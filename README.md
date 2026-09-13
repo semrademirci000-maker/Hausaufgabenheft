@@ -51,6 +51,46 @@ starten und später über den App Store veröffentlichen.
 Alles wird automatisch auf dem Gerät gespeichert (JSON-Datei im
 Dokumente-Ordner der App) – ohne Internet, ohne Konto.
 
+## Testen ohne Mac (Cloud-Build)
+
+Für eine native iOS-App braucht man normalerweise einen Mac. Es geht aber auch
+in der Cloud – GitHub stellt Mac-Rechner bereit:
+
+**Was automatisch passiert**
+
+Bei jedem Push baut GitHub Actions die App (`.github/workflows/ios.yml`),
+startet sie im iPhone- und im iPad-Simulator und legt Screenshots von
+Startseite, Stundenplan und Heft im Ordner `screenshots/` ab. Die kannst du
+direkt auf github.com anschauen – auch vom iPad aus.
+
+Läuft etwas nicht, steht der genaue Fehler im Build-Protokoll unter
+*Actions* → letzter Lauf.
+
+**App im Browser ausprobieren (kostenlos, ohne Apple-Konto)**
+
+1. Auf github.com unter *Actions* den letzten Lauf öffnen.
+2. Unten bei *Artifacts* `Schulplaner-Simulator-App` herunterladen (ZIP).
+3. Auf [appetize.io](https://appetize.io) hochladen (kostenloses Kontingent).
+4. Dort öffnet sich ein iPhone oder iPad im Browser, das du antippen und
+   bedienen kannst – die echte App, nur eben ferngesteuert.
+
+**Auf dem eigenen iPhone/iPad (TestFlight)**
+
+Dafür braucht es das Apple Developer Program (99 $/Jahr). Danach lässt sich der
+Cloud-Build so erweitern, dass er die App signiert und direkt zu TestFlight
+hochlädt – ebenfalls ohne eigenen Mac. Nötig sind dann ein eigener Bundle
+Identifier (statt `com.beispiel.schulplaner`), ein App-Store-Connect-API-Schlüssel
+und ein Verteilungszertifikat, alles als GitHub-Secrets hinterlegt.
+
+**Auf dem iPad selbst programmieren (Swift Playgrounds)**
+
+Im Ordner `ipad/Schulplaner.swiftpm` liegt dieselbe App als Projekt für die
+Gratis-App **Swift Playgrounds** (iPadOS 16 oder neuer). Repo als ZIP laden, in
+der Dateien-App entpacken, `Schulplaner.swiftpm` antippen – Playgrounds baut und
+startet die App direkt auf dem iPad. (Falls Playgrounds das App-Icon bemängelt:
+in `Package.swift` `appIcon: .asset("AppIcon")` durch
+`appIcon: .placeholder(icon: .book)` ersetzen.)
+
 ## Öffnen und starten
 
 1. Ordner auf einen Mac kopieren (Xcode 15 oder neuer).
@@ -104,7 +144,10 @@ dabei: `ios/Schulplaner/Assets.xcassets/AppIcon.appiconset/AppIcon.png`.
 | `ios/Schulplaner/Audio/Synth.swift` | Der Musik-Synthesizer (Sample für Sample) |
 | `ios/Schulplaner/Audio/MusicEngine.swift` | Abspielen, Lautstärke, Audio-Session |
 | `ios/Schulplaner/Views/MusicControl.swift` | Knopf und Regler für die Musik |
-| `ios/Tools/` | Hilfsskripte: App-Icon und Xcode-Projekt erzeugen |
+| `ios/Tools/` | Hilfsskripte: App-Icon, Xcode-Projekt und iPad-Fassung erzeugen |
+| `ipad/Schulplaner.swiftpm` | dieselbe App für Swift Playgrounds auf dem iPad |
+| `.github/workflows/ios.yml` | Cloud-Build mit Screenshots |
+| `screenshots/` | automatisch erzeugte Bilder aus dem letzten Cloud-Build |
 | `web-legacy/` | die alte Web-Version (wird nicht mehr weiterentwickelt) |
 
 Neue Swift-Dateien fügst du am einfachsten direkt in Xcode hinzu. Alternativ
