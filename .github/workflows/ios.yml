@@ -1,0 +1,86 @@
+name: App bauen und Screenshots
+
+# Baut die App auf einem Mac in der Cloud, startet sie im iPhone- und
+# iPad-Simulator und legt Screenshots in den Ordner "screenshots".
+
+on:
+  push:
+    branches:
+      - "claude/**"
+      - main
+    paths-ignore:
+      - "screenshots/**"
+      - "**/*.md"
+      - "web-legacy/**"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Bauen, starten, fotografieren
+    runs-on: macos-14
+    timeout-minutes: 40
+
+    steps:
+      - name: Projekt holen
+        uses: actions/checkout@v4
+
+      - name: Xcode-Version
+        run: xcodebuild -version
+
+      - name: App für den Simulator bauen
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project ios/Schulplaner.xcodeproj \
+            -scheme Schulplaner \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            build
+
+      - name: App starten und Screenshots machen
+        run: bash .github/scripts/screenshots.sh
+
+      - name: App als ZIP verpacken
+        run: |
+          APP=$(find build/Build/Products/Debug-iphonesimulator -maxdepth 1 -name "*.app" | head -1)
+          ditto -c -k --sequesterRsrc --keepParent "$APP" Schulplaner-Simulator.zip
+
+      - name: App zum Herunterladen bereitstellen
+        uses: actions/upload-artifact@v4
+        with:
+          name: Schulplaner-Simulator-App
+          path: Schulplaner-Simulator.zip
+          retention-days: 30
+
+      - name: Screenshots zum Herunterladen bereitstellen
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Screenshots
+          path: screenshots
+          retention-days: 30
+          if-no-files-found: ignore
+
+      - name: Screenshots ins Repo legen
+        if: always()
+        run: |
+          if [ -z "$(ls -A screenshots 2>/dev/null)" ]; then
+            echo "Keine Screenshots vorhanden."
+            exit 0
+          fi
+          git config user.name "Cloud-Build"
+          git config user.email "actions@users.noreply.github.com"
+          git add screenshots
+          if git diff --staged --quiet; then
+            echo "Screenshots unverändert."
+          else
+            git commit -m "Screenshots aus dem Cloud-Build [skip ci]"
+            git push origin HEAD:${GITHUB_REF_NAME}
+          fi

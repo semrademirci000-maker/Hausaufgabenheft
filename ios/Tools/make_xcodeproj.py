@@ -13,7 +13,7 @@ APP = "Schulplaner"
 SOURCE_DIR = os.path.join(ROOT, APP)
 PROJECT_DIR = os.path.join(ROOT, f"{APP}.xcodeproj")
 BUNDLE_ID = "com.beispiel.schulplaner"
-DEPLOYMENT_TARGET = "17.0"
+DEPLOYMENT_TARGET = "16.0"
 
 
 def uid(seed):
