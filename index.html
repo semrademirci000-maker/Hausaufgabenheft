@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Mein Hausaufgabenheft</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Hausaufgaben">
+<meta name="theme-color" content="#f4ede2">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ============ STARTSEITE ============ -->
+<section class="screen screen--start is-active" id="screen-start">
+  <div class="start">
+    <h1 class="start__title">Mein Schulplaner</h1>
+    <p class="start__sub" id="start-date">Heute</p>
+
+    <div class="start__cards">
+      <button class="card card--plan" data-go="timetable">
+        <span class="card__art">
+          <span class="mini-grid">
+            <i style="--c:#2f6fed"></i><i style="--c:#e0483f"></i><i style="--c:#2aa66b"></i><i style="--c:#f29d1b"></i><i style="--c:#a05ad4"></i>
+            <i style="--c:#2aa66b"></i><i style="--c:#2f6fed"></i><i style="--c:#f29d1b"></i><i style="--c:#e0483f"></i><i style="--c:#12a3b4"></i>
+            <i style="--c:#e4529f"></i><i style="--c:#2aa66b"></i><i style="--c:#2f6fed"></i><i style="--c:#a05ad4"></i><i style="--c:#e0483f"></i>
+          </span>
+        </span>
+        <span class="card__label">Stundenplan</span>
+        <span class="card__hint">Fächer eintragen &amp; Farben wählen</span>
+      </button>
+
+      <button class="card card--book" data-go="book">
+        <span class="card__art">
+          <span class="mini-book">
+            <span class="mini-book__page"></span>
+            <span class="mini-book__page mini-book__page--r"></span>
+          </span>
+        </span>
+        <span class="card__label">Hausaufgabenheft</span>
+        <span class="card__hint">Aufschreiben, was auf ist</span>
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ STUNDENPLAN ============ -->
+<section class="screen screen--timetable" id="screen-timetable">
+  <header class="topbar">
+    <button class="btn btn--ghost" data-go="start" aria-label="Zurück">‹ Zurück</button>
+    <h2 class="topbar__title">Stundenplan</h2>
+    <div class="topbar__right">
+      <button class="btn btn--ghost" id="btn-subjects">Fächer</button>
+      <button class="btn btn--ghost" data-go="book">Heft ›</button>
+    </div>
+  </header>
+
+  <div class="tt-wrap">
+    <div class="tt" id="tt"></div>
+    <div class="tt-foot">
+      <button class="btn btn--small" id="btn-less">− Stunde</button>
+      <span class="tt-foot__info" id="tt-count">8 Stunden</span>
+      <button class="btn btn--small" id="btn-more">+ Stunde</button>
+      <span class="tt-foot__tip">Tippe auf ein Feld, um ein Fach zu wählen.</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ HAUSAUFGABENHEFT ============ -->
+<section class="screen screen--book" id="screen-book">
+  <header class="topbar topbar--book">
+    <button class="btn btn--ghost" data-go="start" aria-label="Zurück">‹ Zurück</button>
+    <div class="topbar__nav">
+      <button class="btn btn--round" id="btn-prev" aria-label="Vorheriger Tag">‹</button>
+      <button class="btn btn--ghost" id="btn-today">Heute</button>
+      <button class="btn btn--round" id="btn-next" aria-label="Nächster Tag">›</button>
+    </div>
+    <div class="topbar__right">
+      <button class="btn btn--ghost" data-go="timetable">Stundenplan</button>
+    </div>
+  </header>
+
+  <div class="book-stage">
+    <div class="book" id="book">
+      <div class="book__spine"></div>
+      <div class="page page--left" id="page-left"></div>
+      <div class="page page--right" id="page-right"></div>
+
+      <div class="flip flip--fwd" id="flip-fwd" aria-hidden="true">
+        <div class="flip__face flip__face--front" id="fwd-front"></div>
+        <div class="flip__face flip__face--back" id="fwd-back"></div>
+      </div>
+      <div class="flip flip--back" id="flip-back" aria-hidden="true">
+        <div class="flip__face flip__face--front" id="back-front"></div>
+        <div class="flip__face flip__face--back" id="back-back"></div>
+      </div>
+    </div>
+  </div>
+  <p class="swipe-hint" id="swipe-hint">Wische zum Blättern →</p>
+</section>
+
+<!-- ============ DIALOGE ============ -->
+<div class="overlay" id="overlay" hidden>
+
+  <!-- Fach wählen -->
+  <div class="sheet" id="dlg-pick" hidden>
+    <h3 class="sheet__title" id="pick-title">Fach wählen</h3>
+    <div class="chips" id="pick-chips"></div>
+    <div class="sheet__row">
+      <button class="btn btn--wide" id="pick-clear">Leer lassen</button>
+      <button class="btn btn--wide btn--primary" id="pick-new">+ Neues Fach</button>
+    </div>
+    <button class="btn btn--close" data-close>Fertig</button>
+  </div>
+
+  <!-- Fächer verwalten -->
+  <div class="sheet sheet--wide" id="dlg-subjects" hidden>
+    <h3 class="sheet__title">Meine Fächer</h3>
+    <div class="subj-list" id="subj-list"></div>
+    <div class="sheet__row">
+      <button class="btn btn--wide btn--primary" id="subj-add">+ Fach hinzufügen</button>
+    </div>
+    <button class="btn btn--close" data-close>Fertig</button>
+  </div>
+
+  <!-- Hausaufgabe eintragen -->
+  <div class="sheet" id="dlg-hw" hidden>
+    <h3 class="sheet__title" id="hw-title">Hausaufgabe</h3>
+    <p class="sheet__sub" id="hw-sub"></p>
+    <textarea id="hw-text" class="hw-input" rows="4" placeholder="z. B. Arbeitsheft Seite 15, Nr. 3"></textarea>
+    <div class="sheet__row">
+      <button class="btn btn--wide" id="hw-none">Keine Hausaufgaben</button>
+      <button class="btn btn--wide btn--primary" id="hw-save">Speichern</button>
+    </div>
+    <button class="btn btn--danger-ghost" id="hw-del" hidden>Eintrag löschen</button>
+    <button class="btn btn--close" data-close>Abbrechen</button>
+  </div>
+
+</div>
+
+<!-- Entspannungsmusik -->
+<div class="music" id="music">
+  <input type="range" class="music__vol" id="music-vol" min="0" max="100" value="45" aria-label="Lautstärke">
+  <button class="music__btn" id="music-btn" aria-label="Entspannungsmusik an">♪</button>
+</div>
+
+<script src="app.js"></script>
+<script src="music.js"></script>
+</body>
+</html>
