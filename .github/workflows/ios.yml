@@ -77,10 +77,14 @@ jobs:
           fi
           git config user.name "Cloud-Build"
           git config user.email "actions@users.noreply.github.com"
+          # immer auf dem aktuellen Stand des Zweigs aufsetzen,
+          # sonst wird der Push abgelehnt, wenn zwischendurch etwas gepusht wurde
+          git fetch origin "${GITHUB_REF_NAME}"
+          git checkout -B screenshot-update "origin/${GITHUB_REF_NAME}"
           git add screenshots
           if git diff --staged --quiet; then
             echo "Screenshots unverändert."
           else
             git commit -m "Screenshots aus dem Cloud-Build [skip ci]"
-            git push origin HEAD:${GITHUB_REF_NAME}
+            git push origin HEAD:"${GITHUB_REF_NAME}"
           fi
