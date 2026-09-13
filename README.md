@@ -1,5 +1,11 @@
 # Mein Schulplaner – Stundenplan & Hausaufgabenheft
 
+Die App gibt es zweimal:
+
+* **Web-App** (dieser Ordner) – läuft sofort in Safari und lässt sich über
+  „Zum Home-Bildschirm“ wie eine App aufs iPad legen.
+* **Native SwiftUI-App** in [`ios/`](ios/README.md) – zum Öffnen in Xcode auf einem Mac.
+
 Eine App fürs iPad: Erst wählst du **Stundenplan** oder **Hausaufgabenheft**.
 Das Heft öffnet sich wie ein echtes Buch mit weißen Seiten und schwarzen Linien –
 und du blätterst mit einem Wisch in 3-D zum nächsten Tag.
