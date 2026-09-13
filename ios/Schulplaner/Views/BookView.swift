@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Das Hausaufgabenheft: öffnet sich wie ein Buch, eine Seite pro Schultag.
+/// Das Hausaufgabenheft – eine Seite pro Schultag, Wischen blättert um.
 struct BookView: View {
     @EnvironmentObject private var store: PlannerStore
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
@@ -11,7 +11,7 @@ struct BookView: View {
 
     var body: some View {
         ZStack {
-            Theme.desk.ignoresSafeArea()
+            Theme.background.ignoresSafeArea()
 
             BookFrame {
                 PageCurlPager(pageCount: days.count, index: $pageIndex) { index in
@@ -19,30 +19,26 @@ struct BookView: View {
                         .environmentObject(store)
                 }
             }
-            .padding(.horizontal, horizontalSizeClass == .compact ? 10 : 20)
-            .padding(.top, 6)
-            .padding(.bottom, 10)
+            .padding(.horizontal, horizontalSizeClass == .compact ? 12 : 22)
+            .padding(.top, 8)
+            .padding(.bottom, 14)
         }
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button("Heute") { goToToday(animated: true) }
-                    .font(Theme.font(16, .semibold))
-                    .disabled(isOnToday)
+                MusicToolbarButton()
             }
             ToolbarItem(placement: .topBarTrailing) {
-                NavigationLink {
-                    TimetableView()
-                } label: {
-                    Label("Stundenplan", systemImage: "calendar")
-                }
+                Button("Heute") { goToToday() }
+                    .font(Theme.font(15, .medium))
+                    .disabled(isOnToday)
             }
         }
         .onAppear {
             guard !didOpen else { return }
             didOpen = true
-            goToToday(animated: false)
+            goToToday()
         }
     }
 
@@ -58,41 +54,29 @@ struct BookView: View {
         SchoolCalendar.isToday(currentDate)
     }
 
-    private func goToToday(animated: Bool) {
-        let target = SchoolCalendar.startOfDay(SchoolCalendar.nextSchoolDay(onOrAfter: Date()))
-        guard let index = days.firstIndex(where: { SchoolCalendar.key(for: $0) == SchoolCalendar.key(for: target) }) else { return }
-        if animated {
-            withAnimation { pageIndex = index }
-        } else {
-            pageIndex = index
-        }
+    private func goToToday() {
+        let target = SchoolCalendar.nextSchoolDay(onOrAfter: Date())
+        guard let index = days.firstIndex(where: {
+            SchoolCalendar.key(for: $0) == SchoolCalendar.key(for: target)
+        }) else { return }
+        pageIndex = index
     }
 }
 
-/// Der Bucheinband rund um die Seiten.
+/// Schmaler Einband um die Seiten.
 struct BookFrame<Content: View>: View {
     @ViewBuilder var content: () -> Content
 
     var body: some View {
         content()
             .background(Theme.paper)
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .strokeBorder(Color.black.opacity(0.08), lineWidth: 1)
-            )
-            .padding(9)
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .padding(5)
             .background(
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [Theme.cover, Theme.cover.opacity(0.82)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .shadow(color: .black.opacity(0.28), radius: 16, x: 0, y: 8)
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Theme.cover)
             )
+            .shadow(color: .black.opacity(0.16), radius: 14, x: 0, y: 6)
     }
 }
 

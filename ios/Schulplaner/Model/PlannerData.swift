@@ -45,13 +45,13 @@ struct PlannerData: Codable {
 
     /// Beispiel-Stundenplan beim ersten Start – alles änderbar.
     static var starter: PlannerData {
-        let deutsch = Subject(name: "Deutsch", colorHex: "#2F6FED")
-        let mathe = Subject(name: "Mathe", colorHex: "#E0483F")
-        let englisch = Subject(name: "Englisch", colorHex: "#2AA66B")
-        let sachkunde = Subject(name: "Sachkunde", colorHex: "#F29D1B")
-        let sport = Subject(name: "Sport", colorHex: "#A05AD4")
-        let kunst = Subject(name: "Kunst", colorHex: "#E4529F")
-        let musik = Subject(name: "Musik", colorHex: "#12A3B4")
+        let deutsch = Subject(name: "Deutsch", colorHex: "#3B6FD1")
+        let mathe = Subject(name: "Mathe", colorHex: "#C0453C")
+        let englisch = Subject(name: "Englisch", colorHex: "#2E8B62")
+        let sachkunde = Subject(name: "Sachkunde", colorHex: "#C2801F")
+        let sport = Subject(name: "Sport", colorHex: "#7A5AA8")
+        let kunst = Subject(name: "Kunst", colorHex: "#B05576")
+        let musik = Subject(name: "Musik", colorHex: "#2A8A99")
 
         var data = PlannerData()
         data.subjects = [deutsch, mathe, englisch, sachkunde, sport, kunst, musik]

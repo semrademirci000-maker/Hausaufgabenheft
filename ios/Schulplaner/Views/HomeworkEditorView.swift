@@ -14,29 +14,29 @@ struct HomeworkEditorView: View {
     @State private var loaded = false
     @FocusState private var writing: Bool
 
-    private let suggestions = ["Arbeitsheft Seite ", "Buch Seite ", "Nr. ", "üben", "auswendig lernen"]
-
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: 18) {
                     subjectHeader
-                    editor
-                    suggestionChips
+                    field
                     noHomeworkButton
-                    doneToggle
+                    if !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        doneToggle
+                    }
                     if store.entry(date: date, period: block.firstPeriod) != nil {
                         Button("Eintrag löschen", role: .destructive) {
                             store.setEntry(nil, date: date, period: block.firstPeriod)
                             dismiss()
                         }
-                        .font(Theme.font(15, .semibold))
+                        .font(Theme.font(14))
                         .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.top, 4)
                     }
                 }
-                .padding(20)
+                .padding(22)
             }
-            .background(Theme.paper.ignoresSafeArea())
+            .background(Theme.background.ignoresSafeArea())
             .navigationTitle("Hausaufgabe")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -48,7 +48,7 @@ struct HomeworkEditorView: View {
                         save()
                         dismiss()
                     }
-                    .font(Theme.font(16, .bold))
+                    .font(Theme.font(16, .semibold))
                 }
             }
         }
@@ -58,75 +58,39 @@ struct HomeworkEditorView: View {
 
     private var subjectHeader: some View {
         HStack(spacing: 10) {
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
+            Circle()
                 .fill(block.subject.color)
-                .frame(width: 34, height: 34)
+                .frame(width: 10, height: 10)
             VStack(alignment: .leading, spacing: 2) {
                 Text(block.subject.name)
-                    .font(Theme.font(22, .bold))
+                    .font(Theme.font(19, .semibold))
                     .foregroundStyle(Theme.ink)
                 Text("\(block.longPeriodLabel) · \(SchoolCalendar.longDateFormatter.string(from: date))")
-                    .font(Theme.font(13, .medium))
-                    .foregroundStyle(Theme.softInk)
+                    .font(Theme.font(12))
+                    .foregroundStyle(Theme.secondaryInk)
             }
             Spacer(minLength: 0)
         }
     }
 
-    private var editor: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Was ist auf?")
-                .font(Theme.font(14, .semibold))
-                .foregroundStyle(Theme.softInk)
-
-            ZStack(alignment: .topLeading) {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(Color.white)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .strokeBorder(Color.black.opacity(0.12), lineWidth: 1)
-                    )
-                TextEditor(text: $text)
-                    .font(Theme.font(17, .medium))
-                    .foregroundStyle(Theme.ink)
-                    .scrollContentBackground(.hidden)
-                    .padding(10)
-                    .focused($writing)
-                if text.isEmpty {
-                    Text("z. B. Arbeitsheft Seite 15, Nr. 3")
-                        .font(Theme.font(16, .regular))
-                        .foregroundStyle(Theme.softInk.opacity(0.6))
-                        .padding(.horizontal, 15)
-                        .padding(.vertical, 18)
-                        .allowsHitTesting(false)
-                }
+    private var field: some View {
+        TextField("z. B. Arbeitsheft Seite 15, Nr. 3", text: $text, axis: .vertical)
+            .font(Theme.font(16))
+            .foregroundStyle(Theme.ink)
+            .lineLimit(3...8)
+            .focused($writing)
+            .padding(14)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Theme.surface)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .strokeBorder(Theme.hairline, lineWidth: 1)
+            )
+            .onChange(of: text) { _, newValue in
+                if !newValue.isEmpty { noHomework = false }
             }
-            .frame(minHeight: 130)
-        }
-    }
-
-    private var suggestionChips: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(suggestions, id: \.self) { suggestion in
-                    Button {
-                        if !text.isEmpty, !text.hasSuffix(" ") { text += " " }
-                        text += suggestion
-                        noHomework = false
-                        writing = true
-                    } label: {
-                        Text(suggestion.trimmingCharacters(in: .whitespaces))
-                            .font(Theme.font(14, .semibold))
-                            .foregroundStyle(Theme.ink)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .background(Capsule().fill(Color.black.opacity(0.06)))
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(.vertical, 2)
-        }
     }
 
     private var noHomeworkButton: some View {
@@ -137,30 +101,26 @@ struct HomeworkEditorView: View {
             save()
             dismiss()
         } label: {
-            HStack(spacing: 8) {
-                Image(systemName: "checkmark.circle.fill")
-                Text("Keine Hausaufgaben")
-            }
-            .font(Theme.font(17, .bold))
-            .foregroundStyle(.white)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
-            .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(Theme.blue)
-            )
+            Text("Keine Hausaufgaben")
+                .font(Theme.font(16, .medium))
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 13)
+                .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Theme.accent)
+                )
         }
         .buttonStyle(.plain)
     }
 
     private var doneToggle: some View {
         Toggle(isOn: $done) {
-            Text("Schon erledigt")
-                .font(Theme.font(16, .semibold))
+            Text("Erledigt")
+                .font(Theme.font(15))
                 .foregroundStyle(Theme.ink)
         }
-        .tint(Color(hex: "#2AA66B"))
-        .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        .tint(Theme.success)
     }
 
     private func load() {

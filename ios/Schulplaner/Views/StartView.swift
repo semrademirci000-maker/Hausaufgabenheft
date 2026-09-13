@@ -1,174 +1,116 @@
 import SwiftUI
 
-/// Startseite: „Stundenplan“ oder „Hausaufgabenheft“ auswählen.
+/// Startseite: Stundenplan oder Hausaufgabenheft.
 struct StartView: View {
-    @EnvironmentObject private var store: PlannerStore
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     var body: some View {
         ZStack {
-            Theme.desk.ignoresSafeArea()
+            Theme.background.ignoresSafeArea()
 
-            GeometryReader { proxy in
-                ScrollView {
-                    VStack(spacing: 32) {
-                        header
-                        cards
-                        hint
-                    }
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 32)
-                    .frame(minHeight: proxy.size.height)
+            VStack(spacing: 0) {
+                Spacer(minLength: 0)
+
+                VStack(alignment: .leading, spacing: 28) {
+                    header
+                    choices
                 }
+                .frame(maxWidth: 640)
+                .padding(.horizontal, 24)
+
+                Spacer(minLength: 0)
+
+                MusicPill()
+                    .padding(.bottom, 24)
             }
         }
         .toolbar(.hidden, for: .navigationBar)
     }
 
     private var header: some View {
-        VStack(spacing: 8) {
-            Text("Mein Schulplaner")
-                .font(Theme.font(horizontalSizeClass == .compact ? 34 : 46, .bold))
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Schulplaner")
+                .font(Theme.font(32, .semibold))
                 .foregroundStyle(Theme.ink)
             Text(todayText)
-                .font(Theme.font(17, .medium))
-                .foregroundStyle(Theme.softInk)
+                .font(Theme.font(15))
+                .foregroundStyle(Theme.secondaryInk)
         }
-        .multilineTextAlignment(.center)
     }
 
-    private var cards: some View {
+    private var choices: some View {
         let layout = horizontalSizeClass == .compact
-            ? AnyLayout(VStackLayout(spacing: 20))
-            : AnyLayout(HStackLayout(spacing: 28))
+            ? AnyLayout(VStackLayout(spacing: 14))
+            : AnyLayout(HStackLayout(spacing: 18))
 
         return layout {
             NavigationLink {
                 TimetableView()
             } label: {
-                StartCard(title: "Stundenplan", subtitle: "Fächer eintragen und Farben wählen") {
-                    TimetableArt()
-                }
+                ChoiceCard(
+                    symbol: "calendar",
+                    title: "Stundenplan",
+                    subtitle: "Fächer und Farben eintragen"
+                )
             }
             NavigationLink {
                 BookView()
             } label: {
-                StartCard(title: "Hausaufgabenheft", subtitle: "Aufschreiben, was auf ist") {
-                    BookArt()
-                }
+                ChoiceCard(
+                    symbol: "book.closed",
+                    title: "Hausaufgabenheft",
+                    subtitle: "Aufschreiben, was auf ist"
+                )
             }
         }
         .buttonStyle(.plain)
-        .frame(maxWidth: 900)
-    }
-
-    private var hint: some View {
-        Text("Tipp: Im Heft einfach wischen – dann blättert die Seite um zum nächsten Tag.")
-            .font(Theme.font(14, .medium))
-            .foregroundStyle(Theme.softInk)
-            .multilineTextAlignment(.center)
-            .padding(.horizontal, 20)
     }
 
     private var todayText: String {
         let today = Date()
         if Weekday(date: today) != nil {
-            return "Heute ist \(SchoolCalendar.longDateFormatter.string(from: today))"
+            return SchoolCalendar.longDateFormatter.string(from: today)
         }
-        let next = SchoolCalendar.nextSchoolDay(onOrAfter: today)
-        return "Wochenende – nächster Schultag: \(SchoolCalendar.longDateFormatter.string(from: next))"
+        return "Nächster Schultag: \(SchoolCalendar.longDateFormatter.string(from: SchoolCalendar.nextSchoolDay(onOrAfter: today)))"
     }
 }
 
-/// Große Auswahlkarte auf der Startseite.
-struct StartCard<Art: View>: View {
+/// Eine der beiden Auswahlkarten.
+private struct ChoiceCard: View {
+    let symbol: String
     let title: String
     let subtitle: String
-    @ViewBuilder var art: () -> Art
 
     var body: some View {
-        VStack(spacing: 14) {
-            art()
-                .frame(height: 150)
-                .frame(maxWidth: .infinity)
+        HStack(spacing: 16) {
+            Image(systemName: symbol)
+                .font(.system(size: 20, weight: .regular))
+                .foregroundStyle(Theme.accent)
+                .frame(width: 44, height: 44)
                 .background(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(Color.white.opacity(0.55))
+                    RoundedRectangle(cornerRadius: 11, style: .continuous)
+                        .fill(Theme.accent.opacity(0.1))
                 )
-            VStack(spacing: 4) {
+
+            VStack(alignment: .leading, spacing: 3) {
                 Text(title)
-                    .font(Theme.font(24, .bold))
+                    .font(Theme.font(17, .semibold))
                     .foregroundStyle(Theme.ink)
                 Text(subtitle)
-                    .font(Theme.font(14, .medium))
-                    .foregroundStyle(Theme.softInk)
-                    .multilineTextAlignment(.center)
+                    .font(Theme.font(13))
+                    .foregroundStyle(Theme.secondaryInk)
             }
-        }
-        .padding(20)
-        .frame(maxWidth: .infinity)
-        .background(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(Color.white)
-                .shadow(color: .black.opacity(0.15), radius: 14, x: 0, y: 8)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .strokeBorder(Color.black.opacity(0.06), lineWidth: 1)
-        )
-        .contentShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-    }
-}
 
-/// Mini-Stundenplan als Bildchen auf der Startkarte.
-private struct TimetableArt: View {
-    private let colors = ["#2F6FED", "#E0483F", "#2AA66B", "#F29D1B", "#A05AD4", "#12A3B4", "#E4529F"]
+            Spacer(minLength: 8)
 
-    var body: some View {
-        VStack(spacing: 6) {
-            ForEach(0..<3, id: \.self) { row in
-                HStack(spacing: 6) {
-                    ForEach(0..<5, id: \.self) { column in
-                        RoundedRectangle(cornerRadius: 5, style: .continuous)
-                            .fill(Color(hex: colors[(row * 5 + column * 2) % colors.count]).opacity(0.85))
-                            .frame(height: 24)
-                    }
-                }
-            }
+            Image(systemName: "chevron.right")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(Theme.tertiaryInk)
         }
         .padding(18)
-    }
-}
-
-/// Mini-Buch als Bildchen auf der Startkarte.
-private struct BookArt: View {
-    var body: some View {
-        HStack(spacing: 2) {
-            page.rotation3DEffect(.degrees(16), axis: (x: 0, y: 1, z: 0), anchor: .trailing)
-            page.rotation3DEffect(.degrees(-16), axis: (x: 0, y: 1, z: 0), anchor: .leading)
-        }
-        .padding(22)
-        .shadow(color: .black.opacity(0.12), radius: 6, x: 0, y: 4)
-    }
-
-    private var page: some View {
-        ZStack(alignment: .top) {
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .fill(Theme.paper)
-            VStack(spacing: 9) {
-                ForEach(0..<6, id: \.self) { _ in
-                    Rectangle()
-                        .fill(Theme.rule)
-                        .frame(height: 1)
-                }
-            }
-            .padding(.horizontal, 8)
-            .padding(.top, 16)
-        }
-        .overlay(
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .strokeBorder(Color.black.opacity(0.1), lineWidth: 1)
-        )
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .card()
+        .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }
 

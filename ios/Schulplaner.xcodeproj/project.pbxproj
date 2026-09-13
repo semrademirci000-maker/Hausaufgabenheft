@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		99E3FEA0C5D9F40CBAD11D89 /* MusicEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7727BE1FC23C530F89285A0 /* MusicEngine.swift */; };
+		1EC554D3DB03ECD15D28661F /* Synth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F0FEF5A7CF0A521D40A245D /* Synth.swift */; };
 		2C21DC0740F74F72A9EEEC2C /* HomeworkEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4ED5D73B26E2A0C415FF8F1B /* HomeworkEntry.swift */; };
 		2E98FD2C8CABDF007A5A5C7A /* PlannerData.swift in Sources */ = {isa = PBXBuildFile; fileRef = B31163F3852CC9B4363CBC57 /* PlannerData.swift */; };
 		B555E8AB2AB0669D1DB6E6B2 /* SchoolCalendar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B9B7179E547AC8B75DBEEA2 /* SchoolCalendar.swift */; };
@@ -18,6 +20,7 @@
 		8FF25F47918F4C73D799C87A /* BookView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C96455A85A4FF62D3628C3A0 /* BookView.swift */; };
 		55C17BA3211E94588E1A370A /* HomeworkEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE6259AA13AB56C591F6B346 /* HomeworkEditorView.swift */; };
 		7C4924520F62B7E86A897F1C /* HomeworkPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1104D1E6E3F22EF5A2A6218 /* HomeworkPageView.swift */; };
+		700F4FF3F6E87E3D8657D02C /* MusicControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF5A759EE0A03C9CD99E0782 /* MusicControl.swift */; };
 		06CC214A9F7181F924E78499 /* PageCurlPager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44A5458D780FFF3FB3F0E97C /* PageCurlPager.swift */; };
 		ADB1FD5BCEAC586C620F2F55 /* RuledPaper.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFAC65AF4E0CB8D3D778FE47 /* RuledPaper.swift */; };
 		D43D3A473D08154C043CB8CC /* StartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E7590E93E71A94E9DFDBED5 /* StartView.swift */; };
@@ -30,6 +33,8 @@
 
 /* Begin PBXFileReference section */
 		F5BF48AA40CAD7891EB709FC /* Schulplaner.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Schulplaner.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		C7727BE1FC23C530F89285A0 /* MusicEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MusicEngine.swift; sourceTree = "<group>"; };
+		6F0FEF5A7CF0A521D40A245D /* Synth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Synth.swift; sourceTree = "<group>"; };
 		4ED5D73B26E2A0C415FF8F1B /* HomeworkEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeworkEntry.swift; sourceTree = "<group>"; };
 		B31163F3852CC9B4363CBC57 /* PlannerData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlannerData.swift; sourceTree = "<group>"; };
 		0B9B7179E547AC8B75DBEEA2 /* SchoolCalendar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SchoolCalendar.swift; sourceTree = "<group>"; };
@@ -41,6 +46,7 @@
 		C96455A85A4FF62D3628C3A0 /* BookView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookView.swift; sourceTree = "<group>"; };
 		BE6259AA13AB56C591F6B346 /* HomeworkEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeworkEditorView.swift; sourceTree = "<group>"; };
 		B1104D1E6E3F22EF5A2A6218 /* HomeworkPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeworkPageView.swift; sourceTree = "<group>"; };
+		BF5A759EE0A03C9CD99E0782 /* MusicControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MusicControl.swift; sourceTree = "<group>"; };
 		44A5458D780FFF3FB3F0E97C /* PageCurlPager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageCurlPager.swift; sourceTree = "<group>"; };
 		CFAC65AF4E0CB8D3D778FE47 /* RuledPaper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuledPaper.swift; sourceTree = "<group>"; };
 		0E7590E93E71A94E9DFDBED5 /* StartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartView.swift; sourceTree = "<group>"; };
@@ -81,6 +87,7 @@
 		82CF2A43A7100F086D7FCFDD /* Schulplaner */ = {
 			isa = PBXGroup;
 			children = (
+				E45F76C2D80FAD483876517A /* Audio */,
 				13CB9448904D13D14C47BDD4 /* Model */,
 				84CF25C76D64DAA0B536E4A0 /* Store */,
 				38DF21AEF4612506D6BE5CBE /* Views */,
@@ -88,6 +95,15 @@
 				F4520D96AC0EDB42E750BB2B /* Assets.xcassets */,
 			);
 			path = Schulplaner;
+			sourceTree = "<group>";
+		};
+		E45F76C2D80FAD483876517A /* Audio */ = {
+			isa = PBXGroup;
+			children = (
+				C7727BE1FC23C530F89285A0 /* MusicEngine.swift */,
+				6F0FEF5A7CF0A521D40A245D /* Synth.swift */,
+			);
+			path = Audio;
 			sourceTree = "<group>";
 		};
 		13CB9448904D13D14C47BDD4 /* Model */ = {
@@ -117,6 +133,7 @@
 				C96455A85A4FF62D3628C3A0 /* BookView.swift */,
 				BE6259AA13AB56C591F6B346 /* HomeworkEditorView.swift */,
 				B1104D1E6E3F22EF5A2A6218 /* HomeworkPageView.swift */,
+				BF5A759EE0A03C9CD99E0782 /* MusicControl.swift */,
 				44A5458D780FFF3FB3F0E97C /* PageCurlPager.swift */,
 				CFAC65AF4E0CB8D3D778FE47 /* RuledPaper.swift */,
 				0E7590E93E71A94E9DFDBED5 /* StartView.swift */,
@@ -197,6 +214,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				99E3FEA0C5D9F40CBAD11D89 /* MusicEngine.swift in Sources */,
+				1EC554D3DB03ECD15D28661F /* Synth.swift in Sources */,
 				2C21DC0740F74F72A9EEEC2C /* HomeworkEntry.swift in Sources */,
 				2E98FD2C8CABDF007A5A5C7A /* PlannerData.swift in Sources */,
 				B555E8AB2AB0669D1DB6E6B2 /* SchoolCalendar.swift in Sources */,
@@ -208,6 +227,7 @@
 				8FF25F47918F4C73D799C87A /* BookView.swift in Sources */,
 				55C17BA3211E94588E1A370A /* HomeworkEditorView.swift in Sources */,
 				7C4924520F62B7E86A897F1C /* HomeworkPageView.swift in Sources */,
+				700F4FF3F6E87E3D8657D02C /* MusicControl.swift in Sources */,
 				06CC214A9F7181F924E78499 /* PageCurlPager.swift in Sources */,
 				ADB1FD5BCEAC586C620F2F55 /* RuledPaper.swift in Sources */,
 				D43D3A473D08154C043CB8CC /* StartView.swift in Sources */,

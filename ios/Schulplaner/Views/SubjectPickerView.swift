@@ -21,23 +21,21 @@ struct SubjectPickerView: View {
                         dismiss()
                     } label: {
                         HStack(spacing: 12) {
-                            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            RoundedRectangle(cornerRadius: 4, style: .continuous)
                                 .fill(subject.color)
-                                .frame(width: 26, height: 26)
+                                .frame(width: 14, height: 14)
                             Text(subject.name)
-                                .font(Theme.font(17, .semibold))
+                                .font(Theme.font(16))
                                 .foregroundStyle(Theme.ink)
                             Spacer()
                             if currentID == subject.id {
                                 Image(systemName: "checkmark")
-                                    .font(.body.bold())
-                                    .foregroundStyle(Theme.blue)
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(Theme.accent)
                             }
                         }
                     }
                 }
-            } header: {
-                Text("Fach wählen")
             }
 
             Section {
@@ -45,13 +43,18 @@ struct SubjectPickerView: View {
                     store.setLesson(nil, day: day, period: period)
                     dismiss()
                 } label: {
-                    Label("Frei – keine Stunde", systemImage: "minus.circle")
+                    Text("Frei – keine Stunde")
+                        .font(Theme.font(16))
+                        .foregroundStyle(Theme.secondaryInk)
                 }
                 NavigationLink {
                     SubjectsManagerView()
                         .navigationTitle("Fächer")
+                        .navigationBarTitleDisplayMode(.inline)
                 } label: {
-                    Label("Fächer und Farben ändern", systemImage: "paintpalette")
+                    Text("Fächer und Farben")
+                        .font(Theme.font(16))
+                        .foregroundStyle(Theme.ink)
                 }
             }
         }

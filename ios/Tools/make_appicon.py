@@ -70,29 +70,29 @@ def u(v):
     return v * SS
 
 
-# --- Motiv: Heftseite mit Linien, Fach-Balken und blauem Plus-Knopf ---
-vertical_gradient((247, 241, 228), (223, 211, 188))
+# --- Motiv: Heftseite mit Linien und blauem Plus – ruhig und klar ---
+vertical_gradient((241, 239, 233), (228, 224, 214))
 
-# Schatten unter der Seite
-fill_round_rect(u(176), u(160), u(864), u(900), u(46), (196, 186, 168))
+# feiner Schatten unter der Seite
+fill_round_rect(u(186), u(178), u(846), u(868), u(52), (206, 201, 190))
 # Seite
-fill_round_rect(u(168), u(148), u(856), u(888), u(46), (255, 255, 255))
+fill_round_rect(u(178), u(166), u(838), u(856), u(52), (255, 255, 255))
 
-# Farbige Fach-Balken oben
-for index, (color, width) in enumerate([((47, 111, 237), 250), ((224, 72, 63), 190), ((42, 166, 107), 220)]):
-    top = 214 + index * 58
-    fill_round_rect(u(232), u(top), u(232 + width), u(top + 34), u(17), color)
+# gedeckte Fach-Balken
+for index, (color, width) in enumerate([((59, 111, 209), 236), ((192, 69, 60), 176), ((46, 139, 98), 206)]):
+    top = 250 + index * 56
+    fill_round_rect(u(246), u(top), u(246 + width), u(top + 26), u(13), color)
 
-# Schwarze Linien
+# feine dunkle Linien
 for index in range(4):
-    y = 420 + index * 74
-    fill_round_rect(u(232), u(y), u(700), u(y + 8), u(4), (28, 28, 34))
+    y = 456 + index * 68
+    fill_round_rect(u(246), u(y), u(690), u(y + 7), u(3), (38, 40, 46))
 
-# Blauer Plus-Knopf
-fill_circle(u(724), u(744), u(132), (22, 78, 170))
-fill_circle(u(724), u(736), u(132), (30, 111, 237))
-fill_round_rect(u(724 - 66), u(736 - 15), u(724 + 66), u(736 + 15), u(15), (255, 255, 255))
-fill_round_rect(u(724 - 15), u(736 - 66), u(724 + 15), u(736 + 66), u(15), (255, 255, 255))
+# Akzent: blauer Plus-Knopf
+fill_circle(u(716), u(716), u(112), (33, 78, 158))
+fill_circle(u(716), u(708), u(112), (39, 105, 212))
+fill_round_rect(u(716 - 54), u(708 - 12), u(716 + 54), u(708 + 12), u(12), (255, 255, 255))
+fill_round_rect(u(716 - 12), u(708 - 54), u(716 + 12), u(708 + 54), u(12), (255, 255, 255))
 
 # --- Downsampling auf 1024 und PNG schreiben (RGB, kein Alpha) ---
 raw = bytearray()

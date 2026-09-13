@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Der Stundenplan: Montag bis Freitag nebeneinander, die Stunden untereinander.
+/// Stundenplan: Montag bis Freitag nebeneinander, Stunden untereinander.
 struct TimetableView: View {
     @EnvironmentObject private var store: PlannerStore
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
@@ -9,25 +9,27 @@ struct TimetableView: View {
     @State private var showSubjects = false
     @State private var askClear = false
 
-    private let rowSpacing: CGFloat = 6
-    private let columnSpacing: CGFloat = 6
-    private let periodColumnWidth: CGFloat = 30
+    private let rowSpacing: CGFloat = 4
+    private let columnSpacing: CGFloat = 4
+    private let periodColumnWidth: CGFloat = 26
 
-    private var rowHeight: CGFloat { horizontalSizeClass == .compact ? 48 : 60 }
+    private var rowHeight: CGFloat { horizontalSizeClass == .compact ? 46 : 56 }
     private var periodCount: Int { store.data.timetable.periodCount }
 
     var body: some View {
         ZStack {
-            Theme.desk.ignoresSafeArea()
+            Theme.background.ignoresSafeArea()
 
             ScrollView {
-                VStack(spacing: 16) {
+                VStack(spacing: 14) {
                     grid
-                    controls
+                    Text("Tippe auf eine Stunde, um ein Fach einzutragen.")
+                        .font(Theme.font(12))
+                        .foregroundStyle(Theme.tertiaryInk)
                 }
-                .padding(.horizontal, horizontalSizeClass == .compact ? 12 : 24)
-                .padding(.vertical, 18)
-                .frame(maxWidth: 1100)
+                .padding(.horizontal, horizontalSizeClass == .compact ? 14 : 24)
+                .padding(.vertical, 16)
+                .frame(maxWidth: 1000)
                 .frame(maxWidth: .infinity)
             }
         }
@@ -35,29 +37,56 @@ struct TimetableView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    showSubjects = true
-                } label: {
-                    Label("Fächer", systemImage: "paintpalette")
-                }
+                MusicToolbarButton()
             }
             ToolbarItem(placement: .topBarTrailing) {
-                NavigationLink {
-                    BookView()
+                Menu {
+                    Button {
+                        showSubjects = true
+                    } label: {
+                        Label("Fächer und Farben", systemImage: "paintpalette")
+                    }
+                    Section("Stunden pro Tag") {
+                        Button {
+                            store.setPeriodCount(periodCount + 1)
+                        } label: {
+                            Label("Eine Stunde mehr", systemImage: "plus")
+                        }
+                        .disabled(periodCount >= 12)
+                        Button {
+                            store.setPeriodCount(periodCount - 1)
+                        } label: {
+                            Label("Eine Stunde weniger", systemImage: "minus")
+                        }
+                        .disabled(periodCount <= 1)
+                    }
+                    Divider()
+                    Button(role: .destructive) {
+                        askClear = true
+                    } label: {
+                        Label("Stundenplan leeren", systemImage: "trash")
+                    }
                 } label: {
-                    Label("Heft", systemImage: "book")
+                    Image(systemName: "ellipsis.circle")
+                        .font(.system(size: 16, weight: .medium))
                 }
             }
+        }
+        .confirmationDialog("Alle Stunden löschen?", isPresented: $askClear, titleVisibility: .visible) {
+            Button("Stundenplan leeren", role: .destructive) { store.clearTimetable() }
+            Button("Abbrechen", role: .cancel) {}
         }
         .sheet(item: $selectedSlot) { slot in
             NavigationStack {
                 SubjectPickerView(day: slot.day, period: slot.period)
             }
+            .presentationDetents([.medium, .large])
         }
         .sheet(isPresented: $showSubjects) {
             NavigationStack {
                 SubjectsManagerView()
                     .navigationTitle("Fächer")
+                    .navigationBarTitleDisplayMode(.inline)
                     .toolbar {
                         ToolbarItem(placement: .confirmationAction) {
                             Button("Fertig") { showSubjects = false }
@@ -70,7 +99,7 @@ struct TimetableView: View {
     // MARK: - Tabelle
 
     private var grid: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 12) {
             headerRow
             HStack(alignment: .top, spacing: columnSpacing) {
                 periodColumn
@@ -79,30 +108,26 @@ struct TimetableView: View {
                 }
             }
         }
-        .padding(horizontalSizeClass == .compact ? 12 : 18)
-        .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(Color.white.opacity(0.9))
-                .shadow(color: .black.opacity(0.12), radius: 12, x: 0, y: 6)
-        )
+        .padding(horizontalSizeClass == .compact ? 14 : 20)
+        .card(cornerRadius: 18)
     }
 
     private var headerRow: some View {
-        HStack(alignment: .bottom, spacing: columnSpacing) {
+        HStack(spacing: columnSpacing) {
             Spacer().frame(width: periodColumnWidth)
             ForEach(Weekday.allCases) { day in
                 let isToday = Weekday(date: Date()) == day
-                Text(horizontalSizeClass == .compact ? day.shortName : day.longName)
-                    .font(Theme.font(horizontalSizeClass == .compact ? 14 : 17, .bold))
-                    .foregroundStyle(isToday ? Color.white : Theme.ink)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-                    .padding(.vertical, 7)
-                    .frame(maxWidth: .infinity)
-                    .background(
-                        Capsule(style: .continuous)
-                            .fill(isToday ? Theme.blue : Color.black.opacity(0.05))
-                    )
+                VStack(spacing: 5) {
+                    Text(horizontalSizeClass == .compact ? day.shortName : day.longName)
+                        .font(Theme.font(horizontalSizeClass == .compact ? 13 : 14, isToday ? .semibold : .medium))
+                        .foregroundStyle(isToday ? Theme.accent : Theme.secondaryInk)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                    Rectangle()
+                        .fill(isToday ? Theme.accent : Color.clear)
+                        .frame(height: 2)
+                }
+                .frame(maxWidth: .infinity)
             }
         }
     }
@@ -110,9 +135,10 @@ struct TimetableView: View {
     private var periodColumn: some View {
         VStack(spacing: rowSpacing) {
             ForEach(1...max(periodCount, 1), id: \.self) { period in
-                Text("\(period).")
-                    .font(Theme.font(13, .semibold))
-                    .foregroundStyle(Theme.softInk)
+                Text("\(period)")
+                    .font(Theme.font(12))
+                    .monospacedDigit()
+                    .foregroundStyle(Theme.tertiaryInk)
                     .frame(width: periodColumnWidth, height: rowHeight)
             }
         }
@@ -120,21 +146,14 @@ struct TimetableView: View {
 
     private func dayColumn(_ day: Weekday) -> some View {
         ZStack(alignment: .topLeading) {
-            // leere Stunden
             ForEach(emptyPeriods(day), id: \.self) { period in
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(Color.black.opacity(0.03))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
-                            .foregroundStyle(Color.black.opacity(0.12))
-                    )
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(Color.black.opacity(0.035))
                     .frame(maxWidth: .infinity)
                     .frame(height: rowHeight)
                     .offset(y: offset(for: period))
             }
 
-            // Fach-Blöcke
             ForEach(store.data.blocks(for: day)) { block in
                 blockCell(block)
                     .frame(maxWidth: .infinity)
@@ -142,7 +161,7 @@ struct TimetableView: View {
                     .offset(y: offset(for: block.firstPeriod))
             }
 
-            // Tippfläche: jede Stunde einzeln antippbar
+            // jede Stunde bleibt einzeln antippbar
             VStack(spacing: rowSpacing) {
                 ForEach(1...max(periodCount, 1), id: \.self) { period in
                     Rectangle()
@@ -160,69 +179,28 @@ struct TimetableView: View {
     }
 
     private func blockCell(_ block: LessonBlock) -> some View {
-        RoundedRectangle(cornerRadius: 12, style: .continuous)
-            .fill(block.subject.color)
-            .overlay(
-                VStack(spacing: 2) {
-                    Text(block.subject.name)
-                        .font(Theme.font(horizontalSizeClass == .compact ? 13 : 16, .bold))
-                        .foregroundStyle(.white)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.6)
-                        .multilineTextAlignment(.center)
-                    if block.periodCount > 1 {
-                        Text(block.periodLabel)
-                            .font(Theme.font(11, .semibold))
-                            .foregroundStyle(.white.opacity(0.85))
-                    }
-                }
-                .padding(4)
-            )
-            .shadow(color: block.subject.color.opacity(0.35), radius: 4, x: 0, y: 2)
-    }
-
-    // MARK: - Bedienung unten
-
-    private var controls: some View {
-        VStack(spacing: 12) {
-            HStack(spacing: 14) {
-                Button {
-                    store.setPeriodCount(periodCount - 1)
-                } label: {
-                    Label("Stunde", systemImage: "minus.circle.fill")
-                }
-                .disabled(periodCount <= 1)
-
-                Text("\(periodCount) Stunden am Tag")
-                    .font(Theme.font(15, .semibold))
+        HStack(spacing: 0) {
+            Rectangle()
+                .fill(block.subject.color)
+                .frame(width: 3)
+            VStack(spacing: 2) {
+                Text(block.subject.name)
+                    .font(Theme.font(horizontalSizeClass == .compact ? 13 : 14, .medium))
                     .foregroundStyle(Theme.ink)
-                    .frame(minWidth: 150)
-
-                Button {
-                    store.setPeriodCount(periodCount + 1)
-                } label: {
-                    Label("Stunde", systemImage: "plus.circle.fill")
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.65)
+                    .multilineTextAlignment(.center)
+                if block.periodCount > 1 {
+                    Text(block.periodLabel)
+                        .font(Theme.font(10))
+                        .foregroundStyle(Theme.tertiaryInk)
                 }
-                .disabled(periodCount >= 12)
             }
-            .font(Theme.font(15, .semibold))
-            .buttonStyle(.bordered)
-
-            Text("Tippe auf ein Feld, um ein Fach einzutragen. Zwei gleiche Stunden hintereinander werden zu einem Block.")
-                .font(Theme.font(13, .medium))
-                .foregroundStyle(Theme.softInk)
-                .multilineTextAlignment(.center)
-
-            Button("Stundenplan leeren", role: .destructive) {
-                askClear = true
-            }
-            .font(Theme.font(14, .semibold))
-            .confirmationDialog("Wirklich alle Stunden löschen?", isPresented: $askClear, titleVisibility: .visible) {
-                Button("Ja, leeren", role: .destructive) { store.clearTimetable() }
-                Button("Abbrechen", role: .cancel) {}
-            }
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 4)
         }
-        .padding(.top, 4)
+        .background(block.subject.color.opacity(0.11))
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 
     // MARK: - Rechnen

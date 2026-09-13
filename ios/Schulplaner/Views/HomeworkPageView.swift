@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Eine Seite im Hausaufgabenheft – der Stundenplan von genau diesem Tag,
-/// untereinander auf den Linien, mit blauem Plus-Knopf zum Eintragen.
+/// Eine Heftseite: der Stundenplan dieses Tages auf den Linien,
+/// daneben der blaue Plus-Knopf zum Eintragen der Hausaufgabe.
 struct HomeworkPageView: View {
     let date: Date
 
@@ -12,7 +12,7 @@ struct HomeworkPageView: View {
     @State private var showNotes = false
 
     private var isCompact: Bool { horizontalSizeClass == .compact }
-    private var lineHeight: CGFloat { isCompact ? 44 : 48 }
+    private var lineHeight: CGFloat { isCompact ? 42 : 46 }
 
     private var blocks: [LessonBlock] { store.data.blocks(for: date) }
 
@@ -49,7 +49,7 @@ struct HomeworkPageView: View {
         }
     }
 
-    // MARK: - Linke Seite: Stunden und Hausaufgaben
+    // MARK: - Seite mit den Stunden
 
     private var lessonPage: some View {
         PaperPage {
@@ -72,99 +72,96 @@ struct HomeworkPageView: View {
                         }
                     }
                     if isCompact {
-                        notesButton
+                        notesRow
                     }
                     RuledLines(spacing: lineHeight)
                         .frame(height: lineHeight * 4)
                 }
-                .padding(.leading, 26)
-                .padding(.trailing, 14)
-                .padding(.top, 12)
+                .padding(.horizontal, isCompact ? 16 : 22)
+                .padding(.top, 16)
             }
             .scrollBounceBehavior(.basedOnSize)
         }
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(alignment: .firstTextBaseline, spacing: 10) {
-                Text(SchoolCalendar.longDateFormatter.string(from: date))
-                    .font(Theme.font(isCompact ? 22 : 26, .bold))
-                    .foregroundStyle(Theme.ink)
-                if SchoolCalendar.isToday(date) {
-                    Text("heute")
-                        .font(Theme.font(12, .bold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(Capsule().fill(Theme.blue))
-                }
-                Spacer(minLength: 0)
-            }
-            Text("Hausaufgaben")
-                .font(Theme.font(13, .semibold))
-                .foregroundStyle(Theme.softInk)
+        VStack(alignment: .leading, spacing: 3) {
+            Text(SchoolCalendar.longDateFormatter.string(from: date))
+                .font(Theme.font(isCompact ? 19 : 21, .semibold))
+                .foregroundStyle(Theme.ink)
+            Text(statusText)
+                .font(Theme.font(12))
+                .foregroundStyle(SchoolCalendar.isToday(date) ? Theme.accent : Theme.tertiaryInk)
         }
-        .padding(.bottom, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.bottom, 10)
         .overlay(alignment: .bottom) {
             Rectangle()
                 .fill(Theme.rule)
-                .frame(height: 1.5)
+                .frame(height: 1)
         }
-        .padding(.bottom, 6)
+        .padding(.bottom, 4)
+    }
+
+    private var statusText: String {
+        let open = store.openCount(for: date)
+        if SchoolCalendar.isToday(date) {
+            return open > 0 ? "Heute · \(open) offen" : "Heute"
+        }
+        return open > 0 ? "\(open) offen" : SchoolCalendar.shortDateFormatter.string(from: date)
     }
 
     private var emptyHint: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("An diesem Tag ist noch kein Unterricht eingetragen.")
-                .font(Theme.font(16, .semibold))
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Kein Unterricht eingetragen")
+                .font(Theme.font(15, .medium))
                 .foregroundStyle(Theme.ink)
-            Text("Trage die Stunden erst im Stundenplan ein – dann stehen sie hier automatisch auf den Linien.")
-                .font(Theme.font(14, .medium))
-                .foregroundStyle(Theme.softInk)
+            Text("Trage die Stunden im Stundenplan ein – dann stehen sie hier automatisch.")
+                .font(Theme.font(13))
+                .foregroundStyle(Theme.secondaryInk)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, 14)
+        .padding(.vertical, 16)
     }
 
-    private var notesButton: some View {
+    private var notesRow: some View {
         Button {
             showNotes = true
         } label: {
             HStack(spacing: 8) {
-                Image(systemName: "square.and.pencil")
-                Text(store.note(for: date).isEmpty ? "Notizen" : "Notizen ansehen")
-                Spacer()
-                if !store.note(for: date).isEmpty {
-                    Text(store.note(for: date))
-                        .font(Theme.font(13, .regular))
-                        .foregroundStyle(Theme.softInk)
-                        .lineLimit(1)
-                }
+                Text("Notizen")
+                    .font(Theme.font(14, .medium))
+                    .foregroundStyle(Theme.secondaryInk)
+                Spacer(minLength: 8)
+                Text(store.note(for: date))
+                    .font(Theme.font(13))
+                    .foregroundStyle(Theme.tertiaryInk)
+                    .lineLimit(1)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(Theme.tertiaryInk)
             }
-            .font(Theme.font(15, .semibold))
-            .foregroundStyle(Theme.blue)
             .frame(height: lineHeight)
+            .overlay(alignment: .bottom) {
+                Rectangle().fill(Theme.rule).frame(height: 0.75)
+            }
         }
         .buttonStyle(.plain)
-        .overlay(alignment: .bottom) {
-            Rectangle().fill(Theme.rule).frame(height: 1)
-        }
     }
 
-    /// Die Mitte des Buches (Falz) auf dem iPad.
+    /// Buchfalz auf dem iPad.
     private var spine: some View {
         LinearGradient(
             colors: [
-                Color.black.opacity(0.02),
-                Color.black.opacity(0.16),
-                Color.black.opacity(0.02)
+                Color.black.opacity(0.015),
+                Color.black.opacity(0.10),
+                Color.black.opacity(0.015)
             ],
             startPoint: .leading,
             endPoint: .trailing
         )
-        .frame(width: 22)
+        .frame(width: 18)
     }
 }
 
@@ -175,7 +172,7 @@ struct HomeworkTarget: Identifiable {
     var id: String { PlannerData.homeworkKey(date: date, period: block.firstPeriod) }
 }
 
-/// Eine Zeile auf der Linie: Stunde, Fach, Hausaufgabe und der blaue Plus-Knopf.
+/// Eine Zeile auf der Linie: Stunde, Fach, Hausaufgabe, Plus-Knopf.
 struct HomeworkRow: View {
     let date: Date
     let block: LessonBlock
@@ -191,23 +188,24 @@ struct HomeworkRow: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack(alignment: .center, spacing: 10) {
+            HStack(spacing: 10) {
                 Text(block.periodLabel)
-                    .font(Theme.font(12, .semibold))
-                    .foregroundStyle(Theme.softInk)
-                    .frame(width: 38, alignment: .trailing)
+                    .font(Theme.font(11))
+                    .monospacedDigit()
+                    .foregroundStyle(Theme.tertiaryInk)
+                    .frame(width: 34, alignment: .trailing)
 
                 HStack(spacing: 7) {
                     Circle()
                         .fill(block.subject.color)
-                        .frame(width: 10, height: 10)
+                        .frame(width: 7, height: 7)
                     Text(block.subject.name)
-                        .font(Theme.font(compact ? 16 : 18, .bold))
-                        .foregroundStyle(block.subject.color)
+                        .font(Theme.font(compact ? 15 : 16, .medium))
+                        .foregroundStyle(Theme.ink)
                         .lineLimit(1)
-                        .minimumScaleFactor(0.7)
+                        .minimumScaleFactor(0.75)
                 }
-                .frame(width: compact ? 104 : 128, alignment: .leading)
+                .frame(width: compact ? 100 : 122, alignment: .leading)
 
                 homeworkText
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -217,8 +215,8 @@ struct HomeworkRow: View {
                         store.toggleDone(date: date, period: block.firstPeriod)
                     } label: {
                         Image(systemName: (entry?.done ?? false) ? "checkmark.circle.fill" : "circle")
-                            .font(.system(size: 21))
-                            .foregroundStyle((entry?.done ?? false) ? Color(hex: "#2AA66B") : Theme.softInk.opacity(0.6))
+                            .font(.system(size: 19, weight: .regular))
+                            .foregroundStyle((entry?.done ?? false) ? Theme.success : Theme.tertiaryInk)
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(Text("Erledigt"))
@@ -226,11 +224,10 @@ struct HomeworkRow: View {
 
                 Button(action: onEdit) {
                     Image(systemName: "plus")
-                        .font(.system(size: 15, weight: .bold))
+                        .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(.white)
-                        .frame(width: 30, height: 30)
-                        .background(Circle().fill(Theme.blue))
-                        .shadow(color: Theme.blue.opacity(0.35), radius: 3, x: 0, y: 2)
+                        .frame(width: 26, height: 26)
+                        .background(Circle().fill(Theme.accent))
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(Text("Hausaufgabe für \(block.subject.name) eintragen"))
@@ -240,7 +237,7 @@ struct HomeworkRow: View {
 
             Rectangle()
                 .fill(Theme.rule)
-                .frame(height: 1)
+                .frame(height: 0.75)
         }
         .contentShape(Rectangle())
         .onTapGesture(perform: onEdit)
@@ -249,29 +246,23 @@ struct HomeworkRow: View {
     @ViewBuilder
     private var homeworkText: some View {
         if let entry, entry.noHomework {
-            HStack(spacing: 5) {
-                Image(systemName: "checkmark")
-                    .font(.system(size: 11, weight: .bold))
-                Text("Keine Hausaufgaben")
-            }
-            .font(Theme.font(15, .medium))
-            .foregroundStyle(Color(hex: "#2AA66B"))
+            Text("Keine Hausaufgaben")
+                .font(Theme.font(14))
+                .foregroundStyle(Theme.secondaryInk)
         } else if let entry, !entry.text.isEmpty {
             Text(entry.text)
-                .font(Theme.font(15, .medium))
-                .foregroundStyle(entry.done ? Theme.softInk : Theme.ink)
-                .strikethrough(entry.done, color: Theme.softInk)
+                .font(Theme.font(14))
+                .foregroundStyle(entry.done ? Theme.tertiaryInk : Theme.ink)
+                .strikethrough(entry.done, color: Theme.tertiaryInk)
                 .lineLimit(3)
                 .fixedSize(horizontal: false, vertical: true)
         } else {
-            Text("Tippe auf +")
-                .font(Theme.font(14, .regular))
-                .foregroundStyle(Theme.softInk.opacity(0.55))
+            Color.clear.frame(height: 1)
         }
     }
 }
 
-/// Rechte Seite bzw. Notiz-Blatt: freier Platz zum Schreiben.
+/// Notizen – auf dem iPad die rechte Buchseite.
 struct NotesPage: View {
     let date: Date
     let lineHeight: CGFloat
@@ -279,36 +270,36 @@ struct NotesPage: View {
     @EnvironmentObject private var store: PlannerStore
 
     var body: some View {
-        PaperPage(showMargin: false) {
-            VStack(alignment: .leading, spacing: 6) {
+        PaperPage {
+            VStack(alignment: .leading, spacing: 8) {
                 Text("Notizen")
-                    .font(Theme.font(18, .bold))
-                    .foregroundStyle(Theme.ink)
-                    .padding(.bottom, 6)
+                    .font(Theme.font(14, .medium))
+                    .foregroundStyle(Theme.secondaryInk)
+                    .padding(.bottom, 8)
                     .overlay(alignment: .bottom) {
-                        Rectangle().fill(Theme.rule).frame(height: 1.5)
+                        Rectangle().fill(Theme.rule).frame(height: 1)
                     }
 
                 ZStack(alignment: .topLeading) {
                     RuledLines(spacing: lineHeight)
                     TextEditor(text: store.noteBinding(for: date))
-                        .font(Theme.font(16, .medium))
+                        .font(Theme.font(15))
                         .foregroundStyle(Theme.ink)
                         .scrollContentBackground(.hidden)
                         .background(Color.clear)
                         .padding(.leading, -5)
                     if store.note(for: date).isEmpty {
-                        Text("Platz für alles andere: Zettel abgeben, Sportzeug mitnehmen …")
-                            .font(Theme.font(14, .regular))
-                            .foregroundStyle(Theme.softInk.opacity(0.55))
+                        Text("Zettel abgeben, Sportzeug mitnehmen …")
+                            .font(Theme.font(14))
+                            .foregroundStyle(Theme.tertiaryInk)
                             .padding(.top, 8)
                             .allowsHitTesting(false)
                     }
                 }
             }
-            .padding(.horizontal, 18)
-            .padding(.top, 14)
-            .padding(.bottom, 10)
+            .padding(.horizontal, 20)
+            .padding(.top, 16)
+            .padding(.bottom, 12)
         }
     }
 }

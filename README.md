@@ -5,6 +5,9 @@ Eine **echte native App** (SwiftUI, kein Web-Kram): Beim Start wählst du
 weißen Seiten und schwarzen Linien – und mit einem Wisch dreht sich die Seite
 in 3-D um zum nächsten Schultag.
 
+Die Oberfläche ist bewusst ruhig gehalten: Systemschrift, viel Weißraum, dünne
+Linien statt bunter Kästen, Farbe nur dort, wo sie etwas bedeutet (die Fächer).
+
 Das Projekt liegt in `ios/` und lässt sich in Xcode öffnen, auf dem iPad/iPhone
 starten und später über den App Store veröffentlichen.
 
@@ -35,6 +38,15 @@ starten und später über den App Store veröffentlichen.
   Schultag steht da. Wochenenden werden übersprungen, `Heute` springt zurück.
 - Auf dem iPad ist rechts die zweite Buchseite für **Notizen**, auf dem iPhone
   gibt es dafür den Knopf *Notizen*.
+
+**Fokus-Musik**
+- Der kleine Notenknopf oben rechts (und die Taste auf der Startseite) öffnet die
+  Musik: abspielen, anhalten, Lautstärke.
+- Ruhige Musik zum Lernen: warme Akkordfläche, sparsame Melodie, weicher Beat,
+  ein Hauch Vinyl-Rauschen und Hallraum.
+- Die Musik wird **live in der App berechnet** (`AVAudioEngine` +
+  eigener Synthesizer) – keine Audiodateien, kein Internet, kein Download,
+  und sie wiederholt sich nie exakt.
 
 Alles wird automatisch auf dem Gerät gespeichert (JSON-Datei im
 Dokumente-Ordner der App) – ohne Internet, ohne Konto.
@@ -89,6 +101,9 @@ dabei: `ios/Schulplaner/Assets.xcassets/AppIcon.appiconset/AppIcon.png`.
 | `ios/Schulplaner/Views/HomeworkPageView.swift` | Eine Heftseite mit Linien und Plus-Knopf |
 | `ios/Schulplaner/Views/HomeworkEditorView.swift` | Hausaufgabe eintippen |
 | `ios/Schulplaner/Views/PageCurlPager.swift` | Das 3-D-Blättern |
+| `ios/Schulplaner/Audio/Synth.swift` | Der Musik-Synthesizer (Sample für Sample) |
+| `ios/Schulplaner/Audio/MusicEngine.swift` | Abspielen, Lautstärke, Audio-Session |
+| `ios/Schulplaner/Views/MusicControl.swift` | Knopf und Regler für die Musik |
 | `ios/Tools/` | Hilfsskripte: App-Icon und Xcode-Projekt erzeugen |
 | `web-legacy/` | die alte Web-Version (wird nicht mehr weiterentwickelt) |
 
@@ -96,7 +111,9 @@ Neue Swift-Dateien fügst du am einfachsten direkt in Xcode hinzu. Alternativ
 legst du sie im Ordner ab und führst `python3 ios/Tools/make_xcodeproj.py` aus –
 das Skript baut die Projektdatei neu.
 
-## Noch nicht dabei
+## Gestaltung
 
-Die Lo-Fi-Entspannungsmusik aus der alten Web-Version ist in der nativen App
-noch nicht enthalten. Sag Bescheid, wenn sie mit rein soll.
+- Systemschrift (San Francisco) in wenigen, klaren Abstufungen.
+- Ruhiger heller Hintergrund, weiße Flächen mit 1-Pixel-Rand statt schweren Schatten.
+- Fachfarben gedeckt und nur als schmaler Balken bzw. Punkt – nicht als bunte Kacheln.
+- Nur ein Akzentblau: der Plus-Knopf, die Auswahl, der heutige Tag.

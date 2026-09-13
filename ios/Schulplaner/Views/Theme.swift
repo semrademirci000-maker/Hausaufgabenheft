@@ -1,44 +1,44 @@
 import SwiftUI
 
-/// Farben, Schriften und die Fach-Farbpalette der App.
+/// Farben, Schriften und Fach-Palette – ruhig, klar, zurückhaltend.
 enum Theme {
-    /// Papierweiß der Heftseiten.
-    static let paper = Color(red: 0.996, green: 0.992, blue: 0.976)
-    /// Hintergrund: Schreibtisch.
-    static let deskTop = Color(red: 0.945, green: 0.914, blue: 0.859)
-    static let deskBottom = Color(red: 0.859, green: 0.816, blue: 0.761)
-    /// Bucheinband.
-    static let cover = Color(red: 0.208, green: 0.298, blue: 0.541)
-    /// Schriftfarbe.
-    static let ink = Color(red: 0.106, green: 0.114, blue: 0.133)
-    static let softInk = Color(red: 0.392, green: 0.400, blue: 0.435)
-    /// Die schwarzen Linien auf dem Papier.
-    static let rule = Color.black.opacity(0.45)
-    /// Roter Rand links auf der Seite.
-    static let margin = Color(red: 0.839, green: 0.353, blue: 0.322).opacity(0.55)
-    /// Blau für den Plus-Knopf.
-    static let blue = Color(red: 0.118, green: 0.435, blue: 0.933)
+    /// Hintergrund der App.
+    static let background = Color(red: 0.957, green: 0.953, blue: 0.945)
+    /// Weiße Flächen: Karten, Tabelle.
+    static let surface = Color.white
+    /// Papier der Heftseiten.
+    static let paper = Color(red: 0.996, green: 0.996, blue: 0.988)
+    /// Buchrücken und Einband – neutrales Dunkelgrau.
+    static let cover = Color(red: 0.157, green: 0.176, blue: 0.208)
+    /// Schrift.
+    static let ink = Color(red: 0.098, green: 0.102, blue: 0.118)
+    static let secondaryInk = Color(red: 0.408, green: 0.416, blue: 0.443)
+    static let tertiaryInk = Color(red: 0.596, green: 0.604, blue: 0.627)
+    /// Linien auf dem Papier – schwarz, aber fein.
+    static let rule = Color.black.opacity(0.28)
+    /// Trennlinien und Ränder.
+    static let hairline = Color.black.opacity(0.09)
+    /// Akzentfarbe (Plus-Knopf, Auswahl).
+    static let accent = Color(red: 0.153, green: 0.412, blue: 0.831)
+    /// Erledigt-Haken.
+    static let success = Color(red: 0.153, green: 0.514, blue: 0.376)
 
-    static var desk: LinearGradient {
-        LinearGradient(colors: [deskTop, deskBottom], startPoint: .top, endPoint: .bottom)
+    /// Systemschrift – klar und unaufgeregt.
+    static func font(_ size: CGFloat, _ weight: Font.Weight = .regular) -> Font {
+        .system(size: size, weight: weight)
     }
 
-    /// Freundliche, runde Schrift – kindgerecht, aber nicht albern.
-    static func font(_ size: CGFloat, _ weight: Font.Weight = .semibold) -> Font {
-        .system(size: size, weight: weight, design: .rounded)
-    }
-
-    /// Auswahlfarben für die Fächer.
+    /// Gedeckte Farben für die Fächer.
     static let palette: [String] = [
-        "#2F6FED", "#E0483F", "#2AA66B", "#F29D1B",
-        "#A05AD4", "#12A3B4", "#E4529F", "#7A8B2F",
-        "#C2601C", "#3F5AA6", "#0F8E8E", "#B07A12",
-        "#8B5E3C", "#5A5A6E", "#D93E6F", "#1F9A5B"
+        "#3B6FD1", "#C0453C", "#2E8B62", "#C2801F",
+        "#7A5AA8", "#2A8A99", "#B05576", "#5C7A3F",
+        "#9A6A3C", "#4A5568", "#1F7A6B", "#8A6D1F",
+        "#7B4B3A", "#5A5F7A", "#A34E5E", "#3C7A5A"
     ]
 }
 
 extension Color {
-    /// Erzeugt eine Farbe aus einem Hex-String wie "#2F6FED".
+    /// Erzeugt eine Farbe aus einem Hex-String wie "#3B6FD1".
     init(hex: String) {
         var string = hex.trimmingCharacters(in: .whitespacesAndNewlines)
         if string.hasPrefix("#") { string.removeFirst() }
@@ -57,5 +57,29 @@ extension Color {
             alpha = 1
         }
         self.init(.sRGB, red: red, green: green, blue: blue, opacity: alpha)
+    }
+}
+
+/// Karte mit dünnem Rand statt kräftigem Schatten.
+struct CardBackground: ViewModifier {
+    var cornerRadius: CGFloat = 16
+
+    func body(content: Content) -> some View {
+        content
+            .background(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .fill(Theme.surface)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .strokeBorder(Theme.hairline, lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 3)
+    }
+}
+
+extension View {
+    func card(cornerRadius: CGFloat = 16) -> some View {
+        modifier(CardBackground(cornerRadius: cornerRadius))
     }
 }
