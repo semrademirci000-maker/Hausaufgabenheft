@@ -59,6 +59,48 @@ jobs:
           path: Schulplaner-Simulator.zip
           retention-days: 30
 
+      - name: App in der Cloud zum Antippen bereitstellen (Appetize)
+        env:
+          APPETIZE_TOKEN: ${{ secrets.APPETIZE_TOKEN }}
+          APPETIZE_PUBLIC_KEY: ${{ secrets.APPETIZE_PUBLIC_KEY }}
+        run: |
+          if [ -z "$APPETIZE_TOKEN" ]; then
+            echo "Kein APPETIZE_TOKEN hinterlegt – Schritt wird übersprungen."
+            echo "### App im Browser testen" >> $GITHUB_STEP_SUMMARY
+            echo "Noch kein Appetize-Token hinterlegt. Anleitung steht im README unter 'Testen ohne Mac'." >> $GITHUB_STEP_SUMMARY
+            exit 0
+          fi
+
+          if [ -n "$APPETIZE_PUBLIC_KEY" ]; then
+            URL="https://api.appetize.io/v1/apps/$APPETIZE_PUBLIC_KEY"
+          else
+            URL="https://api.appetize.io/v1/apps"
+          fi
+
+          ANTWORT=$(curl -sS -X POST "$URL" \
+            -H "X-API-KEY: $APPETIZE_TOKEN" \
+            -F "file=@Schulplaner-Simulator.zip" \
+            -F "platform=ios")
+
+          echo "$ANTWORT" | python3 -c "
+import json, sys, os
+try:
+    data = json.loads(sys.stdin.read())
+except Exception:
+    print('Antwort von Appetize nicht lesbar.'); raise SystemExit(0)
+link = data.get('publicURL', '')
+key = data.get('publicKey', '')
+summary = os.environ.get('GITHUB_STEP_SUMMARY')
+text = '### App im Browser testen\n\n'
+if link:
+    text += 'Hier antippen: ' + link + '\n\nDauerhafter Schlüssel (als Secret APPETIZE_PUBLIC_KEY speichern): ' + key + '\n'
+else:
+    text += 'Appetize meldete: ' + json.dumps(data)[:400] + '\n'
+print(text)
+if summary:
+    open(summary, 'a').write(text)
+"
+
       - name: Screenshots zum Herunterladen bereitstellen
         if: always()
         uses: actions/upload-artifact@v4
