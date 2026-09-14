@@ -1,11 +1,14 @@
 import SwiftUI
 import UIKit
 
-/// Blättern wie in einem echten Buch: Wischen dreht die Seite in 3-D um.
-/// (UIPageViewController mit `pageCurl` – das ist die echte Buch-Animation von iOS.)
-struct PageCurlPager<Content: View>: UIViewControllerRepresentable {
+/// Das aufgeschlagene Buch: zwei Seiten nebeneinander, Falz in der Mitte.
+/// Beim Wischen dreht sich das Blatt in echtem 3-D um die Mitte –
+/// das ist Apples eigene Buch-Animation (`UIPageViewController`, `pageCurl`).
+struct BookPager<Content: View>: UIViewControllerRepresentable {
+    /// Anzahl aller Seiten (jede Seite ist ein Tag).
     let pageCount: Int
-    @Binding var index: Int
+    /// Index der linken Seite – immer geradzahlig.
+    @Binding var leftIndex: Int
     let content: (Int) -> Content
 
     func makeCoordinator() -> Coordinator {
@@ -16,16 +19,13 @@ struct PageCurlPager<Content: View>: UIViewControllerRepresentable {
         let controller = UIPageViewController(
             transitionStyle: .pageCurl,
             navigationOrientation: .horizontal,
-            options: [.spineLocation: UIPageViewController.SpineLocation.min.rawValue]
+            options: [.spineLocation: UIPageViewController.SpineLocation.mid.rawValue]
         )
         controller.dataSource = context.coordinator
         controller.delegate = context.coordinator
-        controller.isDoubleSided = false
+        controller.isDoubleSided = true
         controller.view.backgroundColor = .clear
-
-        if let first = context.coordinator.page(at: index) {
-            controller.setViewControllers([first], direction: .forward, animated: false)
-        }
+        context.coordinator.apply(spread: leftIndex, to: controller, animated: false)
         return controller
     }
 
@@ -34,21 +34,19 @@ struct PageCurlPager<Content: View>: UIViewControllerRepresentable {
         context.coordinator.refreshPages()
 
         let shown = controller.viewControllers?.first.flatMap { context.coordinator.index(of: $0) }
-        if shown != index, let target = context.coordinator.page(at: index) {
-            let direction: UIPageViewController.NavigationDirection = (shown ?? 0) <= index ? .forward : .reverse
-            controller.setViewControllers([target], direction: direction, animated: false)
+        if shown != leftIndex {
+            context.coordinator.apply(spread: leftIndex, to: controller, animated: false)
         }
     }
 
     final class Coordinator: NSObject, UIPageViewControllerDataSource, UIPageViewControllerDelegate {
-        var parent: PageCurlPager
+        var parent: BookPager
         private var pages: [Int: UIHostingController<Content>] = [:]
 
-        init(_ parent: PageCurlPager) {
+        init(_ parent: BookPager) {
             self.parent = parent
         }
 
-        /// Seite für einen Index – wird gemerkt, damit das Blättern flüssig bleibt.
         func page(at index: Int) -> UIHostingController<Content>? {
             guard index >= 0, index < parent.pageCount else { return nil }
             if let existing = pages[index] {
@@ -65,15 +63,25 @@ struct PageCurlPager<Content: View>: UIViewControllerRepresentable {
             pages.first { $0.value === controller }?.key
         }
 
-        /// Inhalte aktualisieren, wenn sich Hausaufgaben oder Stundenplan ändern.
         func refreshPages() {
             for (index, host) in pages where index < parent.pageCount {
                 host.rootView = parent.content(index)
             }
         }
 
+        /// Zeigt die Doppelseite, die links mit `spread` beginnt.
+        func apply(spread: Int, to controller: UIPageViewController, animated: Bool) {
+            let left = max(0, spread - (spread % 2))
+            guard let leftPage = page(at: left) else { return }
+            var shown = [leftPage]
+            if let rightPage = page(at: left + 1) {
+                shown.append(rightPage)
+            }
+            controller.setViewControllers(shown, direction: .forward, animated: animated)
+        }
+
         private func dropDistantPages(around index: Int) {
-            pages = pages.filter { abs($0.key - index) <= 2 }
+            pages = pages.filter { abs($0.key - index) <= 4 }
         }
 
         func pageViewController(_ pageViewController: UIPageViewController,
@@ -95,10 +103,11 @@ struct PageCurlPager<Content: View>: UIViewControllerRepresentable {
             guard completed,
                   let shown = pageViewController.viewControllers?.first,
                   let current = index(of: shown) else { return }
-            if parent.index != current {
-                parent.index = current
+            let left = current - (current % 2)
+            if parent.leftIndex != left {
+                parent.leftIndex = left
             }
-            dropDistantPages(around: current)
+            dropDistantPages(around: left)
         }
     }
 }

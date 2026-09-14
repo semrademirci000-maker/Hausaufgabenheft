@@ -19,15 +19,3 @@ struct RuledLines: View {
         .allowsHitTesting(false)
     }
 }
-
-/// Eine Heftseite.
-struct PaperPage<Content: View>: View {
-    @ViewBuilder var content: () -> Content
-
-    var body: some View {
-        ZStack(alignment: .topLeading) {
-            Theme.paper
-            content()
-        }
-    }
-}
