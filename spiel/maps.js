@@ -240,7 +240,8 @@
       { kind: 'bench', x: 22.3, y: 25.6 },
       { kind: 'tree', x: 17.5, y: 21.2 },
       { kind: 'tree', x: 22.5, y: 21.2 },
-      { kind: 'lamp', x: 25.4, y: 24.6 }
+      { kind: 'lamp', x: 25.4, y: 24.6 },
+      { kind: 'stall', x: 25.6, y: 23.2 }
     ];
 
     return {
@@ -253,8 +254,21 @@
       triggers: [],
       props: props,
       wanderSpots: [
-        { x: 12, y: 18 }, { x: 31, y: 12 }, { x: 18, y: 22 }, { x: 34, y: 19 }
-      ]
+        { x: 12, y: 18, wer: 'buerger' },
+        { x: 31, y: 12, wer: 'buerger5' },
+        { x: 18, y: 12, wer: 'buerger2' },
+        { x: 34, y: 19, wer: 'buerger3' },
+        { x: 26, y: 26, wer: 'buerger6' },
+        { x: 8, y: 12, wer: 'buerger4' },
+        { x: 37, y: 24, wer: 'buerger' },
+        { x: 14, y: 26, wer: 'buerger2' },
+        { x: 30, y: 18, wer: 'buerger6' },
+        { x: 20, y: 18, wer: 'buerger3' },
+        { x: 5, y: 19, wer: 'buerger4' },
+        { x: 39, y: 12, wer: 'buerger5' }
+      ],
+      /* Der Haendler steht an seinem Stand, gleich neben dem Auto. */
+      haendler: { x: 26.9, y: 23.9 }
     };
   }
 

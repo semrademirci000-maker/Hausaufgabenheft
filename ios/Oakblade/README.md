@@ -69,6 +69,16 @@ rechnet `GameWorld.advance(to:)` erst das Spiel weiter und danach wird gezeichne
    dazu ein weißer Bogen als Schwung.
 4. Zum Schluss Herzen, Zähler und die Textbox.
 
+### Münzen, Laden und Aufwertungen
+
+Zombies lassen Münzen fallen (`dropCoins`), die von selbst zum Ritter fliegen.
+In der Stadt steht Händler Bosko an seinem Marktstand: `ladenOeffnen(ersterBesuch:)`
+baut das Angebot aus `schwertStufen` und `ruestungStufen` zusammen, `kaufen(_:_:)`
+zieht die Münzen ab. Jede Schwertstufe macht einen Schaden mehr, jede Rüstungsstufe
+gibt ein Herz dazu – und beides ändert sichtbar die Farbe von Klinge und Rüstung
+(`Art.knightFrames(level:)`, `Art.swordImage(level:)`). Alles wird in den
+`UserDefaults` gespeichert.
+
 ### Bosse und Herzen
 
 Die Herzen bestehen aus zwei Hälften: ein Zombietreffer kostet eine Hälfte, ein

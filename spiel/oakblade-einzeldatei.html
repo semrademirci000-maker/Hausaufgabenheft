@@ -898,6 +898,85 @@ html, body {
     return c;
   }
 
+
+  /* ---- Muenzen und Laden ---------------------------------------- */
+
+  function makeCoin(schmal) {
+    var c = mk(8, 8), g = c.getContext('2d');
+    var b = schmal ? 2 : 0;
+    g.fillStyle = '#8a6a1a'; g.fillRect(1 + b, 1, 6 - b * 2, 6);
+    g.fillStyle = '#ffd24a'; g.fillRect(1 + b, 2, 6 - b * 2, 4);
+    g.fillStyle = '#fff0b4'; g.fillRect(2 + b, 2, 2 - (schmal ? 1 : 0), 2);
+    g.fillStyle = '#d8a43a'; g.fillRect(2 + b, 5, 4 - b * 2, 1);
+    return c;
+  }
+
+  /* Marktstand des Haendlers */
+  function makeStall() {
+    var c = mk(34, 30), g = c.getContext('2d');
+    g.fillStyle = '#5b3d22'; g.fillRect(2, 14, 30, 12);
+    g.fillStyle = '#7a5327'; g.fillRect(2, 14, 30, 3);
+    g.fillStyle = '#3d2a18'; g.fillRect(3, 26, 3, 4); g.fillRect(28, 26, 3, 4);
+    /* Markise */
+    for (var x = 0; x < 34; x += 6) {
+      g.fillStyle = '#c85a4a'; g.fillRect(x, 2, 3, 10);
+      g.fillStyle = '#efe6cf'; g.fillRect(x + 3, 2, 3, 10);
+    }
+    g.fillStyle = '#5b3d22'; g.fillRect(0, 0, 34, 3);
+    g.fillStyle = '#3d2a18'; g.fillRect(1, 3, 2, 12); g.fillRect(31, 3, 2, 12);
+    /* Ware auf dem Tresen */
+    g.fillStyle = '#c9d2e0'; g.fillRect(7, 10, 2, 5);
+    g.fillStyle = '#d8a43a'; g.fillRect(6, 14, 4, 1);
+    g.fillStyle = '#9aa4b8'; g.fillRect(22, 9, 7, 6);
+    g.fillStyle = '#cfd8e6'; g.fillRect(23, 10, 5, 3);
+    return c;
+  }
+
+  /* Der Ritter in besserer Ruestung und mit besserem Schwert */
+  var RUESTUNGEN = [
+    { a: '#d3dbe8', b: '#9aa4b8', c: '#646e82' },   /* Eisen */
+    { a: '#e8c48a', b: '#b3853f', c: '#7a5a28' },   /* Bronze */
+    { a: '#eaf1fb', b: '#b6c2d6', c: '#7d8a9e' },   /* Silber */
+    { a: '#ffe08a', b: '#d8a43a', c: '#96702a' }    /* Gold */
+  ];
+  var KLINGEN = [
+    { w: '#eef3fb', g: '#aab6c8' },
+    { w: '#ffffff', g: '#c4cedd' },
+    { w: '#dff0ff', g: '#9ec6e8' },
+    { w: '#ffe8a0', g: '#d8a43a' }
+  ];
+
+  var knightCache = {}, swordCache = {};
+
+  function knightFor(stufe) {
+    stufe = Math.max(0, Math.min(RUESTUNGEN.length - 1, stufe || 0));
+    if (knightCache[stufe]) return knightCache[stufe];
+    var r = RUESTUNGEN[stufe];
+    var pal = {
+      o: KP.o, a: r.a, b: r.b, c: r.c, t: KP.t, u: KP.u,
+      s: KP.s, r: KP.r, k: KP.k, n: KP.n
+    };
+    var side = [sprite(knightSide, pal), sprite(knightSide2, pal)];
+    knightCache[stufe] = {
+      down: [sprite(knightDown, pal), sprite(knightDown2, pal)],
+      up: [sprite(knightUp, pal), sprite(knightUp2, pal)],
+      right: side,
+      left: [flipX(side[0]), flipX(side[1])]
+    };
+    return knightCache[stufe];
+  }
+
+  function swordFor(stufe) {
+    stufe = Math.max(0, Math.min(KLINGEN.length - 1, stufe || 0));
+    if (swordCache[stufe]) return swordCache[stufe];
+    var k = KLINGEN[stufe];
+    swordCache[stufe] = sprite([
+      '..w..', '..w..', '.www.', '.wgw.', '.wgw.', '.wgw.', '.wgw.',
+      '.wgw.', '.wgw.', 'hhhhh', '..n..', '..n..', '..n..', '..h..'
+    ], { w: k.w, g: k.g, h: '#d8a43a', n: '#6b4a2b' });
+    return swordCache[stufe];
+  }
+
   /* =========================================================
      KACHELN (16x16) – Wald, Haus, Stadt
      ========================================================= */
@@ -1197,6 +1276,10 @@ html, body {
     spider: [makeSpider(0), makeSpider(1)],
     crown: makeCrown(),
     treant: makeTreant(),
+    coin: [makeCoin(false), makeCoin(true)],
+    stall: makeStall(),
+    knightFor: knightFor,
+    swordFor: swordFor,
     withEars: withEars,
     actor: buildActor,
     tiles: TILES,
@@ -1451,7 +1534,8 @@ html, body {
       { kind: 'bench', x: 22.3, y: 25.6 },
       { kind: 'tree', x: 17.5, y: 21.2 },
       { kind: 'tree', x: 22.5, y: 21.2 },
-      { kind: 'lamp', x: 25.4, y: 24.6 }
+      { kind: 'lamp', x: 25.4, y: 24.6 },
+      { kind: 'stall', x: 25.6, y: 23.2 }
     ];
 
     return {
@@ -1464,8 +1548,21 @@ html, body {
       triggers: [],
       props: props,
       wanderSpots: [
-        { x: 12, y: 18 }, { x: 31, y: 12 }, { x: 18, y: 22 }, { x: 34, y: 19 }
-      ]
+        { x: 12, y: 18, wer: 'buerger' },
+        { x: 31, y: 12, wer: 'buerger5' },
+        { x: 18, y: 12, wer: 'buerger2' },
+        { x: 34, y: 19, wer: 'buerger3' },
+        { x: 26, y: 26, wer: 'buerger6' },
+        { x: 8, y: 12, wer: 'buerger4' },
+        { x: 37, y: 24, wer: 'buerger' },
+        { x: 14, y: 26, wer: 'buerger2' },
+        { x: 30, y: 18, wer: 'buerger6' },
+        { x: 20, y: 18, wer: 'buerger3' },
+        { x: 5, y: 19, wer: 'buerger4' },
+        { x: 39, y: 12, wer: 'buerger5' }
+      ],
+      /* Der Haendler steht an seinem Stand, gleich neben dem Auto. */
+      haendler: { x: 26.9, y: 23.9 }
     };
   }
 
@@ -1599,6 +1696,12 @@ html, body {
     select: function () { if (!on || !ctx) return; note(660, ctx.currentTime, 0.05, 'square', 0.12); note(990, ctx.currentTime + 0.05, 0.07, 'square', 0.1); },
     door: function () { if (!on || !ctx) return; noise(ctx.currentTime, 0.18, 0.12); note(180, ctx.currentTime, 0.15, 'triangle', 0.1); },
     horn: function () { if (!on || !ctx) return; var t = ctx.currentTime; note(392, t, 0.3, 'square', 0.16); note(330, t, 0.3, 'square', 0.14); },
+    coin: function () {
+      if (!on || !ctx) return;
+      var t = ctx.currentTime;
+      note(1046, t, 0.05, 'square', 0.12);
+      note(1568, t + 0.05, 0.09, 'square', 0.1);
+    },
     heal: function () { if (!on || !ctx) return; var t = ctx.currentTime; note(523, t, 0.1, 'triangle', 0.16); note(659, t + 0.09, 0.1, 'triangle', 0.16); note(784, t + 0.18, 0.22, 'triangle', 0.16); }
   };
 
@@ -1786,6 +1889,30 @@ html, body {
     buerger: {
       name: 'Stadtmensch', rolle: 'Buerger', color: '#c8c8d8', kurz: 'Buerger',
       pal: { hair: '#4a3a2a', skin: '#e8b58a', shirt: '#6b7a8a', shirtDark: '#55606e', pants: '#3b3b46', boots: '#2a2a33' }
+    },
+    buerger2: {
+      name: 'Baeckerin Rosa', rolle: 'Baeckerin', color: '#f0b0c0', kurz: 'Rosa',
+      pal: { hair: '#8a3f5a', skin: '#f0c191', shirt: '#e0a0b8', shirtDark: '#c07f98', pants: '#efe6cf', boots: '#7a5327' }
+    },
+    buerger3: {
+      name: 'Alter Jorin', rolle: 'Rentner', color: '#c0c0b0', kurz: 'Jorin',
+      pal: { hair: '#dcdcdc', skin: '#e0b48a', shirt: '#7a6a5a', shirtDark: '#5f5348', pants: '#4a4238', boots: '#33261a' }
+    },
+    buerger4: {
+      name: 'Nell', rolle: 'Botin', color: '#8fd0e0', kurz: 'Nell',
+      pal: { hair: '#2a4a8a', skin: '#c08a5a', shirt: '#4a9bb8', shirtDark: '#377a92', pants: '#3b3b46', boots: '#2a2a33' }
+    },
+    buerger5: {
+      name: 'Wache Brom', rolle: 'Stadtwache', color: '#b0b8c8', kurz: 'Brom',
+      pal: { hair: '#3a3a44', skin: '#e8b58a', shirt: '#5a6478', shirtDark: '#454e60', pants: '#3b4250', boots: '#2a2f3a' }
+    },
+    buerger6: {
+      name: 'Kleiner Tino', rolle: 'Stadtkind', color: '#e0d080', kurz: 'Tino',
+      pal: { hair: '#c8a03a', skin: '#f5cfa8', shirt: '#7ac45a', shirtDark: '#5da040', pants: '#8a5ac4', boots: '#5b4326' }
+    },
+    haendler: {
+      name: 'Haendler Bosko', rolle: 'Waffenschmied', color: '#ffd24a', kurz: 'Bosko',
+      pal: { hair: '#5a3a1a', skin: '#d8a070', shirt: '#8a5a2a', shirtDark: '#6b4420', pants: '#4a3a2a', boots: '#33261a' }
     }
   };
 
@@ -1889,7 +2016,22 @@ html, body {
     'Ein Ritter! Mit echtem Schwert! Machen Sie bitte kein Loch in die Strasse.',
     'Frisches Brot, zwei Kupfer. Fuer Helden drei, weil Helden immer Hunger haben.',
     'Zombies? Hier? Nein nein, die bleiben schoen im Wald. Hoffentlich.',
-    'Schoenes Auto haben Sie da. Faehrt das auch bergauf?'
+    'Schoenes Auto haben Sie da. Faehrt das auch bergauf?',
+    'Beim Haendler am Brunnen gibt es Ruestungen. Der nimmt nur Muenzen.',
+    'Mein Neffe sagt, im Wald waere ein Werwolf. Ich sage: zu viel Fantasie.',
+    'Wenn Sie Muenzen haben - ausgeben! Liegen lassen macht sie nicht mehr.',
+    'Heute ist Markt. Also, eigentlich ist immer Markt.',
+    'Sie sehen muede aus. Und ein bisschen nach Zombie.',
+    'Guten Tag! Schoenes Wetter, oder? Sagen Sie bitte ja, ich uebe Small Talk.',
+    'Ich haette gern so ein Schwert. Meine Mutter sagt nein.',
+    'Die Strassenlaternen sind neu. Kosten haben die gekostet!'
+  ];
+
+  /* Was der Haendler so sagt */
+  var SHOP_LINES = [
+    'Aha! Ein Ritter mit Muenzen in der Tasche. Willkommen!',
+    'Frisch geschmiedet, alles ehrlich. Was darf es sein?',
+    'Du siehst aus, als koenntest du was Schaerferes gebrauchen.'
   ];
 
   /* ---------- Die Bosse ---------- */
@@ -1940,6 +2082,7 @@ html, body {
   };
 
   var Chat = {
+    shopLines: SHOP_LINES,
     bosse: BOSSE,
     bossLines: BOSS_LINES,
     people: PEOPLE,
@@ -2002,7 +2145,7 @@ html, body {
   'use strict';
 
   var TILE = 16, VW = 320, VH = 240;
-  var FASSUNG = 10;                    /* steht unten auf dem Titelbild */
+  var FASSUNG = 11;                    /* steht unten auf dem Titelbild */
   var cv = document.getElementById('game');
   var ctx = cv.getContext('2d');
   ctx.imageSmoothingEnabled = false;
@@ -2019,6 +2162,7 @@ html, body {
     kills: 0, time: 0, fade: 0, fadeTo: null,
     spawnT: 4, shake: 0, hint: '', hintT: 0,
     boss: null, bossQueue: [], bossesBeaten: 0, killsSinceBoss: 0,
+    coins: 0, swordLevel: 0, armorLevel: 0,
     drive: null, overT: 0, lastSave: 0
   };
   global.GAME = G;
@@ -2203,9 +2347,13 @@ html, body {
     if (key === 'stadt') {
       for (i = 0; i < m.wanderSpots.length; i++) {
         var w = m.wanderSpots[i];
-        var n = addNPC('buerger', w.x, w.y, 'down');
+        var n = addNPC(w.wer || 'buerger', w.x, w.y, 'down');
         n.wander = true; n.wt = Math.random() * 2;
         n.line = Chat.cityLines[i % Chat.cityLines.length];
+      }
+      if (m.haendler) {
+        var h = addNPC('haendler', m.haendler.x, m.haendler.y, 'down');
+        h.shop = true;
       }
     }
 
@@ -2219,7 +2367,7 @@ html, body {
     var spr = kind === 'tree' ? S.tree : kind === 'pine' ? S.pine : kind === 'bush' ? S.bush :
               kind === 'rock' ? S.rock : kind === 'lamp' ? S.lamp : kind === 'sign' ? S.sign :
               kind === 'car' ? S.car : kind === 'fountain' ? S.fountain :
-              kind === 'bench' ? S.bench : null;
+              kind === 'bench' ? S.bench : kind === 'stall' ? S.stall : null;
     var p = { type: 'prop', kind: kind, x: x * TILE, y: y * TILE, spr: spr,
               text: data && data.text };
     G.ents.push(p);
@@ -2228,6 +2376,7 @@ html, body {
     if (kind === 'sign') G.blocks.push({ l: p.x - 12, r: p.x + 12, t: p.y - 6, b: p.y });
     if (kind === 'fountain') G.blocks.push({ l: p.x - 16, r: p.x + 16, t: p.y - 14, b: p.y });
     if (kind === 'bench') G.blocks.push({ l: p.x - 10, r: p.x + 10, t: p.y - 5, b: p.y });
+    if (kind === 'stall') G.blocks.push({ l: p.x - 17, r: p.x + 17, t: p.y - 10, b: p.y });
     return p;
   }
 
@@ -2362,7 +2511,7 @@ html, body {
       if (z.hitId === p.swingId) continue;
       if (z.x + 6 > box.l && z.x - 6 < box.r && z.y > box.t && z.y - 14 < box.b) {
         z.hitId = p.swingId;
-        damageZombie(z, 1, z.x - p.x, z.y - p.y);
+        damageZombie(z, 1 + G.swordLevel, z.x - p.x, z.y - p.y);
       }
     }
   }
@@ -2377,8 +2526,10 @@ html, body {
       z.dying = 0.001;
       if (A) A.dead();
       if (z.boss) {
+        muenzenAbwerfen(z.x, z.y - 8, 12 + ((Math.random() * 8) | 0));
         bossBesiegt(z);
       } else {
+        muenzenAbwerfen(z.x, z.y - 8, 1 + ((Math.random() * 3) | 0));
         G.kills++;
         G.killsSinceBoss++;
         G.killsHeute = (G.killsHeute || 0) + 1;
@@ -2475,6 +2626,46 @@ html, body {
     G.shake = 4;
     if (A) A.hurt();
     if (p.hp <= 0) { p.hp = 0; gameOver(); }
+  }
+
+  /* ================= Muenzen ================= */
+
+  function muenzenAbwerfen(x, y, anzahl) {
+    for (var i = 0; i < anzahl; i++) {
+      var w = Math.random() * Math.PI * 2;
+      G.ents.push({
+        type: 'coin', x: x, y: y, t: 0, anim: Math.random() * 2,
+        vx: Math.cos(w) * (20 + Math.random() * 30),
+        vy: Math.sin(w) * (14 + Math.random() * 20) - 10
+      });
+    }
+  }
+
+  function updateCoin(c, dt) {
+    c.t += dt;
+    c.anim += dt * 6;
+    var p = G.player;
+    var dx = p.x - c.x, dy = (p.y - 8) - c.y;
+    var dd = Math.sqrt(dx * dx + dy * dy) || 1;
+
+    if (c.t < 0.3) {
+      /* kurz wegspringen */
+      c.x += c.vx * dt;
+      c.y += c.vy * dt;
+      c.vy += 90 * dt;
+    } else {
+      /* dann fliegt sie von selbst zum Ritter */
+      var sp = 110 + c.t * 120;
+      c.x += dx / dd * sp * dt;
+      c.y += dy / dd * sp * dt;
+    }
+
+    if (dd < 11) {
+      c.weg = true;
+      G.coins++;
+      if (A) A.coin();
+      save();
+    }
   }
 
   /* ================= Bosse ================= */
@@ -2671,6 +2862,80 @@ html, body {
     n.anim += dt * (n.moving ? 6 : 0);
   }
 
+  /* ================= Der Laden ================= */
+
+  var SCHWERT_STUFEN = [
+    { name: 'Geschaerfte Klinge', preis: 25 },
+    { name: 'Stahlklinge', preis: 60 },
+    { name: 'Goldene Klinge', preis: 120 }
+  ];
+  var RUESTUNG_STUFEN = [
+    { name: 'Lederwams', preis: 30 },
+    { name: 'Kettenhemd', preis: 70 },
+    { name: 'Goldene Ruestung', preis: 140 }
+  ];
+
+  function ladenOeffnen(ersterBesuch) {
+    var h = Chat.people.haendler;
+    var opts = [];
+    var sw = SCHWERT_STUFEN[G.swordLevel];
+    var ru = RUESTUNG_STUFEN[G.armorLevel];
+
+    if (sw) {
+      opts.push({ t: 'Schwert: ' + sw.name + ' - ' + sw.preis + ' Muenzen',
+                  go: function () { kaufen('schwert', sw); } });
+    }
+    if (ru) {
+      opts.push({ t: 'Ruestung: ' + ru.name + ' - ' + ru.preis + ' Muenzen',
+                  go: function () { kaufen('ruestung', ru); } });
+    }
+    if (G.player.hp < G.player.maxhp) {
+      opts.push({ t: 'Eintopf, alle Herzen voll - 10 Muenzen',
+                  go: function () { kaufen('eintopf', { name: 'Eintopf', preis: 10 }); } });
+    }
+    opts.push({ t: 'Nur schauen, danke.', r: 'Kein Problem. Komm wieder, wenn die Tasche klimpert!' });
+
+    var text = ersterBesuch
+      ? Chat.shopLines[(Math.random() * Chat.shopLines.length) | 0]
+      : 'Sonst noch was?';
+    text += '  (Du hast ' + G.coins + ' Muenzen)';
+
+    D.push(h.name + ' (' + h.rolle + ')', h.color, text, opts);
+    D.begin();
+  }
+
+  function kaufen(art, stufe) {
+    var h = Chat.people.haendler;
+    if (G.coins < stufe.preis) {
+      D.push(h.name, h.color,
+             'Dafuer fehlen dir ' + (stufe.preis - G.coins) +
+             ' Muenzen. Im Wald liegen genug herum - in Zombies!');
+      ladenOeffnen(false);
+      return;
+    }
+    G.coins -= stufe.preis;
+
+    if (art === 'schwert') {
+      G.swordLevel++;
+      D.push(h.name, h.color, 'Die ' + stufe.name + ' gehoert dir. Damit haust du haerter zu!');
+      hint('Schwert aufgewertet!');
+      if (A) A.select();
+    } else if (art === 'ruestung') {
+      G.armorLevel++;
+      G.player.maxhp = Math.min(20, G.player.maxhp + 2);
+      G.player.hp = G.player.maxhp;
+      D.push(h.name, h.color, stufe.name + ' sitzt wie angegossen. Ein Herz mehr - und alle voll!');
+      hint('Ruestung aufgewertet!');
+      if (A) A.heal();
+    } else {
+      G.player.hp = G.player.maxhp;
+      D.push(h.name, h.color, 'Loeffel leer, Herzen voll. Guten Appetit!');
+      if (A) A.heal();
+    }
+    save();
+    ladenOeffnen(false);
+  }
+
   /* ================= Reden ================= */
   function tryTalk() {
     var p = G.player, best = null, bd = 30;
@@ -2689,6 +2954,7 @@ html, body {
       D.say('Ein Blatt Papier', '#e8e2c8', best.text);
       return;
     }
+    if (best.type === 'npc' && best.shop) return ladenOeffnen(true);
     if (best.type === 'npc') return talkNPC(best);
     return talkFriend(best);
   }
@@ -2841,6 +3107,7 @@ html, body {
       G.state = 'play';
       if (to === 'stadt') {
         loadMap('stadt', 26.5, 22);
+        hint('Beim Marktstand gibt es Schwerter und Ruestungen!');
         D.push('Mila', Chat.people.mila.color, 'Schau mal, so viele Haeuser! Und die riechen nach Brot!');
         D.begin();
       } else {
@@ -2967,6 +3234,12 @@ html, body {
       return;
     }
 
+    if (e.type === 'coin') {
+      var cf = Math.floor(e.anim) % 2;
+      ctx.drawImage(S.coin[cf], sx - 4, sy - 8 + Math.round(Math.sin(e.anim) * 1.5));
+      return;
+    }
+
     if (e.type === 'zombie') {
       var set = actorFor('zombie', true);
       var img = set[e.dir][frameOf(e)];
@@ -3005,6 +3278,13 @@ html, body {
     if (e.type === 'npc' || e.type === 'friend') {
       var s2 = actorFor(e.key, false);
       ctx.drawImage(s2[e.dir][frameOf(e)], sx - 8, sy - 16);
+      if (e.shop) {
+        ctx.fillStyle = '#ffd24a';
+        ctx.font = '8px "Courier New", monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('LADEN', sx, sy - 26);
+        ctx.textAlign = 'left';
+      }
       if (e.type === 'friend' && e.idle) {
         ctx.fillStyle = '#ffd24a';
         ctx.font = '8px "Courier New", monospace';
@@ -3124,12 +3404,12 @@ html, body {
     ctx.save();
     ctx.translate(hx, hy);
     ctx.rotate(rad);
-    ctx.drawImage(S.sword, -2, -12);
+    ctx.drawImage(S.swordFor(G.swordLevel), -2, -12);
     ctx.restore();
   }
 
   function drawKnight(p, sx, sy) {
-    var img = S.knight[p.dir][frameOf(p)];
+    var img = S.knightFor(G.armorLevel)[p.dir][frameOf(p)];
     var blink = p.invuln > 0 && (Math.floor(p.invuln * 14) % 2 === 0);
     if (blink) ctx.globalAlpha = 0.35;
     if (p.dir === 'up') drawSword(p, sx, sy);
@@ -3163,7 +3443,10 @@ html, body {
     ctx.textAlign = 'right';
     ctx.fillStyle = '#8fd36a';
     ctx.fillText('Zombies: ' + G.kills, VW - 6, 23);
+    ctx.fillStyle = '#ffd24a';
+    ctx.fillText(G.coins + ' Muenzen', VW - 6, 33);
     ctx.textAlign = 'left';
+    ctx.drawImage(S.coin[0], VW - 6 - ctx.measureText(G.coins + ' Muenzen').width - 10, 26);
 
     /* Begleiter */
     var names = [];
@@ -3240,11 +3523,11 @@ html, body {
     /* Ritter in der Mitte */
     var p = { dir: 'down', anim: G.time * 2, atk: null, moving: false, invuln: 0 };
     ctx.save(); ctx.translate(VW / 2, 150); ctx.scale(3, 3);
-    ctx.drawImage(S.knight.down[(Math.floor(G.time * 2) % 2)], -8, -16);
+    ctx.drawImage(S.knightFor(G.armorLevel).down[(Math.floor(G.time * 2) % 2)], -8, -16);
     ctx.restore();
     ctx.save(); ctx.translate(VW / 2 + 13, 126); ctx.scale(3, 3);
     ctx.rotate(20 * Math.PI / 180);
-    ctx.drawImage(S.sword, -2, -12);
+    ctx.drawImage(S.swordFor(G.swordLevel), -2, -12);
     ctx.restore();
 
     ctx.textAlign = 'center';
@@ -3288,13 +3571,27 @@ html, body {
   /* ================= Speichern ================= */
   function save() {
     try {
-      localStorage.setItem('oakblade_kills', String(G.kills));
+      localStorage.setItem('oakblade_stand', JSON.stringify({
+        kills: G.kills, coins: G.coins,
+        schwert: G.swordLevel, ruestung: G.armorLevel,
+        maxhp: G.player ? G.player.maxhp : 10
+      }));
     } catch (e) { }
   }
+
   function load() {
     try {
-      var k = localStorage.getItem('oakblade_kills');
-      if (k) G.kills = parseInt(k, 10) || 0;
+      var roh = localStorage.getItem('oakblade_stand');
+      if (!roh) return;
+      var d = JSON.parse(roh);
+      G.kills = d.kills || 0;
+      G.coins = d.coins || 0;
+      G.swordLevel = d.schwert || 0;
+      G.armorLevel = d.ruestung || 0;
+      if (d.maxhp && G.player) {
+        G.player.maxhp = Math.max(10, Math.min(20, d.maxhp));
+        G.player.hp = G.player.maxhp;
+      }
     } catch (e) { }
   }
 
@@ -3363,6 +3660,9 @@ html, body {
       if (e.type === 'zombie') {
         updateZombie(e, dt);
         if (e.dying > 0.55) G.ents.splice(i, 1);
+      } else if (e.type === 'coin') {
+        updateCoin(e, dt);
+        if (e.weg) G.ents.splice(i, 1);
       }
     }
     for (i = 0; i < G.ents.length; i++) {

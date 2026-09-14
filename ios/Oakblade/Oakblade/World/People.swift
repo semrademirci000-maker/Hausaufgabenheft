@@ -144,6 +144,48 @@ enum Chat {
             palette: ActorPalette(hair: 0x4A3A2A, skin: 0xE8B58A,
                                   shirt: 0x6B7A8A, shirtDark: 0x55606E,
                                   pants: 0x3B3B46, boots: 0x2A2A33)
+        ),
+        "buerger2": Person(
+            key: "buerger2", name: "Baeckerin Rosa", rolle: "Baeckerin", kurz: "Rosa",
+            color: Color(hex: 0xF0B0C0),
+            palette: ActorPalette(hair: 0x8A3F5A, skin: 0xF0C191,
+                                  shirt: 0xE0A0B8, shirtDark: 0xC07F98,
+                                  pants: 0xEFE6CF, boots: 0x7A5327)
+        ),
+        "buerger3": Person(
+            key: "buerger3", name: "Alter Jorin", rolle: "Rentner", kurz: "Jorin",
+            color: Color(hex: 0xC0C0B0),
+            palette: ActorPalette(hair: 0xDCDCDC, skin: 0xE0B48A,
+                                  shirt: 0x7A6A5A, shirtDark: 0x5F5348,
+                                  pants: 0x4A4238, boots: 0x33261A)
+        ),
+        "buerger4": Person(
+            key: "buerger4", name: "Nell", rolle: "Botin", kurz: "Nell",
+            color: Color(hex: 0x8FD0E0),
+            palette: ActorPalette(hair: 0x2A4A8A, skin: 0xC08A5A,
+                                  shirt: 0x4A9BB8, shirtDark: 0x377A92,
+                                  pants: 0x3B3B46, boots: 0x2A2A33)
+        ),
+        "buerger5": Person(
+            key: "buerger5", name: "Wache Brom", rolle: "Stadtwache", kurz: "Brom",
+            color: Color(hex: 0xB0B8C8),
+            palette: ActorPalette(hair: 0x3A3A44, skin: 0xE8B58A,
+                                  shirt: 0x5A6478, shirtDark: 0x454E60,
+                                  pants: 0x3B4250, boots: 0x2A2F3A)
+        ),
+        "buerger6": Person(
+            key: "buerger6", name: "Kleiner Tino", rolle: "Stadtkind", kurz: "Tino",
+            color: Color(hex: 0xE0D080),
+            palette: ActorPalette(hair: 0xC8A03A, skin: 0xF5CFA8,
+                                  shirt: 0x7AC45A, shirtDark: 0x5DA040,
+                                  pants: 0x8A5AC4, boots: 0x5B4326)
+        ),
+        "haendler": Person(
+            key: "haendler", name: "Haendler Bosko", rolle: "Waffenschmied", kurz: "Bosko",
+            color: Color(hex: 0xFFD24A),
+            palette: ActorPalette(hair: 0x5A3A1A, skin: 0xD8A070,
+                                  shirt: 0x8A5A2A, shirtDark: 0x6B4420,
+                                  pants: 0x4A3A2A, boots: 0x33261A)
         )
     ]
 
@@ -293,11 +335,25 @@ enum Chat {
         ]
     ]
 
+    static let shopLines: [String] = [
+        "Aha! Ein Ritter mit Muenzen in der Tasche. Willkommen!",
+        "Frisch geschmiedet, alles ehrlich. Was darf es sein?",
+        "Du siehst aus, als koenntest du was Schaerferes gebrauchen."
+    ]
+
     static let cityLines: [String] = [
         "Ein Ritter! Mit echtem Schwert! Machen Sie bitte kein Loch in die Strasse.",
         "Frisches Brot, zwei Kupfer. Fuer Helden drei, weil Helden immer Hunger haben.",
         "Zombies? Hier? Nein nein, die bleiben schoen im Wald. Hoffentlich.",
-        "Schoenes Auto haben Sie da. Faehrt das auch bergauf?"
+        "Schoenes Auto haben Sie da. Faehrt das auch bergauf?",
+        "Beim Haendler am Brunnen gibt es Ruestungen. Der nimmt nur Muenzen.",
+        "Mein Neffe sagt, im Wald waere ein Werwolf. Ich sage: zu viel Fantasie.",
+        "Wenn Sie Muenzen haben - ausgeben! Liegen lassen macht sie nicht mehr.",
+        "Heute ist Markt. Also, eigentlich ist immer Markt.",
+        "Sie sehen muede aus. Und ein bisschen nach Zombie.",
+        "Guten Tag! Schoenes Wetter, oder? Sagen Sie bitte ja, ich uebe Small Talk.",
+        "Ich haette gern so ein Schwert. Meine Mutter sagt nein.",
+        "Die Strassenlaternen sind neu. Kosten haben die gekostet!"
     ]
 }
 

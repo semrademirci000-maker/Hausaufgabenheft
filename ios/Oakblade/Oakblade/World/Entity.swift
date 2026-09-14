@@ -34,7 +34,7 @@ struct Box {
 final class Entity {
 
     enum Kind {
-        case player, friend, npc, zombie, prop
+        case player, friend, npc, zombie, prop, coin
     }
 
     let kind: Kind
@@ -77,8 +77,13 @@ final class Entity {
     var rootsTimer: Double = 0
     var raging = false
 
+    // Münzen
+    var life: Double = 0
+    var collected = false
+
     // Objekte
     var text: String?
+    var isShop = false
 
     init(kind: Kind, key: String, pos: Vec) {
         self.kind = kind

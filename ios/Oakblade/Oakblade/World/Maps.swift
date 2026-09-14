@@ -342,15 +342,29 @@ extension GameMap {
                 PropSpec("bench", 22.3, 25.6),
                 PropSpec("tree", 17.5, 21.2),
                 PropSpec("tree", 22.5, 21.2),
-                PropSpec("lamp", 25.4, 24.6)
+                PropSpec("lamp", 25.4, 24.6),
+                PropSpec("stall", 25.6, 23.2)
             ],
             friendSpots: []
         )
     }
 
     /// Wo in der Stadt die Leute herumlaufen.
-    static let stadtWanderSpots: [Vec] = [
-        Vec(x: 12, y: 18), Vec(x: 31, y: 12),
-        Vec(x: 18, y: 22), Vec(x: 34, y: 19)
+    static let stadtWanderSpots: [(pos: Vec, wer: String)] = [
+        (Vec(x: 12, y: 18), "buerger"),
+        (Vec(x: 31, y: 12), "buerger5"),
+        (Vec(x: 18, y: 12), "buerger2"),
+        (Vec(x: 34, y: 19), "buerger3"),
+        (Vec(x: 26, y: 26), "buerger6"),
+        (Vec(x: 8, y: 12), "buerger4"),
+        (Vec(x: 37, y: 24), "buerger"),
+        (Vec(x: 14, y: 26), "buerger2"),
+        (Vec(x: 30, y: 18), "buerger6"),
+        (Vec(x: 20, y: 18), "buerger3"),
+        (Vec(x: 5, y: 19), "buerger4"),
+        (Vec(x: 39, y: 12), "buerger5")
     ]
+
+    /// Wo der Händler an seinem Stand steht.
+    static let haendlerSpot = Vec(x: 26.9, y: 23.9)
 }

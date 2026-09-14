@@ -500,6 +500,85 @@
     return c;
   }
 
+
+  /* ---- Muenzen und Laden ---------------------------------------- */
+
+  function makeCoin(schmal) {
+    var c = mk(8, 8), g = c.getContext('2d');
+    var b = schmal ? 2 : 0;
+    g.fillStyle = '#8a6a1a'; g.fillRect(1 + b, 1, 6 - b * 2, 6);
+    g.fillStyle = '#ffd24a'; g.fillRect(1 + b, 2, 6 - b * 2, 4);
+    g.fillStyle = '#fff0b4'; g.fillRect(2 + b, 2, 2 - (schmal ? 1 : 0), 2);
+    g.fillStyle = '#d8a43a'; g.fillRect(2 + b, 5, 4 - b * 2, 1);
+    return c;
+  }
+
+  /* Marktstand des Haendlers */
+  function makeStall() {
+    var c = mk(34, 30), g = c.getContext('2d');
+    g.fillStyle = '#5b3d22'; g.fillRect(2, 14, 30, 12);
+    g.fillStyle = '#7a5327'; g.fillRect(2, 14, 30, 3);
+    g.fillStyle = '#3d2a18'; g.fillRect(3, 26, 3, 4); g.fillRect(28, 26, 3, 4);
+    /* Markise */
+    for (var x = 0; x < 34; x += 6) {
+      g.fillStyle = '#c85a4a'; g.fillRect(x, 2, 3, 10);
+      g.fillStyle = '#efe6cf'; g.fillRect(x + 3, 2, 3, 10);
+    }
+    g.fillStyle = '#5b3d22'; g.fillRect(0, 0, 34, 3);
+    g.fillStyle = '#3d2a18'; g.fillRect(1, 3, 2, 12); g.fillRect(31, 3, 2, 12);
+    /* Ware auf dem Tresen */
+    g.fillStyle = '#c9d2e0'; g.fillRect(7, 10, 2, 5);
+    g.fillStyle = '#d8a43a'; g.fillRect(6, 14, 4, 1);
+    g.fillStyle = '#9aa4b8'; g.fillRect(22, 9, 7, 6);
+    g.fillStyle = '#cfd8e6'; g.fillRect(23, 10, 5, 3);
+    return c;
+  }
+
+  /* Der Ritter in besserer Ruestung und mit besserem Schwert */
+  var RUESTUNGEN = [
+    { a: '#d3dbe8', b: '#9aa4b8', c: '#646e82' },   /* Eisen */
+    { a: '#e8c48a', b: '#b3853f', c: '#7a5a28' },   /* Bronze */
+    { a: '#eaf1fb', b: '#b6c2d6', c: '#7d8a9e' },   /* Silber */
+    { a: '#ffe08a', b: '#d8a43a', c: '#96702a' }    /* Gold */
+  ];
+  var KLINGEN = [
+    { w: '#eef3fb', g: '#aab6c8' },
+    { w: '#ffffff', g: '#c4cedd' },
+    { w: '#dff0ff', g: '#9ec6e8' },
+    { w: '#ffe8a0', g: '#d8a43a' }
+  ];
+
+  var knightCache = {}, swordCache = {};
+
+  function knightFor(stufe) {
+    stufe = Math.max(0, Math.min(RUESTUNGEN.length - 1, stufe || 0));
+    if (knightCache[stufe]) return knightCache[stufe];
+    var r = RUESTUNGEN[stufe];
+    var pal = {
+      o: KP.o, a: r.a, b: r.b, c: r.c, t: KP.t, u: KP.u,
+      s: KP.s, r: KP.r, k: KP.k, n: KP.n
+    };
+    var side = [sprite(knightSide, pal), sprite(knightSide2, pal)];
+    knightCache[stufe] = {
+      down: [sprite(knightDown, pal), sprite(knightDown2, pal)],
+      up: [sprite(knightUp, pal), sprite(knightUp2, pal)],
+      right: side,
+      left: [flipX(side[0]), flipX(side[1])]
+    };
+    return knightCache[stufe];
+  }
+
+  function swordFor(stufe) {
+    stufe = Math.max(0, Math.min(KLINGEN.length - 1, stufe || 0));
+    if (swordCache[stufe]) return swordCache[stufe];
+    var k = KLINGEN[stufe];
+    swordCache[stufe] = sprite([
+      '..w..', '..w..', '.www.', '.wgw.', '.wgw.', '.wgw.', '.wgw.',
+      '.wgw.', '.wgw.', 'hhhhh', '..n..', '..n..', '..n..', '..h..'
+    ], { w: k.w, g: k.g, h: '#d8a43a', n: '#6b4a2b' });
+    return swordCache[stufe];
+  }
+
   /* =========================================================
      KACHELN (16x16) – Wald, Haus, Stadt
      ========================================================= */
@@ -799,6 +878,10 @@
     spider: [makeSpider(0), makeSpider(1)],
     crown: makeCrown(),
     treant: makeTreant(),
+    coin: [makeCoin(false), makeCoin(true)],
+    stall: makeStall(),
+    knightFor: knightFor,
+    swordFor: swordFor,
     withEars: withEars,
     actor: buildActor,
     tiles: TILES,

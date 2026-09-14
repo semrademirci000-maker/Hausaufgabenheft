@@ -98,6 +98,9 @@ final class GameWorld {
     var bossQueue: [Boss] = []
     var bossesBeaten = 0
     var killsSinceBoss = 0
+    var coins = 0
+    var swordLevel = 0
+    var armorLevel = 0
     var time: Double = 0
     var camera = Vec.zero
     var shake: Double = 0
@@ -130,7 +133,16 @@ final class GameWorld {
         self.audio = audio
         player.hp = 10
         player.maxHP = 10
-        kills = UserDefaults.standard.integer(forKey: "oakblade.kills")
+        let speicher = UserDefaults.standard
+        kills = speicher.integer(forKey: "oakblade.kills")
+        coins = speicher.integer(forKey: "oakblade.coins")
+        swordLevel = speicher.integer(forKey: "oakblade.schwert")
+        armorLevel = speicher.integer(forKey: "oakblade.ruestung")
+        let gespeicherteHerzen = speicher.integer(forKey: "oakblade.maxhp")
+        if gespeicherteHerzen >= 10 {
+            player.maxHP = min(20, gespeicherteHerzen)
+            player.hp = player.maxHP
+        }
         dialog.onBlip = { [weak self] in self?.audio.play(.blip) }
         dialog.onSelect = { [weak self] in self?.audio.play(.select) }
     }
@@ -182,6 +194,11 @@ final class GameWorld {
             updateZombie(entity, dt)
         }
         entities.removeAll { $0.kind == .zombie && $0.isDying && $0.dying > 0.55 }
+
+        for coin in entities where coin.kind == .coin {
+            updateCoin(coin, dt)
+        }
+        entities.removeAll { $0.kind == .coin && $0.collected }
 
         var followerIndex = 0
         for entity in entities {
@@ -316,12 +333,15 @@ final class GameWorld {
         }
 
         if map.key == "stadt" {
-            for (index, spot) in GameMap.stadtWanderSpots.enumerated() {
-                let person = addNPC("buerger", x: spot.x, y: spot.y, facing: .down)
+            for (index, eintrag) in GameMap.stadtWanderSpots.enumerated() {
+                let person = addNPC(eintrag.wer, x: eintrag.pos.x, y: eintrag.pos.y, facing: .down)
                 person.wanders = true
                 person.wanderTimer = Double.random(in: 0...2)
                 person.line = Chat.cityLines[index % Chat.cityLines.count]
             }
+            let haendler = addNPC("haendler", x: GameMap.haendlerSpot.x,
+                                  y: GameMap.haendlerSpot.y, facing: .down)
+            haendler.isShop = true
         }
 
         spawnTimer = 3
@@ -366,6 +386,9 @@ final class GameWorld {
         case "bench":
             blocks.append(Box(minX: prop.pos.x - 10, minY: prop.pos.y - 5,
                               maxX: prop.pos.x + 10, maxY: prop.pos.y))
+        case "stall":
+            blocks.append(Box(minX: prop.pos.x - 17, minY: prop.pos.y - 10,
+                              maxX: prop.pos.x + 17, maxY: prop.pos.y))
         default:
             break
         }
@@ -542,13 +565,13 @@ final class GameWorld {
             if zombie.pos.x + 6 > left, zombie.pos.x - 6 < right,
                zombie.pos.y > top, zombie.pos.y - 14 < bottom {
                 zombie.hitBySwing = player.swingCount
-                damage(zombie, from: player.pos)
+                damage(zombie, from: player.pos, amount: 1 + swordLevel)
             }
         }
     }
 
-    private func damage(_ zombie: Entity, from source: Vec) {
-        zombie.hp -= 1
+    private func damage(_ zombie: Entity, from source: Vec, amount: Int = 1) {
+        zombie.hp -= amount
         zombie.flash = 0.18
         let dx = zombie.pos.x - source.x
         let dy = zombie.pos.y - source.y
@@ -561,11 +584,13 @@ final class GameWorld {
             zombie.dying = 0.001
             audio.play(.dead)
             if zombie.boss != nil {
+                dropCoins(at: zombie.pos, count: 12 + Int.random(in: 0...7))
                 bossDefeated(zombie)
             } else {
                 kills += 1
                 killsSinceBoss += 1
-                UserDefaults.standard.set(kills, forKey: "oakblade.kills")
+                dropCoins(at: zombie.pos, count: 1 + Int.random(in: 0...2))
+                speichern()
                 sayKillLine()
             }
         } else {
@@ -673,6 +698,138 @@ final class GameWorld {
             player.hp = 0
             gameOver()
         }
+    }
+
+    // MARK: Münzen
+
+    private func dropCoins(at spot: Vec, count: Int) {
+        for _ in 0..<count {
+            let winkel = Double.random(in: 0...(2 * Double.pi))
+            let coin = Entity(kind: .coin, key: "coin", pos: Vec(x: spot.x, y: spot.y - 8))
+            coin.drift = Vec(x: cos(winkel) * Double.random(in: 20...50),
+                             y: sin(winkel) * Double.random(in: 14...34) - 10)
+            coin.anim = Double.random(in: 0...2)
+            entities.append(coin)
+        }
+    }
+
+    private func updateCoin(_ coin: Entity, _ dt: Double) {
+        coin.life += dt
+        coin.anim += dt * 6
+
+        let dx = player.pos.x - coin.pos.x
+        let dy = (player.pos.y - 8) - coin.pos.y
+        let distance = max(0.001, (dx * dx + dy * dy).squareRoot())
+
+        if coin.life < 0.3 {
+            coin.pos.x += coin.drift.x * dt          // kurz wegspringen
+            coin.pos.y += coin.drift.y * dt
+            coin.drift.y += 90 * dt
+        } else {
+            let speed = 110 + coin.life * 120        // dann zum Ritter fliegen
+            coin.pos.x += dx / distance * speed * dt
+            coin.pos.y += dy / distance * speed * dt
+        }
+
+        if distance < 11 {
+            coin.collected = true
+            coins += 1
+            audio.play(.coin)
+            speichern()
+        }
+    }
+
+    private func speichern() {
+        let speicher = UserDefaults.standard
+        speicher.set(kills, forKey: "oakblade.kills")
+        speicher.set(coins, forKey: "oakblade.coins")
+        speicher.set(swordLevel, forKey: "oakblade.schwert")
+        speicher.set(armorLevel, forKey: "oakblade.ruestung")
+        speicher.set(player.maxHP, forKey: "oakblade.maxhp")
+    }
+
+    // MARK: Der Laden
+
+    struct Angebot {
+        let name: String
+        let preis: Int
+    }
+
+    static let schwertStufen = [
+        Angebot(name: "Geschaerfte Klinge", preis: 25),
+        Angebot(name: "Stahlklinge", preis: 60),
+        Angebot(name: "Goldene Klinge", preis: 120)
+    ]
+    static let ruestungStufen = [
+        Angebot(name: "Lederwams", preis: 30),
+        Angebot(name: "Kettenhemd", preis: 70),
+        Angebot(name: "Goldene Ruestung", preis: 140)
+    ]
+
+    func ladenOeffnen(ersterBesuch: Bool) {
+        let h = Chat.person("haendler")
+        var choices: [DialogChoice] = []
+
+        if swordLevel < GameWorld.schwertStufen.count {
+            let stufe = GameWorld.schwertStufen[swordLevel]
+            choices.append(DialogChoice("Schwert: \(stufe.name) - \(stufe.preis) Muenzen",
+                                        action: { [weak self] in self?.kaufen("schwert", stufe) }))
+        }
+        if armorLevel < GameWorld.ruestungStufen.count {
+            let stufe = GameWorld.ruestungStufen[armorLevel]
+            choices.append(DialogChoice("Ruestung: \(stufe.name) - \(stufe.preis) Muenzen",
+                                        action: { [weak self] in self?.kaufen("ruestung", stufe) }))
+        }
+        if player.hp < player.maxHP {
+            let eintopf = Angebot(name: "Eintopf", preis: 10)
+            choices.append(DialogChoice("Eintopf, alle Herzen voll - 10 Muenzen",
+                                        action: { [weak self] in self?.kaufen("eintopf", eintopf) }))
+        }
+        choices.append(DialogChoice("Nur schauen, danke.",
+                                    reply: "Kein Problem. Komm wieder, wenn die Tasche klimpert!"))
+
+        var text = ersterBesuch
+            ? (Chat.shopLines.randomElement() ?? "Was darf es sein?")
+            : "Sonst noch was?"
+        text += "  (Du hast \(coins) Muenzen)"
+
+        dialog.push(who: "\(h.name) (\(h.rolle))", color: h.color, text: text, choices: choices)
+        dialog.start()
+    }
+
+    private func kaufen(_ art: String, _ stufe: Angebot) {
+        let h = Chat.person("haendler")
+        guard coins >= stufe.preis else {
+            dialog.push(who: h.name, color: h.color,
+                        text: "Dafuer fehlen dir \(stufe.preis - coins) Muenzen. "
+                            + "Im Wald liegen genug herum - in Zombies!")
+            ladenOeffnen(ersterBesuch: false)
+            return
+        }
+        coins -= stufe.preis
+
+        switch art {
+        case "schwert":
+            swordLevel += 1
+            dialog.push(who: h.name, color: h.color,
+                        text: "Die \(stufe.name) gehoert dir. Damit haust du haerter zu!")
+            showHint("Schwert aufgewertet!")
+            audio.play(.select)
+        case "ruestung":
+            armorLevel += 1
+            player.maxHP = min(20, player.maxHP + 2)
+            player.hp = player.maxHP
+            dialog.push(who: h.name, color: h.color,
+                        text: "\(stufe.name) sitzt wie angegossen. Ein Herz mehr - und alle voll!")
+            showHint("Ruestung aufgewertet!")
+            audio.play(.heal)
+        default:
+            player.hp = player.maxHP
+            dialog.push(who: h.name, color: h.color, text: "Loeffel leer, Herzen voll. Guten Appetit!")
+            audio.play(.heal)
+        }
+        speichern()
+        ladenOeffnen(ersterBesuch: false)
     }
 
     // MARK: Bosse
@@ -917,7 +1074,11 @@ final class GameWorld {
                 dialog.say(who: "Ein Blatt Papier", color: Color(hex: 0xE8E2C8), text: text)
             }
         case .npc:
-            talkToNPC(partner)
+            if partner.isShop {
+                ladenOeffnen(ersterBesuch: true)
+            } else {
+                talkToNPC(partner)
+            }
         case .friend:
             talkToFriend(partner)
         default:
@@ -1143,6 +1304,7 @@ final class GameWorld {
         phase = .play
         if state.to == "stadt" {
             loadMap("stadt", at: Vec(x: 26.5, y: 22))
+            showHint("Beim Marktstand gibt es Schwerter und Ruestungen!")
             let mila = Chat.person("mila")
             dialog.say(who: mila.name, color: mila.color,
                        text: "Schau mal, so viele Haeuser! Und die riechen nach Brot!")

@@ -35,6 +35,30 @@
     buerger: {
       name: 'Stadtmensch', rolle: 'Buerger', color: '#c8c8d8', kurz: 'Buerger',
       pal: { hair: '#4a3a2a', skin: '#e8b58a', shirt: '#6b7a8a', shirtDark: '#55606e', pants: '#3b3b46', boots: '#2a2a33' }
+    },
+    buerger2: {
+      name: 'Baeckerin Rosa', rolle: 'Baeckerin', color: '#f0b0c0', kurz: 'Rosa',
+      pal: { hair: '#8a3f5a', skin: '#f0c191', shirt: '#e0a0b8', shirtDark: '#c07f98', pants: '#efe6cf', boots: '#7a5327' }
+    },
+    buerger3: {
+      name: 'Alter Jorin', rolle: 'Rentner', color: '#c0c0b0', kurz: 'Jorin',
+      pal: { hair: '#dcdcdc', skin: '#e0b48a', shirt: '#7a6a5a', shirtDark: '#5f5348', pants: '#4a4238', boots: '#33261a' }
+    },
+    buerger4: {
+      name: 'Nell', rolle: 'Botin', color: '#8fd0e0', kurz: 'Nell',
+      pal: { hair: '#2a4a8a', skin: '#c08a5a', shirt: '#4a9bb8', shirtDark: '#377a92', pants: '#3b3b46', boots: '#2a2a33' }
+    },
+    buerger5: {
+      name: 'Wache Brom', rolle: 'Stadtwache', color: '#b0b8c8', kurz: 'Brom',
+      pal: { hair: '#3a3a44', skin: '#e8b58a', shirt: '#5a6478', shirtDark: '#454e60', pants: '#3b4250', boots: '#2a2f3a' }
+    },
+    buerger6: {
+      name: 'Kleiner Tino', rolle: 'Stadtkind', color: '#e0d080', kurz: 'Tino',
+      pal: { hair: '#c8a03a', skin: '#f5cfa8', shirt: '#7ac45a', shirtDark: '#5da040', pants: '#8a5ac4', boots: '#5b4326' }
+    },
+    haendler: {
+      name: 'Haendler Bosko', rolle: 'Waffenschmied', color: '#ffd24a', kurz: 'Bosko',
+      pal: { hair: '#5a3a1a', skin: '#d8a070', shirt: '#8a5a2a', shirtDark: '#6b4420', pants: '#4a3a2a', boots: '#33261a' }
     }
   };
 
@@ -138,7 +162,22 @@
     'Ein Ritter! Mit echtem Schwert! Machen Sie bitte kein Loch in die Strasse.',
     'Frisches Brot, zwei Kupfer. Fuer Helden drei, weil Helden immer Hunger haben.',
     'Zombies? Hier? Nein nein, die bleiben schoen im Wald. Hoffentlich.',
-    'Schoenes Auto haben Sie da. Faehrt das auch bergauf?'
+    'Schoenes Auto haben Sie da. Faehrt das auch bergauf?',
+    'Beim Haendler am Brunnen gibt es Ruestungen. Der nimmt nur Muenzen.',
+    'Mein Neffe sagt, im Wald waere ein Werwolf. Ich sage: zu viel Fantasie.',
+    'Wenn Sie Muenzen haben - ausgeben! Liegen lassen macht sie nicht mehr.',
+    'Heute ist Markt. Also, eigentlich ist immer Markt.',
+    'Sie sehen muede aus. Und ein bisschen nach Zombie.',
+    'Guten Tag! Schoenes Wetter, oder? Sagen Sie bitte ja, ich uebe Small Talk.',
+    'Ich haette gern so ein Schwert. Meine Mutter sagt nein.',
+    'Die Strassenlaternen sind neu. Kosten haben die gekostet!'
+  ];
+
+  /* Was der Haendler so sagt */
+  var SHOP_LINES = [
+    'Aha! Ein Ritter mit Muenzen in der Tasche. Willkommen!',
+    'Frisch geschmiedet, alles ehrlich. Was darf es sein?',
+    'Du siehst aus, als koenntest du was Schaerferes gebrauchen.'
   ];
 
   /* ---------- Die Bosse ---------- */
@@ -189,6 +228,7 @@
   };
 
   var Chat = {
+    shopLines: SHOP_LINES,
     bosse: BOSSE,
     bossLines: BOSS_LINES,
     people: PEOPLE,

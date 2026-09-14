@@ -57,6 +57,7 @@ final class Art {
     let sword: Image
     let heart: Image
     let heartHalf: Image
+    let coin: [Image]
     let spider: [Image]
     let spiderWhite: [Image]
     let crown: Image
@@ -97,6 +98,7 @@ final class Art {
         // Die linke Hälfte ist das halbe Herz.
         heartHalf = Art.image(PixelImage.from(rows: heartRows.map { String($0.prefix(4)) },
                                               palette: heartPalette))
+        coin = [Art.image(Art.makeCoin(false)), Art.image(Art.makeCoin(true))]
         let spiderPixels = [Art.makeSpider(0), Art.makeSpider(1)]
         spider = spiderPixels.map { Art.image($0) }
         spiderWhite = spiderPixels.map { Art.image($0.whiteCopy()) }
@@ -118,6 +120,31 @@ final class Art {
     }
 
     func prop(_ kind: String) -> PropArt? { props[kind] }
+
+    /// Der Ritter in seiner aktuellen Rüstung.
+    private var knightLevels: [Int: ActorFrames] = [:]
+    func knightFrames(level: Int) -> ActorFrames {
+        let l = max(0, min(3, level))
+        if l == 0 { return knight }
+        if let fertig = knightLevels[l] { return fertig }
+        let made = Art.buildKnight(armor: l)
+        knightLevels[l] = made
+        return made
+    }
+
+    /// Das Schwert in seiner aktuellen Stufe.
+    private var swordLevels: [Int: Image] = [:]
+    func swordImage(level: Int) -> Image {
+        let l = max(0, min(3, level))
+        if l == 0 { return sword }
+        if let fertig = swordLevels[l] { return fertig }
+        let k = Art.klingen[l]
+        let made = Art.image(PixelImage.from(rows: SpriteRows.sword, palette: [
+            "w": RGBA(k.w), "g": RGBA(k.g), "h": RGBA(0xD8A43A), "n": RGBA(0x6B4A2B)
+        ]))
+        swordLevels[l] = made
+        return made
+    }
 
     /// Der Werwolf: die Menschen-Vorlage in Fellfarben, mit spitzen Ohren.
     private var wolfFrames: ActorFrames?
@@ -201,9 +228,25 @@ final class Art {
         )
     }
 
-    private static func buildKnight() -> ActorFrames {
+    /// Eisen, Bronze, Silber, Gold
+    private static let ruestungen: [(a: UInt32, b: UInt32, c: UInt32)] = [
+        (0xD3DBE8, 0x9AA4B8, 0x646E82),
+        (0xE8C48A, 0xB3853F, 0x7A5A28),
+        (0xEAF1FB, 0xB6C2D6, 0x7D8A9E),
+        (0xFFE08A, 0xD8A43A, 0x96702A)
+    ]
+
+    private static let klingen: [(w: UInt32, g: UInt32)] = [
+        (0xEEF3FB, 0xAAB6C8),
+        (0xFFFFFF, 0xC4CEDD),
+        (0xDFF0FF, 0x9EC6E8),
+        (0xFFE8A0, 0xD8A43A)
+    ]
+
+    private static func buildKnight(armor: Int = 0) -> ActorFrames {
+        let r = ruestungen[max(0, min(ruestungen.count - 1, armor))]
         let pal: [Character: RGBA] = [
-            "o": RGBA(0x191324), "a": RGBA(0xD3DBE8), "b": RGBA(0x9AA4B8), "c": RGBA(0x646E82),
+            "o": RGBA(0x191324), "a": RGBA(r.a), "b": RGBA(r.b), "c": RGBA(r.c),
             "t": RGBA(0x3D6FB5), "u": RGBA(0x2B4F83), "s": RGBA(0xF0C191), "r": RGBA(0xD2453F),
             "k": RGBA(0x140F1E), "n": RGBA(0x6B4A2B)
         ]
@@ -236,6 +279,7 @@ final class Art {
         add("car", makeCar())
         add("fountain", makeFountain())
         add("bench", makeBench())
+        add("stall", makeStall())
         return out
     }
 
@@ -439,6 +483,37 @@ final class Art {
         p.set(14, 27, RGBA(0xFFF0B4))
         p.set(19, 27, RGBA(0xFFF0B4))
         p.fill(15, 31, 5, 2, RGBA(0x2A1A10))
+        return p
+    }
+
+    private static func makeCoin(_ schmal: Bool) -> PixelImage {
+        let p = PixelImage(8, 8)
+        let b = schmal ? 2 : 0
+        p.fill(1 + b, 1, 6 - b * 2, 6, RGBA(0x8A6A1A))
+        p.fill(1 + b, 2, 6 - b * 2, 4, RGBA(0xFFD24A))
+        p.fill(2 + b, 2, schmal ? 1 : 2, 2, RGBA(0xFFF0B4))
+        p.fill(2 + b, 5, 4 - b * 2, 1, RGBA(0xD8A43A))
+        return p
+    }
+
+    /// Marktstand des Händlers.
+    private static func makeStall() -> PixelImage {
+        let p = PixelImage(34, 30)
+        p.fill(2, 14, 30, 12, RGBA(0x5B3D22))
+        p.fill(2, 14, 30, 3, RGBA(0x7A5327))
+        p.fill(3, 26, 3, 4, RGBA(0x3D2A18))
+        p.fill(28, 26, 3, 4, RGBA(0x3D2A18))
+        for x in stride(from: 0, to: 34, by: 6) {
+            p.fill(x, 2, 3, 10, RGBA(0xC85A4A))
+            p.fill(x + 3, 2, 3, 10, RGBA(0xEFE6CF))
+        }
+        p.fill(0, 0, 34, 3, RGBA(0x5B3D22))
+        p.fill(1, 3, 2, 12, RGBA(0x3D2A18))
+        p.fill(31, 3, 2, 12, RGBA(0x3D2A18))
+        p.fill(7, 10, 2, 5, RGBA(0xC9D2E0))
+        p.fill(6, 14, 4, 1, RGBA(0xD8A43A))
+        p.fill(22, 9, 7, 6, RGBA(0x9AA4B8))
+        p.fill(23, 10, 5, 3, RGBA(0xCFD8E6))
         return p
     }
 

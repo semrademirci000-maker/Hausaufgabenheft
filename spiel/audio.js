@@ -118,6 +118,12 @@
     select: function () { if (!on || !ctx) return; note(660, ctx.currentTime, 0.05, 'square', 0.12); note(990, ctx.currentTime + 0.05, 0.07, 'square', 0.1); },
     door: function () { if (!on || !ctx) return; noise(ctx.currentTime, 0.18, 0.12); note(180, ctx.currentTime, 0.15, 'triangle', 0.1); },
     horn: function () { if (!on || !ctx) return; var t = ctx.currentTime; note(392, t, 0.3, 'square', 0.16); note(330, t, 0.3, 'square', 0.14); },
+    coin: function () {
+      if (!on || !ctx) return;
+      var t = ctx.currentTime;
+      note(1046, t, 0.05, 'square', 0.12);
+      note(1568, t + 0.05, 0.09, 'square', 0.1);
+    },
     heal: function () { if (!on || !ctx) return; var t = ctx.currentTime; note(523, t, 0.1, 'triangle', 0.16); note(659, t + 0.09, 0.1, 'triangle', 0.16); note(784, t + 0.18, 0.22, 'triangle', 0.16); }
   };
 

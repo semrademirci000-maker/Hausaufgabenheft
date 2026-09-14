@@ -8,7 +8,7 @@ import AVFoundation
 import SwiftUI
 
 enum SFX {
-    case blip, select, swing, hit, dead, hurt, door, horn, heal
+    case blip, select, swing, hit, dead, hurt, door, horn, heal, coin
 }
 
 final class ChipEngine: ObservableObject {
@@ -270,6 +270,9 @@ final class ChipEngine: ObservableObject {
         case .horn:
             startVoice(wave: .square, frequency: 392, amp: 0.18, seconds: 0.3)
             startVoice(wave: .square, frequency: 330, amp: 0.16, seconds: 0.3)
+        case .coin:
+            startVoice(wave: .square, frequency: 1046, amp: 0.13, seconds: 0.05)
+            startVoice(wave: .square, frequency: 1568, amp: 0.11, seconds: 0.09, delay: 0.05)
         case .heal:
             startVoice(wave: .triangle, frequency: 523, amp: 0.18, seconds: 0.1)
             startVoice(wave: .triangle, frequency: 659, amp: 0.18, seconds: 0.1, delay: 0.09)

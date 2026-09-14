@@ -77,11 +77,24 @@ acht. Lässt du los, springt der Stick zurück in seine Ecke.
 - Während ein Gespräch läuft, bleiben die Zombies stehen – niemand wird beim
   Reden von hinten gebissen.
 
+**Münzen und der Laden**
+- Jeder erledigte Zombie lässt **1 bis 3 Münzen** fallen, ein Boss **12 bis 19**.
+  Die Münzen fliegen von selbst zu dir – du musst sie nicht einsammeln.
+- In Eichenstadt steht am Brunnen ein **Marktstand**. Der Händler **Bosko**
+  (mit dem Schild *LADEN* über dem Kopf) verkauft dir:
+  - **Schwert**: Geschärfte Klinge (25) → Stahlklinge (60) → Goldene Klinge (120).
+    Jede Stufe macht **einen Schaden mehr** – und die Klinge sieht anders aus.
+  - **Rüstung**: Lederwams (30) → Kettenhemd (70) → Goldene Rüstung (140).
+    Jede Stufe gibt **ein Herz dazu** – und der Ritter glänzt anders.
+  - **Eintopf** für 10 Münzen macht alle Herzen wieder voll.
+- Dein Stand (Münzen, Stufen, Herzen) wird auf dem Gerät gespeichert.
+
 **Das Auto und die Stadt**
 - Auf dem Waldweg steht ein Auto. Mit **E** ansprechen → „mit der ganzen
   Familie“ oder „nur wir“ → kleine Pixel-Fahrt-Animation mit Sonnenuntergang.
 - In **Eichenstadt**: Straßen, Häuserdächer, Läden, Laternen, ein Park mit
-  Brunnen und Bänken, Leute zum Anquatschen und ein Blatt am Stadttor,
+  Brunnen und Bänken, **zwölf Leute** zum Anquatschen (Bäckerin, Stadtwache,
+  Botin, Rentner, Kinder …), der Marktstand und ein Blatt am Stadttor,
   das man lesen kann. Mit dem Auto geht es wieder zurück.
 
 **Musik**

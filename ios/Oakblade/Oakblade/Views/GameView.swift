@@ -186,6 +186,12 @@ struct GameView: View {
         }
 
         switch entity.kind {
+        case .coin:
+            let frame = Int(entity.anim) % 2
+            let huepfer = (sin(entity.anim) * 1.5).rounded()
+            ctx.draw(Art.shared.coin[frame],
+                     in: CGRect(x: x - 4, y: y - 8 + huepfer, width: 8, height: 8))
+
         case .prop:
             guard let art = Art.shared.prop(entity.key) else { return }
             ctx.draw(art.image,
@@ -231,6 +237,12 @@ struct GameView: View {
             let frames = Art.shared.actor(entity.key, palette: person.palette)
             ctx.draw(frames.image(entity.facing, entity.frame),
                      in: CGRect(x: x - 8, y: y - 16, width: 16, height: 16))
+            if entity.isShop {
+                ctx.draw(Text("LADEN")
+                            .font(.system(size: 8, weight: .bold, design: .monospaced))
+                            .foregroundColor(Color(hex: 0xFFD24A)),
+                         at: CGPoint(x: x, y: y - 26))
+            }
             if entity.kind == .friend, entity.waitsAtHome {
                 ctx.draw(Text("!")
                             .font(.system(size: 9, weight: .bold, design: .monospaced))
@@ -357,7 +369,7 @@ struct GameView: View {
         return base - 105 + 150 * eased
     }
 
-    private func drawSword(_ ctx: GraphicsContext, player: Entity) {
+    private func drawSword(_ ctx: GraphicsContext, player: Entity, swordLevel: Int) {
         let offset = handOffset(player.facing)
         let handX = player.pos.x + offset.0
         let handY = player.pos.y + offset.1
@@ -381,7 +393,7 @@ struct GameView: View {
         var blade = ctx
         blade.translateBy(x: handX, y: handY)
         blade.rotate(by: .degrees(angle + 90))
-        blade.draw(Art.shared.sword,
+        blade.draw(Art.shared.swordImage(level: swordLevel),
                    in: CGRect(x: -2, y: -12,
                               width: Art.swordWidth, height: Art.swordHeight))
     }
@@ -392,10 +404,10 @@ struct GameView: View {
         let blinking = player.invulnerable > 0 && Int(player.invulnerable * 14) % 2 == 0
         if blinking { body.opacity = 0.35 }
 
-        if player.facing == .up { drawSword(body, player: player) }
-        body.draw(Art.shared.knight.image(player.facing, player.frame),
+        if player.facing == .up { drawSword(body, player: player, swordLevel: world.swordLevel) }
+        body.draw(Art.shared.knightFrames(level: world.armorLevel).image(player.facing, player.frame),
                   in: CGRect(x: player.pos.x - 8, y: player.pos.y - 16, width: 16, height: 16))
-        if player.facing != .up { drawSword(body, player: player) }
+        if player.facing != .up { drawSword(body, player: player, swordLevel: world.swordLevel) }
     }
 
     // MARK: Anzeige oben
@@ -440,6 +452,11 @@ struct GameView: View {
         }
         ctx.draw(smallText("Zombies: \(world.kills)", color: Color(hex: 0x8FD36A)),
                  at: CGPoint(x: gameWidth - 6, y: 16), anchor: .topTrailing)
+        ctx.draw(smallText("\(world.coins) Muenzen", color: Color(hex: 0xFFD24A)),
+                 at: CGPoint(x: gameWidth - 6, y: 26), anchor: .topTrailing)
+        ctx.draw(Art.shared.coin[0],
+                 in: CGRect(x: gameWidth - 16 - Double("\(world.coins) Muenzen".count) * 5,
+                            y: 26, width: 8, height: 8))
 
         if !world.party.isEmpty {
             ctx.draw(smallText("Dabei: " + world.partyNames, color: Color(hex: 0xC8C2E0)),
@@ -570,14 +587,15 @@ struct GameView: View {
         var hero = ctx
         hero.translateBy(x: gameWidth / 2, y: 150)
         hero.scaleBy(x: 3, y: 3)
-        hero.draw(Art.shared.knight.image(.down, Int(world.time * 2)),
+        hero.draw(Art.shared.knightFrames(level: world.armorLevel).image(.down, Int(world.time * 2)),
                   in: CGRect(x: -8, y: -16, width: 16, height: 16))
 
         var blade = ctx
         blade.translateBy(x: gameWidth / 2 + 13, y: 126)
         blade.scaleBy(x: 3, y: 3)
         blade.rotate(by: .degrees(20))
-        blade.draw(Art.shared.sword, in: CGRect(x: -2, y: -12, width: 5, height: 14))
+        blade.draw(Art.shared.swordImage(level: world.swordLevel),
+                   in: CGRect(x: -2, y: -12, width: 5, height: 14))
 
         ctx.draw(Text("OAKBLADE")
                     .font(.system(size: 32, weight: .bold, design: .monospaced))
