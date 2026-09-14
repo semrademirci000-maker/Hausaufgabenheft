@@ -9,7 +9,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 
 const alsArtifact = process.argv.includes('--artifact');
 const dateien = ['joystick.js', 'sprites.js', 'maps.js', 'audio.js',
-                 'dialog.js', 'chat.js', 'game.js'];
+                 'dialog.js', 'chat.js', 'kampf.js', 'game.js'];
 
 let html = readFileSync('index.html', 'utf8');
 

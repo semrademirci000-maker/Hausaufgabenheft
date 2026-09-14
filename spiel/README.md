@@ -57,10 +57,22 @@ acht. Lässt du los, springt der Stick zurück in seine Ecke.
 - Für jeden besiegten Boss bekommst du **ein Herz dazu** (bis zu sieben) und
   bist sofort wieder ganz voll.
 
-**Bosskämpfe**
-- Nach jeweils sechs erledigten Zombies taucht im Wald ein **Boss** auf –
-  jedes Mal ein anderer, die Reihenfolge wird gemischt.
-- Oben läuft ein roter Lebensbalken mit seinem Namen, dazu eigene Musik.
+**Bosskämpfe im Kampf-Fenster (wie in Undertale)**
+- Nach jeweils sechs erledigten Zombies taucht ein **Boss** auf – jedes Mal ein
+  anderer. Dann wechselt das Spiel in ein echtes **Kampf-Fenster**:
+- Oben der Boss mit Lebensbalken, unten vier Knöpfe:
+  - **KÄMPFEN** – ein Zeiger saust hin und her. Tippe, wenn er in der Mitte ist:
+    je mittiger, desto mehr Schaden (VOLLTREFFER!).
+  - **HANDELN** – für jeden Boss etwas anderes: dem Zombiekönig die Krone
+    richten, die Spinne für ihr Netz loben, den Werwolf hinter den Ohren
+    kraulen, den Baumgeist gießen. Dreimal nett sein …
+  - **ITEM** – Pilz oder Beeren essen und heilen.
+  - **SCHONEN** – … und dann kannst du ihn gehen lassen. Gibt **mehr** Münzen
+    als ihn zu besiegen.
+- Danach greift der Boss an: Du steuerst dein **rotes Herz** mit dem Joystick
+  durch das Kampf-Fenster und weichst aus. Jeder Boss hat ein eigenes Muster –
+  Würmer regnen herunter, Netzfäden schießen von der Seite, Krallen zielen auf
+  dich, Wurzeln schießen aus dem Boden.
 - **Grauzahn, der Zombiekönig** – riesig, mit Krone, ruft Verstärkung.
 - **Nachtweberin, die Waldspinne** – schnell, schießt in Sprints auf dich zu.
 - **Mondfell, der Werwolf** – wird bei der Hälfte seiner Kraft wütend und noch schneller.
@@ -139,6 +151,7 @@ acht. Lässt du los, springt der Stick zurück in seine Ecke.
 | `maps.js` | Die drei Welten: Wald, Haus, Stadt |
 | `game.js` | Spielablauf: Laufen, Kämpfen, Begleiter, Türen, Autofahrt |
 | `joystick.js` | Der virtuelle Joystick (erscheint unter dem Daumen) |
+| `kampf.js` | Das Kampf-Fenster für Bosse: Menü, Angriffsbalken, Ausweichen |
 | `build.mjs` | Baut alles zu `oakblade-einzeldatei.html` zusammen |
 | `chat.js` | Die Personen und alle Fragen und Antworten |
 | `dialog.js` | Textbox mit tippenden Buchstaben und Auswahl |

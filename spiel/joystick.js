@@ -179,6 +179,8 @@
       this._down = true;
       this._touchId = (touchId === undefined) ? null : touchId;
       this._origin = { x: point.clientX, y: point.clientY };
+      this._lastX = point.clientX;
+      this._lastY = point.clientY;
       this._moved = 0;
       this._start = Date.now();
 
@@ -196,6 +198,8 @@
     _drag(point) {
       if (!this._down) return;
 
+      this._lastX = point.clientX;
+      this._lastY = point.clientY;
       var dx = point.clientX - this._origin.x;
       var dy = point.clientY - this._origin.y;
       var dist = Math.sqrt(dx * dx + dy * dy);
@@ -218,7 +222,7 @@
       if (!this._down) return;
       var kurz = this._moved < 14 && (Date.now() - this._start) < 600;
       this.release();
-      if (kurz && this.onTap) this.onTap();          // getippt statt gezogen
+      if (kurz && this.onTap) this.onTap(this._lastX, this._lastY);   // getippt statt gezogen
     }
 
     /* Alles loslassen – auch von aussen aufrufbar. */

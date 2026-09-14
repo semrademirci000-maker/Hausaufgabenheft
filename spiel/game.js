@@ -5,7 +5,7 @@
   'use strict';
 
   var TILE = 16, VW = 320, VH = 240;
-  var FASSUNG = 12;                    /* steht unten auf dem Titelbild */
+  var FASSUNG = 13;                    /* steht unten auf dem Titelbild */
   var cv = document.getElementById('game');
   var ctx = cv.getContext('2d');
   ctx.imageSmoothingEnabled = false;
@@ -77,10 +77,16 @@
       },
 
       /* Kurz getippt statt gezogen: Spiel starten oder weiterlesen. */
-      onTap: function () {
+      onTap: function (x, y) {
         if (A) A.resume();
         if (G.state === 'title') { startGame(); return; }
         if (D.isOpen()) { D.press(); return; }
+        if (G.state === 'kampf') {
+          /* Bildschirmpunkt in Spielpunkte umrechnen */
+          var r = cv.getBoundingClientRect();
+          Kampf.tippen((x - r.left) / r.width * VW, (y - r.top) / r.height * VH);
+          return;
+        }
         if (G.state === 'drive') { tapped.talk = true; }
       }
     });
@@ -631,37 +637,62 @@
   function spawnBoss() {
     if (!G.bossQueue.length) G.bossQueue = mischen(Chat.bosse);
     var b = G.bossQueue.shift();
-
-    var pos = null, tries = 90;
-    while (tries-- && !pos) {
-      var tx = 2 + ((Math.random() * (G.mapW - 4)) | 0);
-      var ty = 2 + ((Math.random() * (G.mapH - 4)) | 0);
-      if (solidTile(tileAt(tx, ty))) continue;
-      var x = tx * TILE + 8, y = ty * TILE + 14;
-      var d = Math.sqrt((x - G.player.x) * (x - G.player.x) + (y - G.player.y) * (y - G.player.y));
-      if (d < 80 || d > 210) continue;
-      pos = { x: x, y: y };
-    }
-    if (!pos) pos = { x: G.player.x + 110, y: G.player.y };
-
-    var z = { type: 'zombie', boss: b, x: pos.x, y: pos.y, hp: b.hp, maxhp: b.hp,
-              dir: 'down', anim: 0, kx: 0, ky: 0, flash: 0, dying: 0, hitId: -1,
-              wt: 0, vx: 0, vy: 0, spT: 2.5, dash: 0, roots: 0, rage: false };
-    G.ents.push(z);
-    G.boss = z;
     G.killsSinceBoss = 0;
     G.shake = 6;
     if (A) A.music('boss');
 
     D.push('!!!', '#ff5a5a', b.intro);
-    D.push(b.name, '#ff9a8a', b.spruch);
     if (G.party.length) {
       var f = G.party[(Math.random() * G.party.length) | 0];
       var pp = Chat.people[f.key];
       var lines = Chat.bossLines.auftritt;
       D.push(pp.name, pp.color, lines[(Math.random() * lines.length) | 0]);
     }
+    /* Wenn die Einleitung durch ist, geht der Kampf los. */
+    D.begin(function () {
+      G.state = 'kampf';
+      Kampf.start(b);
+    });
+  }
+
+  /* Bild des Bosses fuer das Kampf-Fenster */
+  function bossBild(b, frame) {
+    if (b.art === 'spider') return S.spider[frame % 2];
+    if (b.art === 'treant') return S.treant;
+    if (b.art === 'wolf') return wolfSet().down[frame % 2];
+    return actorFor('zombie', true).down[frame % 2];
+  }
+
+  function bossBelohnung(b, verschont) {
+    var p = G.player;
+    G.state = 'play';
+    G.bossesBeaten++;
+    G.killsSinceBoss = 0;
+    G.shake = 4;
+    questFortschritt('boss', 1);
+    if (p.maxhp < 20) p.maxhp += 2;
+    p.hp = p.maxhp;
+    G.coins += verschont ? 60 : 40;
+    if (verschont) G.spared++;
+    if (A) { A.heal(); A.music(G.map.music); }
+
+    if (verschont) {
+      D.push(b.name + ' verschont!', '#ffd24a',
+             'Ihr habt euch vertragen. Er trottet davon und dreht sich noch zweimal um.');
+      D.push('Belohnung', '#ffd24a', '60 Muenzen, ein Herz mehr - und ein guter Ruf im Wald.');
+    } else {
+      D.push(b.name + ' besiegt!', '#ffd24a', b.sieg);
+      D.push('Belohnung', '#ffd24a', '40 Muenzen und ein Herz mehr. Alle Herzen wieder voll!');
+    }
+    if (G.party.length) {
+      var f = G.party[(Math.random() * G.party.length) | 0];
+      var pp = Chat.people[f.key];
+      var lines = verschont ? Chat.spareLines : Chat.bossLines.sieg;
+      D.push(pp.name, pp.color, lines[(Math.random() * lines.length) | 0]);
+    }
     D.begin();
+    hint(b.name.split(',')[0] + (verschont ? ' verschont!' : ' besiegt!'));
+    save();
   }
 
   function spawnZombieNear(z) {
@@ -1807,10 +1838,17 @@
       if (took('talk') || took('attack')) D.press();
     }
 
+    if (G.state === 'kampf') {
+      if (took('left')) Kampf.taste('left');
+      if (took('right')) Kampf.taste('right');
+      if (took('talk') || took('attack')) Kampf.taste('ok');
+    }
+
     if (G.state === 'title') {
       if (took('talk') || took('attack')) startGame();
       return;
     }
+    if (G.state === 'kampf') { Kampf.update(dt); return; }
     if (G.state === 'drive') { updateDrive(dt); return; }
     if (G.state === 'over') {
       G.overT += dt;
@@ -1915,6 +1953,7 @@
     if (G.state === 'title') { drawTitle(); return; }
 
     ctx.fillStyle = '#000'; ctx.fillRect(0, 0, VW, VH);
+    if (G.state === 'kampf') { Kampf.draw(); return; }
     if (G.state === 'drive') { drawDrive(); return; }
 
     if (G.shake > 0) {
@@ -1977,6 +2016,19 @@
     D.init();
     bindTouch();
     bindStick();
+
+    /* Das Kampf-Fenster bekommt alles, was es braucht */
+    if (global.Kampf) {
+      Kampf.init({
+        ctx: ctx, S: S, D: D, A: A, G: G, VW: VW, VH: VH,
+        keys: keys,
+        stick: function () { return stick; },
+        bossBild: bossBild,
+        onSieg: function (b) { bossBelohnung(b, false); },
+        onVerschont: function (b) { bossBelohnung(b, true); },
+        onTod: function () { gameOver(); }
+      });
+    }
     load();
     resize();
     global.addEventListener('resize', resize);
