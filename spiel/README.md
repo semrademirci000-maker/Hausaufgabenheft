@@ -67,6 +67,34 @@ acht. Lässt du los, springt der Stick zurück in seine Ecke.
 - **Alter Knorr, der Baumgeist** – langsam und zäh, lässt Wurzeln um sich
   aus dem Boden schießen.
 
+**Reden statt kämpfen (wie in Undertale)**
+- Geh nah an einen Zombie und drücke **E** – statt zuzuschlagen redest du mit ihm:
+  winken, einen Witz erzählen, ihm den Grashalm aus dem Ohr ziehen.
+- Nach **drei freundlichen Sachen** ist er gezähmt: Er winkt, lässt Münzen da und
+  schlurft friedlich in den Wald zurück. Oben steht, wie viele du **verschont** hast.
+- Über einem Zombie, der schon zuhört, schweben gelbe Herzchen. Deine Freunde
+  hauen dann nicht mehr drauf – und im Gespräch bleibt sowieso alles stehen.
+
+**Pilze und Beeren**
+- Im Wald liegen Pilze und Beeren herum; du sammelst sie einfach durch Drüberlaufen.
+- Beim Händler verkaufen (Pilz 4, Beere 3 Münzen) – oder **Mama drei Pilze bringen**:
+  Sie macht eine Pilzpfanne daraus, die **ein Herz dazugibt**.
+
+**Tag und Nacht**
+- Draußen vergeht die Zeit: Abendrot, dann Nacht, dann Sonnenaufgang.
+- **Nachts** kommen mehr Zombies – dafür gibt es **doppelte Münzen**.
+- Zu Hause vor dem Bett **E** drücken: Du schläfst bis zum Morgen und alle
+  Herzen sind wieder voll.
+
+**Aufträge von Papa**
+- Frag Papa nach einer Aufgabe: 8 Zombies erledigen, 5 Pilze sammeln,
+  3 Zombies verschonen oder einen Boss besiegen.
+- Der Fortschritt steht oben links. Fertig? Zurück zu Papa – es gibt Münzen.
+
+**Wuffel, der Hund**
+- Im Haus wohnt Wuffel. Streicheln, Bauch kraulen, Stöckchen werfen.
+- Nach fünfmal Streicheln gibt es **ein Herz dazu**. (Hunde sind wichtig.)
+
 **Zombies**
 - Laufen im Wald herum und kommen auf dich zu, wenn sie dich sehen.
 - Du hältst das Schwert **immer in der Hand**. Beim Schlagen holt der Ritter

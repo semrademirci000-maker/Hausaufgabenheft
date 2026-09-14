@@ -579,6 +579,54 @@
     return swordCache[stufe];
   }
 
+
+  /* ---- Sammelzeug und der Hund ----------------------------------- */
+
+  function makeMushroom() {
+    var c = mk(10, 10), g = c.getContext('2d');
+    g.fillStyle = '#efe2cf'; g.fillRect(4, 5, 3, 5);
+    g.fillStyle = '#d6c6ad'; g.fillRect(6, 5, 1, 5);
+    g.fillStyle = '#8a2f2f'; g.fillRect(1, 1, 8, 4);
+    g.fillStyle = '#c14545'; g.fillRect(2, 1, 6, 3);
+    g.fillStyle = '#efe2cf'; g.fillRect(3, 2, 2, 1); g.fillRect(6, 1, 2, 2);
+    g.fillStyle = '#1b1524'; g.fillRect(1, 5, 8, 1);
+    return c;
+  }
+
+  function makeBerries() {
+    var c = mk(10, 10), g = c.getContext('2d');
+    g.fillStyle = '#2f6b34'; g.fillRect(4, 0, 2, 4);
+    g.fillStyle = '#4b9b4a'; g.fillRect(6, 1, 3, 2); g.fillRect(1, 2, 3, 2);
+    blob(g, 3, 6, 2, '#8a1f4a');
+    blob(g, 7, 6, 2, '#8a1f4a');
+    blob(g, 5, 8, 2, '#a83060');
+    g.fillStyle = '#e07aa0'; g.fillRect(2, 5, 1, 1); g.fillRect(6, 5, 1, 1);
+    return c;
+  }
+
+  /* Wuffel, der Familienhund */
+  function makeDog(schwanzHoch) {
+    var c = mk(16, 14), g = c.getContext('2d');
+    var fell = '#a9743f', dunkel = '#7a5327', hell = '#c89a62';
+    g.fillStyle = '#1b1524'; g.fillRect(2, 5, 12, 8);
+    g.fillStyle = fell; g.fillRect(3, 6, 10, 6);
+    g.fillStyle = hell; g.fillRect(3, 6, 10, 2);
+    /* Kopf */
+    g.fillStyle = '#1b1524'; g.fillRect(8, 1, 7, 7);
+    g.fillStyle = fell; g.fillRect(9, 2, 5, 5);
+    g.fillStyle = hell; g.fillRect(9, 2, 5, 2);
+    g.fillStyle = dunkel; g.fillRect(8, 2, 2, 4);          /* Schlappohr */
+    g.fillStyle = '#1b1524'; g.fillRect(12, 4, 1, 1);      /* Auge */
+    g.fillStyle = '#2a1a14'; g.fillRect(13, 5, 2, 2);      /* Schnauze */
+    /* Beine */
+    g.fillStyle = dunkel; g.fillRect(4, 11, 2, 3); g.fillRect(10, 11, 2, 3);
+    /* Schwanz */
+    g.fillStyle = fell;
+    if (schwanzHoch) { g.fillRect(1, 3, 2, 4); g.fillRect(2, 2, 2, 2); }
+    else { g.fillRect(1, 6, 3, 2); g.fillRect(0, 7, 2, 2); }
+    return c;
+  }
+
   /* =========================================================
      KACHELN (16x16) – Wald, Haus, Stadt
      ========================================================= */
@@ -880,6 +928,9 @@
     treant: makeTreant(),
     coin: [makeCoin(false), makeCoin(true)],
     stall: makeStall(),
+    mushroom: makeMushroom(),
+    berries: makeBerries(),
+    dog: [makeDog(false), makeDog(true)],
     knightFor: knightFor,
     swordFor: swordFor,
     withEars: withEars,

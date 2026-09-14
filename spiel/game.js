@@ -5,7 +5,7 @@
   'use strict';
 
   var TILE = 16, VW = 320, VH = 240;
-  var FASSUNG = 11;                    /* steht unten auf dem Titelbild */
+  var FASSUNG = 12;                    /* steht unten auf dem Titelbild */
   var cv = document.getElementById('game');
   var ctx = cv.getContext('2d');
   ctx.imageSmoothingEnabled = false;
@@ -23,6 +23,8 @@
     spawnT: 4, shake: 0, hint: '', hintT: 0,
     boss: null, bossQueue: [], bossesBeaten: 0, killsSinceBoss: 0,
     coins: 0, swordLevel: 0, armorLevel: 0,
+    pilze: 0, beeren: 0, spared: 0, pets: 0, hundBonus: false,
+    zeit: 0.28, quest: null, sammelT: 6,
     drive: null, overT: 0, lastSave: 0
   };
   global.GAME = G;
@@ -202,6 +204,8 @@
       addNPC('mama', 3.5, 4, 'down');
       addNPC('papa', 6.5, 7.2, 'up');
       addNPC('mila', 12.5, 9.2, 'left');
+      var hund = addNPC('hund', 15.5, 5.5, 'down');
+      hund.hund = true;
     }
 
     if (key === 'stadt') {
@@ -215,6 +219,10 @@
         var h = addNPC('haendler', m.haendler.x, m.haendler.y, 'down');
         h.shop = true;
       }
+    }
+
+    if (key === 'wald') {
+      for (i = 0; i < 9; i++) sammelStueckSetzen();
     }
 
     G.spawnT = 3;
@@ -367,7 +375,7 @@
 
     for (var i = 0; i < G.ents.length; i++) {
       var z = G.ents[i];
-      if (z.type !== 'zombie' || z.dying) continue;
+      if (z.type !== 'zombie' || z.dying || z.spared) continue;
       if (z.hitId === p.swingId) continue;
       if (z.x + 6 > box.l && z.x - 6 < box.r && z.y > box.t && z.y - 14 < box.b) {
         z.hitId = p.swingId;
@@ -389,10 +397,11 @@
         muenzenAbwerfen(z.x, z.y - 8, 12 + ((Math.random() * 8) | 0));
         bossBesiegt(z);
       } else {
-        muenzenAbwerfen(z.x, z.y - 8, 1 + ((Math.random() * 3) | 0));
+        muenzenAbwerfen(z.x, z.y - 8, (1 + ((Math.random() * 3) | 0)) * (istNacht() ? 2 : 1));
         G.kills++;
         G.killsSinceBoss++;
         G.killsHeute = (G.killsHeute || 0) + 1;
+        questFortschritt('zombies', 1);
         if (G.killsHeute === 3) hint('Genug gekaempft? Der Auto-Knopf bringt euch in die Stadt!');
         Chat.killLine(G);
         save();
@@ -435,6 +444,16 @@
   function updateZombie(z, dt) {
     if (z.dying) {
       z.dying += dt;
+      return;
+    }
+    /* Verschont: er trollt sich friedlich davon */
+    if (z.spared) {
+      z.leaving -= dt;
+      moveEnt(z, z.vx * 32 * dt, z.vy * 32 * dt);
+      z.anim += dt * 3;
+      if (Math.abs(z.vx) > Math.abs(z.vy)) z.dir = z.vx > 0 ? 'right' : 'left';
+      else z.dir = z.vy > 0 ? 'down' : 'up';
+      if (z.leaving <= 0) z.dying = 0.02;
       return;
     }
     if (D.isOpen()) { z.flash = Math.max(0, z.flash - dt); return; }
@@ -486,6 +505,76 @@
     G.shake = 4;
     if (A) A.hurt();
     if (p.hp <= 0) { p.hp = 0; gameOver(); }
+  }
+
+  /* ================= Pilze und Beeren ================= */
+
+  function sammelStueckSetzen() {
+    for (var i = 0; i < 40; i++) {
+      var tx = 2 + ((Math.random() * (G.mapW - 4)) | 0);
+      var ty = 2 + ((Math.random() * (G.mapH - 4)) | 0);
+      var kachel = tileAt(tx, ty);
+      if (solidTile(kachel)) continue;
+      if (kachel !== '.' && kachel !== ',' && kachel !== 'f') continue;   /* nur auf Gras */
+      G.ents.push({
+        type: 'pickup',
+        art: Math.random() > 0.45 ? 'pilz' : 'beere',
+        x: tx * TILE + 8, y: ty * TILE + 14, anim: Math.random() * 3
+      });
+      return true;
+    }
+    return false;
+  }
+
+  function countPickups() {
+    var n = 0;
+    for (var i = 0; i < G.ents.length; i++) if (G.ents[i].type === 'pickup') n++;
+    return n;
+  }
+
+  function updatePickup(e, dt) {
+    e.anim += dt * 2;
+    var dx = G.player.x - e.x, dy = (G.player.y - 6) - e.y;
+    if (dx * dx + dy * dy < 13 * 13) {
+      e.weg = true;
+      if (e.art === 'pilz') { G.pilze++; hint('Pilz gefunden! (' + G.pilze + ')'); }
+      else { G.beeren++; hint('Beeren gefunden! (' + G.beeren + ')'); }
+      questFortschritt('pilze', e.art === 'pilz' ? 1 : 0);
+      if (A) A.coin();
+      save();
+    }
+  }
+
+  /* ================= Tag und Nacht ================= */
+
+  /* 0 = Mitternacht, 0.5 = Mittag. Ein ganzer Tag dauert vier Minuten. */
+  function istNacht() { return G.zeit < 0.18 || G.zeit > 0.82; }
+
+  function tageszeitFarbe() {
+    var t = G.zeit;
+    if (t > 0.26 && t < 0.72) return null;                  /* heller Tag */
+    var dunkel;
+    if (t <= 0.26) dunkel = 1 - t / 0.26;                   /* Nacht -> Morgen */
+    else dunkel = (t - 0.72) / 0.28;                        /* Abend -> Nacht */
+    var abend = (t > 0.6 && t < 0.8) || (t > 0.16 && t < 0.3);
+    return {
+      farbe: abend ? 'rgba(180,90,40,' : 'rgba(20,24,70,',
+      staerke: Math.min(0.52, dunkel * 0.6)
+    };
+  }
+
+  function schlafen() {
+    D.push('Dein Bett', '#9ad8e0',
+           'Du legst dich hin. Draussen wird es hell...',
+           [{ t: 'Bis zum Morgen schlafen', r: 'Du wachst ausgeruht auf. Alle Herzen sind voll!',
+              go: function () {
+                G.zeit = 0.3;
+                G.player.hp = G.player.maxhp;
+                if (A) A.heal();
+                hint('Guten Morgen!');
+              } },
+            { t: 'Doch nicht muede', r: 'Du stehst wieder auf.' }]);
+    D.begin();
   }
 
   /* ================= Muenzen ================= */
@@ -648,6 +737,7 @@
     G.boss = null;
     G.bossesBeaten++;
     G.killsSinceBoss = 0;
+    questFortschritt('boss', 1);
     G.shake = 6;
     if (p.maxhp < 14) p.maxhp += 2;
     p.hp = p.maxhp;
@@ -690,10 +780,13 @@
     c.anim += dt * (c.moving ? 7 : 0);
 
     /* Freunde helfen im Kampf */
-    if (c.atkCd <= 0) {
+    /* Waehrend geredet wird, haut auch niemand zu */
+    if (c.atkCd <= 0 && !D.isOpen()) {
       for (var i = 0; i < G.ents.length; i++) {
         var z = G.ents[i];
         if (z.type !== 'zombie' || z.dying) continue;
+        /* Wer zuhoert oder verschont ist, wird in Ruhe gelassen */
+        if (z.spared || z.reden || z.mercy > 0) continue;
         if (dist(z, c) < 22) {
           c.atkCd = 1.5; c.swing = 0.25;
           damageZombie(z, 1, z.x - c.x, z.y - c.y);
@@ -722,6 +815,89 @@
     n.anim += dt * (n.moving ? 6 : 0);
   }
 
+  /* ================= Auftraege ================= */
+
+  var AUFTRAEGE = [
+    { art: 'zombies', ziel: 8, text: 'Erledige 8 Zombies', lohn: 40 },
+    { art: 'pilze', ziel: 5, text: 'Sammle 5 Pilze', lohn: 35 },
+    { art: 'verschonen', ziel: 3, text: 'Verschone 3 Zombies', lohn: 55 },
+    { art: 'boss', ziel: 1, text: 'Besiege einen Boss', lohn: 80 }
+  ];
+
+  function questFortschritt(art, n) {
+    if (!n || !G.quest || G.quest.art !== art || G.quest.fertig) return;
+    G.quest.stand += n;
+    if (G.quest.stand >= G.quest.ziel) {
+      G.quest.fertig = true;
+      hint('Auftrag geschafft! Erzaehl es Papa.');
+      if (A) A.select();
+    }
+  }
+
+  function neuerAuftrag() {
+    var a = AUFTRAEGE[(Math.random() * AUFTRAEGE.length) | 0];
+    G.quest = { art: a.art, ziel: a.ziel, text: a.text, lohn: a.lohn, stand: 0, fertig: false };
+    hint('Neuer Auftrag: ' + a.text);
+  }
+
+  function auftragAbgeben() {
+    var lohn = G.quest.lohn;
+    G.coins += lohn;
+    G.quest = null;
+    if (A) A.coin();
+    hint('+' + lohn + ' Muenzen!');
+    save();
+  }
+
+  /* ============ Mit Zombies reden statt zuschlagen ============ */
+
+  function zombieAnsprechen(z) {
+    if (!z.mercy) z.mercy = 0;
+    z.reden = true;                 /* jetzt wird geredet, nicht geschlagen */
+    var text = Chat.zombieTexte[Math.min(z.mercy, Chat.zombieTexte.length - 1)];
+    D.push('Ein Zombie', '#8fd36a', text, [
+      { t: 'Freundlich winken',
+        go: function () { mercyPlus(z, 'Du winkst. Der Zombie winkt ganz langsam zurueck.'); } },
+      { t: 'Einen Witz erzaehlen',
+        go: function () { mercyPlus(z, 'Dein Witz ueber Regenwuermer kommt gut an. Der Zombie gluckst.'); } },
+      { t: 'Den Grashalm wegnehmen',
+        go: function () { mercyPlus(z, 'Du zupfst ihm den Halm aus dem Ohr. Er sieht fast ordentlich aus.'); } },
+      { t: 'Lieber doch kaempfen',
+        r: 'Der Zombie knurrt und kommt wieder auf dich zu.' }
+    ]);
+    D.begin();
+  }
+
+  function mercyPlus(z, text) {
+    z.mercy = (z.mercy || 0) + 1;
+    D.push('Ein Zombie', '#8fd36a', text);
+    if (A) A.blip();
+    if (z.mercy >= 3) verschonen(z);
+    else D.push('Ein Zombie', '#8fd36a', 'Er wirkt schon viel ruhiger. Noch ein bisschen...');
+  }
+
+  function verschonen(z) {
+    z.spared = true;
+    z.leaving = 2.2;
+    z.vx = (z.x - G.player.x) || 1;
+    z.vy = (z.y - G.player.y);
+    var len = Math.sqrt(z.vx * z.vx + z.vy * z.vy) || 1;
+    z.vx /= len; z.vy /= len;
+    G.spared++;
+    muenzenAbwerfen(z.x, z.y - 8, 2 + ((Math.random() * 3) | 0));
+    questFortschritt('verschonen', 1);
+    if (A) A.heal();
+    hint('Verschont! (' + G.spared + ')');
+    D.push('Ein Zombie', '#8fd36a',
+           Chat.zombieFreund[(Math.random() * Chat.zombieFreund.length) | 0]);
+    if (G.party.length) {
+      var f = G.party[(Math.random() * G.party.length) | 0];
+      var pp = Chat.people[f.key];
+      D.push(pp.name, pp.color, Chat.spareLines[(Math.random() * Chat.spareLines.length) | 0]);
+    }
+    save();
+  }
+
   /* ================= Der Laden ================= */
 
   var SCHWERT_STUFEN = [
@@ -748,6 +924,24 @@
     if (ru) {
       opts.push({ t: 'Ruestung: ' + ru.name + ' - ' + ru.preis + ' Muenzen',
                   go: function () { kaufen('ruestung', ru); } });
+    }
+    if (G.pilze > 0) {
+      opts.push({ t: G.pilze + ' Pilze verkaufen (je 4)',
+                  go: function () {
+                    var lohn = G.pilze * 4; G.coins += lohn; G.pilze = 0;
+                    if (A) A.coin(); hint('+' + lohn + ' Muenzen');
+                    D.push(h.name, h.color, 'Schoene Pilze! Die kommen heute Abend in die Pfanne.');
+                    save(); ladenOeffnen(false);
+                  } });
+    }
+    if (G.beeren > 0) {
+      opts.push({ t: G.beeren + ' Beeren verkaufen (je 3)',
+                  go: function () {
+                    var lohn = G.beeren * 3; G.coins += lohn; G.beeren = 0;
+                    if (A) A.coin(); hint('+' + lohn + ' Muenzen');
+                    D.push(h.name, h.color, 'Beeren! Meine Frau macht Marmelade draus.');
+                    save(); ladenOeffnen(false);
+                  } });
     }
     if (G.player.hp < G.player.maxhp) {
       opts.push({ t: 'Eintopf, alle Herzen voll - 10 Muenzen',
@@ -797,8 +991,33 @@
   }
 
   /* ================= Reden ================= */
+  /* Auf welcher Kachel steht der Ritter, wenn er einen Schritt vorgeht? */
+  function kachelVorDemRitter() {
+    var p = G.player, dx = 0, dy = 0;
+    if (p.dir === 'left') dx = -12;
+    else if (p.dir === 'right') dx = 12;
+    else if (p.dir === 'up') dy = -14;
+    else dy = 6;
+    return tileAt(Math.floor((p.x + dx) / TILE), Math.floor((p.y - 4 + dy) / TILE));
+  }
+
   function tryTalk() {
     var p = G.player, best = null, bd = 30;
+
+    /* Erst schauen, ob ein Zombie in der Naehe ist - mit dem kann man reden! */
+    var zNah = null, zd = 30;
+    for (var j = 0; j < G.ents.length; j++) {
+      var z = G.ents[j];
+      if (z.type !== 'zombie' || z.dying || z.boss || z.spared) continue;
+      var d0 = dist(z, p);
+      if (d0 < zd) { zd = d0; zNah = z; }
+    }
+    if (zNah) return zombieAnsprechen(zNah);
+
+    /* Vor dem Bett schlafen */
+    var k = kachelVorDemRitter();
+    if (G.mapKey === 'haus' && (k === 'b' || k === 'n')) return schlafen();
+
     for (var i = 0; i < G.ents.length; i++) {
       var e = G.ents[i];
       if (e === p) continue;
@@ -814,25 +1033,60 @@
       D.say('Ein Blatt Papier', '#e8e2c8', best.text);
       return;
     }
+    if (best.type === 'npc' && best.hund) return streicheln(best);
     if (best.type === 'npc' && best.shop) return ladenOeffnen(true);
     if (best.type === 'npc') return talkNPC(best);
     return talkFriend(best);
   }
 
+  function familyLine(wer, index) {
+    var lines = Chat.familyLines[wer] || [];
+    if (!lines.length) return 'Schoen, dass du da bist!';
+    return lines[index % lines.length];
+  }
+
   function talkNPC(n) {
     var p = Chat.people[n.key];
     if (n.key === 'mama') {
-      D.push(p.name, p.color, Chat.familyLines.mama[n.said % 3], [
-        { t: 'Ja bitte, einen Teller Eintopf!', r: 'Da, iss auf. So, jetzt bist du wieder ganz.', go: heal },
-        { t: 'Spaeter, ich muss los.', r: 'Dann pass auf dich auf, mein Ritter.' }
-      ]);
+      var mopts = [
+        { t: 'Ja bitte, einen Teller Eintopf!',
+          r: 'Da, iss auf. So, jetzt bist du wieder ganz.', go: heal }
+      ];
+      if (G.pilze >= 3) {
+        mopts.push({ t: 'Ich hab Pilze dabei! (3 Pilze)',
+                     r: 'Pilzpfanne! Die beste im ganzen Wald. Davon wirst du staerker.',
+                     go: function () {
+                       G.pilze -= 3;
+                       if (G.player.maxhp < 20) G.player.maxhp += 2;
+                       G.player.hp = G.player.maxhp;
+                       hint('Ein Herz mehr von Mamas Pilzpfanne!');
+                       if (A) A.heal();
+                       save();
+                     } });
+      }
+      mopts.push({ t: 'Spaeter, ich muss los.', r: 'Dann pass auf dich auf, mein Ritter.' });
+      D.push(p.name, p.color, familyLine('mama', n.said), mopts);
     } else if (n.key === 'papa') {
-      D.push(p.name, p.color, Chat.familyLines.papa[n.said % 3], [
-        { t: 'Wollen wir in die Stadt fahren?', r: 'Gern! Der Wagen steht auf dem Weg draussen. Sag Bescheid.' },
-        { t: 'Ich gehe erst noch in den Wald.', r: 'Halt das Schwert fest und den Kopf unten.' }
-      ]);
+      var opts = [];
+      if (!G.quest) {
+        opts.push({ t: 'Hast du eine Aufgabe fuer mich?',
+                    r: 'Immer! Pack das an, dann gibt es Muenzen.',
+                    go: neuerAuftrag });
+      } else if (G.quest.fertig) {
+        opts.push({ t: 'Auftrag erledigt! (' + G.quest.text + ')',
+                    r: 'Sauber gemacht! Hier, dein Lohn.',
+                    go: auftragAbgeben });
+      } else {
+        opts.push({ t: 'Wie war der Auftrag nochmal?',
+                    r: G.quest.text + ' - du hast ' + G.quest.stand + ' von ' + G.quest.ziel + '.' });
+      }
+      opts.push({ t: 'Lass uns in die Stadt fahren!',
+                  r: 'Gern! Alle einsteigen!', go: starteFahrt });
+      opts.push({ t: 'Ich gehe erst noch in den Wald.',
+                  r: 'Halt das Schwert fest und den Kopf unten.' });
+      D.push(p.name, p.color, familyLine('papa', n.said), opts);
     } else if (n.key === 'mila') {
-      D.push(p.name, p.color, Chat.familyLines.mila[n.said % 3], [
+      D.push(p.name, p.color, familyLine('mila', n.said), [
         { t: 'Wenn du groesser bist, versprochen.', r: 'Das sagst du immer! Aber gut. Ich uebe schon mal.' },
         { t: 'In die Stadt darfst du mit.', r: 'JAAA! Ich hol meine Schuhe!' }
       ]);
@@ -841,6 +1095,33 @@
     }
     n.said++;
     D.begin();
+  }
+
+  function streicheln(hund) {
+    var w = Chat.people.hund;
+    D.push(w.name, w.color, 'Wuffel wedelt so doll, dass sein ganzer Hintern mitwackelt.', [
+      { t: 'Kopf kraulen', go: function () { gestreichelt(hund, 'Wuffel macht die Augen zu und lehnt sich an dein Bein.'); } },
+      { t: 'Bauch kraulen', go: function () { gestreichelt(hund, 'Wuffel faellt sofort um und zeigt dir den Bauch.'); } },
+      { t: 'Stoeckchen werfen', go: function () { gestreichelt(hund, 'Wuffel rast los, kommt mit einem viel zu grossen Ast zurueck.'); } },
+      { t: 'Spaeter, Wuffel.', r: 'Wuffel legt sich seufzend wieder hin.' }
+    ]);
+    D.begin();
+  }
+
+  function gestreichelt(hund, text) {
+    G.pets++;
+    hund.anim += 1;
+    if (A) A.heal();
+    D.push(Chat.people.hund.name, Chat.people.hund.color, text);
+    if (G.pets >= 5 && !G.hundBonus) {
+      G.hundBonus = true;
+      G.player.maxhp = Math.min(20, G.player.maxhp + 2);
+      G.player.hp = G.player.maxhp;
+      D.push('Wuffel', Chat.people.hund.color,
+             'Von so viel Hund wird einem ganz warm ums Herz. Ein Herz mehr!');
+      hint('Ein Herz mehr - danke, Wuffel!');
+    }
+    save();
   }
 
   function heal() {
@@ -1094,6 +1375,12 @@
       return;
     }
 
+    if (e.type === 'pickup') {
+      var bild = e.art === 'pilz' ? S.mushroom : S.berries;
+      ctx.drawImage(bild, sx - 5, sy - 10 + Math.round(Math.sin(e.anim) * 1.2));
+      return;
+    }
+
     if (e.type === 'coin') {
       var cf = Math.floor(e.anim) % 2;
       ctx.drawImage(S.coin[cf], sx - 4, sy - 8 + Math.round(Math.sin(e.anim) * 1.5));
@@ -1127,11 +1414,30 @@
         ctx.drawImage(whiteCopy(img), sx - 8, sy - 16);
         ctx.globalAlpha = 1;
       }
+      /* Wer schon zuhoert, bekommt ein gelbes Herz */
+      if (e.mercy > 0 && !e.spared) {
+        ctx.fillStyle = '#ffd24a';
+        ctx.font = '8px "Courier New", monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('\u2665'.repeat(e.mercy), sx, sy - 19);
+        ctx.textAlign = 'left';
+      }
+
       /* kleine Lebensanzeige */
       if (e.hp < 3) {
         ctx.fillStyle = '#1a1420'; ctx.fillRect(sx - 7, sy - 20, 14, 3);
         ctx.fillStyle = '#8fd36a'; ctx.fillRect(sx - 6, sy - 19, (e.hp / 3) * 12, 1);
       }
+      return;
+    }
+
+    if (e.type === 'npc' && e.hund) {
+      ctx.drawImage(S.dog[frameOf(e)], sx - 8, sy - 14);
+      ctx.fillStyle = '#d8a45a';
+      ctx.font = '8px "Courier New", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('Wuffel', sx, sy - 17);
+      ctx.textAlign = 'left';
       return;
     }
 
@@ -1305,6 +1611,14 @@
     ctx.fillText('Zombies: ' + G.kills, VW - 6, 23);
     ctx.fillStyle = '#ffd24a';
     ctx.fillText(G.coins + ' Muenzen', VW - 6, 33);
+    if (G.spared > 0) {
+      ctx.fillStyle = '#8fd0e0';
+      ctx.fillText('Verschont: ' + G.spared, VW - 6, 43);
+    }
+    if (G.pilze || G.beeren) {
+      ctx.fillStyle = '#c8c2e0';
+      ctx.fillText(G.pilze + ' Pilze  ' + G.beeren + ' Beeren', VW - 6, 53);
+    }
     ctx.textAlign = 'left';
     ctx.drawImage(S.coin[0], VW - 6 - ctx.measureText(G.coins + ' Muenzen').width - 10, 26);
 
@@ -1348,6 +1662,15 @@
       ctx.fillStyle = '#cfc9e6';
       ctx.fillText('Finger aufs Bild legen und ziehen zum Laufen', 8, VH - 10);
       ctx.globalAlpha = 1;
+    }
+
+    /* Laufender Auftrag */
+    if (G.quest) {
+      ctx.fillStyle = G.quest.fertig ? '#8fd36a' : '#c8c2e0';
+      ctx.fillText(G.quest.fertig
+        ? 'Auftrag geschafft: zu Papa!'
+        : 'Auftrag: ' + G.quest.text + ' (' + Math.min(G.quest.stand, G.quest.ziel) + '/' + G.quest.ziel + ')',
+        6, 33);
     }
 
     /* Ortsname / Hinweis */
@@ -1434,7 +1757,9 @@
       localStorage.setItem('oakblade_stand', JSON.stringify({
         kills: G.kills, coins: G.coins,
         schwert: G.swordLevel, ruestung: G.armorLevel,
-        maxhp: G.player ? G.player.maxhp : 10
+        maxhp: G.player ? G.player.maxhp : 10,
+        pilze: G.pilze, beeren: G.beeren, spared: G.spared,
+        pets: G.pets, hundBonus: G.hundBonus
       }));
     } catch (e) { }
   }
@@ -1448,6 +1773,11 @@
       G.coins = d.coins || 0;
       G.swordLevel = d.schwert || 0;
       G.armorLevel = d.ruestung || 0;
+      G.pilze = d.pilze || 0;
+      G.beeren = d.beeren || 0;
+      G.spared = d.spared || 0;
+      G.pets = d.pets || 0;
+      G.hundBonus = !!d.hundBonus;
       if (d.maxhp && G.player) {
         G.player.maxhp = Math.max(10, Math.min(20, d.maxhp));
         G.player.hp = G.player.maxhp;
@@ -1523,6 +1853,9 @@
       } else if (e.type === 'coin') {
         updateCoin(e, dt);
         if (e.weg) G.ents.splice(i, 1);
+      } else if (e.type === 'pickup') {
+        updatePickup(e, dt);
+        if (e.weg) G.ents.splice(i, 1);
       }
     }
     for (i = 0; i < G.ents.length; i++) {
@@ -1535,11 +1868,18 @@
     if (G.map.zombies && G.state === 'play') {
       G.spawnT -= dt;
       if (G.spawnT <= 0) {
-        G.spawnT = 5 + Math.random() * 4;
-        if (countZombies() < 7) spawnZombie();
+        G.spawnT = (istNacht() ? 3 : 5) + Math.random() * 4;
+        if (countZombies() < (istNacht() ? 10 : 7)) spawnZombie();
       }
       /* Nach ein paar erledigten Zombies kommt ein Boss - jedes Mal ein anderer */
       if (!G.boss && G.killsSinceBoss >= 6 && !D.isOpen()) spawnBoss();
+
+      /* Pilze und Beeren wachsen nach */
+      G.sammelT -= dt;
+      if (G.sammelT <= 0) {
+        G.sammelT = 10 + Math.random() * 8;
+        if (countPickups() < 12) sammelStueckSetzen();
+      }
     }
 
     /* Musik im Kampf */
@@ -1553,6 +1893,14 @@
     } else G.danger = false;
 
     Chat.update(dt, G);
+
+    /* Die Zeit vergeht nur draussen */
+    if (G.mapKey === 'wald') {
+      var vorher = istNacht();
+      G.zeit = (G.zeit + dt / 240) % 1;
+      if (!vorher && istNacht()) hint('Es wird dunkel - mehr Zombies, doppelte Muenzen!');
+      if (vorher && !istNacht()) hint('Die Sonne geht auf.');
+    }
 
     if (G.hintT > 0) G.hintT -= dt;
     if (G.shake > 0) G.shake = Math.max(0, G.shake - dt * 12);
@@ -1582,7 +1930,14 @@
 
     ctx.setTransform(1, 0, 0, 1, 0, 0);
 
-    /* Nacht/Innen-Stimmung */
+    /* Tag und Nacht */
+    var tz = (G.mapKey === 'wald') ? tageszeitFarbe() : null;
+    if (tz) {
+      ctx.fillStyle = tz.farbe + tz.staerke.toFixed(2) + ')';
+      ctx.fillRect(0, 0, VW, VH);
+    }
+
+    /* Innen-Stimmung */
     if (G.mapKey === 'haus') {
       ctx.fillStyle = 'rgba(60,30,10,0.10)';
       ctx.fillRect(0, 0, VW, VH);

@@ -56,6 +56,10 @@
       name: 'Kleiner Tino', rolle: 'Stadtkind', color: '#e0d080', kurz: 'Tino',
       pal: { hair: '#c8a03a', skin: '#f5cfa8', shirt: '#7ac45a', shirtDark: '#5da040', pants: '#8a5ac4', boots: '#5b4326' }
     },
+    hund: {
+      name: 'Wuffel', rolle: 'Familienhund', color: '#d8a45a', kurz: 'Wuffel',
+      pal: { hair: '#a9743f', skin: '#c89a62', shirt: '#a9743f', shirtDark: '#7a5327', pants: '#7a5327', boots: '#5b3d22' }
+    },
     haendler: {
       name: 'Haendler Bosko', rolle: 'Waffenschmied', color: '#ffd24a', kurz: 'Bosko',
       pal: { hair: '#5a3a1a', skin: '#d8a070', shirt: '#8a5a2a', shirtDark: '#6b4420', pants: '#4a3a2a', boots: '#33261a' }
@@ -129,6 +133,25 @@
             { t: 'Herrlich.', r: 'Nicht wahr? Kein Stoehnen, kein Gematsche.' }] }
     ]
   };
+
+  /* Wenn man mit einem Zombie redet statt zuzuschlagen */
+  var ZOMBIE_TEXTE = [
+    'Der Zombie bleibt stehen und starrt dich an. Ein Grashalm haengt ihm aus dem Ohr.',
+    'Der Zombie macht "Bluuuh?" und legt den Kopf schief.',
+    'Der Zombie schnueffelt an deinem Schwert und niest. Fast schon suess.'
+  ];
+
+  var ZOMBIE_FREUND = [
+    'Der Zombie brummt zufrieden, winkt kurz und schlurft in den Wald zurueck.',
+    'Der Zombie legt dir einen matschigen Wurm vor die Fuesse. Ein Geschenk!',
+    'Der Zombie macht einen sehr langsamen Freudensprung und trollt sich.'
+  ];
+
+  var SPARE_LINES = [
+    'Du hast ihn einfach gehen lassen? Du bist schon ein Komischer.',
+    'Guck mal, der winkt! Das hab ich ja noch nie gesehen.',
+    'Nicht jeder Kampf muss ein Kampf sein. Schoen.'
+  ];
 
   /* Spruch, wenn ein Zombie fällt */
   var KILL_LINES = [
@@ -228,6 +251,9 @@
   };
 
   var Chat = {
+    zombieTexte: ZOMBIE_TEXTE,
+    zombieFreund: ZOMBIE_FREUND,
+    spareLines: SPARE_LINES,
     shopLines: SHOP_LINES,
     bosse: BOSSE,
     bossLines: BOSS_LINES,
