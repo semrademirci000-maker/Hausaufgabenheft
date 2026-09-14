@@ -100,6 +100,7 @@ html, body {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
 }
 .act.big { width: 74px; height: 74px; border-color: #b8453f; color: #ff9a8a; font-size: 22px; }
+.act.auto { border-color: #e8a54a; color: #ffd24a; }
 .act small { font-size: 7px; opacity: .75; margin-top: 2px; }
 .act:active { background: #3b3660; }
 

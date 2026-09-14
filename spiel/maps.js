@@ -121,7 +121,7 @@
         { x: 11, y: 7, w: 2, h: 1, kind: 'door', to: 'haus', tx: 10.5, ty: 10.5 }
       ],
       props: [
-        { kind: 'car', x: 26.5, y: 16 },
+        { kind: 'car', x: 16.8, y: 10.4 },
         { kind: 'sign', x: 28, y: 20.9, text: 'Wegweiser: Nach Osten geht es zur Stadt Eichenstadt. Zu Fuss viel zu weit - nimm das Auto!' }
       ],
       /* Startplätze für die vier Freunde vor dem Haus */

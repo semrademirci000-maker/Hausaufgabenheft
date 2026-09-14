@@ -5,7 +5,7 @@
   'use strict';
 
   var TILE = 16, VW = 320, VH = 240;
-  var FASSUNG = 8;                    /* steht unten auf dem Titelbild */
+  var FASSUNG = 9;                    /* steht unten auf dem Titelbild */
   var cv = document.getElementById('game');
   var ctx = cv.getContext('2d');
   ctx.imageSmoothingEnabled = false;
@@ -127,6 +127,8 @@
     if (show === controlsOn) return;
     controlsOn = show;
     touchEl.classList.toggle('off', !show);
+    var autotext = document.getElementById('autotext');
+    if (autotext) autotext.textContent = (G.mapKey === 'stadt') ? 'Wald' : 'Stadt';
     if (!show) {
       /* Finger weg vom Knopf: nichts darf gedrückt bleiben */
       for (var k in keys) keys[k] = false;
@@ -380,6 +382,8 @@
       } else {
         G.kills++;
         G.killsSinceBoss++;
+        G.killsHeute = (G.killsHeute || 0) + 1;
+        if (G.killsHeute === 3) hint('Genug gekaempft? Der Auto-Knopf bringt euch in die Stadt!');
         Chat.killLine(G);
         save();
       }
@@ -808,6 +812,19 @@
       { t: 'Lieber noch nicht.', r: 'Der Wagen bleibt stehen.' }
     ]);
     D.begin();
+  }
+
+  /* Mit einem Knopfdruck zur Stadt - die Familie steigt mit ein. */
+  function starteFahrt() {
+    if (G.state !== 'play') return;
+    if (G.mapKey === 'stadt') {
+      hint('Zurueck in den Wald!');
+      startDrive('wald');
+      return;
+    }
+    G.partyKeys = ['mama', 'papa', 'mila'];
+    hint('Die ganze Familie steigt ein!');
+    startDrive('stadt');
   }
 
   function startDrive(to) {
@@ -1325,6 +1342,9 @@
     } else if (G.fade > 0) {
       G.fade = Math.max(0, G.fade - dt * 3.2);
     }
+
+    /* Auto-Knopf: sofort losfahren, kein Suchen noetig */
+    if (took('auto') && !D.isOpen()) starteFahrt();
 
     if (!D.isOpen() && took('talk')) tryTalk();
 

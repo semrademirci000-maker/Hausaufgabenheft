@@ -28,7 +28,8 @@
       this.active = false;     // Finger liegt auf und der Stick ist sichtbar
       this.used = false;       // schon einmal benutzt (für den Hinweis)
 
-      this._id = null;
+      this._touchId = null;    // welcher Finger zieht gerade
+      this._lastTouch = 0;     // wann zuletzt ein Finger/Pointer kam
       this._down = false;      // Finger liegt auf (auch wenn kein Stick)
       this._origin = { x: 0, y: 0 };
       this._moved = 0;
@@ -59,48 +60,92 @@
       this._listen(zone);
     }
 
-    /* ---- Ereignisse: Finger und Maus laufen durch dieselben drei Schritte ---- */
+    /* ---- Ereignisse ----------------------------------------------------
+       Es wird auf ALLE Arten gehorcht: pointer, touch und Maus. Welche ein
+       Geraet schickt, ist von Browser zu Browser verschieden - und manche
+       schicken die eine zum Anfassen und die andere zum Ziehen. Deshalb
+       darf jede Art jede laufende Beruehrung fortsetzen; doppelte Meldungen
+       schreiben einfach denselben Wert und stoeren nicht.
+       Nur echte Maus-Echos nach einer Fingerberuehrung werden verworfen. */
     _listen(zone) {
       var self = this;
 
+      function istEcho(art) {
+        return art === 'maus' && (Date.now() - self._lastTouch) < 900;
+      }
+      function merken(art) {
+        if (art !== 'maus') self._lastTouch = Date.now();
+      }
+
+      /* 1) Pointer */
+      if (global.PointerEvent) {
+        zone.addEventListener('pointerdown', function (e) {
+          merken('pointer');
+          self._begin(e, e, null);
+        });
+        global.addEventListener('pointermove', function (e) {
+          merken('pointer');
+          self._drag(e);
+        });
+        global.addEventListener('pointerup', function () { merken('pointer'); self._stop(); });
+        global.addEventListener('pointercancel', function () { merken('pointer'); self._stop(); });
+      }
+
+      /* 2) Finger */
       zone.addEventListener('touchstart', function (e) {
         var t = e.changedTouches[0];
-        if (t) self._begin(t, t.identifier, e);
+        if (!t) return;
+        merken('touch');
+        self._begin(t, e, t.identifier);
       }, { passive: false });
 
       global.addEventListener('touchmove', function (e) {
-        for (var i = 0; i < e.changedTouches.length; i++) {
-          var t = e.changedTouches[i];
-          if (t.identifier === self._id) {
-            self._drag(t, t.identifier);
-            if (e.cancelable) e.preventDefault();
-            return;
-          }
-        }
+        merken('touch');
+        var t = self._passenderFinger(e.changedTouches);
+        if (!t) return;
+        self._drag(t);
+        if (e.cancelable) e.preventDefault();
       }, { passive: false });
 
-      var los = function (e) {
-        for (var i = 0; i < e.changedTouches.length; i++) {
-          self._stop(e.changedTouches[i].identifier);
-        }
+      var fingerWeg = function (e) {
+        merken('touch');
+        if (self._touchId === null || self._passenderFinger(e.changedTouches)) self._stop();
       };
-      global.addEventListener('touchend', los);
-      global.addEventListener('touchcancel', los);
+      global.addEventListener('touchend', fingerWeg);
+      global.addEventListener('touchcancel', fingerWeg);
 
-      zone.addEventListener('mousedown', function (e) { self._begin(e, 'maus', e); });
-      global.addEventListener('mousemove', function (e) { self._drag(e, 'maus'); });
-      global.addEventListener('mouseup', function () { self._stop('maus'); });
+      /* 3) Maus */
+      zone.addEventListener('mousedown', function (e) {
+        if (istEcho('maus')) return;
+        self._begin(e, e, null);
+      });
+      global.addEventListener('mousemove', function (e) {
+        if (istEcho('maus')) return;
+        self._drag(e);
+      });
+      global.addEventListener('mouseup', function () {
+        if (istEcho('maus')) return;
+        self._stop();
+      });
 
-      /* Verlässt der Finger das Fenster, wird losgelassen. */
       global.addEventListener('blur', function () { self.release(); });
     }
 
-    _begin(point, id, event) {
+    /* Der Finger, der den Stick angefasst hat (falls bekannt). */
+    _passenderFinger(liste) {
+      if (this._touchId === null) return liste[0] || null;
+      for (var i = 0; i < liste.length; i++) {
+        if (liste[i].identifier === this._touchId) return liste[i];
+      }
+      return null;
+    }
+
+    _begin(point, event, touchId) {
       if (this._down) return;
       if (this.ignore(point.target)) return;        // Knöpfe haben Vorrang
 
       this._down = true;
-      this._id = id;
+      this._touchId = (touchId === undefined) ? null : touchId;
       this._origin = { x: point.clientX, y: point.clientY };
       this._moved = 0;
       this._start = Date.now();
@@ -115,8 +160,8 @@
       if (event && event.cancelable) event.preventDefault();
     }
 
-    _drag(point, id) {
-      if (!this._down || id !== this._id) return;
+    _drag(point) {
+      if (!this._down) return;
 
       var dx = point.clientX - this._origin.x;
       var dy = point.clientY - this._origin.y;
@@ -136,8 +181,8 @@
       else { this.x = nx; this.y = ny; }
     }
 
-    _stop(id) {
-      if (!this._down || id !== this._id) return;
+    _stop() {
+      if (!this._down) return;
       var kurz = this._moved < 14 && (Date.now() - this._start) < 600;
       this.release();
       if (kurz && this.onTap) this.onTap();          // getippt statt gezogen
@@ -147,7 +192,7 @@
     release() {
       this._down = false;
       this.active = false;
-      this._id = null;
+      this._touchId = null;
       this.x = this.y = 0;
       this.base.style.display = this.knob.style.display = 'none';
     }
