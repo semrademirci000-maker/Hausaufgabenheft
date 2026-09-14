@@ -8,8 +8,7 @@ struct HomeworkPageView: View {
     @EnvironmentObject private var store: PlannerStore
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
-    @State private var editing: HomeworkTarget?
-    @State private var showNotes = false
+    @State private var openSheet: PageSheet?
 
     /// Zeilenabstand des Linienrasters – alles sitzt auf diesen Linien.
     private let lineHeight: CGFloat = 34
@@ -46,21 +45,23 @@ struct HomeworkPageView: View {
             .padding(.horizontal, 13)
             .padding(.top, 12)
         }
-        .sheet(item: $editing) { target in
-            HomeworkEditorView(date: target.date, block: target.block)
-                .environmentObject(store)
-        }
-        .sheet(isPresented: $showNotes) {
-            NavigationStack {
-                NotesEditor(date: date)
+        .sheet(item: $openSheet) { sheet in
+            switch sheet {
+            case .homework(let target):
+                HomeworkEditorView(date: target.date, block: target.block)
                     .environmentObject(store)
-                    .navigationTitle("Notizen")
-                    .navigationBarTitleDisplayMode(.inline)
-                    .toolbar {
-                        ToolbarItem(placement: .confirmationAction) {
-                            Button("Fertig") { showNotes = false }
+            case .notes:
+                NavigationStack {
+                    NotesEditor(date: date)
+                        .environmentObject(store)
+                        .navigationTitle("Notizen")
+                        .navigationBarTitleDisplayMode(.inline)
+                        .toolbar {
+                            ToolbarItem(placement: .confirmationAction) {
+                                Button("Fertig") { openSheet = nil }
+                            }
                         }
-                    }
+                }
             }
         }
     }
@@ -133,7 +134,7 @@ struct HomeworkPageView: View {
                 }
 
                 Button {
-                    editing = HomeworkTarget(date: date, block: block)
+                    openSheet = .homework(HomeworkTarget(date: date, block: block))
                 } label: {
                     Image(systemName: "plus")
                         .font(.system(size: 11, weight: .bold))
@@ -151,7 +152,7 @@ struct HomeworkPageView: View {
         }
         .contentShape(Rectangle())
         .onTapGesture {
-            editing = HomeworkTarget(date: date, block: block)
+            openSheet = .homework(HomeworkTarget(date: date, block: block))
         }
     }
 
@@ -185,7 +186,7 @@ struct HomeworkPageView: View {
 
     private var notesLine: some View {
         Button {
-            showNotes = true
+            openSheet = .notes
         } label: {
             HStack(spacing: 6) {
                 Text("Notizen")
@@ -201,6 +202,19 @@ struct HomeworkPageView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+    }
+}
+
+/// Was gerade über der Seite geöffnet ist.
+enum PageSheet: Identifiable {
+    case homework(HomeworkTarget)
+    case notes
+
+    var id: String {
+        switch self {
+        case .homework(let target): return "hausaufgabe-" + target.id
+        case .notes: return "notizen"
+        }
     }
 }
 
