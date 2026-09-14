@@ -1,10 +1,10 @@
 # Mein Schulplaner – Stundenplan & Hausaufgabenheft
 
-> Und als Pause danach: das Pixelspiel **Ritter von Eichenwald** – Wald, Holzhaus,
-> Familie, Freunde zum Mitnehmen, Zombies und eine Autofahrt in die Stadt.
+> Und als Pause danach: **Oakblade**, das Pixelspiel – Wald, Holzhaus, Familie,
+> Freunde zum Mitnehmen, Zombies und eine Autofahrt in die Stadt.
 > Es gibt es zweimal, genau wie den Schulplaner:
 > als **Web-Spiel** in [`spiel/`](spiel/README.md) (einfach `spiel/index.html` öffnen)
-> und als **native SwiftUI-App** in [`ios/RitterVonEichenwald/`](ios/RitterVonEichenwald/README.md).
+> und als **native SwiftUI-App** in [`ios/Oakblade/`](ios/Oakblade/README.md).
 
 Die App gibt es zweimal:
 

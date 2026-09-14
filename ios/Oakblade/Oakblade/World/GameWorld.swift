@@ -117,7 +117,7 @@ final class GameWorld {
         self.audio = audio
         player.hp = 20
         player.maxHP = 20
-        kills = UserDefaults.standard.integer(forKey: "ritter.kills")
+        kills = UserDefaults.standard.integer(forKey: "oakblade.kills")
         dialog.onBlip = { [weak self] in self?.audio.play(.blip) }
         dialog.onSelect = { [weak self] in self?.audio.play(.select) }
     }
@@ -522,7 +522,7 @@ final class GameWorld {
             zombie.isDying = true
             zombie.dying = 0.001
             kills += 1
-            UserDefaults.standard.set(kills, forKey: "ritter.kills")
+            UserDefaults.standard.set(kills, forKey: "oakblade.kills")
             audio.play(.dead)
             sayKillLine()
         } else {

@@ -1,4 +1,4 @@
-/* game.js – Ritter von Eichenwald
+/* game.js – Oakblade
    Ein kleines Pixel-Rollenspiel: Wald, Holzhaus, Familie, Freunde,
    Zombies, Schwertschlag-Animation und Autofahrt in die Stadt. */
 (function (global) {
@@ -916,13 +916,12 @@
 
     ctx.textAlign = 'center';
     ctx.fillStyle = '#ffd24a';
-    ctx.font = 'bold 19px "Courier New", monospace';
-    ctx.fillText('RITTER VON', VW / 2, 42);
-    ctx.fillText('EICHENWALD', VW / 2, 62);
+    ctx.font = 'bold 34px "Courier New", monospace';
+    ctx.fillText('OAKBLADE', VW / 2, 54);
     ctx.fillStyle = '#8fd36a';
     ctx.font = '9px "Courier New", monospace';
-    ctx.fillText('ein Pixel-Abenteuer mit Familie, Freunden', VW / 2, 78);
-    ctx.fillText('und viel zu vielen Zombies', VW / 2, 89);
+    ctx.fillText('ein Pixel-Abenteuer mit Familie, Freunden', VW / 2, 76);
+    ctx.fillText('und viel zu vielen Zombies', VW / 2, 88);
 
     ctx.fillStyle = (Math.floor(G.time * 1.6) % 2) ? '#fff' : '#7a748f';
     ctx.font = '10px "Courier New", monospace';
@@ -951,12 +950,12 @@
   /* ================= Speichern ================= */
   function save() {
     try {
-      localStorage.setItem('ritter_kills', String(G.kills));
+      localStorage.setItem('oakblade_kills', String(G.kills));
     } catch (e) { }
   }
   function load() {
     try {
-      var k = localStorage.getItem('ritter_kills');
+      var k = localStorage.getItem('oakblade_kills');
       if (k) G.kills = parseInt(k, 10) || 0;
     } catch (e) { }
   }

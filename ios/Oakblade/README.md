@@ -1,4 +1,4 @@
-# Ritter von Eichenwald – native SwiftUI-App
+# Oakblade – native SwiftUI-App
 
 Dasselbe Spiel wie im Ordner [`spiel/`](../../spiel/), aber **nativ in SwiftUI**
 für iPad und iPhone. Die Grafik ist nicht geladen, sondern wird beim Start
@@ -12,14 +12,14 @@ Pixel für Pixel im Code gemalt – genau wie in der Web-Fassung.
 
 ## Öffnen und starten
 
-1. Ordner `ios/RitterVonEichenwald` auf einen Mac kopieren.
-2. `RitterVonEichenwald.xcodeproj` doppelklicken (Xcode 16 oder neuer).
+1. Ordner `ios/Oakblade` auf einen Mac kopieren.
+2. `Oakblade.xcodeproj` doppelklicken (Xcode 16 oder neuer).
 3. Oben links ein **iPad** auswählen (Simulator oder eigenes Gerät).
 4. Auf ▶ drücken.
 
 Für das eigene iPad einmalig: *Xcode → Einstellungen → Accounts → Apple-ID*,
 danach im Projekt unter **Signing & Capabilities** dein Team auswählen. Die
-Bundle-ID `de.eichenwald.ritter` darfst du auf etwas Eigenes ändern.
+Bundle-ID `de.oakblade.game` darfst du auf etwas Eigenes ändern.
 
 Falls die Projektdatei nicht passt: `brew install xcodegen`, dann in diesem
 Ordner `xcodegen generate`.
@@ -41,7 +41,7 @@ Pixel groß und wird passend hochskaliert).
 
 | Datei | Inhalt |
 |---|---|
-| `RitterApp.swift` | Einstieg der App |
+| `OakbladeApp.swift` | Einstieg der App |
 | `Engine/PixelImage.swift` | Kleines Malprogramm: Bilder Pixel für Pixel, dazu der immer gleiche Zufall |
 | `Engine/SpriteRows.swift` | Die Pixel-Vorlagen als Textzeilen (Ritter, Leute, Zombie, Schwert) |
 | `Engine/Art.swift` | Baut daraus alle Bilder: Figuren, Bäume, Auto, Kacheln, Dächer |

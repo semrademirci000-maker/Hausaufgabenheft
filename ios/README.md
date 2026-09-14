@@ -3,8 +3,8 @@
 In diesem Ordner liegen **zwei** SwiftUI-Apps:
 
 * **`Hausaufgabenheft/`** – Stundenplan und Hausaufgabenheft (diese Anleitung).
-* **`RitterVonEichenwald/`** – das Pixelspiel *Ritter von Eichenwald*,
-  siehe [RitterVonEichenwald/README.md](RitterVonEichenwald/README.md).
+* **`Oakblade/`** – das Pixelspiel *Oakblade*,
+  siehe [Oakblade/README.md](Oakblade/README.md).
 
 ---
 

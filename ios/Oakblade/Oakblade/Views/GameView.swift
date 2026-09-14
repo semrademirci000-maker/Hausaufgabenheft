@@ -453,22 +453,18 @@ struct GameView: View {
         blade.rotate(by: .degrees(20))
         blade.draw(Art.shared.sword, in: CGRect(x: -2, y: -12, width: 5, height: 14))
 
-        ctx.draw(Text("RITTER VON")
-                    .font(.system(size: 19, weight: .bold, design: .monospaced))
+        ctx.draw(Text("OAKBLADE")
+                    .font(.system(size: 32, weight: .bold, design: .monospaced))
                     .foregroundColor(Color(hex: 0xFFD24A)),
-                 at: CGPoint(x: gameWidth / 2, y: 34))
-        ctx.draw(Text("EICHENWALD")
-                    .font(.system(size: 19, weight: .bold, design: .monospaced))
-                    .foregroundColor(Color(hex: 0xFFD24A)),
-                 at: CGPoint(x: gameWidth / 2, y: 55))
+                 at: CGPoint(x: gameWidth / 2, y: 44))
         ctx.draw(Text("ein Pixel-Abenteuer mit Familie, Freunden")
                     .font(.system(size: 9, design: .monospaced))
                     .foregroundColor(Color(hex: 0x8FD36A)),
-                 at: CGPoint(x: gameWidth / 2, y: 75))
+                 at: CGPoint(x: gameWidth / 2, y: 76))
         ctx.draw(Text("und viel zu vielen Zombies")
                     .font(.system(size: 9, design: .monospaced))
                     .foregroundColor(Color(hex: 0x8FD36A)),
-                 at: CGPoint(x: gameWidth / 2, y: 87))
+                 at: CGPoint(x: gameWidth / 2, y: 88))
 
         let blink = Int(world.time * 1.6) % 2 == 0
         ctx.draw(Text("Tippen zum Starten")

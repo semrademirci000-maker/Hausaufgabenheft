@@ -1,4 +1,4 @@
-# Ritter von Eichenwald
+# Oakblade
 
 Ein kleines Pixel-Rollenspiel im Stil von Undertale – alles selbst gezeichnet,
 Pixel für Pixel im Code. Keine Bilddateien, kein Internet nötig.
@@ -7,8 +7,9 @@ Pixel für Pixel im Code. Keine Bilddateien, kein Internet nötig.
 „Zum Home-Bildschirm“ als eigene App).
 
 > Dasselbe Spiel gibt es auch **nativ in SwiftUI** für iPad und iPhone:
-> [`ios/RitterVonEichenwald/`](../ios/RitterVonEichenwald/README.md) – zum Öffnen
-> in Xcode auf einem Mac.
+> [`ios/Oakblade/`](../ios/Oakblade/README.md) – zum Öffnen in Xcode auf einem Mac.
+
+Der Name: *oak* ist die Eiche, *blade* die Klinge – dein Schwert im Eichenwald.
 
 ## Die Geschichte
 

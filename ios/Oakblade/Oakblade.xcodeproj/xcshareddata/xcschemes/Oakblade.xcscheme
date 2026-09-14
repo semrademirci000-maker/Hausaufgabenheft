@@ -6,9 +6,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "AB00000000000000000000A2"
-               BuildableName = "RitterVonEichenwald.app"
-               BlueprintName = "RitterVonEichenwald"
-               ReferencedContainer = "container:RitterVonEichenwald.xcodeproj">
+               BuildableName = "Oakblade.app"
+               BlueprintName = "Oakblade"
+               ReferencedContainer = "container:Oakblade.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -21,9 +21,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "AB00000000000000000000A2"
-            BuildableName = "RitterVonEichenwald.app"
-            BlueprintName = "RitterVonEichenwald"
-            ReferencedContainer = "container:RitterVonEichenwald.xcodeproj">
+            BuildableName = "Oakblade.app"
+            BlueprintName = "Oakblade"
+            ReferencedContainer = "container:Oakblade.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -32,9 +32,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "AB00000000000000000000A2"
-            BuildableName = "RitterVonEichenwald.app"
-            BlueprintName = "RitterVonEichenwald"
-            ReferencedContainer = "container:RitterVonEichenwald.xcodeproj">
+            BuildableName = "Oakblade.app"
+            BlueprintName = "Oakblade"
+            ReferencedContainer = "container:Oakblade.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>
