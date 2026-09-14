@@ -1,5 +1,9 @@
 # Mein Schulplaner – Stundenplan & Hausaufgabenheft
 
+> Und als Pause danach: das Pixelspiel **[Ritter von Eichenwald](spiel/README.md)**
+> im Ordner [`spiel/`](spiel/) – Wald, Holzhaus, Familie, Freunde zum Mitnehmen,
+> Zombies und eine Autofahrt in die Stadt. Einfach `spiel/index.html` öffnen.
+
 Die App gibt es zweimal:
 
 * **Web-App** (dieser Ordner) – läuft sofort in Safari und lässt sich über

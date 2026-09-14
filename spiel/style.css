@@ -1,0 +1,122 @@
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0; padding: 0; height: 100%;
+  background: #07060c;
+  color: #fff;
+  font-family: "Courier New", ui-monospace, monospace;
+  overflow: hidden;
+  -webkit-user-select: none; user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+}
+
+#wrap {
+  position: fixed; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+
+#stage {
+  position: relative;
+  width: 320px; height: 240px;
+  transform-origin: center center;
+}
+
+#game {
+  display: block;
+  width: 320px; height: 240px;
+  background: #000;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+#ui { position: absolute; inset: 0; pointer-events: none; }
+
+/* ---------- Textbox im Undertale-Stil ---------- */
+#box {
+  position: absolute;
+  left: 6px; right: 6px; bottom: 6px;
+  min-height: 62px;
+  background: #000;
+  border: 3px solid #fff;
+  padding: 5px 7px 6px;
+  display: none;
+  pointer-events: auto;
+}
+#box.on { display: block; }
+
+#who {
+  font-size: 8px; letter-spacing: 1px;
+  color: #ffd24a; margin-bottom: 3px;
+  text-transform: uppercase;
+}
+#txt {
+  font-size: 10px; line-height: 13px;
+  color: #fff; white-space: pre-wrap; word-break: break-word;
+  min-height: 26px;
+}
+#opts { margin-top: 3px; }
+.opt {
+  position: relative;
+  font-size: 10px; line-height: 13px;
+  padding-left: 11px; color: #dcdcdc; cursor: pointer;
+}
+.opt.sel { color: #fff; }
+.opt.sel::before {
+  content: "♥"; position: absolute; left: 0; top: 0; color: #ff5a5a;
+}
+#more {
+  position: absolute; right: 6px; bottom: 2px;
+  font-size: 9px; color: #fff; display: none;
+}
+#more.on { display: block; animation: blink 0.9s steps(2) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+
+/* ---------- Knöpfe ---------- */
+#sound {
+  position: fixed; top: 8px; right: 8px;
+  width: 34px; height: 34px; border-radius: 50%;
+  border: 2px solid #4a4560; background: #14121c; color: #ffd24a;
+  font-size: 15px; line-height: 1; cursor: pointer; z-index: 5;
+}
+#sound.off { color: #5a5670; }
+
+#touch { display: none; }
+
+/* Touch-Steuerung nur auf Geräten ohne Maus */
+@media (pointer: coarse) {
+  #touch {
+    display: block;
+    position: fixed; inset: auto 0 0 0; height: 150px;
+    z-index: 4; pointer-events: none;
+  }
+  #dpad {
+    position: absolute; left: 14px; bottom: calc(14px + env(safe-area-inset-bottom));
+    width: 132px; height: 132px; pointer-events: auto;
+  }
+  .pad {
+    position: absolute; width: 44px; height: 44px;
+    background: rgba(30,28,44,.82); color: #cfc9e6;
+    border: 2px solid #4a4560; border-radius: 9px;
+    font-size: 15px; line-height: 1; padding: 0;
+  }
+  .pad:active { background: #3b3660; }
+  .pad[data-k="up"]    { left: 44px; top: 0; }
+  .pad[data-k="left"]  { left: 0; top: 44px; }
+  .pad[data-k="right"] { left: 88px; top: 44px; }
+  .pad[data-k="down"]  { left: 44px; top: 88px; }
+
+  #abtn {
+    position: absolute; right: 14px; bottom: calc(20px + env(safe-area-inset-bottom));
+    display: flex; gap: 10px; align-items: flex-end; pointer-events: auto;
+  }
+  .act {
+    width: 60px; height: 60px; border-radius: 50%;
+    background: rgba(30,28,44,.82); border: 2px solid #4a4560;
+    color: #cfc9e6; font-size: 17px; padding: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .act.big { width: 74px; height: 74px; border-color: #b8453f; color: #ff9a8a; font-size: 22px; }
+  .act small { font-size: 7px; opacity: .75; margin-top: 2px; }
+  .act:active { background: #3b3660; }
+}

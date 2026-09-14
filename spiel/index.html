@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="theme-color" content="#0b0a10">
+<title>Ritter von Eichenwald</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="wrap">
+  <div id="stage">
+    <canvas id="game" width="320" height="240"></canvas>
+
+    <div id="ui">
+      <!-- Undertale-artige Textbox -->
+      <div id="box">
+        <div id="who"></div>
+        <div id="txt"></div>
+        <div id="opts"></div>
+        <div id="more">▼</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<button id="sound" title="Musik an/aus">♪</button>
+
+<div id="touch">
+  <div id="dpad">
+    <button class="pad" data-k="up">▲</button>
+    <button class="pad" data-k="left">◀</button>
+    <button class="pad" data-k="right">▶</button>
+    <button class="pad" data-k="down">▼</button>
+  </div>
+  <div id="abtn">
+    <button class="act" data-k="talk">E<small>reden</small></button>
+    <button class="act big" data-k="attack">⚔<small>schlagen</small></button>
+  </div>
+</div>
+
+<script src="sprites.js"></script>
+<script src="maps.js"></script>
+<script src="audio.js"></script>
+<script src="dialog.js"></script>
+<script src="chat.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
