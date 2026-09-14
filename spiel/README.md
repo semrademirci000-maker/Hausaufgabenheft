@@ -25,7 +25,7 @@ fährst du mit der ganzen Familie im Auto in die Stadt.
 |---|---|---|
 | Laufen | WASD oder Pfeiltasten | **Daumen-Stick** unten links ziehen |
 | Schlagen | Leertaste (oder X / J) | großer roter Knopf ⚔ |
-| Reden / Weiter | E oder Enter | Knopf **E**, oder auf die Textbox tippen |
+| Reden / Weiter | E oder Enter | Knopf **E**, oder kurz aufs Bild tippen |
 | Antwort wählen | ↑ ↓ + Enter | Antwort antippen |
 | Musik an/aus | – | ♪ oben rechts |
 

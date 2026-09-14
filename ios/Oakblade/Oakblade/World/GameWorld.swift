@@ -113,8 +113,9 @@ final class GameWorld {
     var choiceHits: [ChoiceHit] = []
 
     /// Meldet, ob die Lauf-Knöpfe gerade sinnvoll sind (beim Reden nicht).
-    var onControlsChanged: ((Bool) -> Void)?
-    private var controlsVisible = true
+    var onControlsChanged: ((_ buttons: Bool, _ joystick: Bool) -> Void)?
+    private var buttonsVisible = true
+    private var joystickVisible = true
 
     private var pendingChange: (() -> Void)?
     private var spawnTimer: Double = 3
@@ -225,11 +226,14 @@ final class GameWorld {
 
     /// Beim Reden und auf dem Titelbild stören die Knöpfe nur – dann weg damit.
     private func updateControlsVisibility() {
-        let show = (phase == .play || phase == .over) && !dialog.isOpen
-        guard show != controlsVisible else { return }
-        controlsVisible = show
-        if !show { input.releaseAll() }
-        onControlsChanged?(show)
+        let spielt = (phase == .play || phase == .over)
+        let buttons = spielt && !dialog.isOpen      // Knoepfe wuerden die Textbox verdecken
+        let joystick = spielt                       // laufen geht immer
+        guard buttons != buttonsVisible || joystick != joystickVisible else { return }
+        buttonsVisible = buttons
+        joystickVisible = joystick
+        if !joystick { input.releaseAll() }
+        onControlsChanged?(buttons, joystick)
     }
 
     private func clamp(_ value: Double, _ low: Double, _ high: Double) -> Double {
@@ -419,17 +423,16 @@ final class GameWorld {
         player.invulnerable = max(0, player.invulnerable - dt)
         player.attackCooldown = max(0, player.attackCooldown - dt)
 
+        // Gelaufen wird immer - auch waehrend geredet wird.
         var dx = 0.0, dy = 0.0
-        if !dialog.isOpen {
-            if input.stick.x != 0 || input.stick.y != 0 {
-                dx = input.stick.x          // Stick: jede Richtung, auch langsam
-                dy = input.stick.y
-            } else {
-                if input.isHeld(.left) { dx -= 1 }
-                if input.isHeld(.right) { dx += 1 }
-                if input.isHeld(.up) { dy -= 1 }
-                if input.isHeld(.down) { dy += 1 }
-            }
+        if input.stick.x != 0 || input.stick.y != 0 {
+            dx = input.stick.x              // Stick: jede Richtung, auch langsam
+            dy = input.stick.y
+        } else {
+            if input.isHeld(.left) { dx -= 1 }
+            if input.isHeld(.right) { dx += 1 }
+            if input.isHeld(.up) { dy -= 1 }
+            if input.isHeld(.down) { dy += 1 }
         }
         let length = (dx * dx + dy * dy).squareRoot()
         if length > 1 { dx /= length; dy /= length }

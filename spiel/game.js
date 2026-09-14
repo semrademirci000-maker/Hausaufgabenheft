@@ -49,22 +49,54 @@
     keys[k] = false;
   });
 
-  /* ================= Daumen-Stick =================
-     Die Klasse steckt in joystick.js: Finger irgendwo aufsetzen, der Stick
-     erscheint genau dort und folgt dem Daumen. */
+  /* ================= Laufen =================
+     Alles laeuft ueber den Joystick aus joystick.js. Ziehen laeuft,
+     kurzes Tippen liest Texte weiter - mehr Eingaben gibt es nicht
+     (ausser der Tastatur am Rechner). */
   var stick = null;
 
   function bindStick() {
     if (!global.Joystick) return;
     stick = new Joystick({
       radius: 60,
-      side: 'any',                  /* der Finger darf ueberall hin */
       deadZone: 0.18,
-      canStart: function () { return G.state === 'play' && !D.isOpen(); },
-      ignore: function (target) {   /* die beiden Knoepfe haben Vorrang */
-        return !!(target && target.closest && target.closest('button'));
+
+      /* Gelaufen wird, sobald das Spiel laeuft - auch waehrend geredet wird. */
+      canStart: function () {
+        return G.state === 'play' || G.state === 'over';
+      },
+
+      /* Knoepfe und die Textbox behalten ihre eigenen Beruehrungen. */
+      ignore: function (target) {
+        if (!target || !target.closest) return false;
+        return !!(target.closest('button') || target.closest('#box'));
+      },
+
+      /* Kurz getippt statt gezogen: Spiel starten oder weiterlesen. */
+      onTap: function () {
+        if (A) A.resume();
+        if (G.state === 'title') { startGame(); return; }
+        if (D.isOpen()) { D.press(); return; }
+        if (G.state === 'drive') { tapped.talk = true; }
       }
     });
+  }
+
+  /* Richtung, in die der Ritter laufen soll: erst der Stick, sonst Tasten. */
+  function laufRichtung() {
+    var dx = 0, dy = 0;
+    if (stick && stick.active && (stick.x !== 0 || stick.y !== 0)) {
+      dx = stick.x;
+      dy = stick.y;
+    } else {
+      if (keys.left) dx -= 1;
+      if (keys.right) dx += 1;
+      if (keys.up) dy -= 1;
+      if (keys.down) dy += 1;
+    }
+    var laenge = Math.sqrt(dx * dx + dy * dy);
+    if (laenge > 1) { dx /= laenge; dy /= laenge; }   /* nie schneller als 1 */
+    return { x: dx, y: dy };
   }
 
   function bindTouch() {
@@ -97,7 +129,6 @@
     if (!show) {
       /* Finger weg vom Knopf: nichts darf gedrückt bleiben */
       for (var k in keys) keys[k] = false;
-      if (stick) stick.release();
     }
   }
 
@@ -253,19 +284,8 @@
     p.invuln = Math.max(0, p.invuln - dt);
     p.atkCd = Math.max(0, p.atkCd - dt);
 
-    var dx = 0, dy = 0;
-    if (!D.isOpen()) {
-      if (stick && stick.active && (stick.x || stick.y)) {
-        dx = stick.x; dy = stick.y;              /* Stick: jede Richtung */
-      } else {
-        if (keys.left) dx -= 1;
-        if (keys.right) dx += 1;
-        if (keys.up) dy -= 1;
-        if (keys.down) dy += 1;
-      }
-    }
-    var laenge = Math.sqrt(dx * dx + dy * dy);
-    if (laenge > 1) { dx /= laenge; dy /= laenge; }
+    var richtung = laufRichtung();
+    var dx = richtung.x, dy = richtung.y;
 
     p.moving = !!(dx || dy);
     if (p.moving && !p.atk) {
@@ -1421,14 +1441,6 @@
       this.classList.toggle('off', !on);
     });
     document.getElementById('sound').classList.add('off');
-
-    cv.addEventListener('pointerdown', function () {
-      if (A) A.resume();
-      if (G.state === 'title') { startGame(); return; }
-      /* Tippen irgendwo auf das Bild liest den Text weiter */
-      if (D.isOpen()) { D.press(); return; }
-      if (G.state === 'drive') { tapped.talk = true; }
-    });
 
     /* kleine Startabkuerzung zum Testen: ?map=stadt */
     var q = (location.search || '').match(/map=(\w+)/);

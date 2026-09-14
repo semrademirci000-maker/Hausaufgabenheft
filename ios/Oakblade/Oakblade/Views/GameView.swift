@@ -11,14 +11,19 @@ final class GameSession: ObservableObject {
     let audio = ChipEngine()
     lazy var world: GameWorld = GameWorld(audio: audio)
     @Published var musicOn = false
-    @Published var showControls = false
+    @Published var showButtons = false
+    @Published var showJoystick = false
 
     /// Einmal beim Start verbinden: die Welt sagt Bescheid, wann die
     /// Lauf-Knöpfe gebraucht werden.
     func connect() {
-        showControls = false
-        world.onControlsChanged = { [weak self] visible in
-            DispatchQueue.main.async { self?.showControls = visible }
+        showButtons = false
+        showJoystick = false
+        world.onControlsChanged = { [weak self] buttons, joystick in
+            DispatchQueue.main.async {
+                self?.showButtons = buttons
+                self?.showJoystick = joystick
+            }
         }
     }
 
@@ -55,9 +60,9 @@ struct GameView: View {
             }
             .ignoresSafeArea()
 
-            if session.showControls {
-                ControlsOverlay(world: session.world)
-            }
+            ControlsOverlay(world: session.world,
+                            showButtons: session.showButtons,
+                            showJoystick: session.showJoystick)
 
             VStack {
                 HStack {

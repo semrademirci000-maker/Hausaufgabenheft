@@ -133,10 +133,15 @@ struct JoystickView: View {
                         if (nx * nx + ny * ny).squareRoot() < 0.22 { nx = 0; ny = 0 }
                         world.input.stick = Vec(x: nx, y: ny)
                     }
-                    .onEnded { _ in
+                    .onEnded { value in
+                        let dx = value.location.x - value.startLocation.x
+                        let dy = value.location.y - value.startLocation.y
+                        let getippt = sqrt(dx * dx + dy * dy) < 14
                         center = nil
                         knob = .zero
                         world.input.stick = .zero
+                        // Kurz getippt statt gezogen: Text weiterlesen.
+                        if getippt { world.handleTap(at: value.startLocation) }
                     }
             )
         }
@@ -169,14 +174,18 @@ struct JoystickView: View {
 struct ControlsOverlay: View {
 
     let world: GameWorld
+    let showButtons: Bool
+    let showJoystick: Bool
 
     var body: some View {
-        GeometryReader { geo in
-            ZStack(alignment: .bottomTrailing) {
-                // Der Stick nimmt die ganze Flaeche an: Finger irgendwo
-                // aufsetzen, er springt dorthin. Die Knoepfe liegen darueber.
+        ZStack(alignment: .bottomTrailing) {
+            // Der Stick nimmt die ganze Flaeche ein: Finger irgendwo aufsetzen,
+            // er erscheint dort. Die Knoepfe liegen darueber.
+            if showJoystick {
                 JoystickView(world: world)
+            }
 
+            if showButtons {
                 HStack(alignment: .bottom, spacing: 14) {
                     HoldButton(world: world, button: .talk, label: "E", caption: "reden",
                                size: 58, tint: Color(hex: 0xCFC9E6), round: true)
