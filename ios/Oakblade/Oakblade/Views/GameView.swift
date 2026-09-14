@@ -11,6 +11,16 @@ final class GameSession: ObservableObject {
     let audio = ChipEngine()
     lazy var world: GameWorld = GameWorld(audio: audio)
     @Published var musicOn = false
+    @Published var showControls = false
+
+    /// Einmal beim Start verbinden: die Welt sagt Bescheid, wann die
+    /// Lauf-Knöpfe gebraucht werden.
+    func connect() {
+        showControls = false
+        world.onControlsChanged = { [weak self] visible in
+            DispatchQueue.main.async { self?.showControls = visible }
+        }
+    }
 
     func toggleMusic() {
         audio.toggle()
@@ -45,7 +55,9 @@ struct GameView: View {
             }
             .ignoresSafeArea()
 
-            ControlsOverlay(world: session.world)
+            if session.showControls {
+                ControlsOverlay(world: session.world)
+            }
 
             VStack {
                 HStack {
@@ -68,6 +80,7 @@ struct GameView: View {
         }
         .statusBarHidden(true)
         .persistentSystemOverlays(.hidden)
+        .onAppear { session.connect() }
         .focusable()
         .focusEffectDisabled()
         .onKeyPress(phases: [.down, .up]) { press in

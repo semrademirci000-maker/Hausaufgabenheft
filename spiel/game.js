@@ -67,6 +67,20 @@
 
   function took(k) { if (tapped[k]) { tapped[k] = false; return true; } return false; }
 
+  /* Die Lauf-Knöpfe nur zeigen, wenn man auch laufen darf. */
+  var touchEl = null, controlsOn = null;
+  function updateControls() {
+    if (!touchEl) touchEl = document.getElementById('touch');
+    var show = (G.state === 'play' || G.state === 'over') && !D.isOpen();
+    if (show === controlsOn) return;
+    controlsOn = show;
+    touchEl.classList.toggle('off', !show);
+    if (!show) {
+      /* Finger weg vom Knopf: nichts darf gedrückt bleiben */
+      for (var k in keys) keys[k] = false;
+    }
+  }
+
   /* ================= Karte laden ================= */
   function solidTile(ch) { return MAPS.SOLID.indexOf(ch) >= 0; }
 
@@ -925,10 +939,11 @@
 
     ctx.fillStyle = (Math.floor(G.time * 1.6) % 2) ? '#fff' : '#7a748f';
     ctx.font = '10px "Courier New", monospace';
-    ctx.fillText('[ Enter / Tippen zum Starten ]', VW / 2, 204);
+    ctx.fillText('[ Enter / Tippen zum Starten ]', VW / 2, 200);
     ctx.fillStyle = '#6a6480';
     ctx.font = '8px "Courier New", monospace';
-    ctx.fillText('Laufen: WASD oder Pfeile   Schlagen: Leertaste   Reden: E', VW / 2, 222);
+    ctx.fillText('Laufen: Knoepfe unten oder WASD   Schlagen: Leertaste', VW / 2, 216);
+    ctx.fillText('Reden und weiter: E, Enter oder aufs Bild tippen', VW / 2, 227);
     ctx.textAlign = 'left';
   }
 
@@ -972,6 +987,8 @@
   }
 
   function update(dt) {
+    updateControls();
+
     /* Dialog hat Vorrang */
     D.update(dt);
     if (D.isOpen()) {
@@ -1129,7 +1146,10 @@
 
     cv.addEventListener('pointerdown', function () {
       if (A) A.resume();
-      if (G.state === 'title') startGame();
+      if (G.state === 'title') { startGame(); return; }
+      /* Tippen irgendwo auf das Bild liest den Text weiter */
+      if (D.isOpen()) { D.press(); return; }
+      if (G.state === 'drive') { tapped.talk = true; }
     });
 
     /* kleine Startabkuerzung zum Testen: ?map=stadt */

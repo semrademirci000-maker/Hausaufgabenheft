@@ -81,42 +81,46 @@ html, body {
 }
 #sound.off { color: #5a5670; }
 
-#touch { display: none; }
+/* ---------- Steuerkreuz und Knöpfe: immer da ---------- */
+#touch {
+  display: block;
+  position: fixed; inset: auto 0 0 0; height: 160px;
+  z-index: 4; pointer-events: none;
+}
+/* Beim Reden und auf dem Titelbild stören die Knöpfe nur */
+#touch.off { display: none; }
+#dpad {
+  position: absolute; left: 14px; bottom: calc(14px + env(safe-area-inset-bottom));
+  width: 132px; height: 132px; pointer-events: auto;
+}
+.pad {
+  position: absolute; width: 44px; height: 44px;
+  background: rgba(30,28,44,.82); color: #cfc9e6;
+  border: 2px solid #4a4560; border-radius: 9px;
+  font-size: 15px; line-height: 1; padding: 0; cursor: pointer;
+}
+.pad:active { background: #3b3660; }
+.pad[data-k="up"]    { left: 44px; top: 0; }
+.pad[data-k="left"]  { left: 0; top: 44px; }
+.pad[data-k="right"] { left: 88px; top: 44px; }
+.pad[data-k="down"]  { left: 44px; top: 88px; }
 
-/* Touch-Steuerung nur auf Geräten ohne Maus */
-@media (pointer: coarse) {
-  #touch {
-    display: block;
-    position: fixed; inset: auto 0 0 0; height: 150px;
-    z-index: 4; pointer-events: none;
-  }
-  #dpad {
-    position: absolute; left: 14px; bottom: calc(14px + env(safe-area-inset-bottom));
-    width: 132px; height: 132px; pointer-events: auto;
-  }
-  .pad {
-    position: absolute; width: 44px; height: 44px;
-    background: rgba(30,28,44,.82); color: #cfc9e6;
-    border: 2px solid #4a4560; border-radius: 9px;
-    font-size: 15px; line-height: 1; padding: 0;
-  }
-  .pad:active { background: #3b3660; }
-  .pad[data-k="up"]    { left: 44px; top: 0; }
-  .pad[data-k="left"]  { left: 0; top: 44px; }
-  .pad[data-k="right"] { left: 88px; top: 44px; }
-  .pad[data-k="down"]  { left: 44px; top: 88px; }
+#abtn {
+  position: absolute; right: 14px; bottom: calc(20px + env(safe-area-inset-bottom));
+  display: flex; gap: 10px; align-items: flex-end; pointer-events: auto;
+}
+.act {
+  width: 60px; height: 60px; border-radius: 50%;
+  background: rgba(30,28,44,.82); border: 2px solid #4a4560;
+  color: #cfc9e6; font-size: 17px; padding: 0; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.act.big { width: 74px; height: 74px; border-color: #b8453f; color: #ff9a8a; font-size: 22px; }
+.act small { font-size: 7px; opacity: .75; margin-top: 2px; }
+.act:active { background: #3b3660; }
 
-  #abtn {
-    position: absolute; right: 14px; bottom: calc(20px + env(safe-area-inset-bottom));
-    display: flex; gap: 10px; align-items: flex-end; pointer-events: auto;
-  }
-  .act {
-    width: 60px; height: 60px; border-radius: 50%;
-    background: rgba(30,28,44,.82); border: 2px solid #4a4560;
-    color: #cfc9e6; font-size: 17px; padding: 0;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-  }
-  .act.big { width: 74px; height: 74px; border-color: #b8453f; color: #ff9a8a; font-size: 22px; }
-  .act small { font-size: 7px; opacity: .75; margin-top: 2px; }
-  .act:active { background: #3b3660; }
+/* Mit Maus und Tastatur halten sich die Knöpfe zurück */
+@media (pointer: fine) {
+  #dpad, #abtn { opacity: .55; transition: opacity .2s; }
+  #dpad:hover, #abtn:hover { opacity: 1; }
 }

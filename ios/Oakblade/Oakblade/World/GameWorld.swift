@@ -104,6 +104,10 @@ final class GameWorld {
     var viewOffset = Vec.zero
     var choiceHits: [ChoiceHit] = []
 
+    /// Meldet, ob die Lauf-Knöpfe gerade sinnvoll sind (beim Reden nicht).
+    var onControlsChanged: ((Bool) -> Void)?
+    private var controlsVisible = true
+
     private var pendingChange: (() -> Void)?
     private var spawnTimer: Double = 3
     private var chatTimer: Double = 18
@@ -136,6 +140,7 @@ final class GameWorld {
 
     private func update(_ dt: Double) {
         dialog.update(dt)
+        updateControlsVisibility()
 
         if dialog.isOpen {
             if input.took(.up) { dialog.move(-1) }
@@ -202,6 +207,15 @@ final class GameWorld {
                          0, Double(map.columns) * 16 - GameWorld.viewWidth)
         camera.y = clamp(player.pos.y - GameWorld.viewHeight / 2,
                          0, Double(map.lines) * 16 - GameWorld.viewHeight)
+    }
+
+    /// Beim Reden und auf dem Titelbild stören die Knöpfe nur – dann weg damit.
+    private func updateControlsVisibility() {
+        let show = (phase == .play || phase == .over) && !dialog.isOpen
+        guard show != controlsVisible else { return }
+        controlsVisible = show
+        if !show { input.releaseAll() }
+        onControlsChanged?(show)
     }
 
     private func clamp(_ value: Double, _ low: Double, _ high: Double) -> Double {
