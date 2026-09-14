@@ -44,6 +44,7 @@ struct HomeworkPageView: View {
             }
             .padding(.horizontal, 13)
             .padding(.top, 12)
+            .padding(.bottom, 56)
         }
         .sheet(item: $openSheet) { sheet in
             switch sheet {

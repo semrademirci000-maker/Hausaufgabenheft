@@ -25,7 +25,7 @@ struct BookPager<Content: View>: UIViewControllerRepresentable {
         controller.delegate = context.coordinator
         controller.isDoubleSided = true
         controller.view.backgroundColor = .clear
-        context.coordinator.apply(spread: leftIndex, to: controller, animated: false)
+        context.coordinator.apply(spread: leftIndex, to: controller, animated: false, direction: .forward)
         return controller
     }
 
@@ -34,7 +34,16 @@ struct BookPager<Content: View>: UIViewControllerRepresentable {
         context.coordinator.refreshPages()
 
         let shown = controller.viewControllers?.first.flatMap { context.coordinator.index(of: $0) }
-        if shown != leftIndex {
+        if let shown, shown != leftIndex {
+            // eine Doppelseite weiter oder zurück: mit Umblätter-Animation
+            let nachbar = abs(shown - leftIndex) == 2
+            context.coordinator.apply(
+                spread: leftIndex,
+                to: controller,
+                animated: nachbar,
+                direction: leftIndex > shown ? .forward : .reverse
+            )
+        } else if shown == nil {
             context.coordinator.apply(spread: leftIndex, to: controller, animated: false)
         }
     }
@@ -70,14 +79,17 @@ struct BookPager<Content: View>: UIViewControllerRepresentable {
         }
 
         /// Zeigt die Doppelseite, die links mit `spread` beginnt.
-        func apply(spread: Int, to controller: UIPageViewController, animated: Bool) {
+        func apply(spread: Int,
+                   to controller: UIPageViewController,
+                   animated: Bool,
+                   direction: UIPageViewController.NavigationDirection = .forward) {
             let left = max(0, spread - (spread % 2))
             guard let leftPage = page(at: left) else { return }
             var shown = [leftPage]
             if let rightPage = page(at: left + 1) {
                 shown.append(rightPage)
             }
-            controller.setViewControllers(shown, direction: .forward, animated: animated)
+            controller.setViewControllers(shown, direction: direction, animated: animated)
         }
 
         private func dropDistantPages(around index: Int) {

@@ -10,27 +10,29 @@ struct BookView: View {
     @State private var didOpen = false
 
     var body: some View {
-        ZStack {
-            Theme.background.ignoresSafeArea()
-
-            VStack(spacing: 0) {
-                HStack(spacing: 2) {
-                    turnButton(forward: false)
-                    BookFrame {
-                        BookPager(pageCount: pages.count, leftIndex: $leftIndex) { index in
-                            HomeworkPageView(date: pages[min(max(index, 0), pages.count - 1)])
-                                .environmentObject(store)
-                        }
-                    }
-                    turnButton(forward: true)
-                }
-                .padding(.horizontal, horizontalSizeClass == .compact ? 2 : 10)
-                .padding(.top, 6)
-
-                dayStrip
-                    .padding(.top, 8)
-                    .padding(.bottom, 6)
+        ZStack(alignment: .bottom) {
+            // Das Buch füllt die ganze Fläche – bis in jede Ecke.
+            BookPager(pageCount: pages.count, leftIndex: $leftIndex) { index in
+                HomeworkPageView(date: pages[min(max(index, 0), pages.count - 1)])
+                    .environmentObject(store)
             }
+            .background(Theme.paper)
+            .ignoresSafeArea(edges: .bottom)
+            .overlay(alignment: .leading) {
+                turnButton(forward: false).padding(.leading, 8)
+            }
+            .overlay(alignment: .trailing) {
+                turnButton(forward: true).padding(.trailing, 8)
+            }
+
+            dayStrip
+                .padding(.horizontal, 8)
+                .padding(.top, 7)
+                .padding(.bottom, 6)
+                .background(.ultraThinMaterial)
+                .overlay(alignment: .top) {
+                    Rectangle().fill(Theme.hairline).frame(height: 0.75)
+                }
         }
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
@@ -54,19 +56,21 @@ struct BookView: View {
     // MARK: - Blättern
 
     private func turnButton(forward: Bool) -> some View {
-        Button {
-            withAnimation { turn(forward: forward) }
+        let blocked = forward ? leftIndex + 2 >= pages.count : leftIndex <= 0
+
+        return Button {
+            turn(forward: forward)
         } label: {
             Image(systemName: forward ? "chevron.right" : "chevron.left")
-                .font(.system(size: 17, weight: .medium))
-                .foregroundStyle(Theme.tertiaryInk)
-                .frame(width: horizontalSizeClass == .compact ? 26 : 38)
-                .frame(maxHeight: .infinity)
-                .contentShape(Rectangle())
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(Theme.secondaryInk)
+                .frame(width: 34, height: 34)
+                .background(Circle().fill(.ultraThinMaterial))
+                .shadow(color: .black.opacity(0.12), radius: 3, x: 0, y: 1)
         }
         .buttonStyle(.plain)
-        .disabled(forward ? leftIndex + 2 >= pages.count : leftIndex <= 0)
-        .opacity((forward ? leftIndex + 2 >= pages.count : leftIndex <= 0) ? 0.25 : 1)
+        .disabled(blocked)
+        .opacity(blocked ? 0.25 : 1)
         .accessibilityLabel(Text(forward ? "Weiterblättern" : "Zurückblättern"))
     }
 
@@ -174,23 +178,6 @@ struct BookView: View {
         let wanted = SchoolCalendar.key(for: target)
         guard let index = pages.firstIndex(where: { SchoolCalendar.key(for: $0) == wanted }) else { return }
         leftIndex = index - (index % 2)
-    }
-}
-
-/// Schmaler Einband um die beiden Seiten.
-struct BookFrame<Content: View>: View {
-    @ViewBuilder var content: () -> Content
-
-    var body: some View {
-        content()
-            .background(Theme.paper)
-            .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
-            .padding(4)
-            .background(
-                RoundedRectangle(cornerRadius: 13, style: .continuous)
-                    .fill(Theme.cover)
-            )
-            .shadow(color: .black.opacity(0.18), radius: 14, x: 0, y: 6)
     }
 }
 
