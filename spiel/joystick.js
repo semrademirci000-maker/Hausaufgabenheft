@@ -30,6 +30,7 @@
 
       this._touchId = null;    // welcher Finger zieht gerade
       this._lastTouch = 0;     // wann zuletzt ein Finger/Pointer kam
+      this.visible = false;    // wird vom Spiel ein- und ausgeschaltet
       this._down = false;      // Finger liegt auf (auch wenn kein Stick)
       this._origin = { x: 0, y: 0 };
       this._moved = 0;
@@ -40,15 +41,15 @@
       this.base = document.createElement('div');
       this.base.style.cssText =
         'position:fixed;width:' + (this.radius * 2) + 'px;height:' + (this.radius * 2) + 'px;' +
-        'border-radius:50%;background:rgba(120,112,170,.20);' +
-        'border:2px solid rgba(207,201,230,.45);pointer-events:none;' +
+        'border-radius:50%;background:rgba(30,28,44,.55);' +
+        'border:3px solid rgba(207,201,230,.75);pointer-events:none;' +
         'display:none;z-index:9999;transform:translate(-50%,-50%);';
 
       this.knob = document.createElement('div');
       this.knob.style.cssText =
         'position:fixed;width:' + this.radius + 'px;height:' + this.radius + 'px;' +
-        'border-radius:50%;background:rgba(207,201,230,.75);' +
-        'border:2px solid rgba(255,255,255,.7);pointer-events:none;' +
+        'border-radius:50%;background:rgba(150,142,205,.9);' +
+        'border:3px solid rgba(255,255,255,.85);pointer-events:none;' +
         'display:none;z-index:10000;transform:translate(-50%,-50%);';
 
       document.body.appendChild(this.base);
@@ -56,6 +57,11 @@
 
       zone.style.touchAction = 'none';
       document.documentElement.style.touchAction = 'none';
+
+      var self = this;
+      global.addEventListener('resize', function () {
+        if (!self._down) self._zeigeRuheplatz();
+      });
 
       this._listen(zone);
     }
@@ -131,6 +137,32 @@
       global.addEventListener('blur', function () { self.release(); });
     }
 
+    /* Der Stick sitzt in Ruhe unten links - damit man ihn sieht. */
+    _ruheplatz() {
+      return { x: 30 + this.radius, y: global.innerHeight - 30 - this.radius };
+    }
+
+    _zeigeRuheplatz() {
+      if (!this.visible) return;
+      var platz = this._ruheplatz();
+      this.base.style.left = this.knob.style.left = platz.x + 'px';
+      this.base.style.top = this.knob.style.top = platz.y + 'px';
+      this.base.style.display = this.knob.style.display = 'block';
+      this.base.style.opacity = this.knob.style.opacity = '0.45';
+    }
+
+    /* Das Spiel sagt, wann gelaufen werden darf. */
+    setVisible(sichtbar) {
+      if (sichtbar === this.visible) return;
+      this.visible = sichtbar;
+      if (!sichtbar) {
+        this.release();
+        this.base.style.display = this.knob.style.display = 'none';
+      } else {
+        this._zeigeRuheplatz();
+      }
+    }
+
     /* Der Finger, der den Stick angefasst hat (falls bekannt). */
     _passenderFinger(liste) {
       if (this._touchId === null) return liste[0] || null;
@@ -156,6 +188,7 @@
         this.base.style.left = this.knob.style.left = point.clientX + 'px';
         this.base.style.top = this.knob.style.top = point.clientY + 'px';
         this.base.style.display = this.knob.style.display = 'block';
+        this.base.style.opacity = this.knob.style.opacity = '1';
       }
       if (event && event.cancelable) event.preventDefault();
     }
@@ -194,7 +227,8 @@
       this.active = false;
       this._touchId = null;
       this.x = this.y = 0;
-      this.base.style.display = this.knob.style.display = 'none';
+      if (this.visible) this._zeigeRuheplatz();
+      else this.base.style.display = this.knob.style.display = 'none';
     }
 
     get angle() { return Math.atan2(this.y, this.x); }

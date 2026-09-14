@@ -5,7 +5,7 @@
   'use strict';
 
   var TILE = 16, VW = 320, VH = 240;
-  var FASSUNG = 9;                    /* steht unten auf dem Titelbild */
+  var FASSUNG = 10;                    /* steht unten auf dem Titelbild */
   var cv = document.getElementById('game');
   var ctx = cv.getContext('2d');
   ctx.imageSmoothingEnabled = false;
@@ -123,7 +123,9 @@
   var touchEl = null, controlsOn = null;
   function updateControls() {
     if (!touchEl) touchEl = document.getElementById('touch');
-    var show = (G.state === 'play' || G.state === 'over') && !D.isOpen();
+    var spielt = (G.state === 'play' || G.state === 'over');
+    if (stick) stick.setVisible(spielt);          /* Stick ist immer zu sehen */
+    var show = spielt && !D.isOpen();
     if (show === controlsOn) return;
     controlsOn = show;
     touchEl.classList.toggle('off', !show);
@@ -1255,7 +1257,7 @@
     ctx.fillText('[ Enter / Tippen zum Starten ]', VW / 2, 200);
     ctx.fillStyle = '#6a6480';
     ctx.font = '8px "Courier New", monospace';
-    ctx.fillText('Laufen: Finger aufs Bild legen und ziehen (oder WASD)', VW / 2, 216);
+    ctx.fillText('Laufen: Joystick unten links ziehen (oder irgendwo aufs Bild)', VW / 2, 216);
     ctx.fillText('Schlagen: roter Knopf / Leertaste   Reden: E   Weiter: tippen', VW / 2, 227);
     ctx.textAlign = 'right';
     ctx.fillStyle = '#4a4560';
