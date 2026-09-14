@@ -1,3 +1,13 @@
+# Native iOS-Apps (SwiftUI)
+
+In diesem Ordner liegen **zwei** SwiftUI-Apps:
+
+* **`Hausaufgabenheft/`** – Stundenplan und Hausaufgabenheft (diese Anleitung).
+* **`RitterVonEichenwald/`** – das Pixelspiel *Ritter von Eichenwald*,
+  siehe [RitterVonEichenwald/README.md](RitterVonEichenwald/README.md).
+
+---
+
 # Hausaufgabenheft – native iOS-App (SwiftUI)
 
 Dieselbe App wie die Web-Version, aber nativ in **SwiftUI** für iPad und iPhone:

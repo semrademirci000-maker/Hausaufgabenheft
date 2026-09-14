@@ -6,6 +6,10 @@ Pixel für Pixel im Code. Keine Bilddateien, kein Internet nötig.
 **Starten:** `spiel/index.html` im Browser öffnen (oder auf dem iPad über
 „Zum Home-Bildschirm“ als eigene App).
 
+> Dasselbe Spiel gibt es auch **nativ in SwiftUI** für iPad und iPhone:
+> [`ios/RitterVonEichenwald/`](../ios/RitterVonEichenwald/README.md) – zum Öffnen
+> in Xcode auf einem Mac.
+
 ## Die Geschichte
 
 Du bist ein Ritter und wohnst mit deiner Familie in einem Holzhaus mitten im

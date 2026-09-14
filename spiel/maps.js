@@ -8,7 +8,7 @@
   }
 
   /* Feste Buchstaben, die man nicht betreten kann */
-  var SOLID = 'T*rs~#^W=bnmhFBCVKOQlP';
+  var SOLID = 'Tt*rs~#^W=bnmhFBCVKOQlP';
 
   function grid(w, h, ch) {
     var g = [];
