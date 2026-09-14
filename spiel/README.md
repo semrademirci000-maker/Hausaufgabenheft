@@ -97,6 +97,7 @@ acht. Lässt du los, springt der Stick zurück in seine Ecke.
 | `sprites.js` | Alle Pixel-Grafiken: Ritter, Schwert, Leute, Zombies, Kacheln, Auto |
 | `maps.js` | Die drei Welten: Wald, Haus, Stadt |
 | `game.js` | Spielablauf: Laufen, Kämpfen, Begleiter, Türen, Autofahrt |
+| `joystick.js` | Der virtuelle Joystick (erscheint unter dem Daumen) |
 | `chat.js` | Die Personen und alle Fragen und Antworten |
 | `dialog.js` | Textbox mit tippenden Buchstaben und Auswahl |
 | `audio.js` | 8-Bit-Musik und Geräusche |

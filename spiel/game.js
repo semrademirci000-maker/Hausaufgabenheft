@@ -50,109 +50,20 @@
   });
 
   /* ================= Daumen-Stick =================
-     Bewusst einfach gehalten: echte Touch- und Maus-Ereignisse direkt am
-     Dokument. Keine Zonen-Elemente, keine Pointer-Capture-Tricks - das
-     funktioniert auf iPad, Handy und am Rechner gleichermassen. */
-  var stick = { on: false, id: null, bx: 0, by: 0, vx: 0, vy: 0, moved: false };
-  var stickEl = null, knobEl = null;
-  var STICK_R = 46;
-
-  function stickRuhe() {
-    if (!stickEl) return;
-    stickEl.style.left = '24px';
-    stickEl.style.top = (global.innerHeight - 150) + 'px';
-    stickEl.classList.remove('on');
-    knobEl.style.transform = 'translate(0px, 0px)';
-  }
-
-  function stickSetzen(x, y) {
-    var halb = 59;
-    var left = Math.max(6, Math.min(global.innerWidth - 2 * halb - 6, x - halb));
-    var top = Math.max(6, Math.min(global.innerHeight - 2 * halb - 6, y - halb));
-    stickEl.style.left = left + 'px';
-    stickEl.style.top = top + 'px';
-    stick.bx = left + halb;
-    stick.by = top + halb;
-    stickEl.classList.add('on');
-  }
-
-  function stickZiehen(x, y) {
-    var dx = x - stick.bx, dy = y - stick.by;
-    var len = Math.sqrt(dx * dx + dy * dy);
-    var kx = dx, ky = dy;
-    if (len > STICK_R) { kx = dx / len * STICK_R; ky = dy / len * STICK_R; }
-    knobEl.style.transform = 'translate(' + kx + 'px, ' + ky + 'px)';
-    var nx = kx / STICK_R, ny = ky / STICK_R;
-    if (Math.sqrt(nx * nx + ny * ny) < 0.2) { stick.vx = 0; stick.vy = 0; }
-    else { stick.vx = nx; stick.vy = ny; stick.moved = true; }
-  }
-
-  function stickAus() {
-    stick.on = false; stick.id = null; stick.vx = 0; stick.vy = 0;
-    stickRuhe();
-  }
-
-  function aufKnopf(target) {
-    return !!(target && target.closest && target.closest('button'));
-  }
-
-  function stickStart(x, y, id, target) {
-    if (stick.on) return false;
-    if (G.state !== 'play' || D.isOpen()) return false;
-    if (aufKnopf(target)) return false;    /* die Knoepfe haben Vorrang */
-    if (!stickEl) return false;
-    stick.on = true; stick.id = id; stick.moved = false;
-    if (A) A.resume();
-    stickEl.classList.add('used');   /* Hinweis wird nicht mehr gebraucht */
-    stickSetzen(x, y);
-    stickZiehen(x, y);
-    return true;
-  }
+     Die Klasse steckt in joystick.js: Finger irgendwo aufsetzen, der Stick
+     erscheint genau dort und folgt dem Daumen. */
+  var stick = null;
 
   function bindStick() {
-    stickEl = document.getElementById('stick');
-    knobEl = document.getElementById('knob');
-    if (!stickEl || !knobEl) return;
-    stickRuhe();
-    global.addEventListener('resize', function () { if (!stick.on) stickRuhe(); });
-
-    /* --- Finger --- */
-    document.addEventListener('touchstart', function (e) {
-      var t = e.changedTouches[0];
-      if (!t) return;
-      if (stickStart(t.clientX, t.clientY, t.identifier, e.target)) e.preventDefault();
-    }, { passive: false });
-
-    document.addEventListener('touchmove', function (e) {
-      if (!stick.on) return;
-      for (var i = 0; i < e.changedTouches.length; i++) {
-        var t = e.changedTouches[i];
-        if (t.identifier === stick.id) {
-          stickZiehen(t.clientX, t.clientY);
-          e.preventDefault();
-          return;
-        }
+    if (!global.Joystick) return;
+    stick = new Joystick({
+      radius: 60,
+      side: 'any',                  /* der Finger darf ueberall hin */
+      deadZone: 0.18,
+      canStart: function () { return G.state === 'play' && !D.isOpen(); },
+      ignore: function (target) {   /* die beiden Knoepfe haben Vorrang */
+        return !!(target && target.closest && target.closest('button'));
       }
-    }, { passive: false });
-
-    function fingerWeg(e) {
-      if (!stick.on) return;
-      for (var i = 0; i < e.changedTouches.length; i++) {
-        if (e.changedTouches[i].identifier === stick.id) { stickAus(); return; }
-      }
-    }
-    document.addEventListener('touchend', fingerWeg);
-    document.addEventListener('touchcancel', fingerWeg);
-
-    /* --- Maus --- */
-    document.addEventListener('mousedown', function (e) {
-      if (stickStart(e.clientX, e.clientY, 'maus', e.target)) e.preventDefault();
-    });
-    document.addEventListener('mousemove', function (e) {
-      if (stick.on && stick.id === 'maus') stickZiehen(e.clientX, e.clientY);
-    });
-    document.addEventListener('mouseup', function () {
-      if (stick.on && stick.id === 'maus') stickAus();
     });
   }
 
@@ -186,7 +97,7 @@
     if (!show) {
       /* Finger weg vom Knopf: nichts darf gedrückt bleiben */
       for (var k in keys) keys[k] = false;
-      stickAus();
+      if (stick) stick.release();
     }
   }
 
@@ -344,8 +255,8 @@
 
     var dx = 0, dy = 0;
     if (!D.isOpen()) {
-      if (stick.on && (stick.vx || stick.vy)) {
-        dx = stick.vx; dy = stick.vy;            /* Stick: jede Richtung */
+      if (stick && stick.active && (stick.x || stick.y)) {
+        dx = stick.x; dy = stick.y;              /* Stick: jede Richtung */
       } else {
         if (keys.left) dx -= 1;
         if (keys.right) dx += 1;
@@ -1242,6 +1153,16 @@
       ctx.fillStyle = '#ff9a8a'; ctx.fillRect(bx, by + 1, bw * anteil, 2);
     }
 
+    /* Kleiner Hinweis, bis der Stick einmal benutzt wurde */
+    if (stick && !stick.used && G.state === 'play' && !D.isOpen()) {
+      var puls = 0.55 + 0.45 * Math.abs(Math.sin(G.time * 2));
+      ctx.globalAlpha = puls;
+      ctx.font = '8px "Courier New", monospace';
+      ctx.fillStyle = '#cfc9e6';
+      ctx.fillText('Finger aufs Bild legen und ziehen zum Laufen', 8, VH - 10);
+      ctx.globalAlpha = 1;
+    }
+
     /* Ortsname / Hinweis */
     if (G.hintT > 0) {
       ctx.globalAlpha = Math.min(1, G.hintT);
@@ -1296,7 +1217,7 @@
     ctx.fillText('[ Enter / Tippen zum Starten ]', VW / 2, 200);
     ctx.fillStyle = '#6a6480';
     ctx.font = '8px "Courier New", monospace';
-    ctx.fillText('Laufen: Stick unten links ziehen (oder WASD)', VW / 2, 216);
+    ctx.fillText('Laufen: Finger aufs Bild legen und ziehen (oder WASD)', VW / 2, 216);
     ctx.fillText('Schlagen: roter Knopf / Leertaste   Reden: E   Weiter: tippen', VW / 2, 227);
     ctx.textAlign = 'left';
   }

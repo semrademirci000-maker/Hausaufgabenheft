@@ -31,7 +31,7 @@ Pixel groß und wird passend hochskaliert).
 
 | | auf dem Bildschirm | mit Tastatur (iPad) |
 |---|---|---|
-| Laufen | **Daumen-Stick** unten links ziehen | WASD oder Pfeiltasten |
+| Laufen | **Daumen-Stick**: Finger irgendwo aufs Bild legen und ziehen | WASD oder Pfeiltasten |
 | Schlagen | großer roter Knopf ⚔ | Leertaste (oder X / J) |
 | Reden / Weiter | Knopf **E** oder auf die Textbox tippen | E, Enter oder Z |
 | Antwort wählen | Antwort antippen | ↑ ↓ und Enter |

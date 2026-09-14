@@ -96,18 +96,17 @@ struct JoystickView: View {
             ZStack(alignment: .topLeading) {
                 Color.clear.contentShape(Rectangle())
 
-                stick
-                    .opacity(center == nil ? 0.5 : 1)
-                    .position(center ?? restingPoint(in: geo.size))
-                    .allowsHitTesting(false)
-
-                if !used, center == nil {
-                    Text("ziehen zum Laufen")
-                        .font(.system(size: 11, design: .monospaced))
-                        .foregroundColor(Color(hex: 0xCFC9E6))
+                // Der Stick erscheint erst da, wo der Daumen aufsetzt.
+                if let center {
+                    stick
+                        .position(center)
+                        .allowsHitTesting(false)
+                } else if !used {
+                    Text("Finger aufs Bild legen und ziehen zum Laufen")
+                        .font(.system(size: 12, design: .monospaced))
+                        .foregroundColor(Color(hex: 0xCFC9E6).opacity(0.85))
                         .shadow(color: .black, radius: 2)
-                        .position(x: restingPoint(in: geo.size).x,
-                                  y: restingPoint(in: geo.size).y + baseSize / 2 + 14)
+                        .position(x: geo.size.width * 0.34, y: geo.size.height - 20)
                         .allowsHitTesting(false)
                 }
             }
@@ -157,10 +156,6 @@ struct JoystickView: View {
                 .offset(knob)
         }
         .frame(width: baseSize, height: baseSize)
-    }
-
-    private func restingPoint(in size: CGSize) -> CGPoint {
-        CGPoint(x: 24 + baseSize / 2, y: size.height - 24 - baseSize / 2)
     }
 
     /// Der Stick soll ganz im Bild bleiben.
