@@ -90,6 +90,10 @@ final class GameWorld {
     var trail: [TrailPoint] = []
 
     var kills = 0
+    var boss: Entity?
+    var bossQueue: [Boss] = []
+    var bossesBeaten = 0
+    var killsSinceBoss = 0
     var time: Double = 0
     var camera = Vec.zero
     var shake: Double = 0
@@ -119,8 +123,8 @@ final class GameWorld {
 
     init(audio: ChipEngine) {
         self.audio = audio
-        player.hp = 20
-        player.maxHP = 20
+        player.hp = 10
+        player.maxHP = 10
         kills = UserDefaults.standard.integer(forKey: "oakblade.kills")
         dialog.onBlip = { [weak self] in self?.audio.play(.blip) }
         dialog.onSelect = { [weak self] in self?.audio.play(.select) }
@@ -195,7 +199,13 @@ final class GameWorld {
                 spawnTimer = 5 + Double.random(in: 0...4)
                 if livingZombies() < 7 { spawnZombie() }
             }
-            audio.music(zombieNear(70) ? .kampf : map.song)
+            if boss != nil {
+                audio.music(.boss)
+            } else {
+                audio.music(zombieNear(70) ? .kampf : map.song)
+            }
+            // Nach ein paar erledigten Zombies kommt ein Boss – jedes Mal ein anderer.
+            if boss == nil, killsSinceBoss >= 6, !dialog.isOpen { spawnBoss() }
         }
 
         updateChat(dt)
@@ -246,6 +256,7 @@ final class GameWorld {
         party = []
         blocks = []
         trail = []
+        boss = nil
         buildMapImage()
 
         player.pos = Vec(x: position.x * 16, y: position.y * 16)
@@ -535,17 +546,22 @@ final class GameWorld {
         if zombie.hp <= 0 {
             zombie.isDying = true
             zombie.dying = 0.001
-            kills += 1
-            UserDefaults.standard.set(kills, forKey: "oakblade.kills")
             audio.play(.dead)
-            sayKillLine()
+            if zombie.boss != nil {
+                bossDefeated(zombie)
+            } else {
+                kills += 1
+                killsSinceBoss += 1
+                UserDefaults.standard.set(kills, forKey: "oakblade.kills")
+                sayKillLine()
+            }
         } else {
             audio.play(.hit)
         }
     }
 
     private func livingZombies() -> Int {
-        entities.filter { $0.kind == .zombie && !$0.isDying }.count
+        entities.filter { $0.kind == .zombie && !$0.isDying && $0.boss == nil }.count
     }
 
     func zombieNear(_ radius: Double) -> Bool {
@@ -582,6 +598,11 @@ final class GameWorld {
             return
         }
         zombie.flash = max(0, zombie.flash - dt)
+
+        if zombie.boss != nil {
+            updateBoss(zombie, dt)
+            return
+        }
 
         let dx = player.pos.x - zombie.pos.x
         let dy = player.pos.y - zombie.pos.y
@@ -623,16 +644,172 @@ final class GameWorld {
         }
 
         if distance < 13, player.invulnerable <= 0, phase == .play {
-            player.hp -= 3
-            player.invulnerable = 1.1
-            player.knock = Vec(x: -dx / distance * 150, y: -dy / distance * 150)
-            shake = 4
-            audio.play(.hurt)
-            if player.hp <= 0 {
-                player.hp = 0
-                gameOver()
-            }
+            hurtPlayer(1, dx: dx, dy: dy, distance: distance)
         }
+    }
+
+    /// Ein Treffer kostet ein halbes Herz, ein Bosstreffer ein ganzes.
+    private func hurtPlayer(_ amount: Int, dx: Double, dy: Double, distance: Double) {
+        let length = max(0.001, distance)
+        player.hp -= amount
+        player.invulnerable = 1.1
+        player.knock = Vec(x: -dx / length * 150, y: -dy / length * 150)
+        shake = 4
+        audio.play(.hurt)
+        if player.hp <= 0 {
+            player.hp = 0
+            gameOver()
+        }
+    }
+
+    // MARK: Bosse
+
+    private func spawnBoss() {
+        if bossQueue.isEmpty { bossQueue = Chat.bosse.shuffled() }
+        let data = bossQueue.removeFirst()
+
+        var spot: Vec?
+        for _ in 0..<90 {
+            let tx = 2 + Int.random(in: 0..<max(1, map.columns - 4))
+            let ty = 2 + Int.random(in: 0..<max(1, map.lines - 4))
+            if map.isSolid(tx, ty) { continue }
+            let candidate = Vec(x: Double(tx) * 16 + 8, y: Double(ty) * 16 + 14)
+            let d = candidate.distance(to: player.pos)
+            if d < 80 || d > 210 { continue }
+            spot = candidate
+            break
+        }
+        let place = spot ?? Vec(x: player.pos.x + 110, y: player.pos.y)
+
+        let entity = Entity(kind: .zombie, key: data.key, pos: place)
+        entity.boss = data
+        entity.hp = data.hp
+        entity.maxHP = data.hp
+        entity.specialTimer = 2.5
+        entities.append(entity)
+        boss = entity
+        killsSinceBoss = 0
+        shake = 6
+        audio.music(.boss)
+
+        dialog.push(who: "!!!", color: Color(hex: 0xFF5A5A), text: data.intro)
+        dialog.push(who: data.name, color: Color(hex: 0xFF9A8A), text: data.spruch)
+        if let friend = party.randomElement(), let line = Chat.bossAuftritt.randomElement() {
+            let person = Chat.person(friend.key)
+            dialog.push(who: person.name, color: person.color, text: line)
+        }
+        dialog.start()
+    }
+
+    private func spawnZombieNear(_ entity: Entity) {
+        for _ in 0..<20 {
+            let angle = Double.random(in: 0...(2 * Double.pi))
+            let radius = 26 + Double.random(in: 0...26)
+            let spot = Vec(x: entity.pos.x + cos(angle) * radius,
+                           y: entity.pos.y + sin(angle) * radius)
+            let tx = Int(floor(spot.x / 16)), ty = Int(floor(spot.y / 16))
+            if map.isSolid(tx, ty) { continue }
+            let zombie = Entity(kind: .zombie, key: "zombie", pos: spot)
+            zombie.hp = 3
+            zombie.maxHP = 3
+            entities.append(zombie)
+            return
+        }
+    }
+
+    private func updateBoss(_ entity: Entity, _ dt: Double) {
+        guard let data = entity.boss else { return }
+        entity.specialTimer -= dt
+
+        let dx = player.pos.x - entity.pos.x
+        let dy = player.pos.y - entity.pos.y
+        let distance = max(0.001, (dx * dx + dy * dy).squareRoot())
+        var speed = data.speed * (entity.raging ? 1.6 : 1)
+        entity.drift = Vec(x: dx / distance, y: dy / distance)
+
+        switch data.koennen {
+        case "sprint":
+            if entity.dashTimer > 0 {
+                entity.dashTimer -= dt
+                speed = 120
+            } else if entity.specialTimer <= 0, distance < 190 {
+                entity.specialTimer = 2.8
+                entity.dashTimer = 0.45
+                shake = 2
+                audio.play(.swing)
+            }
+        case "rufen":
+            if entity.specialTimer <= 0, distance < 220 {
+                entity.specialTimer = 7
+                spawnZombieNear(entity)
+                spawnZombieNear(entity)
+                showHint("Grauzahn ruft Verstaerkung!")
+            }
+        case "wut":
+            if !entity.raging, entity.hp <= entity.maxHP / 2 {
+                entity.raging = true
+                shake = 5
+                showHint("Mondfell wird wuetend!")
+            }
+        case "wurzeln":
+            if entity.rootsTimer > 0 {
+                entity.rootsTimer -= dt
+                speed = 0
+                if entity.rootsTimer <= 0, distance < 46,
+                   player.invulnerable <= 0, phase == .play {
+                    hurtPlayer(data.dmg, dx: dx, dy: dy, distance: distance)
+                }
+            } else if entity.specialTimer <= 0, distance < 130 {
+                entity.specialTimer = 4.5
+                entity.rootsTimer = 0.75
+                audio.play(.hit)
+            }
+        default:
+            break
+        }
+
+        if abs(entity.drift.x) > abs(entity.drift.y) {
+            entity.facing = entity.drift.x > 0 ? .right : .left
+        } else {
+            entity.facing = entity.drift.y > 0 ? .down : .up
+        }
+
+        move(entity, dx: entity.drift.x * speed * dt, dy: entity.drift.y * speed * dt)
+        entity.anim += dt * (speed > 0 ? 4 : 1.4)
+
+        if entity.knock.x != 0 || entity.knock.y != 0 {
+            move(entity, dx: entity.knock.x * 0.5 * dt, dy: entity.knock.y * 0.5 * dt)
+            entity.knock.x *= 0.78
+            entity.knock.y *= 0.78
+            if abs(entity.knock.x) < 4 { entity.knock.x = 0 }
+            if abs(entity.knock.y) < 4 { entity.knock.y = 0 }
+        }
+
+        if distance < 14 + data.scale * 4, player.invulnerable <= 0, phase == .play {
+            hurtPlayer(data.dmg, dx: dx, dy: dy, distance: distance)
+        }
+    }
+
+    private func bossDefeated(_ entity: Entity) {
+        guard let data = entity.boss else { return }
+        boss = nil
+        bossesBeaten += 1
+        killsSinceBoss = 0
+        shake = 6
+        if player.maxHP < 14 { player.maxHP += 2 }
+        player.hp = player.maxHP
+        audio.play(.heal)
+        audio.music(map.song)
+
+        dialog.push(who: data.name + " besiegt!", color: Color(hex: 0xFFD24A), text: data.sieg)
+        dialog.push(who: "Belohnung", color: Color(hex: 0xFFD24A),
+                    text: "Du fuehlst dich staerker: ein Herz mehr - und alle Herzen wieder voll.")
+        if let friend = party.randomElement(), let line = Chat.bossSieg.randomElement() {
+            let person = Chat.person(friend.key)
+            dialog.push(who: person.name, color: person.color, text: line)
+        }
+        dialog.start()
+        showHint(String(data.name.split(separator: ",").first ?? "Boss") + " besiegt!")
     }
 
     // MARK: Begleiter

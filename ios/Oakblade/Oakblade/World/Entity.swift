@@ -70,6 +70,13 @@ final class Entity {
     var line: String?
     var timesTalked = 0
 
+    // Bosse
+    var boss: Boss?
+    var specialTimer: Double = 0
+    var dashTimer: Double = 0
+    var rootsTimer: Double = 0
+    var raging = false
+
     // Objekte
     var text: String?
 

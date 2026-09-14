@@ -25,7 +25,60 @@ struct Question {
     let answers: [Answer]
 }
 
+/// Ein Boss mit eigenem Aussehen und eigener Kampfweise.
+struct Boss {
+    let key: String
+    let name: String
+    let art: String          // "zombie", "spider", "wolf", "treant"
+    let scale: Double
+    let hp: Int
+    let speed: Double
+    let dmg: Int
+    let koennen: String      // "rufen", "sprint", "wut", "wurzeln"
+    let intro: String
+    let spruch: String
+    let sieg: String
+}
+
 enum Chat {
+
+    /// Jeder Bosskampf ist ein anderer – die Reihenfolge wird gemischt.
+    static let bosse: [Boss] = [
+        Boss(key: "koenig", name: "Grauzahn, der Zombiekoenig", art: "zombie",
+             scale: 1.8, hp: 12, speed: 22, dmg: 2, koennen: "rufen",
+             intro: "Der Boden bebt. Ein riesiger Zombie mit schiefer Krone stapft aus dem Dickicht.",
+             spruch: "GRRRAAA! MEIN WALD! MEINE WUERMER!",
+             sieg: "Die Krone kullert ins Gras. Grauzahn faellt um wie ein nasser Sack."),
+        Boss(key: "spinne", name: "Nachtweberin, die Waldspinne", art: "spider",
+             scale: 1.5, hp: 10, speed: 28, dmg: 1, koennen: "sprint",
+             intro: "Zwischen zwei Eichen haengt ein Netz so gross wie eine Tuer. Acht Beine kommen heraus.",
+             spruch: "ssssss... bleib doch ein biiisschen kleben.",
+             sieg: "Die Nachtweberin rollt sich ein und verschwindet im Gebuesch."),
+        Boss(key: "wolf", name: "Mondfell, der Werwolf", art: "wolf",
+             scale: 1.5, hp: 11, speed: 34, dmg: 1, koennen: "wut",
+             intro: "Ein Heulen, viel zu nah. Etwas Grosses laeuft auf zwei Beinen zwischen den Baeumen.",
+             spruch: "Du riechst nach Eintopf, kleiner Ritter.",
+             sieg: "Mondfell schuettelt sich, brummt beleidigt und trottet davon."),
+        Boss(key: "knorr", name: "Alter Knorr, der Baumgeist", art: "treant",
+             scale: 1.3, hp: 14, speed: 12, dmg: 2, koennen: "wurzeln",
+             intro: "Der Baum vor dir macht die Augen auf. Und dann macht er einen Schritt.",
+             spruch: "Ihr... trampelt... auf... meinen... Wurzeln.",
+             sieg: "Alter Knorr setzt sich wieder hin und ist einfach nur noch ein Baum.")
+    ]
+
+    static let bossAuftritt: [String] = [
+        "Das ist kein normaler Zombie. Bleib dicht bei mir!",
+        "Oh nein. OH NEIN. Ist der gross.",
+        "Ausweichen, dann zuschlagen. Immer abwechselnd!",
+        "Sowas hab ich zuletzt als Kind gesehen. Damals bin ich weggelaufen."
+    ]
+
+    static let bossSieg: [String] = [
+        "DAS war ein Kampf! Hast du gesehen, wie der umgefallen ist?",
+        "Mein Herz klopft bis in die Ohren. Aber wir leben!",
+        "Dein Schwert hat heute gesungen, Ritter.",
+        "Ich erzaehl das heute Abend allen. Mit Handbewegungen."
+    ]
 
     static let zombiePalette = ActorPalette(
         hair: 0x2F4A2A, skin: 0x7AA85F, eye: 0xC43A2A,

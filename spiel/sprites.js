@@ -415,6 +415,91 @@
     ], { r: '#e03a3a' });
   }
 
+
+  /* ---- Bosse ---------------------------------------------------- */
+
+  /* Waldspinne: dicker Leib, acht Beine, rote Augen */
+  function makeSpider(step) {
+    var c = mk(30, 22), g = c.getContext('2d');
+    var beinFarbe = '#241a2e', hoch = step ? 1 : 0;
+    var beine = [
+      [11, 12, 2, 6], [11, 13, 5, 9], [19, 12, 28, 6], [19, 13, 25, 9]
+    ];
+    for (var i = 0; i < beine.length; i++) {
+      var b = beine[i];
+      var x0 = b[0], y0 = b[1] + (i % 2 ? hoch : -hoch);
+      var x1 = b[2], y1 = b[3] + (i % 2 ? -hoch : hoch);
+      // grobe Pixel-Linie
+      var n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0));
+      for (var t = 0; t <= n; t++) {
+        var x = Math.round(x0 + (x1 - x0) * t / n);
+        var y = Math.round(y0 + (y1 - y0) * t / n);
+        g.fillStyle = beinFarbe;
+        g.fillRect(x, y, 2, 2);
+      }
+    }
+    blob(g, 15, 14, 7, '#2e2140');
+    blob(g, 15, 13, 6, '#3f2c57');
+    blob(g, 15, 8, 5, '#241a2e');
+    blob(g, 15, 7, 4, '#4a3568');
+    g.fillStyle = '#d24b4b';
+    g.fillRect(12, 6, 2, 2); g.fillRect(17, 6, 2, 2);
+    g.fillStyle = '#ff9a8a';
+    g.fillRect(12, 6, 1, 1); g.fillRect(17, 6, 1, 1);
+    g.fillStyle = '#6b4f8a';
+    g.fillRect(13, 12, 4, 2); g.fillRect(14, 16, 3, 2);
+    return c;
+  }
+
+  /* Krone für den Zombiekönig */
+  function makeCrown() {
+    var c = mk(12, 7), g = c.getContext('2d');
+    g.fillStyle = '#8a6a1a';
+    g.fillRect(0, 4, 12, 3);
+    g.fillStyle = '#ffd24a';
+    g.fillRect(0, 3, 12, 2);
+    g.fillRect(0, 0, 2, 4); g.fillRect(5, 0, 2, 4); g.fillRect(10, 0, 2, 4);
+    g.fillStyle = '#fff0b4';
+    g.fillRect(0, 0, 1, 2); g.fillRect(5, 0, 1, 2); g.fillRect(10, 0, 1, 2);
+    g.fillStyle = '#d24b4b';
+    g.fillRect(5, 4, 2, 2);
+    return c;
+  }
+
+  /* Spitze Ohren für den Werwolf */
+  function withEars(src, color) {
+    var c = mk(src.width, src.height), g = c.getContext('2d');
+    g.drawImage(src, 0, 0);
+    g.fillStyle = color;
+    g.fillRect(3, 0, 3, 3); g.fillRect(4, 0, 2, 4);
+    g.fillRect(10, 0, 3, 3); g.fillRect(10, 0, 2, 4);
+    g.fillStyle = '#1b1524';
+    g.fillRect(3, 0, 1, 3); g.fillRect(12, 0, 1, 3);
+    return c;
+  }
+
+  /* Baumgeist: ein Baum, der Augen aufmacht */
+  function makeTreant() {
+    var c = mk(34, 42), g = c.getContext('2d'), r = rng(99);
+    g.fillStyle = '#3d2a18'; g.fillRect(13, 22, 9, 19);
+    g.fillStyle = '#5f4026'; g.fillRect(14, 22, 6, 19);
+    g.fillStyle = '#3d2a18';
+    g.fillRect(6, 30, 8, 3); g.fillRect(21, 32, 8, 3);
+    blob(g, 17, 17, 14, '#1d3a22');
+    blob(g, 14, 13, 12, '#28572f');
+    blob(g, 21, 12, 10, '#35703a');
+    for (var i = 0; i < 20; i++) {
+      g.fillStyle = r() > 0.5 ? '#16301c' : '#47934a';
+      g.fillRect(4 + ((r() * 26) | 0), 3 + ((r() * 24) | 0), 1, 1);
+    }
+    /* Gesicht im Stamm */
+    g.fillStyle = '#1b1008'; g.fillRect(14, 26, 7, 8);
+    g.fillStyle = '#ffd24a'; g.fillRect(14, 27, 2, 3); g.fillRect(19, 27, 2, 3);
+    g.fillStyle = '#fff0b4'; g.fillRect(14, 27, 1, 1); g.fillRect(19, 27, 1, 1);
+    g.fillStyle = '#2a1a10'; g.fillRect(15, 31, 5, 2);
+    return c;
+  }
+
   /* =========================================================
      KACHELN (16x16) – Wald, Haus, Stadt
      ========================================================= */
@@ -711,6 +796,10 @@
     fountain: makeFountain(),
     bench: makeBench(),
     sign: makeSign(),
+    spider: [makeSpider(0), makeSpider(1)],
+    crown: makeCrown(),
+    treant: makeTreant(),
+    withEars: withEars,
     actor: buildActor,
     tiles: TILES,
     build: buildTiles,

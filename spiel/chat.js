@@ -141,7 +141,56 @@
     'Schoenes Auto haben Sie da. Faehrt das auch bergauf?'
   ];
 
+  /* ---------- Die Bosse ---------- */
+  var BOSSE = [
+    {
+      key: 'koenig', name: 'Grauzahn, der Zombiekoenig', art: 'zombie',
+      scale: 1.8, hp: 12, speed: 22, dmg: 2, koennen: 'rufen',
+      intro: 'Der Boden bebt. Ein riesiger Zombie mit schiefer Krone stapft aus dem Dickicht.',
+      spruch: 'GRRRAAA! MEIN WALD! MEINE WUERMER!',
+      sieg: 'Die Krone kullert ins Gras. Grauzahn faellt um wie ein nasser Sack.'
+    },
+    {
+      key: 'spinne', name: 'Nachtweberin, die Waldspinne', art: 'spider',
+      scale: 1.5, hp: 10, speed: 28, dmg: 1, koennen: 'sprint',
+      intro: 'Zwischen zwei Eichen haengt ein Netz so gross wie eine Tuer. Acht Beine kommen heraus.',
+      spruch: 'ssssss... bleib doch ein biiisschen kleben.',
+      sieg: 'Die Nachtweberin rollt sich ein und verschwindet im Gebuesch.'
+    },
+    {
+      key: 'wolf', name: 'Mondfell, der Werwolf', art: 'wolf',
+      scale: 1.5, hp: 11, speed: 34, dmg: 1, koennen: 'wut',
+      intro: 'Ein Heulen, viel zu nah. Etwas Grosses laeuft auf zwei Beinen zwischen den Baeumen.',
+      spruch: 'Du riechst nach Eintopf, kleiner Ritter.',
+      sieg: 'Mondfell schuettelt sich, brummt beleidigt und trottet davon.'
+    },
+    {
+      key: 'knorr', name: 'Alter Knorr, der Baumgeist', art: 'treant',
+      scale: 1.3, hp: 14, speed: 12, dmg: 2, koennen: 'wurzeln',
+      intro: 'Der Baum vor dir macht die Augen auf. Und dann macht er einen Schritt.',
+      spruch: 'Ihr... trampelt... auf... meinen... Wurzeln.',
+      sieg: 'Alter Knorr setzt sich wieder hin und ist einfach nur noch ein Baum.'
+    }
+  ];
+
+  var BOSS_LINES = {
+    auftritt: [
+      'Das ist kein normaler Zombie. Bleib dicht bei mir!',
+      'Oh nein. OH NEIN. Ist der gross.',
+      'Ausweichen, dann zuschlagen. Immer abwechselnd!',
+      'Sowas hab ich zuletzt als Kind gesehen. Damals bin ich weggelaufen.'
+    ],
+    sieg: [
+      'DAS war ein Kampf! Hast du gesehen, wie der umgefallen ist?',
+      'Mein Herz klopft bis in die Ohren. Aber wir leben!',
+      'Dein Schwert hat heute gesungen, Ritter.',
+      'Ich erzaehl das heute Abend allen. Mit Handbewegungen.'
+    ]
+  };
+
   var Chat = {
+    bosse: BOSSE,
+    bossLines: BOSS_LINES,
     people: PEOPLE,
     zombiePal: ZOMBIE_PAL,
     killLines: KILL_LINES,

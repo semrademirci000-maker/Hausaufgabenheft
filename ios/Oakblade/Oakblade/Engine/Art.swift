@@ -56,6 +56,12 @@ final class Art {
     let zombieWhite: ActorFrames
     let sword: Image
     let heart: Image
+    let heartHalf: Image
+    let spider: [Image]
+    let spiderWhite: [Image]
+    let crown: Image
+    let treant: Image
+    let treantWhite: Image
     let props: [String: PropArt]
     let tiles: [Character: PixelImage]
 
@@ -78,14 +84,26 @@ final class Art {
         sword = Art.image(PixelImage.from(rows: SpriteRows.sword, palette: [
             "w": RGBA(0xEEF3FB), "g": RGBA(0xAAB6C8), "h": RGBA(0xD8A43A), "n": RGBA(0x6B4A2B)
         ]))
-        heart = Art.image(PixelImage.from(rows: [
+        let heartRows = [
             ".rr.rr.",
             "rrrrrrr",
             "rrrrrrr",
             ".rrrrr.",
             "..rrr..",
             "...r..."
-        ], palette: ["r": RGBA(0xE03A3A)]))
+        ]
+        let heartPalette: [Character: RGBA] = ["r": RGBA(0xE03A3A)]
+        heart = Art.image(PixelImage.from(rows: heartRows, palette: heartPalette))
+        // Die linke Hälfte ist das halbe Herz.
+        heartHalf = Art.image(PixelImage.from(rows: heartRows.map { String($0.prefix(4)) },
+                                              palette: heartPalette))
+        let spiderPixels = [Art.makeSpider(0), Art.makeSpider(1)]
+        spider = spiderPixels.map { Art.image($0) }
+        spiderWhite = spiderPixels.map { Art.image($0.whiteCopy()) }
+        crown = Art.image(Art.makeCrown())
+        let treantPixels = Art.makeTreant()
+        treant = Art.image(treantPixels)
+        treantWhite = Art.image(treantPixels.whiteCopy())
 
         props = Art.buildProps()
         tiles = Art.buildTiles()
@@ -100,6 +118,40 @@ final class Art {
     }
 
     func prop(_ kind: String) -> PropArt? { props[kind] }
+
+    /// Der Werwolf: die Menschen-Vorlage in Fellfarben, mit spitzen Ohren.
+    private var wolfFrames: ActorFrames?
+    private var wolfWhiteFrames: ActorFrames?
+
+    func wolf(white: Bool = false) -> ActorFrames {
+        if white, let ready = wolfWhiteFrames { return ready }
+        if !white, let ready = wolfFrames { return ready }
+        let palette = ActorPalette(hair: 0x4A4550, skin: 0x6B6472, eye: 0xD24B4B,
+                                   shirt: 0x3B3644, shirtDark: 0x2A2632,
+                                   pants: 0x241F2C, boots: 0x17131F)
+        let pixels = Art.actorPixels(palette: palette, zombie: false)
+        let ears = RGBA(0x4A4550)
+        let down = pixels.down.map { Art.withEars($0, ears) }
+        let up = pixels.up.map { Art.withEars($0, ears) }
+        let side = pixels.side.map { Art.withEars($0, ears) }
+        func finish(_ p: PixelImage) -> Image { Art.image(white ? p.whiteCopy() : p) }
+        let made = ActorFrames(
+            down: down.map(finish),
+            up: up.map(finish),
+            left: side.map { finish($0.flippedHorizontally()) },
+            right: side.map(finish)
+        )
+        if white { wolfWhiteFrames = made } else { wolfFrames = made }
+        return made
+    }
+
+    /// Größe der Boss-Bilder (für das Zeichnen).
+    static let spiderWidth: Double = 30
+    static let spiderHeight: Double = 22
+    static let treantWidth: Double = 34
+    static let treantHeight: Double = 42
+    static let crownWidth: Double = 12
+    static let crownHeight: Double = 7
 
     // MARK: - Hilfsmittel
 
@@ -303,6 +355,90 @@ final class Art {
         p.fill(10, 4, 2, 5, RGBA(0x9FD6EC))
         p.fill(20, 4, 2, 5, RGBA(0x9FD6EC))
         p.fill(1, 25, 30, 2, RGBA(0x5B5766))
+        return p
+    }
+
+    /// Waldspinne: dicker Leib, acht Beine, rote Augen.
+    private static func makeSpider(_ step: Int) -> PixelImage {
+        let p = PixelImage(30, 22)
+        let lift = step == 1 ? 1 : 0
+        let legs: [(Int, Int, Int, Int)] = [
+            (11, 12, 2, 6), (11, 13, 5, 9), (19, 12, 28, 6), (19, 13, 25, 9)
+        ]
+        for (index, leg) in legs.enumerated() {
+            let wobble = index % 2 == 0 ? -lift : lift
+            let x0 = leg.0, y0 = leg.1 + wobble
+            let x1 = leg.2, y1 = leg.3 - wobble
+            let steps = max(abs(x1 - x0), abs(y1 - y0))
+            for t in 0...max(1, steps) {
+                let f = Double(t) / Double(max(1, steps))
+                let x = x0 + Int((Double(x1 - x0) * f).rounded())
+                let y = y0 + Int((Double(y1 - y0) * f).rounded())
+                p.fill(x, y, 2, 2, RGBA(0x241A2E))
+            }
+        }
+        p.circle(15, 14, 7, RGBA(0x2E2140))
+        p.circle(15, 13, 6, RGBA(0x3F2C57))
+        p.circle(15, 8, 5, RGBA(0x241A2E))
+        p.circle(15, 7, 4, RGBA(0x4A3568))
+        p.fill(12, 6, 2, 2, RGBA(0xD24B4B))
+        p.fill(17, 6, 2, 2, RGBA(0xD24B4B))
+        p.set(12, 6, RGBA(0xFF9A8A))
+        p.set(17, 6, RGBA(0xFF9A8A))
+        p.fill(13, 12, 4, 2, RGBA(0x6B4F8A))
+        p.fill(14, 16, 3, 2, RGBA(0x6B4F8A))
+        return p
+    }
+
+    /// Krone für den Zombiekönig.
+    private static func makeCrown() -> PixelImage {
+        let p = PixelImage(12, 7)
+        p.fill(0, 4, 12, 3, RGBA(0x8A6A1A))
+        p.fill(0, 3, 12, 2, RGBA(0xFFD24A))
+        p.fill(0, 0, 2, 4, RGBA(0xFFD24A))
+        p.fill(5, 0, 2, 4, RGBA(0xFFD24A))
+        p.fill(10, 0, 2, 4, RGBA(0xFFD24A))
+        p.fill(0, 0, 1, 2, RGBA(0xFFF0B4))
+        p.fill(5, 0, 1, 2, RGBA(0xFFF0B4))
+        p.fill(10, 0, 1, 2, RGBA(0xFFF0B4))
+        p.fill(5, 4, 2, 2, RGBA(0xD24B4B))
+        return p
+    }
+
+    /// Spitze Ohren obendrauf – aus einer Person wird ein Werwolf.
+    private static func withEars(_ source: PixelImage, _ color: RGBA) -> PixelImage {
+        let p = PixelImage(source.width, source.height)
+        p.blit(source, 0, 0)
+        p.fill(3, 0, 3, 3, color)
+        p.fill(4, 0, 2, 4, color)
+        p.fill(10, 0, 3, 3, color)
+        p.fill(10, 0, 2, 4, color)
+        p.fill(3, 0, 1, 3, RGBA(0x1B1524))
+        p.fill(12, 0, 1, 3, RGBA(0x1B1524))
+        return p
+    }
+
+    /// Baumgeist: ein Baum, der die Augen aufmacht.
+    private static func makeTreant() -> PixelImage {
+        let p = PixelImage(34, 42)
+        var r = Rand(99)
+        p.fill(13, 22, 9, 19, RGBA(0x3D2A18))
+        p.fill(14, 22, 6, 19, RGBA(0x5F4026))
+        p.fill(6, 30, 8, 3, RGBA(0x3D2A18))
+        p.fill(21, 32, 8, 3, RGBA(0x3D2A18))
+        p.circle(17, 17, 14, RGBA(0x1D3A22))
+        p.circle(14, 13, 12, RGBA(0x28572F))
+        p.circle(21, 12, 10, RGBA(0x35703A))
+        for _ in 0..<20 {
+            let color = r.chance(0.5) ? RGBA(0x16301C) : RGBA(0x47934A)
+            p.set(4 + r.int(26), 3 + r.int(24), color)
+        }
+        p.fill(14, 26, 7, 8, RGBA(0x1B1008))
+        p.fill(14, 27, 2, 3, RGBA(0xFFD24A))
+        p.fill(19, 27, 2, 3, RGBA(0xFFD24A))
+        p.set(14, 27, RGBA(0xFFF0B4))
+        p.set(19, 27, RGBA(0xFFF0B4))
+        p.fill(15, 31, 5, 2, RGBA(0x2A1A10))
         return p
     }
 

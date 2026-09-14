@@ -204,6 +204,17 @@ final class ChipEngine: ObservableObject {
                        N.f3, N.f3, N.c3, N.c3, N.f3, N.f3, N.c3, N.c3,
                        N.e3, N.e3, N.b3, N.b3, N.e3, N.e3, N.b3, N.b3,
                        N.d3, N.d3, N.a3, N.a3, N.g3, N.g3, N.g3, N.rest])
+        case .boss:
+            return Song(
+                bpm: 132,
+                lead: [N.a4, N.rest, N.a4, N.g4, N.a4, N.rest, N.c5, N.b4,
+                       N.a4, N.rest, N.e4, N.f4, N.g4, N.rest, N.rest, N.rest,
+                       N.a4, N.rest, N.c5, N.b4, N.a4, N.g4, N.f4, N.e4,
+                       N.d4, N.e4, N.f4, N.g4, N.a4, N.rest, N.rest, N.rest],
+                bass: [N.a3, N.a3, N.a3, N.a3, N.f3, N.f3, N.f3, N.f3,
+                       N.g3, N.g3, N.g3, N.g3, N.e3, N.e3, N.e3, N.e3,
+                       N.a3, N.a3, N.a3, N.a3, N.f3, N.f3, N.f3, N.f3,
+                       N.d3, N.d3, N.d3, N.d3, N.e3, N.e3, N.e3, N.e3])
         case .kampf:
             return Song(
                 bpm: 150,

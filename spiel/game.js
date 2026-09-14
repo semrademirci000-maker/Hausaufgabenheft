@@ -20,6 +20,7 @@
     player: null, camX: 0, camY: 0,
     kills: 0, time: 0, fade: 0, fadeTo: null,
     spawnT: 4, shake: 0, hint: '', hintT: 0,
+    boss: null, bossQueue: [], bossesBeaten: 0, killsSinceBoss: 0,
     drive: null, overT: 0, lastSave: 0
   };
   global.GAME = G;
@@ -94,6 +95,7 @@
     G.map = m; G.mapKey = key;
     G.mapH = m.rows.length; G.mapW = m.rows[0].length;
     G.ents = []; G.party = []; G.trail = [];
+    G.boss = null;
     G.blocks = [];
 
     /* Bäume, Büsche und Steine aus den Kacheln zu Objekten machen */
@@ -115,7 +117,7 @@
     /* Spieler */
     if (!G.player) {
       G.player = { type: 'player', x: 0, y: 0, dir: 'down', anim: 0, moving: false,
-                   hp: 20, maxhp: 20, atk: null, atkCd: 0, swingId: 0, invuln: 0, kx: 0, ky: 0 };
+                   hp: 10, maxhp: 10, atk: null, atkCd: 0, swingId: 0, invuln: 0, kx: 0, ky: 0 };
     }
     G.player.x = tx * TILE; G.player.y = ty * TILE;
     G.player.atk = null; G.player.kx = 0; G.player.ky = 0;
@@ -327,10 +329,15 @@
     G.shake = 2.5;
     if (z.hp <= 0) {
       z.dying = 0.001;
-      G.kills++;
       if (A) A.dead();
-      Chat.killLine(G);
-      save();
+      if (z.boss) {
+        bossBesiegt(z);
+      } else {
+        G.kills++;
+        G.killsSinceBoss++;
+        Chat.killLine(G);
+        save();
+      }
     } else if (A) A.hit();
   }
 
@@ -380,6 +387,8 @@
     var dd = Math.sqrt(dx * dx + dy * dy) || 1;
     var sp = 0;
 
+    if (z.boss) { updateBoss(z, dt, dx, dy, dd); return; }
+
     if (dd < 150) {
       sp = 26; z.vx = dx / dd; z.vy = dy / dd;
     } else {
@@ -406,14 +415,157 @@
     }
 
     /* Zombie berührt den Ritter */
-    if (dd < 13 && p.invuln <= 0 && G.state === 'play') {
-      p.hp -= 3;
-      p.invuln = 1.1;
-      p.kx = -dx / dd * 150; p.ky = -dy / dd * 150;
-      G.shake = 4;
-      if (A) A.hurt();
-      if (p.hp <= 0) { p.hp = 0; gameOver(); }
+    if (dd < 13 && p.invuln <= 0 && G.state === 'play') hurtPlayer(1, dx, dy, dd);
+  }
+
+  /* Ein Treffer kostet ein halbes Herz, ein Bosstreffer ein ganzes. */
+  function hurtPlayer(dmg, dx, dy, dd) {
+    var p = G.player;
+    p.hp -= dmg;
+    p.invuln = 1.1;
+    p.kx = -dx / dd * 150; p.ky = -dy / dd * 150;
+    G.shake = 4;
+    if (A) A.hurt();
+    if (p.hp <= 0) { p.hp = 0; gameOver(); }
+  }
+
+  /* ================= Bosse ================= */
+
+  function mischen(arr) {
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = (Math.random() * (i + 1)) | 0, t = a[i];
+      a[i] = a[j]; a[j] = t;
     }
+    return a;
+  }
+
+  function spawnBoss() {
+    if (!G.bossQueue.length) G.bossQueue = mischen(Chat.bosse);
+    var b = G.bossQueue.shift();
+
+    var pos = null, tries = 90;
+    while (tries-- && !pos) {
+      var tx = 2 + ((Math.random() * (G.mapW - 4)) | 0);
+      var ty = 2 + ((Math.random() * (G.mapH - 4)) | 0);
+      if (solidTile(tileAt(tx, ty))) continue;
+      var x = tx * TILE + 8, y = ty * TILE + 14;
+      var d = Math.sqrt((x - G.player.x) * (x - G.player.x) + (y - G.player.y) * (y - G.player.y));
+      if (d < 80 || d > 210) continue;
+      pos = { x: x, y: y };
+    }
+    if (!pos) pos = { x: G.player.x + 110, y: G.player.y };
+
+    var z = { type: 'zombie', boss: b, x: pos.x, y: pos.y, hp: b.hp, maxhp: b.hp,
+              dir: 'down', anim: 0, kx: 0, ky: 0, flash: 0, dying: 0, hitId: -1,
+              wt: 0, vx: 0, vy: 0, spT: 2.5, dash: 0, roots: 0, rage: false };
+    G.ents.push(z);
+    G.boss = z;
+    G.killsSinceBoss = 0;
+    G.shake = 6;
+    if (A) A.music('boss');
+
+    D.push('!!!', '#ff5a5a', b.intro);
+    D.push(b.name, '#ff9a8a', b.spruch);
+    if (G.party.length) {
+      var f = G.party[(Math.random() * G.party.length) | 0];
+      var pp = Chat.people[f.key];
+      var lines = Chat.bossLines.auftritt;
+      D.push(pp.name, pp.color, lines[(Math.random() * lines.length) | 0]);
+    }
+    D.begin();
+  }
+
+  function spawnZombieNear(z) {
+    for (var i = 0; i < 20; i++) {
+      var a = Math.random() * Math.PI * 2, r = 26 + Math.random() * 26;
+      var x = z.x + Math.cos(a) * r, y = z.y + Math.sin(a) * r;
+      var tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
+      if (solidTile(tileAt(tx, ty))) continue;
+      G.ents.push({ type: 'zombie', x: x, y: y, hp: 3, dir: 'down', anim: 0,
+                    kx: 0, ky: 0, flash: 0, dying: 0, hitId: -1, wt: 0,
+                    vx: 0, vy: 0, hurtCd: 0 });
+      return;
+    }
+  }
+
+  function updateBoss(z, dt, dx, dy, dd) {
+    var b = z.boss, p = G.player;
+    z.flash = Math.max(0, z.flash - dt);
+    z.spT -= dt;
+
+    var sp = b.speed * (z.rage ? 1.6 : 1);
+    z.vx = dx / dd; z.vy = dy / dd;
+
+    if (b.koennen === 'sprint') {
+      if (z.dash > 0) { z.dash -= dt; sp = 120; }
+      else if (z.spT <= 0 && dd < 190) {
+        z.spT = 2.8; z.dash = 0.45; G.shake = 2;
+        if (A) A.swing();
+      }
+    }
+    if (b.koennen === 'rufen' && z.spT <= 0 && dd < 220) {
+      z.spT = 7;
+      spawnZombieNear(z); spawnZombieNear(z);
+      hint('Grauzahn ruft Verstaerkung!');
+    }
+    if (b.koennen === 'wut' && !z.rage && z.hp <= z.maxhp / 2) {
+      z.rage = true; G.shake = 5;
+      hint('Mondfell wird wuetend!');
+    }
+    if (b.koennen === 'wurzeln') {
+      if (z.roots > 0) {
+        z.roots -= dt;
+        sp = 0;
+        if (z.roots <= 0 && dd < 46 && p.invuln <= 0 && G.state === 'play') {
+          hurtPlayer(b.dmg, dx, dy, dd);
+        }
+      } else if (z.spT <= 0 && dd < 130) {
+        z.spT = 4.5; z.roots = 0.75;
+        if (A) A.hit();
+      }
+    }
+
+    if (Math.abs(z.vx) > Math.abs(z.vy)) z.dir = z.vx > 0 ? 'right' : 'left';
+    else z.dir = z.vy > 0 ? 'down' : 'up';
+
+    moveEnt(z, z.vx * sp * dt, z.vy * sp * dt);
+    z.anim += dt * (sp > 0 ? 4 : 1.4);
+
+    if (z.kx || z.ky) {
+      moveEnt(z, z.kx * 0.5 * dt, z.ky * 0.5 * dt);
+      z.kx *= 0.78; z.ky *= 0.78;
+      if (Math.abs(z.kx) < 4) z.kx = 0;
+      if (Math.abs(z.ky) < 4) z.ky = 0;
+    }
+
+    if (dd < 14 + b.scale * 4 && p.invuln <= 0 && G.state === 'play') {
+      hurtPlayer(b.dmg, dx, dy, dd);
+    }
+  }
+
+  function bossBesiegt(z) {
+    var b = z.boss, p = G.player;
+    G.boss = null;
+    G.bossesBeaten++;
+    G.killsSinceBoss = 0;
+    G.shake = 6;
+    if (p.maxhp < 14) p.maxhp += 2;
+    p.hp = p.maxhp;
+    if (A) { A.heal(); A.music(G.map.music); }
+
+    D.push(b.name + ' besiegt!', '#ffd24a', b.sieg);
+    D.push('Belohnung', '#ffd24a',
+           'Du fuehlst dich staerker: ein Herz mehr - und alle Herzen wieder voll.');
+    if (G.party.length) {
+      var f = G.party[(Math.random() * G.party.length) | 0];
+      var pp = Chat.people[f.key];
+      var lines = Chat.bossLines.sieg;
+      D.push(pp.name, pp.color, lines[(Math.random() * lines.length) | 0]);
+    }
+    D.begin();
+    hint(b.name.split(',')[0] + ' besiegt!');
+    save();
   }
 
   /* ================= Begleiter ================= */
@@ -757,6 +909,7 @@
     if (e.type === 'zombie') {
       var set = actorFor('zombie', true);
       var img = set[e.dir][frameOf(e)];
+      if (e.boss) { drawBoss(e, sx, sy); return; }
       if (e.dying) {
         var k = Math.min(1, e.dying / 0.5);
         ctx.save();
@@ -811,6 +964,71 @@
     if (e.type === 'player') drawKnight(e, sx, sy);
   }
 
+  /* Werwolf: die Menschen-Vorlage mit Fell und spitzen Ohren */
+  var WOLF = null;
+  function wolfSet() {
+    if (WOLF) return WOLF;
+    var base = S.actor({ hair: '#4a4550', skin: '#6b6472', eye: '#d24b4b',
+                         shirt: '#3b3644', shirtDark: '#2a2632',
+                         pants: '#241f2c', boots: '#17131f' });
+    WOLF = {};
+    var dirs = ['down', 'up', 'left', 'right'];
+    for (var i = 0; i < dirs.length; i++) {
+      var d = dirs[i];
+      WOLF[d] = [S.withEars(base[d][0], '#4a4550'), S.withEars(base[d][1], '#4a4550')];
+    }
+    return WOLF;
+  }
+
+  function bossImage(e) {
+    var art = e.boss.art, f = frameOf(e);
+    if (art === 'spider') return S.spider[f];
+    if (art === 'treant') return S.treant;
+    if (art === 'wolf') return wolfSet()[e.dir][f];
+    return actorFor('zombie', true)[e.dir][f];
+  }
+
+  function drawBoss(e, sx, sy) {
+    var b = e.boss, s = b.scale;
+    var img = bossImage(e);
+    var w = img.width * s, h = img.height * s;
+    var x = sx - w / 2, y = sy - h;
+
+    /* Wurzeln, die aus dem Boden schiessen */
+    if (e.roots > 0) {
+      var k = 1 - e.roots / 0.75;
+      for (var i = 0; i < 10; i++) {
+        var a = i * 0.628, r = 14 + k * 30;
+        ctx.fillStyle = i % 2 ? '#5f4026' : '#3d2a18';
+        ctx.fillRect(sx + Math.cos(a) * r - 2, sy + Math.sin(a) * r * 0.6 - 6, 4, 8);
+      }
+    }
+
+    if (e.dying) {
+      var d = Math.min(1, e.dying / 0.5);
+      ctx.globalAlpha = 1 - d;
+      ctx.drawImage(img, x, y + d * 6, w, h);
+      ctx.globalAlpha = 1;
+      return;
+    }
+
+    ctx.drawImage(img, x, y, w, h);
+    if (b.art === 'zombie') {
+      var crown = S.crown;
+      ctx.drawImage(crown, sx - crown.width * s / 2, y - crown.height * s * 0.55,
+                    crown.width * s, crown.height * s);
+    }
+    if (e.flash > 0) {
+      ctx.globalAlpha = 0.85;
+      ctx.drawImage(whiteCopy(img), x, y, w, h);
+      ctx.globalAlpha = 1;
+    }
+    if (e.rage) {
+      ctx.fillStyle = 'rgba(226,58,58,0.25)';
+      ctx.fillRect(x, y, w, h);
+    }
+  }
+
   var DIRDEG = { right: 0, down: 90, left: 180, up: 270 };
   var HAND = { right: [4, -9], left: [-4, -9], down: [5, -7], up: [-5, -10] };
 
@@ -860,16 +1078,25 @@
   }
 
   function drawHUD() {
-    /* Herzen */
-    var hearts = Math.ceil(G.player.hp / 4);
-    for (var i = 0; i < 5; i++) {
-      ctx.globalAlpha = i < hearts ? 1 : 0.22;
-      ctx.drawImage(S.heart, 6 + i * 9, 6);
+    /* Herzen: jedes Herz sind zwei Haelften */
+    var p = G.player;
+    var anzahl = Math.ceil(p.maxhp / 2);
+    for (var i = 0; i < anzahl; i++) {
+      var x = 6 + i * 9, rest = p.hp - i * 2;
+      ctx.globalAlpha = 0.22;
+      ctx.drawImage(S.heart, x, 6);            /* leeres Herz als Umriss */
+      ctx.globalAlpha = 1;
+      if (rest >= 2) {
+        ctx.drawImage(S.heart, x, 6);
+      } else if (rest === 1) {
+        /* nur die linke Haelfte = ein halbes Herz */
+        ctx.drawImage(S.heart, 0, 0, 4, S.heart.height, x, 6, 4, S.heart.height);
+      }
     }
     ctx.globalAlpha = 1;
     ctx.font = '8px "Courier New", monospace';
     ctx.fillStyle = '#fff';
-    ctx.fillText('HP ' + G.player.hp + '/' + G.player.maxhp, 54, 13);
+    ctx.fillText('HP ' + p.hp + '/' + p.maxhp, 10 + anzahl * 9, 13);
 
     /* Zombiezähler (zweite Zeile, damit der Musikknopf nichts verdeckt) */
     ctx.textAlign = 'right';
@@ -886,6 +1113,20 @@
     if (names.length) {
       ctx.fillStyle = '#c8c2e0';
       ctx.fillText('Dabei: ' + names.join(', '), 6, 23);
+    }
+
+    /* Lebensbalken des Bosses */
+    if (G.boss && !G.boss.dying) {
+      var b = G.boss, bw = 176, bx = (VW - bw) / 2, by = 32;
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#ff9a8a';
+      ctx.fillText(b.boss.name.toUpperCase(), VW / 2, by - 3);
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#1a1420'; ctx.fillRect(bx - 1, by, bw + 2, 7);
+      ctx.fillStyle = '#3b2028'; ctx.fillRect(bx, by + 1, bw, 5);
+      var anteil = Math.max(0, b.hp) / b.maxhp;
+      ctx.fillStyle = '#e03a3a'; ctx.fillRect(bx, by + 1, bw * anteil, 5);
+      ctx.fillStyle = '#ff9a8a'; ctx.fillRect(bx, by + 1, bw * anteil, 2);
     }
 
     /* Ortsname / Hinweis */
@@ -1052,6 +1293,8 @@
         G.spawnT = 5 + Math.random() * 4;
         if (countZombies() < 7) spawnZombie();
       }
+      /* Nach ein paar erledigten Zombies kommt ein Boss - jedes Mal ein anderer */
+      if (!G.boss && G.killsSinceBoss >= 6 && !D.isOpen()) spawnBoss();
     }
 
     /* Musik im Kampf */
@@ -1060,7 +1303,7 @@
       for (i = 0; i < G.ents.length; i++) {
         if (G.ents[i].type === 'zombie' && !G.ents[i].dying && dist(G.ents[i], G.player) < 70) { nah = true; break; }
       }
-      if (A) A.music(nah ? 'kampf' : G.map.music);
+      if (A) A.music(G.boss ? 'boss' : (nah ? 'kampf' : G.map.music));
       G.danger = nah;
     } else G.danger = false;
 

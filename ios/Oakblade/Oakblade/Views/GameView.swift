@@ -188,6 +188,10 @@ struct GameView: View {
                                 width: art.width, height: art.height))
 
         case .zombie:
+            if entity.boss != nil {
+                drawBoss(ctx, entity: entity)
+                return
+            }
             let box = CGRect(x: x - 8, y: y - 16, width: 16, height: 16)
             if entity.isDying {
                 let k = min(1.0, entity.dying / 0.5)
@@ -237,6 +241,83 @@ struct GameView: View {
 
         case .player:
             drawKnight(ctx, world: world)
+        }
+    }
+
+    /// Bosse sind grösser und sehen jeder anders aus.
+    private func drawBoss(_ ctx: GraphicsContext, entity: Entity) {
+        guard let data = entity.boss else { return }
+        let x = entity.pos.x, y = entity.pos.y
+
+        var image: Image
+        var whiteImage: Image
+        var width = 16.0
+        var height = 16.0
+        switch data.art {
+        case "spider":
+            image = Art.shared.spider[entity.frame]
+            whiteImage = Art.shared.spiderWhite[entity.frame]
+            width = Art.spiderWidth
+            height = Art.spiderHeight
+        case "treant":
+            image = Art.shared.treant
+            whiteImage = Art.shared.treantWhite
+            width = Art.treantWidth
+            height = Art.treantHeight
+        case "wolf":
+            image = Art.shared.wolf().image(entity.facing, entity.frame)
+            whiteImage = Art.shared.wolf(white: true).image(entity.facing, entity.frame)
+        default:
+            image = Art.shared.zombie.image(entity.facing, entity.frame)
+            whiteImage = Art.shared.zombieWhite.image(entity.facing, entity.frame)
+        }
+
+        let drawWidth = width * data.scale
+        let drawHeight = height * data.scale
+        let left = x - drawWidth / 2
+        let top = y - drawHeight
+
+        // Wurzeln, die aus dem Boden schiessen
+        if entity.rootsTimer > 0 {
+            let grown = 1 - entity.rootsTimer / 0.75
+            for i in 0..<10 {
+                let angle = Double(i) * 0.628
+                let radius = 14 + grown * 30
+                let color = i % 2 == 0 ? Color(hex: 0x5F4026) : Color(hex: 0x3D2A18)
+                ctx.fill(Path(CGRect(x: x + cos(angle) * radius - 2,
+                                     y: y + sin(angle) * radius * 0.6 - 6,
+                                     width: 4, height: 8)),
+                         with: .color(color))
+            }
+        }
+
+        if entity.isDying {
+            let gone = min(1.0, entity.dying / 0.5)
+            var fading = ctx
+            fading.opacity = 1 - gone
+            fading.draw(image, in: CGRect(x: left, y: top + gone * 6,
+                                          width: drawWidth, height: drawHeight))
+            return
+        }
+
+        ctx.draw(image, in: CGRect(x: left, y: top, width: drawWidth, height: drawHeight))
+
+        if data.art == "zombie" {
+            let crownWidth = Art.crownWidth * data.scale
+            let crownHeight = Art.crownHeight * data.scale
+            ctx.draw(Art.shared.crown,
+                     in: CGRect(x: x - crownWidth / 2, y: top - crownHeight * 0.55,
+                                width: crownWidth, height: crownHeight))
+        }
+        if entity.flash > 0 {
+            var flashing = ctx
+            flashing.opacity = 0.85
+            flashing.draw(whiteImage, in: CGRect(x: left, y: top,
+                                                 width: drawWidth, height: drawHeight))
+        }
+        if entity.raging {
+            ctx.fill(Path(CGRect(x: left, y: top, width: drawWidth, height: drawHeight)),
+                     with: .color(Color(hex: 0xE23A3A).opacity(0.25)))
         }
     }
 
@@ -315,16 +396,43 @@ struct GameView: View {
     // MARK: Anzeige oben
 
     private func drawHUD(_ ctx: GraphicsContext, world: GameWorld) {
-        let hearts = Int(ceil(Double(world.player.hp) / 4.0))
-        for i in 0..<5 {
-            var heart = ctx
-            heart.opacity = i < hearts ? 1 : 0.22
-            heart.draw(Art.shared.heart,
-                       in: CGRect(x: 6 + Double(i) * 9, y: 6,
-                                  width: Art.heartWidth, height: Art.heartHeight))
+        // Jedes Herz sind zwei Hälften.
+        let hearts = Int(ceil(Double(world.player.maxHP) / 2.0))
+        for i in 0..<hearts {
+            let x = 6 + Double(i) * 9
+            let rest = world.player.hp - i * 2
+            var empty = ctx
+            empty.opacity = 0.22
+            empty.draw(Art.shared.heart,
+                       in: CGRect(x: x, y: 6, width: Art.heartWidth, height: Art.heartHeight))
+            if rest >= 2 {
+                ctx.draw(Art.shared.heart,
+                         in: CGRect(x: x, y: 6, width: Art.heartWidth, height: Art.heartHeight))
+            } else if rest == 1 {
+                ctx.draw(Art.shared.heartHalf,
+                         in: CGRect(x: x, y: 6, width: 4, height: Art.heartHeight))
+            }
         }
         ctx.draw(smallText("HP \(world.player.hp)/\(world.player.maxHP)", color: .white),
-                 at: CGPoint(x: 54, y: 6), anchor: .topLeading)
+                 at: CGPoint(x: 10 + Double(hearts) * 9, y: 6), anchor: .topLeading)
+
+        // Lebensbalken des Bosses
+        if let boss = world.boss, let data = boss.boss, !boss.isDying {
+            let barWidth = 176.0
+            let barX = (gameWidth - barWidth) / 2
+            let barY = 32.0
+            ctx.draw(smallText(data.name.uppercased(), color: Color(hex: 0xFF9A8A)),
+                     at: CGPoint(x: gameWidth / 2, y: 24), anchor: .top)
+            ctx.fill(Path(CGRect(x: barX - 1, y: barY, width: barWidth + 2, height: 7)),
+                     with: .color(Color(hex: 0x1A1420)))
+            ctx.fill(Path(CGRect(x: barX, y: barY + 1, width: barWidth, height: 5)),
+                     with: .color(Color(hex: 0x3B2028)))
+            let share = Double(max(0, boss.hp)) / Double(max(1, boss.maxHP))
+            ctx.fill(Path(CGRect(x: barX, y: barY + 1, width: barWidth * share, height: 5)),
+                     with: .color(Color(hex: 0xE03A3A)))
+            ctx.fill(Path(CGRect(x: barX, y: barY + 1, width: barWidth * share, height: 2)),
+                     with: .color(Color(hex: 0xFF9A8A)))
+        }
         ctx.draw(smallText("Zombies: \(world.kills)", color: Color(hex: 0x8FD36A)),
                  at: CGPoint(x: gameWidth - 6, y: 16), anchor: .topTrailing)
 

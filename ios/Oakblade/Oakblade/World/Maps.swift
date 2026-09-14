@@ -7,7 +7,7 @@
 import Foundation
 
 enum SongName {
-    case wald, haus, stadt, kampf
+    case wald, haus, stadt, kampf, boss
 }
 
 /// Eine Tür: Wer hier draufläuft, landet in einer anderen Welt.

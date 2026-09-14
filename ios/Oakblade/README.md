@@ -44,7 +44,7 @@ Pixel groß und wird passend hochskaliert).
 | `OakbladeApp.swift` | Einstieg der App |
 | `Engine/PixelImage.swift` | Kleines Malprogramm: Bilder Pixel für Pixel, dazu der immer gleiche Zufall |
 | `Engine/SpriteRows.swift` | Die Pixel-Vorlagen als Textzeilen (Ritter, Leute, Zombie, Schwert) |
-| `Engine/Art.swift` | Baut daraus alle Bilder: Figuren, Bäume, Auto, Kacheln, Dächer |
+| `Engine/Art.swift` | Baut daraus alle Bilder: Figuren, Bäume, Auto, Kacheln, Dächer, Bosse |
 | `World/Maps.swift` | Die drei Welten: Wald, Haus, Stadt (Wald und Stadt werden gewürfelt – aber immer gleich) |
 | `World/People.swift` | Familie, Freunde und alle Fragen und Antworten |
 | `World/Entity.swift` | Alles, was auf der Karte steht oder läuft |
@@ -68,6 +68,16 @@ rechnet `GameWorld.advance(to:)` erst das Spiel weiter und danach wird gezeichne
    im Stehen leicht erhoben, beim Schlagen in einem Bogen von hinten nach vorne,
    dazu ein weißer Bogen als Schwung.
 4. Zum Schluss Herzen, Zähler und die Textbox.
+
+### Bosse und Herzen
+
+Die Herzen bestehen aus zwei Hälften: ein Zombietreffer kostet eine Hälfte, ein
+Bosstreffer ein ganzes Herz. Nach sechs erledigten Zombies kommt ein Boss –
+`GameWorld.spawnBoss()` nimmt den nächsten aus einer gemischten Liste
+(`Chat.bosse`), damit jeder Kampf ein anderer ist. Jeder Boss hat in
+`updateBoss(_:_:)` seine eigene Masche: Verstärkung rufen, im Sprint angreifen,
+wütend werden oder Wurzeln aus dem Boden schießen lassen. Wer gewinnt, bekommt
+ein Herz mehr (bis zu sieben) und volle Herzen.
 
 ### Wie die Fragen funktionieren
 

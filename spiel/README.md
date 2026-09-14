@@ -46,14 +46,29 @@ fährst du mit der ganzen Familie im Auto in die Stadt.
 - Mit **E** kannst du sie auch selbst ansprechen. Freunde mit einem **!**
   über dem Kopf stehen noch vorm Haus und wollen mitgenommen werden.
 
+**Leben in halben Herzen**
+- Du hast fünf Herzen, jedes besteht aus zwei Hälften.
+- Ein normaler Zombie nimmt dir **ein halbes Herz**, ein Boss ein ganzes.
+- Für jeden besiegten Boss bekommst du **ein Herz dazu** (bis zu sieben) und
+  bist sofort wieder ganz voll.
+
+**Bosskämpfe**
+- Nach jeweils sechs erledigten Zombies taucht im Wald ein **Boss** auf –
+  jedes Mal ein anderer, die Reihenfolge wird gemischt.
+- Oben läuft ein roter Lebensbalken mit seinem Namen, dazu eigene Musik.
+- **Grauzahn, der Zombiekönig** – riesig, mit Krone, ruft Verstärkung.
+- **Nachtweberin, die Waldspinne** – schnell, schießt in Sprints auf dich zu.
+- **Mondfell, der Werwolf** – wird bei der Hälfte seiner Kraft wütend und noch schneller.
+- **Alter Knorr, der Baumgeist** – langsam und zäh, lässt Wurzeln um sich
+  aus dem Boden schießen.
+
 **Zombies**
 - Laufen im Wald herum und kommen auf dich zu, wenn sie dich sehen.
 - Du hältst das Schwert **immer in der Hand**. Beim Schlagen holt der Ritter
   aus, das Schwert zieht einen weißen Bogen durch die Luft – ein Treffer lässt
   den Zombie weiß aufblitzen und zurücktaumeln.
 - Nach **drei Treffern** löst er sich in Pixel auf. Oben rechts wird gezählt.
-- Berührt dich ein Zombie, verlierst du Leben (5 Herzen = 20 HP). Bei null
-  wachst du zu Hause im Bett wieder auf.
+- Bei null Herzen wachst du zu Hause im Bett wieder auf.
 - Während ein Gespräch läuft, bleiben die Zombies stehen – niemand wird beim
   Reden von hinten gebissen.
 
