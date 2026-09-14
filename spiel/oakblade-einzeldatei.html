@@ -1,0 +1,3384 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="theme-color" content="#0b0a10">
+<title>Oakblade</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<style>
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0; padding: 0; height: 100%;
+  background: #07060c;
+  color: #fff;
+  font-family: "Courier New", ui-monospace, monospace;
+  overflow: hidden;
+  -webkit-user-select: none; user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+}
+
+#wrap {
+  position: fixed; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+
+#stage {
+  position: relative;
+  width: 320px; height: 240px;
+  transform-origin: center center;
+}
+
+#game {
+  display: block;
+  width: 320px; height: 240px;
+  background: #000;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+#ui { position: absolute; inset: 0; pointer-events: none; }
+
+/* ---------- Textbox im Undertale-Stil ---------- */
+#box {
+  position: absolute;
+  left: 6px; right: 6px; bottom: 6px;
+  min-height: 62px;
+  background: #000;
+  border: 3px solid #fff;
+  padding: 5px 7px 6px;
+  display: none;
+  pointer-events: auto;
+}
+#box.on { display: block; }
+
+#who {
+  font-size: 8px; letter-spacing: 1px;
+  color: #ffd24a; margin-bottom: 3px;
+  text-transform: uppercase;
+}
+#txt {
+  font-size: 10px; line-height: 13px;
+  color: #fff; white-space: pre-wrap; word-break: break-word;
+  min-height: 26px;
+}
+#opts { margin-top: 3px; }
+.opt {
+  position: relative;
+  font-size: 10px; line-height: 13px;
+  padding-left: 11px; color: #dcdcdc; cursor: pointer;
+}
+.opt.sel { color: #fff; }
+.opt.sel::before {
+  content: "♥"; position: absolute; left: 0; top: 0; color: #ff5a5a;
+}
+#more {
+  position: absolute; right: 6px; bottom: 2px;
+  font-size: 9px; color: #fff; display: none;
+}
+#more.on { display: block; animation: blink 0.9s steps(2) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+
+/* ---------- Knöpfe ---------- */
+#sound {
+  position: fixed; top: 8px; right: 8px;
+  width: 34px; height: 34px; border-radius: 50%;
+  border: 2px solid #4a4560; background: #14121c; color: #ffd24a;
+  font-size: 15px; line-height: 1; cursor: pointer; z-index: 5;
+}
+#sound.off { color: #5a5670; }
+
+/* ---------- Steuerkreuz und Knöpfe: immer da ---------- */
+#touch {
+  display: block;
+  position: fixed; inset: auto 0 0 0; height: 160px;
+  z-index: 4; pointer-events: none;
+}
+/* Beim Reden und auf dem Titelbild stören die Knöpfe nur */
+#touch.off { display: none; }
+#abtn {
+  position: absolute; right: 14px; bottom: calc(20px + env(safe-area-inset-bottom));
+  display: flex; gap: 10px; align-items: flex-end; pointer-events: auto;
+}
+.act {
+  width: 60px; height: 60px; border-radius: 50%;
+  background: rgba(30,28,44,.82); border: 2px solid #4a4560;
+  color: #cfc9e6; font-size: 17px; padding: 0; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.act.big { width: 74px; height: 74px; border-color: #b8453f; color: #ff9a8a; font-size: 22px; }
+.act small { font-size: 7px; opacity: .75; margin-top: 2px; }
+.act:active { background: #3b3660; }
+
+/* Mit Maus und Tastatur halten sich die Knöpfe zurück */
+@media (pointer: fine) {
+  #abtn { opacity: .55; transition: opacity .2s; }
+  #abtn:hover { opacity: 1; }
+}
+
+</style>
+</head>
+<body>
+
+<div id="wrap">
+  <div id="stage">
+    <canvas id="game" width="320" height="240"></canvas>
+
+    <div id="ui">
+      <!-- Undertale-artige Textbox -->
+      <div id="box">
+        <div id="who"></div>
+        <div id="txt"></div>
+        <div id="opts"></div>
+        <div id="more">▼</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<button id="sound" title="Musik an/aus">♪</button>
+
+<div id="touch">
+  <div id="abtn">
+    <button class="act" data-k="talk">E<small>reden</small></button>
+    <button class="act big" data-k="attack">⚔<small>schlagen</small></button>
+  </div>
+</div>
+
+<script>
+/* joystick.js – Virtueller Joystick im Brawl-Stars-Stil.
+
+   Finger irgendwo aufsetzen: der Stick erscheint genau dort und folgt dem
+   Daumen. Loslassen blendet ihn wieder aus.
+
+   Wichtig: Es wird sowohl auf Finger- (touch) als auch auf Maus-Ereignisse
+   gehorcht. Nur auf "pointer"-Ereignisse zu bauen hat sich als unzuverlässig
+   erwiesen – in manchen Umgebungen kommen sie nicht an.
+
+   Ein kurzes Tippen ohne Ziehen ist kein Laufen, sondern ein Tipp: dafür
+   gibt es `onTap` (das Spiel liest damit Texte weiter).
+*/
+(function (global) {
+  'use strict';
+
+  class Joystick {
+
+    constructor(options) {
+      var o = options || {};
+      this.radius = o.radius || 60;
+      this.deadZone = o.deadZone != null ? o.deadZone : 0.18;
+      this.canStart = o.canStart || function () { return true; };
+      this.ignore = o.ignore || function () { return false; };
+      this.onTap = o.onTap || null;
+
+      this.x = 0;              // -1 .. 1  (links/rechts)
+      this.y = 0;              // -1 .. 1  (oben/unten, + = runter)
+      this.active = false;     // Finger liegt auf und der Stick ist sichtbar
+      this.used = false;       // schon einmal benutzt (für den Hinweis)
+
+      this._id = null;
+      this._down = false;      // Finger liegt auf (auch wenn kein Stick)
+      this._origin = { x: 0, y: 0 };
+      this._moved = 0;
+      this._start = 0;
+
+      var zone = o.zone || document.body;
+
+      this.base = document.createElement('div');
+      this.base.style.cssText =
+        'position:fixed;width:' + (this.radius * 2) + 'px;height:' + (this.radius * 2) + 'px;' +
+        'border-radius:50%;background:rgba(120,112,170,.20);' +
+        'border:2px solid rgba(207,201,230,.45);pointer-events:none;' +
+        'display:none;z-index:9999;transform:translate(-50%,-50%);';
+
+      this.knob = document.createElement('div');
+      this.knob.style.cssText =
+        'position:fixed;width:' + this.radius + 'px;height:' + this.radius + 'px;' +
+        'border-radius:50%;background:rgba(207,201,230,.75);' +
+        'border:2px solid rgba(255,255,255,.7);pointer-events:none;' +
+        'display:none;z-index:10000;transform:translate(-50%,-50%);';
+
+      document.body.appendChild(this.base);
+      document.body.appendChild(this.knob);
+
+      zone.style.touchAction = 'none';
+      document.documentElement.style.touchAction = 'none';
+
+      this._listen(zone);
+    }
+
+    /* ---- Ereignisse: Finger und Maus laufen durch dieselben drei Schritte ---- */
+    _listen(zone) {
+      var self = this;
+
+      zone.addEventListener('touchstart', function (e) {
+        var t = e.changedTouches[0];
+        if (t) self._begin(t, t.identifier, e);
+      }, { passive: false });
+
+      global.addEventListener('touchmove', function (e) {
+        for (var i = 0; i < e.changedTouches.length; i++) {
+          var t = e.changedTouches[i];
+          if (t.identifier === self._id) {
+            self._drag(t, t.identifier);
+            if (e.cancelable) e.preventDefault();
+            return;
+          }
+        }
+      }, { passive: false });
+
+      var los = function (e) {
+        for (var i = 0; i < e.changedTouches.length; i++) {
+          self._stop(e.changedTouches[i].identifier);
+        }
+      };
+      global.addEventListener('touchend', los);
+      global.addEventListener('touchcancel', los);
+
+      zone.addEventListener('mousedown', function (e) { self._begin(e, 'maus', e); });
+      global.addEventListener('mousemove', function (e) { self._drag(e, 'maus'); });
+      global.addEventListener('mouseup', function () { self._stop('maus'); });
+
+      /* Verlässt der Finger das Fenster, wird losgelassen. */
+      global.addEventListener('blur', function () { self.release(); });
+    }
+
+    _begin(point, id, event) {
+      if (this._down) return;
+      if (this.ignore(point.target)) return;        // Knöpfe haben Vorrang
+
+      this._down = true;
+      this._id = id;
+      this._origin = { x: point.clientX, y: point.clientY };
+      this._moved = 0;
+      this._start = Date.now();
+
+      if (this.canStart()) {
+        this.active = true;
+        this.used = true;
+        this.base.style.left = this.knob.style.left = point.clientX + 'px';
+        this.base.style.top = this.knob.style.top = point.clientY + 'px';
+        this.base.style.display = this.knob.style.display = 'block';
+      }
+      if (event && event.cancelable) event.preventDefault();
+    }
+
+    _drag(point, id) {
+      if (!this._down || id !== this._id) return;
+
+      var dx = point.clientX - this._origin.x;
+      var dy = point.clientY - this._origin.y;
+      var dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist > this._moved) this._moved = dist;
+      if (!this.active) return;
+
+      if (dist > this.radius) {
+        dx = dx / dist * this.radius;
+        dy = dy / dist * this.radius;
+      }
+      this.knob.style.left = (this._origin.x + dx) + 'px';
+      this.knob.style.top = (this._origin.y + dy) + 'px';
+
+      var nx = dx / this.radius, ny = dy / this.radius;
+      if (Math.sqrt(nx * nx + ny * ny) < this.deadZone) { this.x = 0; this.y = 0; }
+      else { this.x = nx; this.y = ny; }
+    }
+
+    _stop(id) {
+      if (!this._down || id !== this._id) return;
+      var kurz = this._moved < 14 && (Date.now() - this._start) < 600;
+      this.release();
+      if (kurz && this.onTap) this.onTap();          // getippt statt gezogen
+    }
+
+    /* Alles loslassen – auch von aussen aufrufbar. */
+    release() {
+      this._down = false;
+      this.active = false;
+      this._id = null;
+      this.x = this.y = 0;
+      this.base.style.display = this.knob.style.display = 'none';
+    }
+
+    get angle() { return Math.atan2(this.y, this.x); }
+    get distance() { return Math.min(1, Math.sqrt(this.x * this.x + this.y * this.y)); }
+  }
+
+  global.Joystick = Joystick;
+})(window);
+
+</script>
+<script>
+/* sprites.js – alle Pixel-Grafiken werden hier im Speicher gemalt.
+   Kein einziges Bild wird geladen: alles ist Pixel für Pixel im Code. */
+(function (global) {
+  'use strict';
+
+  var warnings = [];
+
+  function mk(w, h) {
+    var c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    var g = c.getContext('2d');
+    g.imageSmoothingEnabled = false;
+    return c;
+  }
+
+  /* Baut ein Sprite aus Textzeilen. '.' = durchsichtig. */
+  function sprite(rows, pal) {
+    var w = 0, y, x;
+    for (y = 0; y < rows.length; y++) w = Math.max(w, rows[y].length);
+    var c = mk(w, rows.length), g = c.getContext('2d');
+    for (y = 0; y < rows.length; y++) {
+      if (rows[y].length !== w && rows[y].length !== 0) {
+        warnings.push('Zeile ' + y + ': ' + rows[y].length + ' statt ' + w + ' Pixel');
+      }
+      for (x = 0; x < rows[y].length; x++) {
+        var ch = rows[y][x];
+        if (ch === '.' || ch === ' ') continue;
+        var col = pal[ch];
+        if (!col) { warnings.push('Farbe "' + ch + '" fehlt'); continue; }
+        g.fillStyle = col;
+        g.fillRect(x, y, 1, 1);
+      }
+    }
+    return c;
+  }
+
+  function flipX(src) {
+    var c = mk(src.width, src.height), g = c.getContext('2d');
+    g.translate(src.width, 0); g.scale(-1, 1);
+    g.drawImage(src, 0, 0);
+    return c;
+  }
+
+  /* kleiner, immer gleicher Zufall – damit Gras jedes Mal gleich aussieht */
+  function rng(seed) {
+    var s = seed >>> 0;
+    return function () {
+      s = (s * 1664525 + 1013904223) >>> 0;
+      return s / 4294967296;
+    };
+  }
+
+  function blob(g, cx, cy, r, col) {
+    g.fillStyle = col;
+    for (var y = -r; y <= r; y++) {
+      for (var x = -r; x <= r; x++) {
+        if (x * x + y * y <= r * r) g.fillRect(cx + x, cy + y, 1, 1);
+      }
+    }
+  }
+
+  /* =========================================================
+     RITTER  (16x16, Schwert wird separat gemalt)
+     ========================================================= */
+  var KP = {
+    o: '#191324', a: '#d3dbe8', b: '#9aa4b8', c: '#646e82',
+    t: '#3d6fb5', u: '#2b4f83', s: '#f0c191', r: '#d2453f',
+    k: '#140f1e', n: '#6b4a2b'
+  };
+
+  var knightDown = [
+    '................',
+    '......orro......',
+    '.....orrrro.....',
+    '....oaaaaaao....',
+    '...oaaaaaaaao...',
+    '...oabbbbbbao...',
+    '...oakkkkkkao...',
+    '...oabssssbao...',
+    '....oaaaaaao....',
+    '...octtttttco...',
+    '..socttttttcos..',
+    '...otttttttto...',
+    '...ouuuuuuuuo...',
+    '...ouuuuuuuuo...',
+    '...occo..occo...',
+    '...onno..onno...'
+  ];
+  var knightDown2 = knightDown.slice(0, 14).concat([
+    '...occcccccco...',
+    '....onnnnnno....'
+  ]);
+
+  var knightUp = [
+    '................',
+    '......orro......',
+    '.....orrrro.....',
+    '....oaaaaaao....',
+    '...oaaaaaaaao...',
+    '...oabbbbbbao...',
+    '...oabbbbbbao...',
+    '...oabbbbbbao...',
+    '....oaaaaaao....',
+    '...octtttttco...',
+    '..socttttttcos..',
+    '...otttttttto...',
+    '...ouuuuuuuuo...',
+    '...ouuuuuuuuo...',
+    '...occo..occo...',
+    '...onno..onno...'
+  ];
+  var knightUp2 = knightUp.slice(0, 14).concat([
+    '...occcccccco...',
+    '....onnnnnno....'
+  ]);
+
+  var knightSide = [
+    '................',
+    '.....orro.......',
+    '....orrrro......',
+    '....oaaaaao.....',
+    '...oaaaaaaao....',
+    '...oabbbbkko....',
+    '...oabbbbsko....',
+    '...oabbbbbbo....',
+    '....oaaaaao.....',
+    '...octtttco.....',
+    '...ottttttos....',
+    '...otttttto.....',
+    '....ouuuuuo.....',
+    '....ouuuuuo.....',
+    '....occ.cco.....',
+    '....onn.nno.....'
+  ];
+  var knightSide2 = knightSide.slice(0, 14).concat([
+    '....occccco.....',
+    '.....onnno......'
+  ]);
+
+  var SWORD = sprite([
+    '..w..',
+    '..w..',
+    '.www.',
+    '.wgw.',
+    '.wgw.',
+    '.wgw.',
+    '.wgw.',
+    '.wgw.',
+    '.wgw.',
+    'hhhhh',
+    '..n..',
+    '..n..',
+    '..n..',
+    '..h..'
+  ], { w: '#eef3fb', g: '#aab6c8', h: '#d8a43a', n: '#6b4a2b' });
+
+  /* =========================================================
+     MENSCHEN (Familie, Freunde, Stadtleute) – eine Vorlage,
+     die je Person andere Farben bekommt.
+     ========================================================= */
+  var personDown = [
+    '................',
+    '....oooooooo....',
+    '...oHHHHHHHHo...',
+    '...oHHHHHHHHo...',
+    '...oSSSSSSSSo...',
+    '...oSEESSEESo...',
+    '...oSSSSSSSSo...',
+    '....oSSSSSSo....',
+    '...oCCCCCCCCo...',
+    '..oSCCCCCCCCSo..',
+    '..oSCCCCCCCCSo..',
+    '...oCCCCCCCCo...',
+    '...occcccccco...',
+    '...oPPPPPPPPo...',
+    '...oPPo..oPPo...',
+    '...oBBo..oBBo...'
+  ];
+  var personDown2 = personDown.slice(0, 13).concat([
+    '...oPPPPPPPPo...',
+    '...oPPPPPPPPo...',
+    '....oBBBBBBo....'
+  ]);
+  var personUp = [
+    '................',
+    '....oooooooo....',
+    '...oHHHHHHHHo...',
+    '...oHHHHHHHHo...',
+    '...oHHHHHHHHo...',
+    '...oHHHHHHHHo...',
+    '...oHHHHHHHHo...',
+    '....oHHHHHHo....',
+    '...oCCCCCCCCo...',
+    '..oSCCCCCCCCSo..',
+    '..oSCCCCCCCCSo..',
+    '...oCCCCCCCCo...',
+    '...occcccccco...',
+    '...oPPPPPPPPo...',
+    '...oPPo..oPPo...',
+    '...oBBo..oBBo...'
+  ];
+  var personUp2 = personUp.slice(0, 13).concat([
+    '...oPPPPPPPPo...',
+    '...oPPPPPPPPo...',
+    '....oBBBBBBo....'
+  ]);
+  var personSide = [
+    '................',
+    '....oooooooo....',
+    '...oHHHHHHHHo...',
+    '...oHHHHHHHHo...',
+    '...oHHHSSSSSo...',
+    '...oHHHSSEESo...',
+    '...oHHHSSSSSo...',
+    '....oSSSSSSo....',
+    '...oCCCCCCCCo...',
+    '...oCCCCCCCCoS..',
+    '...oCCCCCCCCoS..',
+    '...oCCCCCCCCo...',
+    '...occcccccco...',
+    '...oPPPPPPPPo...',
+    '...oPPo..oPPo...',
+    '...oBBo..oBBo...'
+  ];
+  var personSide2 = personSide.slice(0, 13).concat([
+    '...oPPPPPPPPo...',
+    '...oPPPPPPPPo...',
+    '....oBBBBBBo....'
+  ]);
+
+  var zombieDown = [
+    '................',
+    '....oooooooo....',
+    '...oHHHHHHHHo...',
+    '...oHSSSSSSHo...',
+    '...oSSSSSSSSo...',
+    '...oSEESSEESo...',
+    '...oSSSSSSSSo...',
+    '....oSkkkkSo....',
+    '...oCCCCCCCCo...',
+    '.oSSCCCCCCCCSSo.',
+    '.oSSCCCCCCCCSSo.',
+    '...oCCCCCCCCo...',
+    '...occcccccco...',
+    '...oPPPPPPPPo...',
+    '...oPPo..oPPo...',
+    '...oBBo..oBBo...'
+  ];
+  var zombieDown2 = zombieDown.slice(0, 13).concat([
+    '...oPPPPPPPPo...',
+    '...oPPPPPPPPo...',
+    '....oBBBBBBo....'
+  ]);
+  var zombieSide = [
+    '................',
+    '....oooooooo....',
+    '...oHHHHHHHHo...',
+    '...oHHHSSSSSo...',
+    '...oHHSSSSSSo...',
+    '...oHHSSSEESo...',
+    '...oHHSSSSSSo...',
+    '....oSSkkkSo....',
+    '...oCCCCCCCCo...',
+    '...oCCCCCCCCoSS.',
+    '...oCCCCCCCCoSS.',
+    '...oCCCCCCCCo...',
+    '...occcccccco...',
+    '...oPPPPPPPPo...',
+    '...oPPo..oPPo...',
+    '...oBBo..oBBo...'
+  ];
+  var zombieSide2 = zombieSide.slice(0, 13).concat([
+    '...oPPPPPPPPo...',
+    '...oPPPPPPPPo...',
+    '....oBBBBBBo....'
+  ]);
+
+  /* Baut alle Laufbilder einer Person aus einer Farbpalette. */
+  function buildActor(pal, style) {
+    var base = {
+      o: '#191324', E: pal.eye || '#1b1430', S: pal.skin || '#f0c191',
+      H: pal.hair || '#6b4a2b', C: pal.shirt || '#c4553f',
+      c: pal.shirtDark || '#9c3f2f', P: pal.pants || '#3b4a6b',
+      B: pal.boots || '#4a3524', k: '#2a1420'
+    };
+    var D1, D2, U1, U2, S1, S2;
+    if (style === 'zombie') {
+      D1 = zombieDown; D2 = zombieDown2;
+      U1 = personUp;   U2 = personUp2;
+      S1 = zombieSide; S2 = zombieSide2;
+    } else {
+      D1 = personDown; D2 = personDown2;
+      U1 = personUp;   U2 = personUp2;
+      S1 = personSide; S2 = personSide2;
+    }
+    var right = [sprite(S1, base), sprite(S2, base)];
+    return {
+      down:  [sprite(D1, base), sprite(D2, base)],
+      up:    [sprite(U1, base), sprite(U2, base)],
+      right: right,
+      left:  [flipX(right[0]), flipX(right[1])]
+    };
+  }
+
+  var knightRight = [sprite(knightSide, KP), sprite(knightSide2, KP)];
+  var KNIGHT = {
+    down:  [sprite(knightDown, KP), sprite(knightDown2, KP)],
+    up:    [sprite(knightUp, KP), sprite(knightUp2, KP)],
+    right: knightRight,
+    left:  [flipX(knightRight[0]), flipX(knightRight[1])]
+  };
+
+  /* =========================================================
+     Bäume, Büsche, Steine, Laterne, Schild, Auto, Herz
+     ========================================================= */
+  function makeTree() {
+    var c = mk(30, 38), g = c.getContext('2d'), r = rng(7);
+    g.fillStyle = '#3d2a18'; g.fillRect(12, 22, 7, 15);
+    g.fillStyle = '#5f4026'; g.fillRect(13, 22, 4, 15);
+    g.fillStyle = '#78542f'; g.fillRect(14, 24, 1, 11);
+    blob(g, 15, 18, 13, '#1f4a26');
+    blob(g, 13, 14, 12, '#2d6a33');
+    blob(g, 18, 13, 10, '#3c8440');
+    blob(g, 12, 10, 7, '#4f9c4c');
+    for (var i = 0; i < 26; i++) {
+      g.fillStyle = r() > 0.5 ? '#1f4a26' : '#58a552';
+      g.fillRect(3 + ((r() * 24) | 0), 3 + ((r() * 24) | 0), 1, 1);
+    }
+    return c;
+  }
+  function makePine() {
+    var c = mk(26, 38), g = c.getContext('2d');
+    g.fillStyle = '#3d2a18'; g.fillRect(11, 28, 5, 9);
+    for (var i = 0; i < 4; i++) {
+      var w = 20 - i * 3, y = 26 - i * 7;
+      g.fillStyle = '#1d4526';
+      g.fillRect(13 - w / 2, y, w, 7);
+      g.fillStyle = '#2f6b34';
+      g.fillRect(13 - w / 2 + 1, y, w - 2, 5);
+      g.fillStyle = '#3f8a41';
+      g.fillRect(13 - w / 2 + 2, y, w - 5, 2);
+    }
+    return c;
+  }
+  function makeBush() {
+    var c = mk(18, 16), g = c.getContext('2d'), r = rng(21);
+    blob(g, 6, 9, 6, '#24582a');
+    blob(g, 12, 9, 6, '#24582a');
+    blob(g, 6, 8, 5, '#357a39');
+    blob(g, 12, 8, 5, '#357a39');
+    blob(g, 8, 6, 3, '#4b9b4a');
+    for (var i = 0; i < 8; i++) {
+      g.fillStyle = '#d24b4b';
+      if (r() > 0.5) g.fillRect(2 + ((r() * 14) | 0), 3 + ((r() * 9) | 0), 1, 1);
+    }
+    return c;
+  }
+  function makeRock() {
+    var c = mk(16, 14), g = c.getContext('2d');
+    blob(g, 8, 9, 6, '#5b606b');
+    blob(g, 7, 8, 5, '#7d838f');
+    blob(g, 6, 7, 3, '#9aa1ac');
+    return c;
+  }
+  function makeLamp() {
+    var c = mk(10, 34), g = c.getContext('2d');
+    g.fillStyle = '#2a2a33'; g.fillRect(4, 6, 3, 27);
+    g.fillRect(2, 31, 7, 3);
+    g.fillStyle = '#4a4a58'; g.fillRect(5, 8, 1, 23);
+    g.fillStyle = '#2a2a33'; g.fillRect(2, 2, 7, 6);
+    g.fillStyle = '#ffe08a'; g.fillRect(3, 3, 5, 4);
+    g.fillStyle = '#fff6cf'; g.fillRect(4, 4, 3, 2);
+    return c;
+  }
+  /* Das Stadt-Schild: ein Pixel-Blatt Papier auf zwei Pfosten */
+  function makeSign() {
+    var c = mk(26, 30), g = c.getContext('2d');
+    g.fillStyle = '#5b3d22'; g.fillRect(3, 16, 3, 14); g.fillRect(20, 16, 3, 14);
+    g.fillStyle = '#efe6cf'; g.fillRect(1, 2, 24, 16);
+    g.fillStyle = '#cdc2a6'; g.fillRect(1, 2, 24, 1); g.fillRect(1, 17, 24, 1);
+    g.fillStyle = '#7a6a4a';
+    g.fillRect(1, 2, 1, 16); g.fillRect(24, 2, 1, 16);
+    g.fillStyle = '#3a3020';
+    var lines = [[4, 6, 18], [4, 9, 14], [4, 12, 17]];
+    for (var i = 0; i < lines.length; i++) {
+      for (var x = 0; x < lines[i][2]; x += 2) g.fillRect(lines[i][0] + x, lines[i][1], 1, 1);
+    }
+    return c;
+  }
+  function makeCar() {
+    var c = mk(40, 24), g = c.getContext('2d');
+    g.fillStyle = '#191324'; g.fillRect(1, 6, 38, 13);
+    g.fillStyle = '#b8342f'; g.fillRect(2, 9, 36, 9);
+    g.fillStyle = '#d9534a'; g.fillRect(2, 9, 36, 3);
+    g.fillStyle = '#8c231f'; g.fillRect(2, 16, 36, 2);
+    g.fillStyle = '#191324'; g.fillRect(8, 2, 22, 8);
+    g.fillStyle = '#9fd6ec'; g.fillRect(10, 4, 8, 5); g.fillRect(20, 4, 8, 5);
+    g.fillStyle = '#d8f0fb'; g.fillRect(10, 4, 8, 2); g.fillRect(20, 4, 8, 2);
+    g.fillStyle = '#ffe08a'; g.fillRect(37, 11, 2, 3);
+    g.fillStyle = '#ff6b5a'; g.fillRect(1, 11, 2, 3);
+    g.fillStyle = '#191324';
+    g.fillRect(5, 17, 10, 6); g.fillRect(25, 17, 10, 6);
+    g.fillStyle = '#3b3b46'; g.fillRect(7, 18, 6, 4); g.fillRect(27, 18, 6, 4);
+    g.fillStyle = '#8a8a98'; g.fillRect(9, 19, 2, 2); g.fillRect(29, 19, 2, 2);
+    return c;
+  }
+  function makeHeart() {
+    return sprite([
+      '.rr.rr.',
+      'rrrrrrr',
+      'rrrrrrr',
+      '.rrrrr.',
+      '..rrr..',
+      '...r...'
+    ], { r: '#e03a3a' });
+  }
+
+
+  /* ---- Bosse ---------------------------------------------------- */
+
+  /* Waldspinne: dicker Leib, acht Beine, rote Augen */
+  function makeSpider(step) {
+    var c = mk(30, 22), g = c.getContext('2d');
+    var beinFarbe = '#241a2e', hoch = step ? 1 : 0;
+    var beine = [
+      [11, 12, 2, 6], [11, 13, 5, 9], [19, 12, 28, 6], [19, 13, 25, 9]
+    ];
+    for (var i = 0; i < beine.length; i++) {
+      var b = beine[i];
+      var x0 = b[0], y0 = b[1] + (i % 2 ? hoch : -hoch);
+      var x1 = b[2], y1 = b[3] + (i % 2 ? -hoch : hoch);
+      // grobe Pixel-Linie
+      var n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0));
+      for (var t = 0; t <= n; t++) {
+        var x = Math.round(x0 + (x1 - x0) * t / n);
+        var y = Math.round(y0 + (y1 - y0) * t / n);
+        g.fillStyle = beinFarbe;
+        g.fillRect(x, y, 2, 2);
+      }
+    }
+    blob(g, 15, 14, 7, '#2e2140');
+    blob(g, 15, 13, 6, '#3f2c57');
+    blob(g, 15, 8, 5, '#241a2e');
+    blob(g, 15, 7, 4, '#4a3568');
+    g.fillStyle = '#d24b4b';
+    g.fillRect(12, 6, 2, 2); g.fillRect(17, 6, 2, 2);
+    g.fillStyle = '#ff9a8a';
+    g.fillRect(12, 6, 1, 1); g.fillRect(17, 6, 1, 1);
+    g.fillStyle = '#6b4f8a';
+    g.fillRect(13, 12, 4, 2); g.fillRect(14, 16, 3, 2);
+    return c;
+  }
+
+  /* Krone für den Zombiekönig */
+  function makeCrown() {
+    var c = mk(12, 7), g = c.getContext('2d');
+    g.fillStyle = '#8a6a1a';
+    g.fillRect(0, 4, 12, 3);
+    g.fillStyle = '#ffd24a';
+    g.fillRect(0, 3, 12, 2);
+    g.fillRect(0, 0, 2, 4); g.fillRect(5, 0, 2, 4); g.fillRect(10, 0, 2, 4);
+    g.fillStyle = '#fff0b4';
+    g.fillRect(0, 0, 1, 2); g.fillRect(5, 0, 1, 2); g.fillRect(10, 0, 1, 2);
+    g.fillStyle = '#d24b4b';
+    g.fillRect(5, 4, 2, 2);
+    return c;
+  }
+
+  /* Spitze Ohren für den Werwolf */
+  function withEars(src, color) {
+    var c = mk(src.width, src.height), g = c.getContext('2d');
+    g.drawImage(src, 0, 0);
+    g.fillStyle = color;
+    g.fillRect(3, 0, 3, 3); g.fillRect(4, 0, 2, 4);
+    g.fillRect(10, 0, 3, 3); g.fillRect(10, 0, 2, 4);
+    g.fillStyle = '#1b1524';
+    g.fillRect(3, 0, 1, 3); g.fillRect(12, 0, 1, 3);
+    return c;
+  }
+
+  /* Baumgeist: ein Baum, der Augen aufmacht */
+  function makeTreant() {
+    var c = mk(34, 42), g = c.getContext('2d'), r = rng(99);
+    g.fillStyle = '#3d2a18'; g.fillRect(13, 22, 9, 19);
+    g.fillStyle = '#5f4026'; g.fillRect(14, 22, 6, 19);
+    g.fillStyle = '#3d2a18';
+    g.fillRect(6, 30, 8, 3); g.fillRect(21, 32, 8, 3);
+    blob(g, 17, 17, 14, '#1d3a22');
+    blob(g, 14, 13, 12, '#28572f');
+    blob(g, 21, 12, 10, '#35703a');
+    for (var i = 0; i < 20; i++) {
+      g.fillStyle = r() > 0.5 ? '#16301c' : '#47934a';
+      g.fillRect(4 + ((r() * 26) | 0), 3 + ((r() * 24) | 0), 1, 1);
+    }
+    /* Gesicht im Stamm */
+    g.fillStyle = '#1b1008'; g.fillRect(14, 26, 7, 8);
+    g.fillStyle = '#ffd24a'; g.fillRect(14, 27, 2, 3); g.fillRect(19, 27, 2, 3);
+    g.fillStyle = '#fff0b4'; g.fillRect(14, 27, 1, 1); g.fillRect(19, 27, 1, 1);
+    g.fillStyle = '#2a1a10'; g.fillRect(15, 31, 5, 2);
+    return c;
+  }
+
+  /* =========================================================
+     KACHELN (16x16) – Wald, Haus, Stadt
+     ========================================================= */
+  var T = 16;
+  function tileCanvas() { return mk(T, T); }
+
+  function grassTile(seed, tuft, flower) {
+    var c = tileCanvas(), g = c.getContext('2d'), r = rng(seed);
+    g.fillStyle = '#4b8f46'; g.fillRect(0, 0, T, T);
+    var i;
+    for (i = 0; i < 26; i++) g.fillStyle = '#437f3f', g.fillRect((r() * T) | 0, (r() * T) | 0, 1, 1);
+    for (i = 0; i < 10; i++) g.fillStyle = '#57a24f', g.fillRect((r() * T) | 0, (r() * T) | 0, 1, 2);
+    if (tuft) {
+      for (i = 0; i < 5; i++) {
+        var x = 3 + ((r() * 10) | 0), y = 4 + ((r() * 9) | 0);
+        g.fillStyle = '#2f6b34'; g.fillRect(x, y, 1, 3);
+        g.fillStyle = '#63b158'; g.fillRect(x + 1, y + 1, 1, 2);
+      }
+    }
+    if (flower) {
+      var fc = ['#f0d24a', '#e8718a', '#e8e2f0'];
+      for (i = 0; i < 4; i++) {
+        var fx = 2 + ((r() * 12) | 0), fy = 2 + ((r() * 12) | 0);
+        g.fillStyle = fc[(r() * 3) | 0];
+        g.fillRect(fx, fy, 2, 2);
+        g.fillStyle = '#2f6b34'; g.fillRect(fx, fy + 2, 1, 2);
+      }
+    }
+    return c;
+  }
+  function pathTile(seed) {
+    var c = tileCanvas(), g = c.getContext('2d'), r = rng(seed);
+    g.fillStyle = '#b08a58'; g.fillRect(0, 0, T, T);
+    for (var i = 0; i < 30; i++) {
+      g.fillStyle = r() > 0.5 ? '#9c7647' : '#c6a06a';
+      g.fillRect((r() * T) | 0, (r() * T) | 0, 1 + ((r() * 2) | 0), 1);
+    }
+    for (i = 0; i < 3; i++) {
+      g.fillStyle = '#8a6840';
+      g.fillRect((r() * 13) | 0, (r() * 13) | 0, 2, 2);
+    }
+    return c;
+  }
+  function waterTile(seed) {
+    var c = tileCanvas(), g = c.getContext('2d'), r = rng(seed);
+    g.fillStyle = '#2f5f9c'; g.fillRect(0, 0, T, T);
+    g.fillStyle = '#3d78bd'; g.fillRect(0, 0, T, 8);
+    for (var i = 0; i < 5; i++) {
+      g.fillStyle = '#7fb6e2';
+      g.fillRect((r() * 11) | 0, (r() * 15) | 0, 4, 1);
+    }
+    return c;
+  }
+  function plankTile(base, dark, light, vertical) {
+    var c = tileCanvas(), g = c.getContext('2d');
+    g.fillStyle = base; g.fillRect(0, 0, T, T);
+    for (var i = 0; i < T; i += 4) {
+      g.fillStyle = dark;
+      if (vertical) g.fillRect(i, 0, 1, T); else g.fillRect(0, i, T, 1);
+      g.fillStyle = light;
+      if (vertical) g.fillRect(i + 1, 0, 1, T); else g.fillRect(0, i + 1, T, 1);
+    }
+    g.fillStyle = dark;
+    if (vertical) g.fillRect(0, 7, T, 1); else g.fillRect(7, 0, 1, T);
+    return c;
+  }
+  function roofTile() {
+    var c = tileCanvas(), g = c.getContext('2d');
+    g.fillStyle = '#7a3327'; g.fillRect(0, 0, T, T);
+    for (var y = 0; y < T; y += 5) {
+      for (var x = (y % 10 === 0 ? 0 : -4); x < T; x += 8) {
+        g.fillStyle = '#93413020'; // wird unten überschrieben
+        g.fillStyle = '#944333';
+        g.fillRect(x + 1, y, 6, 4);
+        g.fillStyle = '#5e2419';
+        g.fillRect(x, y + 4, 8, 1);
+      }
+    }
+    return c;
+  }
+  function windowTile() {
+    var c = plankTile('#a9743f', '#8a5c31', '#bd8a52', false), g = c.getContext('2d');
+    g.fillStyle = '#4a3018'; g.fillRect(2, 2, 12, 12);
+    g.fillStyle = '#8fd3ea'; g.fillRect(3, 3, 10, 10);
+    g.fillStyle = '#c6ecf8'; g.fillRect(3, 3, 10, 4);
+    g.fillStyle = '#4a3018'; g.fillRect(7, 2, 2, 12); g.fillRect(2, 7, 12, 2);
+    return c;
+  }
+  function doorTile(side) {
+    var c = plankTile('#a9743f', '#8a5c31', '#bd8a52', false), g = c.getContext('2d');
+    g.fillStyle = '#4a3018'; g.fillRect(side === 'l' ? 2 : 0, 1, 14, 15);
+    g.fillStyle = '#6b4a2b'; g.fillRect(side === 'l' ? 3 : 0, 2, 13, 14);
+    g.fillStyle = '#5b3d22';
+    for (var x = 0; x < T; x += 4) g.fillRect(x, 2, 1, 14);
+    if (side === 'r') { g.fillStyle = '#ffd24a'; g.fillRect(2, 8, 2, 2); }
+    return c;
+  }
+  function floorTile(seed) {
+    var c = tileCanvas(), g = c.getContext('2d'), r = rng(seed);
+    g.fillStyle = '#c09263'; g.fillRect(0, 0, T, T);
+    g.fillStyle = '#a87f4d';
+    g.fillRect(0, 7, T, 1); g.fillRect(0, 15, T, 1);
+    g.fillStyle = '#d2a978'; g.fillRect(0, 0, T, 1); g.fillRect(0, 8, T, 1);
+    for (var i = 0; i < 10; i++) {
+      g.fillStyle = i % 2 ? '#b58a58' : '#c9a074';
+      g.fillRect((r() * 13) | 0, (r() * T) | 0, 3, 1);
+    }
+    return c;
+  }
+  function carpetTile() {
+    var c = floorTile(3), g = c.getContext('2d');
+    g.fillStyle = '#8a3f5a'; g.fillRect(0, 0, T, T);
+    g.fillStyle = '#a9536e'; g.fillRect(2, 2, 12, 12);
+    g.fillStyle = '#d9a05a'; g.fillRect(5, 5, 6, 6);
+    g.fillStyle = '#8a3f5a'; g.fillRect(7, 7, 2, 2);
+    return c;
+  }
+  function wallTile() {
+    var c = plankTile('#8a5c31', '#6e4826', '#9c6b3a', false), g = c.getContext('2d');
+    g.fillStyle = '#5b3d22'; g.fillRect(0, 0, T, 2);
+    return c;
+  }
+  function bedTile(part) {
+    var c = floorTile(5), g = c.getContext('2d');
+    g.fillStyle = '#6b4a2b'; g.fillRect(1, 0, 14, 16);
+    if (part === 'top') {
+      g.fillStyle = '#e8e2f0'; g.fillRect(2, 2, 12, 6);
+      g.fillStyle = '#c9c2d8'; g.fillRect(2, 7, 12, 1);
+      g.fillStyle = '#4f7fc4'; g.fillRect(2, 9, 12, 7);
+    } else {
+      g.fillStyle = '#4f7fc4'; g.fillRect(2, 0, 12, 13);
+      g.fillStyle = '#3d68a8'; g.fillRect(2, 6, 12, 1);
+      g.fillStyle = '#6b4a2b'; g.fillRect(1, 13, 14, 3);
+    }
+    return c;
+  }
+  function tableTile() {
+    var c = floorTile(9), g = c.getContext('2d');
+    g.fillStyle = '#7a5327'; g.fillRect(0, 0, 16, 16);
+    g.fillStyle = '#a06f38'; g.fillRect(0, 0, 16, 12);
+    g.fillStyle = '#c08a52'; g.fillRect(0, 0, 16, 3);
+    g.fillStyle = '#8a5c31'; g.fillRect(0, 7, 16, 1);
+    return c;
+  }
+  function chairTile() {
+    var c = floorTile(11), g = c.getContext('2d');
+    g.fillStyle = '#6b4a2b'; g.fillRect(4, 3, 9, 10);
+    g.fillStyle = '#8a6238'; g.fillRect(5, 4, 7, 5);
+    g.fillStyle = '#5b3d22'; g.fillRect(4, 12, 2, 3); g.fillRect(11, 12, 2, 3);
+    return c;
+  }
+  function fireTile() {
+    var c = wallTile(), g = c.getContext('2d');
+    g.fillStyle = '#6b6b76'; g.fillRect(0, 0, T, T);
+    g.fillStyle = '#8a8a96';
+    for (var y = 0; y < T; y += 4) for (var x = (y % 8 ? 0 : 4); x < T; x += 8) g.fillRect(x, y, 7, 3);
+    g.fillStyle = '#1a1420'; g.fillRect(3, 6, 10, 10);
+    g.fillStyle = '#d2451f'; g.fillRect(5, 10, 6, 6);
+    g.fillStyle = '#f08a2a'; g.fillRect(6, 11, 4, 5);
+    g.fillStyle = '#ffd24a'; g.fillRect(7, 13, 2, 3);
+    return c;
+  }
+  function roadTile(line) {
+    var c = tileCanvas(), g = c.getContext('2d'), r = rng(line ? 33 : 31);
+    g.fillStyle = '#434350'; g.fillRect(0, 0, T, T);
+    for (var i = 0; i < 20; i++) {
+      g.fillStyle = r() > 0.5 ? '#3b3b46' : '#4f4f5c';
+      g.fillRect((r() * T) | 0, (r() * T) | 0, 1, 1);
+    }
+    if (line) { g.fillStyle = '#d8cf8a'; g.fillRect(7, 3, 2, 10); }
+    return c;
+  }
+  function walkTile() {
+    var c = tileCanvas(), g = c.getContext('2d');
+    g.fillStyle = '#b0a89c'; g.fillRect(0, 0, T, T);
+    g.fillStyle = '#c2bab0'; g.fillRect(0, 0, T, 1); g.fillRect(0, 0, 1, T);
+    g.fillStyle = '#98907f'; g.fillRect(0, 15, T, 1); g.fillRect(15, 0, 1, T);
+    g.fillStyle = '#a79f92'; g.fillRect(3, 5, 2, 1); g.fillRect(9, 11, 3, 1);
+    return c;
+  }
+  function buildingTile(kind) {
+    var c = tileCanvas(), g = c.getContext('2d');
+    var body = kind === 1 ? '#6a6478' : (kind === 2 ? '#7a5a52' : '#59657a');
+    var trim = kind === 1 ? '#565064' : (kind === 2 ? '#644841' : '#465268');
+    g.fillStyle = body; g.fillRect(0, 0, T, T);
+    g.fillStyle = trim; g.fillRect(0, 0, T, 1); g.fillRect(0, 15, T, 1);
+    g.fillStyle = '#2a2633'; g.fillRect(2, 4, 5, 7); g.fillRect(9, 4, 5, 7);
+    g.fillStyle = '#ffd98a'; g.fillRect(3, 5, 3, 5);
+    g.fillStyle = '#8fb6d8'; g.fillRect(10, 5, 3, 5);
+    return c;
+  }
+  function shopTile() {
+    var c = tileCanvas(), g = c.getContext('2d');
+    g.fillStyle = '#7a5a52'; g.fillRect(0, 0, T, T);
+    g.fillStyle = '#2a2633'; g.fillRect(1, 3, 14, 13);
+    g.fillStyle = '#ffd98a'; g.fillRect(2, 4, 12, 8);
+    g.fillStyle = '#c85a4a';
+    for (var x = 0; x < T; x += 4) g.fillRect(x, 0, 2, 3);
+    g.fillStyle = '#e8e2f0'; g.fillRect(2, 0, 2, 3); g.fillRect(10, 0, 2, 3);
+    return c;
+  }
+
+
+  function flatRoofTile() {
+    var c = tileCanvas(), g = c.getContext('2d');
+    g.fillStyle = '#4e4a58'; g.fillRect(0, 0, T, T);
+    g.fillStyle = '#5a5666'; g.fillRect(0, 0, T, 1); g.fillRect(0, 0, 1, T);
+    g.fillStyle = '#3f3b49'; g.fillRect(0, 15, T, 1); g.fillRect(15, 0, 1, T);
+    g.fillStyle = '#565262'; g.fillRect(3, 4, 10, 8);
+    g.fillStyle = '#46424f'; g.fillRect(5, 6, 6, 4);
+    return c;
+  }
+  function tiledRoofTile() {
+    var c = tileCanvas(), g = c.getContext('2d');
+    g.fillStyle = '#6e3b2e'; g.fillRect(0, 0, T, T);
+    for (var y = 0; y < T; y += 4) {
+      for (var x = (y % 8 === 0 ? 0 : -3); x < T; x += 6) {
+        g.fillStyle = '#804638'; g.fillRect(x + 1, y, 4, 3);
+        g.fillStyle = '#552a20'; g.fillRect(x, y + 3, 6, 1);
+      }
+    }
+    return c;
+  }
+  function makeFountain() {
+    var c = mk(32, 28), g = c.getContext('2d');
+    g.fillStyle = '#6e6a76'; g.fillRect(2, 8, 28, 18);
+    g.fillStyle = '#8a8694'; g.fillRect(2, 8, 28, 3);
+    g.fillStyle = '#4f7fc4'; g.fillRect(5, 11, 22, 12);
+    g.fillStyle = '#7fb6e2'; g.fillRect(6, 12, 20, 4);
+    g.fillStyle = '#8a8694'; g.fillRect(13, 2, 6, 12);
+    g.fillStyle = '#a9a5b2'; g.fillRect(14, 2, 2, 12);
+    g.fillStyle = '#c6ecf8'; g.fillRect(12, 1, 8, 2);
+    g.fillStyle = '#9fd6ec'; g.fillRect(10, 4, 2, 5); g.fillRect(20, 4, 2, 5);
+    g.fillStyle = '#5b5766'; g.fillRect(1, 25, 30, 2);
+    return c;
+  }
+  function makeBench() {
+    var c = mk(20, 14), g = c.getContext('2d');
+    g.fillStyle = '#5b3d22'; g.fillRect(1, 2, 18, 3); g.fillRect(1, 6, 18, 4);
+    g.fillStyle = '#7a5327'; g.fillRect(1, 2, 18, 1); g.fillRect(1, 6, 18, 1);
+    g.fillStyle = '#3b3b46'; g.fillRect(2, 10, 3, 3); g.fillRect(15, 10, 3, 3);
+    return c;
+  }
+
+  var TILES = {};
+  function buildTiles() {
+    TILES['.'] = grassTile(1, false, false);
+    TILES[','] = grassTile(2, true, false);
+    TILES['f'] = grassTile(3, true, true);
+    TILES['-'] = pathTile(4);
+    TILES['~'] = waterTile(5);
+    TILES['#'] = plankTile('#a9743f', '#8a5c31', '#bd8a52', false);
+    TILES['^'] = roofTile();
+    TILES['W'] = windowTile();
+    TILES['D'] = doorTile('l');
+    TILES['d'] = doorTile('r');
+    TILES['='] = wallTile();
+    TILES['_'] = floorTile(6);
+    TILES['c'] = carpetTile();
+    TILES['b'] = bedTile('top');
+    TILES['n'] = bedTile('bottom');
+    TILES['m'] = tableTile();
+    TILES['h'] = chairTile();
+    TILES['F'] = fireTile();
+    TILES['R'] = roadTile(false);
+    TILES['M'] = roadTile(true);
+    TILES['S'] = walkTile();
+    TILES['B'] = buildingTile(1);
+    TILES['C'] = buildingTile(2);
+    TILES['V'] = buildingTile(3);
+    TILES['K'] = shopTile();
+    TILES['O'] = flatRoofTile();
+    TILES['Q'] = tiledRoofTile();
+    /* Kacheln, auf denen etwas "draufsteht", sehen unten aus wie Boden */
+    TILES['T'] = TILES['.'];
+    TILES['t'] = TILES[','];
+    TILES['*'] = TILES['.'];
+    TILES['r'] = TILES[','];
+    TILES['l'] = TILES['S'];
+    TILES['P'] = TILES['S'];
+    TILES['x'] = TILES['.'];
+  }
+
+  global.Sprites = {
+    knight: KNIGHT,
+    sword: SWORD,
+    heart: makeHeart(),
+    car: makeCar(),
+    tree: makeTree(),
+    pine: makePine(),
+    bush: makeBush(),
+    rock: makeRock(),
+    lamp: makeLamp(),
+    fountain: makeFountain(),
+    bench: makeBench(),
+    sign: makeSign(),
+    spider: [makeSpider(0), makeSpider(1)],
+    crown: makeCrown(),
+    treant: makeTreant(),
+    withEars: withEars,
+    actor: buildActor,
+    tiles: TILES,
+    build: buildTiles,
+    blob: blob,
+    rng: rng,
+    warnings: warnings
+  };
+})(window);
+
+</script>
+<script>
+/* maps.js – die drei Welten: Wald, Holzhaus, Stadt */
+(function (global) {
+  'use strict';
+
+  function rng(seed) {
+    var s = seed >>> 0;
+    return function () { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+  }
+
+  /* Feste Buchstaben, die man nicht betreten kann */
+  var SOLID = 'Tt*rs~#^W=bnmhFBCVKOQlP';
+
+  function grid(w, h, ch) {
+    var g = [];
+    for (var y = 0; y < h; y++) {
+      var row = [];
+      for (var x = 0; x < w; x++) row.push(ch);
+      g.push(row);
+    }
+    return g;
+  }
+  function stamp(g, x0, y0, rows) {
+    for (var y = 0; y < rows.length; y++) {
+      for (var x = 0; x < rows[y].length; x++) {
+        var ch = rows[y][x];
+        if (ch === '|') continue;            /* '|' = nichts verändern */
+        if (g[y0 + y] && g[y0 + y][x0 + x] !== undefined) g[y0 + y][x0 + x] = ch;
+      }
+    }
+  }
+  function rect(g, x0, y0, w, h, ch) {
+    for (var y = y0; y < y0 + h; y++) {
+      for (var x = x0; x < x0 + w; x++) {
+        if (g[y] && g[y][x] !== undefined) g[y][x] = ch;
+      }
+    }
+  }
+  function toStrings(g) {
+    var out = [];
+    for (var y = 0; y < g.length; y++) out.push(g[y].join(''));
+    return out;
+  }
+
+  /* ============================ WALD ============================ */
+  function buildWald() {
+    var W = 44, H = 34, r = rng(20250914);
+    var g = grid(W, H, '.');
+    var x, y;
+
+    /* Grasvarianten */
+    for (y = 0; y < H; y++) {
+      for (x = 0; x < W; x++) {
+        var v = r();
+        g[y][x] = v > 0.9 ? 'f' : (v > 0.68 ? ',' : '.');
+      }
+    }
+    /* Waldrand ringsum */
+    for (y = 0; y < H; y++) {
+      for (x = 0; x < W; x++) {
+        var d = Math.min(x, y, W - 1 - x, H - 1 - y);
+        if (d === 0 || (d <= 2 && r() > 0.25)) g[y][x] = 'T';
+      }
+    }
+    /* Baumgruppen im Inneren */
+    for (var i = 0; i < 34; i++) {
+      var cx = 4 + ((r() * (W - 8)) | 0), cy = 4 + ((r() * (H - 8)) | 0);
+      var n = 1 + ((r() * 4) | 0);
+      for (var k = 0; k < n; k++) {
+        var tx = cx + ((r() * 4) | 0) - 2, ty = cy + ((r() * 4) | 0) - 2;
+        if (g[ty] && g[ty][tx]) g[ty][tx] = r() > 0.65 ? 't' : 'T';
+      }
+    }
+    /* Büsche, Steine */
+    for (i = 0; i < 24; i++) {
+      x = 3 + ((r() * (W - 6)) | 0); y = 3 + ((r() * (H - 6)) | 0);
+      g[y][x] = r() > 0.45 ? '*' : 'r';
+    }
+    /* Teich unten rechts */
+    for (y = 24; y < 31; y++) {
+      for (x = 31; x < 41; x++) {
+        var dx = (x - 36) / 5, dy = (y - 27.5) / 3.4;
+        if (dx * dx + dy * dy < 1) g[y][x] = '~';
+      }
+    }
+
+    /* Lichtung ums Haus frei räumen */
+    rect(g, 3, 2, 18, 12, '.');
+    for (y = 2; y < 14; y++) for (x = 3; x < 21; x++) if (r() > 0.75) g[y][x] = ',';
+
+    /* Holzhaus (8 breit) bei x=6, y=3 */
+    stamp(g, 6, 3, [
+      '..^^^^^^^^..',
+      '.^^^^^^^^^^.',
+      '.^^^^^^^^^^.',
+      '..#W####W#..',
+      '..###Dd###..',
+      '..--------..'
+    ]);
+
+    /* Weg vom Haus nach unten und nach rechts zum Auto */
+    for (y = 9; y <= 17; y++) { g[y][11] = '-'; g[y][12] = '-'; }
+    for (x = 11; x <= 27; x++) { g[17][x] = '-'; g[18][x] = '-'; }
+    for (y = 17; y <= 22; y++) { g[y][26] = '-'; g[y][27] = '-'; }
+    /* Platz fürs Auto frei halten */
+    rect(g, 24, 14, 6, 4, '-');
+
+    /* Lichtung in der Mitte (Kampfplatz) */
+    rect(g, 14, 21, 12, 8, ',');
+    for (y = 21; y < 29; y++) for (x = 14; x < 26; x++) if (r() > 0.82) g[y][x] = 'f';
+    /* ein paar einzelne Bäume als Deko in der Lichtung */
+    g[23][16] = 'T'; g[27][23] = 't'; g[25][20] = '*';
+
+    return {
+      key: 'wald',
+      name: 'Eichenwald',
+      rows: toStrings(g),
+      music: 'wald',
+      spawn: { x: 11.5, y: 10 },
+      zombies: true,
+      triggers: [
+        { x: 11, y: 7, w: 2, h: 1, kind: 'door', to: 'haus', tx: 10.5, ty: 10.5 }
+      ],
+      props: [
+        { kind: 'car', x: 26.5, y: 16 },
+        { kind: 'sign', x: 28, y: 20.9, text: 'Wegweiser: Nach Osten geht es zur Stadt Eichenstadt. Zu Fuss viel zu weit - nimm das Auto!' }
+      ],
+      /* Startplätze für die vier Freunde vor dem Haus */
+      friendSpots: [
+        { x: 15.5, y: 11 }, { x: 17, y: 12.5 }, { x: 14, y: 13 }, { x: 16.5, y: 14.5 }
+      ]
+    };
+  }
+
+  /* ============================ HAUS ============================ */
+  function buildHaus() {
+    var rows = [
+      '====================',
+      '==W=======W======W==',
+      '=F________________b=',
+      '=_________________n=',
+      '=___mmm___________h=',
+      '=___mmm____________=',
+      '=___hhh____________=',
+      '=b_________cc______=',
+      '=n_________cc______=',
+      '=h_________________=',
+      '=__________________=',
+      '=_________Dd_______=',
+      '====================',
+      '====================',
+      '===================='
+    ];
+    return {
+      key: 'haus',
+      name: 'Zuhause',
+      rows: rows,
+      music: 'haus',
+      spawn: { x: 10.5, y: 10.5 },
+      zombies: false,
+      triggers: [
+        { x: 10, y: 11, w: 2, h: 1, kind: 'door', to: 'wald', tx: 11.5, ty: 10 }
+      ],
+      props: []
+    };
+  }
+
+  /* ============================ STADT ============================ */
+  function buildStadt() {
+    var W = 44, H = 30, r = rng(31415);
+    var g = grid(W, H, 'S');
+    var x, y, i;
+
+    /* Alles Gehweg, dann Straßen einzeichnen */
+    for (y = 0; y < H; y++) {
+      for (x = 0; x < W; x++) {
+        /* Waagerechte Hauptstraße */
+        if (y >= 13 && y <= 17) g[y][x] = (y === 15 ? 'M' : 'R');
+        /* Senkrechte Straße */
+        if (x >= 20 && x <= 24) g[y][x] = (x === 22 && !(y >= 13 && y <= 17) ? 'M' : 'R');
+      }
+    }
+    /* Häuserblöcke */
+    function block(x0, y0, w, h, kinds) {
+      for (var yy = y0; yy < y0 + h; yy++) {
+        for (var xx = x0; xx < x0 + w; xx++) {
+          if (!g[yy] || g[yy][xx] === undefined) continue;
+          var bi = Math.floor((xx - x0) / 4) + Math.floor((yy - y0) / 3) * 2;
+          g[yy][xx] = kinds[bi % kinds.length];
+        }
+      }
+    }
+    block(2, 2, 14, 8, ['B', 'B', 'C', 'V']);
+    block(27, 2, 14, 8, ['V', 'C', 'B', 'B']);
+    block(2, 21, 13, 7, ['C', 'B', 'V', 'C']);
+    block(28, 21, 13, 7, ['B', 'V', 'C', 'B']);
+    /* Ladenzeile an der Hauptstraße */
+    for (x = 4; x < 14; x++) g[10][x] = 'K';
+    for (x = 29; x < 39; x++) g[10][x] = 'K';
+    for (x = 5; x < 13; x++) g[20][x] = 'K';
+    /* Park mit Brunnen in der Mitte unten */
+    rect(g, 16, 19, 8, 8, 'S');
+    rect(g, 17, 20, 6, 6, '.');
+    for (y = 20; y < 26; y++) for (x = 17; x < 23; x++) if (r() > 0.7) g[y][x] = ',';
+
+    /* Raender: aussen Gebaeude, damit man nicht rauslaeuft */
+    for (y = 0; y < H; y++) {
+      g[y][0] = 'B'; g[y][1] = 'B'; g[y][W - 1] = 'B'; g[y][W - 2] = 'B';
+    }
+    for (x = 0; x < W; x++) {
+      g[0][x] = 'B'; g[1][x] = 'B'; g[H - 1][x] = 'B'; g[H - 2][x] = 'B';
+    }
+    /* Strassen bis zum Rand offen lassen (Ein- und Ausfahrt) */
+    for (x = 0; x < W; x++) {
+      if (x < 2 || x > W - 3) { g[14][x] = 'R'; g[15][x] = 'M'; g[16][x] = 'R'; }
+    }
+
+    /* Von oben sieht man Daecher - nur die Seite zur Strasse ist Hauswand */
+    function offen(ch) { return 'SRM.,f-'.indexOf(ch) >= 0; }
+    var g2 = [];
+    for (y = 0; y < H; y++) g2.push(g[y].slice());
+    for (y = 0; y < H; y++) {
+      for (x = 0; x < W; x++) {
+        var ch = g[y][x];
+        if ('BCVK'.indexOf(ch) < 0) continue;
+        var untenFrei = (y + 1 < H) && offen(g[y + 1][x]);
+        if (!untenFrei) g2[y][x] = (ch === 'C' || ch === 'K') ? 'Q' : 'O';
+      }
+    }
+    g = g2;
+
+    var props = [
+      { kind: 'sign', x: 18.5, y: 12.6, text: 'Auf dem Blatt am Stadttor steht: "EICHENSTADT - 412 Einwohner, 3 Baecker, 0 Zombies. Bitte Schwert stecken lassen!"' },
+      { kind: 'lamp', x: 18.5, y: 18.6 },
+      { kind: 'lamp', x: 26.5, y: 18.6 },
+      { kind: 'lamp', x: 18.5, y: 11.6 },
+      { kind: 'lamp', x: 26.5, y: 11.6 },
+      { kind: 'car', x: 26.5, y: 20.5 },
+      { kind: 'fountain', x: 19.9, y: 23.5 },
+      { kind: 'bench', x: 17.5, y: 25.6 },
+      { kind: 'bench', x: 22.3, y: 25.6 },
+      { kind: 'tree', x: 17.5, y: 21.2 },
+      { kind: 'tree', x: 22.5, y: 21.2 },
+      { kind: 'lamp', x: 25.4, y: 24.6 }
+    ];
+
+    return {
+      key: 'stadt',
+      name: 'Eichenstadt',
+      rows: toStrings(g),
+      music: 'stadt',
+      spawn: { x: 26.5, y: 22 },
+      zombies: false,
+      triggers: [],
+      props: props,
+      wanderSpots: [
+        { x: 12, y: 18 }, { x: 31, y: 12 }, { x: 18, y: 22 }, { x: 34, y: 19 }
+      ]
+    };
+  }
+
+  global.MAPS = {
+    SOLID: SOLID,
+    wald: buildWald,
+    haus: buildHaus,
+    stadt: buildStadt
+  };
+})(window);
+
+</script>
+<script>
+/* audio.js – 8-Bit-Musik und Geräusche, komplett im Browser erzeugt. */
+(function (global) {
+  'use strict';
+
+  var ctx = null, master = null, on = false, songTimer = null, cur = '';
+
+  function start() {
+    if (ctx) return;
+    var AC = global.AudioContext || global.webkitAudioContext;
+    if (!AC) return;
+    ctx = new AC();
+    master = ctx.createGain();
+    master.gain.value = 0.32;
+    master.connect(ctx.destination);
+  }
+
+  function note(freq, t, dur, type, vol) {
+    if (!ctx) return;
+    var o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = type || 'square';
+    o.frequency.setValueAtTime(freq, t);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol || 0.18, t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(master);
+    o.start(t); o.stop(t + dur + 0.02);
+  }
+
+  function noise(t, dur, vol) {
+    if (!ctx) return;
+    var len = Math.max(1, (ctx.sampleRate * dur) | 0);
+    var buf = ctx.createBuffer(1, len, ctx.sampleRate);
+    var d = buf.getChannelData(0);
+    for (var i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
+    var src = ctx.createBufferSource(); src.buffer = buf;
+    var g = ctx.createGain(); g.gain.value = vol || 0.2;
+    src.connect(g); g.connect(master);
+    src.start(t);
+  }
+
+  var N = { C3: 130.8, D3: 146.8, E3: 164.8, F3: 174.6, G3: 196, A3: 220, B3: 246.9,
+            C4: 261.6, D4: 293.7, E4: 329.6, F4: 349.2, G4: 392, A4: 440, B4: 493.9,
+            C5: 523.3, D5: 587.3, E5: 659.3, F5: 698.5, G5: 784, A5: 880 };
+
+  var SONGS = {
+    wald: {
+      bpm: 104,
+      lead: ['E4','G4','A4','G4','E4','D4','E4','.','C4','E4','G4','E4','D4','.','D4','.',
+             'E4','G4','A4','B4','C5','B4','A4','G4','E4','G4','E4','D4','C4','.','.','.'],
+      bass: ['A3','.','E3','.','A3','.','E3','.','F3','.','C3','.','G3','.','G3','.',
+             'A3','.','E3','.','A3','.','E3','.','F3','.','G3','.','A3','.','.','.']
+    },
+    haus: {
+      bpm: 78,
+      lead: ['C4','E4','G4','E4','F4','A4','G4','.','E4','G4','C5','G4','F4','E4','D4','.'],
+      bass: ['C3','.','G3','.','F3','.','C3','.','C3','.','G3','.','F3','.','G3','.']
+    },
+    stadt: {
+      bpm: 126,
+      lead: ['G4','B4','D5','B4','G4','A4','B4','A4','F4','A4','C5','A4','F4','G4','A4','.',
+             'E4','G4','B4','G4','E4','F4','G4','F4','D4','F4','A4','F4','G4','.','B4','.'],
+      bass: ['G3','G3','D3','D3','G3','G3','D3','D3','F3','F3','C3','C3','F3','F3','C3','C3',
+             'E3','E3','B3','B3','E3','E3','B3','B3','D3','D3','A3','A3','G3','G3','G3','.']
+    },
+    boss: {
+      bpm: 132,
+      lead: ['A4','.','A4','G4','A4','.','C5','B4','A4','.','E4','F4','G4','.','.','.',
+             'A4','.','C5','B4','A4','G4','F4','E4','D4','E4','F4','G4','A4','.','.','.'],
+      bass: ['A3','A3','A3','A3','F3','F3','F3','F3','G3','G3','G3','G3','E3','E3','E3','E3',
+             'A3','A3','A3','A3','F3','F3','F3','F3','D3','D3','D3','D3','E3','E3','E3','E3']
+    },
+    kampf: {
+      bpm: 150,
+      lead: ['E4','E4','G4','E4','A4','G4','E4','D4','E4','E4','C5','B4','A4','G4','E4','.'],
+      bass: ['E3','E3','E3','E3','A3','A3','A3','A3','F3','F3','F3','F3','G3','G3','G3','G3']
+    }
+  };
+
+  function playSong(name) {
+    if (!on || !ctx) return;
+    var song = SONGS[name] || SONGS.wald;
+    var step = 60 / song.bpm / 2;
+    var t = ctx.currentTime + 0.06;
+    var len = song.lead.length;
+    for (var i = 0; i < len; i++) {
+      var l = song.lead[i], b = song.bass[i % song.bass.length];
+      if (l !== '.') note(N[l], t + i * step, step * 0.92, 'square', 0.14);
+      if (b !== '.') note(N[b], t + i * step, step * 1.5, 'triangle', 0.2);
+      if (i % 4 === 0) noise(t + i * step, 0.05, 0.1);
+      if (i % 4 === 2) noise(t + i * step, 0.03, 0.05);
+    }
+    songTimer = setTimeout(function () { playSong(cur); }, len * step * 1000 - 40);
+  }
+
+  var Audio = {
+    isOn: function () { return on; },
+    toggle: function () {
+      start();
+      on = !on;
+      if (on) { if (ctx.state === 'suspended') ctx.resume(); playSong(cur || 'wald'); }
+      else { clearTimeout(songTimer); }
+      return on;
+    },
+    music: function (name) {
+      if (cur === name) return;
+      cur = name;
+      clearTimeout(songTimer);
+      if (on) playSong(name);
+    },
+    resume: function () { if (ctx && ctx.state === 'suspended') ctx.resume(); },
+
+    /* Geräusche */
+    swing: function () { if (!on || !ctx) return; noise(ctx.currentTime, 0.14, 0.16); note(520, ctx.currentTime, 0.07, 'sawtooth', 0.05); },
+    hit: function () { if (!on || !ctx) return; var t = ctx.currentTime; note(180, t, 0.09, 'square', 0.22); note(90, t + 0.04, 0.12, 'square', 0.2); noise(t, 0.09, 0.24); },
+    dead: function () { if (!on || !ctx) return; var t = ctx.currentTime; note(220, t, 0.1, 'sawtooth', 0.16); note(160, t + 0.09, 0.12, 'sawtooth', 0.14); note(100, t + 0.2, 0.25, 'sawtooth', 0.14); },
+    hurt: function () { if (!on || !ctx) return; var t = ctx.currentTime; note(320, t, 0.08, 'sawtooth', 0.2); note(150, t + 0.07, 0.2, 'sawtooth', 0.18); },
+    blip: function () { if (!on || !ctx) return; note(760 + Math.random() * 90, ctx.currentTime, 0.025, 'square', 0.055); },
+    select: function () { if (!on || !ctx) return; note(660, ctx.currentTime, 0.05, 'square', 0.12); note(990, ctx.currentTime + 0.05, 0.07, 'square', 0.1); },
+    door: function () { if (!on || !ctx) return; noise(ctx.currentTime, 0.18, 0.12); note(180, ctx.currentTime, 0.15, 'triangle', 0.1); },
+    horn: function () { if (!on || !ctx) return; var t = ctx.currentTime; note(392, t, 0.3, 'square', 0.16); note(330, t, 0.3, 'square', 0.14); },
+    heal: function () { if (!on || !ctx) return; var t = ctx.currentTime; note(523, t, 0.1, 'triangle', 0.16); note(659, t + 0.09, 0.1, 'triangle', 0.16); note(784, t + 0.18, 0.22, 'triangle', 0.16); }
+  };
+
+  global.Audio8 = Audio;
+})(window);
+
+</script>
+<script>
+/* dialog.js – Textbox im Undertale-Stil: Buchstaben tippen sich einzeln,
+   und man kann Antworten auswählen. */
+(function (global) {
+  'use strict';
+
+  var box, whoEl, txtEl, optsEl, moreEl;
+
+  var D = {
+    queue: [],
+    node: null,
+    full: '',
+    shown: 0,
+    t: 0,
+    speed: 42,          /* Buchstaben pro Sekunde */
+    sel: 0,
+    open: false,
+    onFinish: null
+  };
+
+  function el(id) { return document.getElementById(id); }
+
+  D.init = function () {
+    box = el('box'); whoEl = el('who'); txtEl = el('txt');
+    optsEl = el('opts'); moreEl = el('more');
+    box.addEventListener('click', function (e) {
+      if (e.target && e.target.classList.contains('opt')) return;
+      D.press();
+    });
+  };
+
+  /* text: String. who: Name. color: Farbe des Namens. opts: [{t:'Antwort', r:'Reaktion'}] */
+  D.push = function (who, color, text, opts) {
+    D.queue.push({ who: who, color: color || '#ffd24a', text: text, opts: opts || null });
+  };
+  D.say = function (who, color, text) { D.push(who, color, text); D.begin(); };
+
+  D.begin = function (onFinish) {
+    if (onFinish) D.onFinish = onFinish;
+    if (!D.node) next();
+  };
+
+  function next() {
+    if (!D.queue.length) {
+      D.open = false;
+      box.classList.remove('on');
+      D.node = null;
+      var f = D.onFinish; D.onFinish = null;
+      if (f) f();
+      return;
+    }
+    D.node = D.queue.shift();
+    D.full = D.node.text;
+    D.shown = 0; D.t = 0; D.sel = 0;
+    D.open = true;
+    box.classList.add('on');
+    whoEl.textContent = D.node.who || '';
+    whoEl.style.color = D.node.color || '#ffd24a';
+    txtEl.textContent = '';
+    optsEl.innerHTML = '';
+    moreEl.classList.remove('on');
+  }
+
+  function showOptions() {
+    optsEl.innerHTML = '';
+    if (!D.node.opts) { moreEl.classList.add('on'); return; }
+    for (var i = 0; i < D.node.opts.length; i++) {
+      (function (i) {
+        var d = document.createElement('div');
+        d.className = 'opt' + (i === D.sel ? ' sel' : '');
+        d.textContent = D.node.opts[i].t;
+        d.addEventListener('click', function (ev) {
+          ev.stopPropagation();
+          D.sel = i; choose();
+        });
+        optsEl.appendChild(d);
+      })(i);
+    }
+  }
+
+  function markSel() {
+    var kids = optsEl.children;
+    for (var i = 0; i < kids.length; i++) {
+      kids[i].className = 'opt' + (i === D.sel ? ' sel' : '');
+    }
+  }
+
+  function choose() {
+    var o = D.node.opts[D.sel];
+    if (global.Audio8) Audio8.select();
+    var node = D.node;
+    D.node = null;
+    optsEl.innerHTML = '';
+    if (o.r) {
+      D.queue.unshift({ who: node.who, color: node.color, text: o.r, opts: null });
+    }
+    if (o.go) o.go();
+    next();
+  }
+
+  D.update = function (dt) {
+    if (!D.node) return;
+    if (D.shown < D.full.length) {
+      D.t += dt * D.speed;
+      while (D.t >= 1 && D.shown < D.full.length) {
+        D.t -= 1; D.shown++;
+        var c = D.full[D.shown - 1];
+        if (c !== ' ' && global.Audio8 && D.shown % 2 === 0) Audio8.blip();
+      }
+      txtEl.textContent = D.full.slice(0, D.shown);
+      if (D.shown >= D.full.length) showOptions();
+    }
+  };
+
+  /* Bestätigen / weiter */
+  D.press = function () {
+    if (!D.node) return;
+    if (D.shown < D.full.length) {          /* erst Text komplett zeigen */
+      D.shown = D.full.length;
+      txtEl.textContent = D.full;
+      showOptions();
+      return;
+    }
+    if (D.node.opts) { choose(); return; }
+    D.node = null;
+    next();
+  };
+
+  D.move = function (dir) {
+    if (!D.node || !D.node.opts || D.shown < D.full.length) return;
+    D.sel = (D.sel + dir + D.node.opts.length) % D.node.opts.length;
+    if (global.Audio8) Audio8.blip();
+    markSel();
+  };
+
+  D.isOpen = function () { return D.open; };
+  D.clear = function () { D.queue.length = 0; D.node = null; D.open = false; if (box) box.classList.remove('on'); };
+
+  global.Dialog = D;
+})(window);
+
+</script>
+<script>
+/* chat.js – die Leute und das automatische Gequatsche.
+   Die Begleiter stellen von selbst Fragen, du wählst eine Antwort. */
+(function (global) {
+  'use strict';
+
+  var PEOPLE = {
+    lisbeth: {
+      name: 'Lisbeth', rolle: 'Bogenschuetzin', color: '#8fd36a', kurz: 'Lisbeth',
+      pal: { hair: '#a8642a', skin: '#f0c191', shirt: '#4f9b45', shirtDark: '#3a7a34', pants: '#5b4326', boots: '#3a2a18' }
+    },
+    tarik: {
+      name: 'Tarik', rolle: 'Schmied', color: '#e8a54a', kurz: 'Tarik',
+      pal: { hair: '#2a1d14', skin: '#c08a5a', shirt: '#b8603a', shirtDark: '#94472a', pants: '#3b3b46', boots: '#2a2a33' }
+    },
+    momo: {
+      name: 'Momo', rolle: 'Magierin', color: '#c78ce0', kurz: 'Momo',
+      pal: { hair: '#6b3f8a', skin: '#f5cfa8', shirt: '#8a5ac4', shirtDark: '#6b44a0', pants: '#4a3a6b', boots: '#2f2545' }
+    },
+    gris: {
+      name: 'Griswold', rolle: 'alter Waechter', color: '#a9c0d8', kurz: 'Griswold',
+      pal: { hair: '#cfd4dc', skin: '#e0b48a', shirt: '#5a6478', shirtDark: '#454e60', pants: '#3b4250', boots: '#2a2f3a' }
+    },
+    mama: {
+      name: 'Mama Edda', rolle: 'Mutter', color: '#f0a0b8', kurz: 'Edda',
+      pal: { hair: '#8a5a2a', skin: '#f0c191', shirt: '#c4557a', shirtDark: '#a03f60', pants: '#6b4a2b', boots: '#4a3524' }
+    },
+    papa: {
+      name: 'Papa Gunnar', rolle: 'Vater', color: '#d8c07a', kurz: 'Gunnar',
+      pal: { hair: '#6b4a2b', skin: '#e8b58a', shirt: '#4a6b8a', shirtDark: '#37536b', pants: '#4a3a2a', boots: '#33261a' }
+    },
+    mila: {
+      name: 'Mila', rolle: 'kleine Schwester', color: '#9ad8e0', kurz: 'Mila',
+      pal: { hair: '#e0c05a', skin: '#f5cfa8', shirt: '#5ab8c4', shirtDark: '#3f95a0', pants: '#8a5ac4', boots: '#5b4326' }
+    },
+    buerger: {
+      name: 'Stadtmensch', rolle: 'Buerger', color: '#c8c8d8', kurz: 'Buerger',
+      pal: { hair: '#4a3a2a', skin: '#e8b58a', shirt: '#6b7a8a', shirtDark: '#55606e', pants: '#3b3b46', boots: '#2a2a33' }
+    }
+  };
+
+  var ZOMBIE_PAL = {
+    hair: '#2f4a2a', skin: '#7aa85f', eye: '#c43a2a',
+    shirt: '#5b4a3a', shirtDark: '#443528', pants: '#3a3a44', boots: '#2a2622'
+  };
+
+  /* ---------- Fragen, die die Begleiter von selbst stellen ---------- */
+  var FRAGEN = {
+    wald: [
+      { q: 'Sag mal, wie viele Zombies schaffen wir heute?',
+        a: [{ t: 'Alle! Jeden einzelnen.', r: 'Ha! Genau so redet ein Ritter.' },
+            { t: 'Vielleicht zehn.', r: 'Zehn sind ein guter Anfang.' },
+            { t: 'Am liebsten keinen.', r: 'Auch gut. Dann gehen wir Beeren suchen.' }] },
+      { q: 'Riechst du das auch? So modrig... die sind nah.',
+        a: [{ t: 'Schwert raus, ich gehe vor.', r: 'Ich bleib direkt hinter dir.' },
+            { t: 'Wir schleichen aussen rum.', r: 'Schlau. Leise wie ein Fuchs.' }] },
+      { q: 'Was war eigentlich dein erster Kampf?',
+        a: [{ t: 'Gegen eine Gans. Ich hab verloren.', r: 'Gaense sind auch furchtbar.' },
+            { t: 'Gegen drei Zombies auf einmal.', r: 'Drei?! Und du stehst noch?' },
+            { t: 'Daran denke ich nicht gern.', r: 'Verstehe. Dann reden wir ueber was anderes.' }] },
+      { q: 'Wenn du ein Tier waerst - welches?',
+        a: [{ t: 'Ein Baer.', r: 'Passt. Gross, ruhig, und niemand legt sich mit dir an.' },
+            { t: 'Ein Rabe.', r: 'Schlau und immer da, wo was los ist.' },
+            { t: 'Ein Igel.', r: 'Stachelig von aussen, weich innen. Kenn ich.' }] },
+      { q: 'Dein Schwert - hat das einen Namen?',
+        a: [{ t: 'Eichenzahn.', r: 'Eichenzahn! Das klingt nach Aerger fuer Zombies.' },
+            { t: 'Nein, es ist einfach ein Schwert.', r: 'Jedes gute Schwert verdient einen Namen. Denk drueber nach.' },
+            { t: 'Kuschel.', r: '...Kuschel. Okay. Warum eigentlich nicht.' }] },
+      { q: 'Sollen wir nachher noch zum Teich?',
+        a: [{ t: 'Ja, Fuesse ins Wasser.', r: 'Abgemacht!' },
+            { t: 'Erst Zombies, dann Teich.', r: 'Arbeit vor Vergnuegen. Sehr ritterlich.' }] },
+      { q: 'Vermisst du deine Familie, wenn wir draussen sind?',
+        a: [{ t: 'Immer ein bisschen.', r: 'Deshalb passen wir auf, dass du heil heimkommst.' },
+            { t: 'Ich bin doch gleich wieder da.', r: 'Stimmt. Das Haus laeuft nicht weg.' }] },
+      { q: 'Wer haelt laenger auf einem Bein? Du oder ich?',
+        a: [{ t: 'Ich natuerlich.', r: 'Gewagt. Nach dem Kampf gilt das!' },
+            { t: 'Du, in voller Ruestung schaff ich das nie.', r: 'Endlich sagt es mal einer.' }] }
+    ],
+    kampf: [
+      { q: 'Achtung, da vorne! Was machen wir?',
+        a: [{ t: 'Ich lenke ihn ab, du von hinten.', r: 'Guter Plan. Los!' },
+            { t: 'Alle draufhauen!', r: 'Mein Lieblingsplan.' },
+            { t: 'Ruhig bleiben und warten.', r: 'Okay... ich zittere aber trotzdem.' }] },
+      { q: 'Alles noch heil bei dir?',
+        a: [{ t: 'Nur ein Kratzer.', r: 'Sagt jeder Ritter, kurz bevor er umkippt.' },
+            { t: 'Ehrlich? Es tut weh.', r: 'Dann geh hinter mich. Ich uebernehme.' }] }
+    ],
+    haus: [
+      { q: 'Gemuetlich habt ihr es hier. Wer hat das Haus gebaut?',
+        a: [{ t: 'Mein Vater, Balken fuer Balken.', r: 'Das sieht man. Das haelt hundert Winter.' },
+            { t: 'Ich. Mit sehr vielen Schrammen.', r: 'Respekt! Und alles steht noch gerade.' }] },
+      { q: 'Was gibt es heute zu essen?',
+        a: [{ t: 'Eintopf. Wie immer.', r: 'Eintopf ist nie "wie immer". Eintopf ist immer gut.' },
+            { t: 'Keine Ahnung, Mama ueberrascht uns.', r: 'Die besten Essen sind Ueberraschungen.' }] }
+    ],
+    stadt: [
+      { q: 'So viele Leute! Bleibst du in der Naehe?',
+        a: [{ t: 'Ich geh nirgendwo hin.', r: 'Gut. Ich verlauf mich hier sonst.' },
+            { t: 'Ich schau mich kurz um.', r: 'Dann treffen wir uns beim Brunnen.' }] },
+      { q: 'Sollen wir was kaufen?',
+        a: [{ t: 'Brot fuer den Rueckweg.', r: 'Vernuenftig. Und vielleicht Kuchen?' },
+            { t: 'Ich hab kein Geld dabei.', r: 'Gucken ist umsonst.' },
+            { t: 'Ein neues Schwert!', r: 'Deins ist doch gut. Aber schauen wir mal.' }] },
+      { q: 'Merkst du, wie ruhig das hier ist ohne Zombies?',
+        a: [{ t: 'Fast schon zu ruhig.', r: 'Typisch Ritter. Geniess es einfach.' },
+            { t: 'Herrlich.', r: 'Nicht wahr? Kein Stoehnen, kein Gematsche.' }] }
+    ]
+  };
+
+  /* Spruch, wenn ein Zombie fällt */
+  var KILL_LINES = [
+    'Sauber getroffen!',
+    'Der steht nicht mehr auf.',
+    'Zwei, drei Hiebe - wie im Lehrbuch.',
+    'Puh. Der roch wirklich uebel.',
+    'Noch einer weniger im Wald.',
+    'Dein Schwert singt heute.'
+  ];
+
+  var FAMILY_LINES = {
+    mama: [
+      'Da bist du ja! Hast du wieder mit dem Schwert im Wald gespielt?',
+      'Es steht Eintopf auf dem Feuer. Iss was, dann haelst du auch mehr aus.',
+      'Pass auf dich auf da draussen, Ritter hin oder her.'
+    ],
+    papa: [
+      'Das Holz fuer den Winter liegt noch draussen. Aber erst mal: erzaehl!',
+      'Frueher war der Wald ruhiger. Heute stolpert man ueber Zombies.',
+      'Wenn ihr in die Stadt wollt - der Wagen steht auf dem Weg.'
+    ],
+    mila: [
+      'Nimmst du mich mal mit raus? Bitte bitte bitte!',
+      'Ich hab ein Bild von dir gemalt. Du bist da sehr eckig.',
+      'Mama sagt, ich darf erst mit, wenn ich groesser bin. Ich bin doch schon riesig!'
+    ]
+  };
+
+  var CITY_LINES = [
+    'Ein Ritter! Mit echtem Schwert! Machen Sie bitte kein Loch in die Strasse.',
+    'Frisches Brot, zwei Kupfer. Fuer Helden drei, weil Helden immer Hunger haben.',
+    'Zombies? Hier? Nein nein, die bleiben schoen im Wald. Hoffentlich.',
+    'Schoenes Auto haben Sie da. Faehrt das auch bergauf?'
+  ];
+
+  /* ---------- Die Bosse ---------- */
+  var BOSSE = [
+    {
+      key: 'koenig', name: 'Grauzahn, der Zombiekoenig', art: 'zombie',
+      scale: 1.8, hp: 12, speed: 22, dmg: 2, koennen: 'rufen',
+      intro: 'Der Boden bebt. Ein riesiger Zombie mit schiefer Krone stapft aus dem Dickicht.',
+      spruch: 'GRRRAAA! MEIN WALD! MEINE WUERMER!',
+      sieg: 'Die Krone kullert ins Gras. Grauzahn faellt um wie ein nasser Sack.'
+    },
+    {
+      key: 'spinne', name: 'Nachtweberin, die Waldspinne', art: 'spider',
+      scale: 1.5, hp: 10, speed: 28, dmg: 1, koennen: 'sprint',
+      intro: 'Zwischen zwei Eichen haengt ein Netz so gross wie eine Tuer. Acht Beine kommen heraus.',
+      spruch: 'ssssss... bleib doch ein biiisschen kleben.',
+      sieg: 'Die Nachtweberin rollt sich ein und verschwindet im Gebuesch.'
+    },
+    {
+      key: 'wolf', name: 'Mondfell, der Werwolf', art: 'wolf',
+      scale: 1.5, hp: 11, speed: 34, dmg: 1, koennen: 'wut',
+      intro: 'Ein Heulen, viel zu nah. Etwas Grosses laeuft auf zwei Beinen zwischen den Baeumen.',
+      spruch: 'Du riechst nach Eintopf, kleiner Ritter.',
+      sieg: 'Mondfell schuettelt sich, brummt beleidigt und trottet davon.'
+    },
+    {
+      key: 'knorr', name: 'Alter Knorr, der Baumgeist', art: 'treant',
+      scale: 1.3, hp: 14, speed: 12, dmg: 2, koennen: 'wurzeln',
+      intro: 'Der Baum vor dir macht die Augen auf. Und dann macht er einen Schritt.',
+      spruch: 'Ihr... trampelt... auf... meinen... Wurzeln.',
+      sieg: 'Alter Knorr setzt sich wieder hin und ist einfach nur noch ein Baum.'
+    }
+  ];
+
+  var BOSS_LINES = {
+    auftritt: [
+      'Das ist kein normaler Zombie. Bleib dicht bei mir!',
+      'Oh nein. OH NEIN. Ist der gross.',
+      'Ausweichen, dann zuschlagen. Immer abwechselnd!',
+      'Sowas hab ich zuletzt als Kind gesehen. Damals bin ich weggelaufen.'
+    ],
+    sieg: [
+      'DAS war ein Kampf! Hast du gesehen, wie der umgefallen ist?',
+      'Mein Herz klopft bis in die Ohren. Aber wir leben!',
+      'Dein Schwert hat heute gesungen, Ritter.',
+      'Ich erzaehl das heute Abend allen. Mit Handbewegungen.'
+    ]
+  };
+
+  var Chat = {
+    bosse: BOSSE,
+    bossLines: BOSS_LINES,
+    people: PEOPLE,
+    zombiePal: ZOMBIE_PAL,
+    killLines: KILL_LINES,
+    familyLines: FAMILY_LINES,
+    cityLines: CITY_LINES,
+    timer: 16 + Math.random() * 10,
+    lastIdx: -1
+  };
+
+  function pick(arr) { return arr[(Math.random() * arr.length) | 0]; }
+
+  /* Wird jede Sekunde vom Spiel gefragt: Zeit für eine Frage? */
+  Chat.update = function (dt, game) {
+    if (!game.party.length) return;
+    if (global.Dialog.isOpen()) return;
+    if (game.state !== 'play') return;
+    if (game.zombieNear && game.zombieNear(120)) { Chat.timer = 5; return; }
+    Chat.timer -= dt;
+    if (Chat.timer > 0) return;
+    Chat.timer = 20 + Math.random() * 18;
+    Chat.ask(game, null);
+  };
+
+  /* Stellt eine Frage. who = Person (optional), ctx = Situation */
+  Chat.ask = function (game, who, ctxName) {
+    var partner = who || pick(game.party);
+    var p = PEOPLE[partner.key] || PEOPLE.lisbeth;
+    var ctx = ctxName || game.mapKey;
+    var pool = FRAGEN[ctx] || FRAGEN.wald;
+    var f = pool[(Math.random() * pool.length) | 0];
+    var opts = f.a.map(function (o) {
+      return { t: o.t, r: o.r };
+    });
+    global.Dialog.push(p.name + ' (' + p.rolle + ')', p.color, f.q, opts);
+    global.Dialog.begin();
+    partner.mood = (partner.mood || 0) + 1;
+  };
+
+  Chat.killLine = function (game) {
+    if (!game.party.length || global.Dialog.isOpen()) return;
+    if (game.zombieNear && game.zombieNear(95)) return;
+    if (Math.random() > 0.5) return;
+    var partner = pick(game.party);
+    var p = PEOPLE[partner.key];
+    global.Dialog.push(p.name, p.color, pick(KILL_LINES));
+    global.Dialog.begin();
+  };
+
+  global.Chat = Chat;
+})(window);
+
+</script>
+<script>
+/* game.js – Oakblade
+   Ein kleines Pixel-Rollenspiel: Wald, Holzhaus, Familie, Freunde,
+   Zombies, Schwertschlag-Animation und Autofahrt in die Stadt. */
+(function (global) {
+  'use strict';
+
+  var TILE = 16, VW = 320, VH = 240;
+  var FASSUNG = 8;                    /* steht unten auf dem Titelbild */
+  var cv = document.getElementById('game');
+  var ctx = cv.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+
+  var S = global.Sprites, MAPS = global.MAPS, D = global.Dialog, Chat = global.Chat;
+  var A = global.Audio8;
+
+  var ACT = {};                    /* fertige Laufbilder je Person */
+  var G = {
+    state: 'title',
+    map: null, mapKey: '', mapW: 0, mapH: 0,
+    ents: [], party: [], partyKeys: [], trail: [],
+    player: null, camX: 0, camY: 0,
+    kills: 0, time: 0, fade: 0, fadeTo: null,
+    spawnT: 4, shake: 0, hint: '', hintT: 0,
+    boss: null, bossQueue: [], bossesBeaten: 0, killsSinceBoss: 0,
+    drive: null, overT: 0, lastSave: 0
+  };
+  global.GAME = G;
+
+  /* ================= Eingabe ================= */
+  var keys = {}, tapped = {};
+  var KEYMAP = {
+    ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right',
+    w: 'up', s: 'down', a: 'left', d: 'right',
+    W: 'up', S: 'down', A: 'left', D: 'right',
+    ' ': 'attack', Enter: 'talk', e: 'talk', E: 'talk',
+    z: 'talk', Z: 'talk', x: 'attack', X: 'attack', j: 'attack', J: 'attack'
+  };
+
+  global.addEventListener('keydown', function (e) {
+    var k = KEYMAP[e.key];
+    if (!k) return;
+    e.preventDefault();
+    if (!keys[k]) tapped[k] = true;
+    keys[k] = true;
+  });
+  global.addEventListener('keyup', function (e) {
+    var k = KEYMAP[e.key];
+    if (!k) return;
+    e.preventDefault();
+    keys[k] = false;
+  });
+
+  /* ================= Laufen =================
+     Alles laeuft ueber den Joystick aus joystick.js. Ziehen laeuft,
+     kurzes Tippen liest Texte weiter - mehr Eingaben gibt es nicht
+     (ausser der Tastatur am Rechner). */
+  var stick = null;
+
+  function bindStick() {
+    if (!global.Joystick) return;
+    stick = new Joystick({
+      radius: 60,
+      deadZone: 0.18,
+
+      /* Gelaufen wird, sobald das Spiel laeuft - auch waehrend geredet wird. */
+      canStart: function () {
+        return G.state === 'play' || G.state === 'over';
+      },
+
+      /* Knoepfe und die Textbox behalten ihre eigenen Beruehrungen. */
+      ignore: function (target) {
+        if (!target || !target.closest) return false;
+        return !!(target.closest('button') || target.closest('#box'));
+      },
+
+      /* Kurz getippt statt gezogen: Spiel starten oder weiterlesen. */
+      onTap: function () {
+        if (A) A.resume();
+        if (G.state === 'title') { startGame(); return; }
+        if (D.isOpen()) { D.press(); return; }
+        if (G.state === 'drive') { tapped.talk = true; }
+      }
+    });
+  }
+
+  /* Richtung, in die der Ritter laufen soll: erst der Stick, sonst Tasten. */
+  function laufRichtung() {
+    var dx = 0, dy = 0;
+    if (stick && stick.active && (stick.x !== 0 || stick.y !== 0)) {
+      dx = stick.x;
+      dy = stick.y;
+    } else {
+      if (keys.left) dx -= 1;
+      if (keys.right) dx += 1;
+      if (keys.up) dy -= 1;
+      if (keys.down) dy += 1;
+    }
+    var laenge = Math.sqrt(dx * dx + dy * dy);
+    if (laenge > 1) { dx /= laenge; dy /= laenge; }   /* nie schneller als 1 */
+    return { x: dx, y: dy };
+  }
+
+  function bindTouch() {
+    var btns = document.querySelectorAll('#touch button');
+    for (var i = 0; i < btns.length; i++) {
+      (function (b) {
+        var k = b.getAttribute('data-k');
+        function on(e) { e.preventDefault(); if (!keys[k]) tapped[k] = true; keys[k] = true; if (A) A.resume(); }
+        function off(e) { e.preventDefault(); keys[k] = false; }
+        b.addEventListener('touchstart', on, { passive: false });
+        b.addEventListener('touchend', off, { passive: false });
+        b.addEventListener('touchcancel', off, { passive: false });
+        b.addEventListener('mousedown', on);
+        b.addEventListener('mouseup', off);
+        b.addEventListener('mouseleave', off);
+      })(btns[i]);
+    }
+  }
+
+  function took(k) { if (tapped[k]) { tapped[k] = false; return true; } return false; }
+
+  /* Die Lauf-Knöpfe nur zeigen, wenn man auch laufen darf. */
+  var touchEl = null, controlsOn = null;
+  function updateControls() {
+    if (!touchEl) touchEl = document.getElementById('touch');
+    var show = (G.state === 'play' || G.state === 'over') && !D.isOpen();
+    if (show === controlsOn) return;
+    controlsOn = show;
+    touchEl.classList.toggle('off', !show);
+    if (!show) {
+      /* Finger weg vom Knopf: nichts darf gedrückt bleiben */
+      for (var k in keys) keys[k] = false;
+    }
+  }
+
+  /* ================= Karte laden ================= */
+  function solidTile(ch) { return MAPS.SOLID.indexOf(ch) >= 0; }
+
+  function tileAt(tx, ty) {
+    if (ty < 0 || ty >= G.mapH || tx < 0 || tx >= G.mapW) return 'T';
+    return G.map.rows[ty][tx];
+  }
+
+  function loadMap(key, tx, ty, after) {
+    var m = MAPS[key]();
+    G.map = m; G.mapKey = key;
+    G.mapH = m.rows.length; G.mapW = m.rows[0].length;
+    G.ents = []; G.party = []; G.trail = [];
+    G.boss = null;
+    G.blocks = [];
+
+    /* Bäume, Büsche und Steine aus den Kacheln zu Objekten machen */
+    for (var y = 0; y < G.mapH; y++) {
+      for (var x = 0; x < G.mapW; x++) {
+        var ch = m.rows[y][x];
+        if (ch === 'T') addProp('tree', x + 0.5, y + 1);
+        else if (ch === 't') addProp('pine', x + 0.5, y + 1);
+        else if (ch === '*') addProp('bush', x + 0.5, y + 1);
+        else if (ch === 'r') addProp('rock', x + 0.5, y + 1);
+      }
+    }
+    /* zusätzliche Objekte der Karte (Auto, Schild, Laternen) */
+    for (var i = 0; i < m.props.length; i++) {
+      var p = m.props[i];
+      addProp(p.kind, p.x, p.y, p);
+    }
+
+    /* Spieler */
+    if (!G.player) {
+      G.player = { type: 'player', x: 0, y: 0, dir: 'down', anim: 0, moving: false,
+                   hp: 10, maxhp: 10, atk: null, atkCd: 0, swingId: 0, invuln: 0, kx: 0, ky: 0 };
+    }
+    G.player.x = tx * TILE; G.player.y = ty * TILE;
+    G.player.atk = null; G.player.kx = 0; G.player.ky = 0;
+    G.ents.push(G.player);
+
+    /* Begleiter, die gerade mitlaufen */
+    for (i = 0; i < G.partyKeys.length; i++) {
+      var c = makeCompanion(G.partyKeys[i], G.player.x - 10 - i * 4, G.player.y + 8 + i * 3);
+      G.ents.push(c); G.party.push(c);
+    }
+
+    if (key === 'wald') {
+      /* Freunde, die (noch) nicht mitkommen, stehen vorm Haus */
+      var spots = m.friendSpots, fi = 0;
+      var alle = ['lisbeth', 'tarik', 'momo', 'gris'];
+      for (i = 0; i < alle.length; i++) {
+        if (G.partyKeys.indexOf(alle[i]) >= 0) continue;
+        var sp = spots[fi % spots.length]; fi++;
+        var f = makeCompanion(alle[i], sp.x * TILE, sp.y * TILE);
+        f.idle = true; f.dir = 'down';
+        G.ents.push(f);
+      }
+    }
+
+    if (key === 'haus') {
+      addNPC('mama', 3.5, 4, 'down');
+      addNPC('papa', 6.5, 7.2, 'up');
+      addNPC('mila', 12.5, 9.2, 'left');
+    }
+
+    if (key === 'stadt') {
+      for (i = 0; i < m.wanderSpots.length; i++) {
+        var w = m.wanderSpots[i];
+        var n = addNPC('buerger', w.x, w.y, 'down');
+        n.wander = true; n.wt = Math.random() * 2;
+        n.line = Chat.cityLines[i % Chat.cityLines.length];
+      }
+    }
+
+    G.spawnT = 3;
+    if (A) A.music(m.music);
+    hint(m.name);
+    if (after) after();
+  }
+
+  function addProp(kind, x, y, data) {
+    var spr = kind === 'tree' ? S.tree : kind === 'pine' ? S.pine : kind === 'bush' ? S.bush :
+              kind === 'rock' ? S.rock : kind === 'lamp' ? S.lamp : kind === 'sign' ? S.sign :
+              kind === 'car' ? S.car : kind === 'fountain' ? S.fountain :
+              kind === 'bench' ? S.bench : null;
+    var p = { type: 'prop', kind: kind, x: x * TILE, y: y * TILE, spr: spr,
+              text: data && data.text };
+    G.ents.push(p);
+    if (kind === 'car') G.blocks.push({ l: p.x - 20, r: p.x + 20, t: p.y - 12, b: p.y });
+    if (kind === 'lamp') G.blocks.push({ l: p.x - 4, r: p.x + 4, t: p.y - 4, b: p.y });
+    if (kind === 'sign') G.blocks.push({ l: p.x - 12, r: p.x + 12, t: p.y - 6, b: p.y });
+    if (kind === 'fountain') G.blocks.push({ l: p.x - 16, r: p.x + 16, t: p.y - 14, b: p.y });
+    if (kind === 'bench') G.blocks.push({ l: p.x - 10, r: p.x + 10, t: p.y - 5, b: p.y });
+    return p;
+  }
+
+  function makeCompanion(key, px, py) {
+    return { type: 'friend', key: key, x: px, y: py, dir: 'down', anim: 0,
+             moving: false, mood: 0, atkCd: 0, swing: 0, idle: false };
+  }
+
+  function addNPC(key, x, y, dir) {
+    var n = { type: 'npc', key: key, x: x * TILE, y: y * TILE, dir: dir || 'down',
+              anim: 0, moving: false, said: 0 };
+    G.ents.push(n);
+    return n;
+  }
+
+  function hint(text) { G.hint = text; G.hintT = 2.6; }
+
+  /* ================= Laufen & Wände ================= */
+  function boxFree(x, y) {
+    var l = x - 5, r = x + 5, t = y - 7, b = y - 0.5;
+    var i, j;
+    for (i = 0; i < 2; i++) {
+      for (j = 0; j < 2; j++) {
+        var px = i ? r : l, py = j ? b : t;
+        if (solidTile(tileAt(Math.floor(px / TILE), Math.floor(py / TILE)))) return false;
+      }
+    }
+    for (i = 0; i < G.blocks.length; i++) {
+      var bl = G.blocks[i];
+      if (r > bl.l && l < bl.r && b > bl.t && t < bl.b) return false;
+    }
+    return true;
+  }
+
+  function moveEnt(e, dx, dy, ignoreBlocks) {
+    var ox = e.x, oy = e.y;
+    if (dx) {
+      e.x += dx;
+      if (!ignoreBlocks && !boxFree(e.x, e.y)) e.x = ox;
+    }
+    if (dy) {
+      e.y += dy;
+      if (!ignoreBlocks && !boxFree(e.x, e.y)) e.y = oy;
+    }
+    e.x = Math.max(8, Math.min(G.mapW * TILE - 8, e.x));
+    e.y = Math.max(10, Math.min(G.mapH * TILE - 2, e.y));
+  }
+
+  function dist(a, b) { var dx = a.x - b.x, dy = a.y - b.y; return Math.sqrt(dx * dx + dy * dy); }
+
+  /* ================= Spieler ================= */
+  var SPEED = 62;
+
+  function updatePlayer(dt) {
+    var p = G.player;
+    p.invuln = Math.max(0, p.invuln - dt);
+    p.atkCd = Math.max(0, p.atkCd - dt);
+
+    var richtung = laufRichtung();
+    var dx = richtung.x, dy = richtung.y;
+
+    p.moving = !!(dx || dy);
+    if (p.moving && !p.atk) {
+      if (Math.abs(dx) > Math.abs(dy)) p.dir = dx > 0 ? 'right' : 'left';
+      else p.dir = dy > 0 ? 'down' : 'up';
+    }
+
+    var sp = p.atk ? SPEED * 0.35 : SPEED;
+    moveEnt(p, dx * sp * dt, dy * sp * dt);
+
+    /* Rückstoß nach einem Treffer */
+    if (p.kx || p.ky) {
+      moveEnt(p, p.kx * dt, p.ky * dt);
+      p.kx *= 0.86; p.ky *= 0.86;
+      if (Math.abs(p.kx) < 3) p.kx = 0;
+      if (Math.abs(p.ky) < 3) p.ky = 0;
+    }
+
+    p.anim += dt * (p.moving ? 7 : 0);
+
+    /* Spur für die Begleiter */
+    G.trail.unshift({ x: p.x, y: p.y, dir: p.dir, moving: p.moving });
+    if (G.trail.length > 260) G.trail.pop();
+
+    /* Schlagen */
+    if (took('attack') && !D.isOpen() && !p.atk && p.atkCd <= 0) {
+      p.atk = { t: 0 };
+      p.swingId++;
+      if (A) A.swing();
+    }
+    if (p.atk) {
+      p.atk.t += dt;
+      if (p.atk.t >= 0.06 && p.atk.t <= 0.22) hitCheck(p);
+      if (p.atk.t >= 0.34) { p.atk = null; p.atkCd = 0.1; }
+    }
+
+    /* Türen */
+    var tx = Math.floor(p.x / TILE), ty = Math.floor((p.y - 3) / TILE);
+    var trg = G.map.triggers;
+    for (var i = 0; i < trg.length; i++) {
+      var t = trg[i];
+      if (tx >= t.x && tx < t.x + t.w && ty >= t.y && ty < t.y + t.h) {
+        useDoor(t);
+        break;
+      }
+    }
+  }
+
+  function useDoor(t) {
+    if (G.fadeTo) return;
+    if (A) A.door();
+    var fromHaus = (G.mapKey === 'haus');
+    fadeTo(function () {
+      loadMap(t.to, t.tx, t.ty);
+      if (fromHaus && t.to === 'wald') askParty();
+    });
+  }
+
+  function fadeTo(fn) { G.fadeTo = fn; G.fade = 0.001; }
+
+  /* Trefferzone vor dem Ritter */
+  function hitCheck(p) {
+    var box;
+    if (p.dir === 'right') box = { l: p.x + 2, r: p.x + 22, t: p.y - 16, b: p.y - 1 };
+    else if (p.dir === 'left') box = { l: p.x - 22, r: p.x - 2, t: p.y - 16, b: p.y - 1 };
+    else if (p.dir === 'down') box = { l: p.x - 12, r: p.x + 12, t: p.y - 6, b: p.y + 14 };
+    else box = { l: p.x - 12, r: p.x + 12, t: p.y - 32, b: p.y - 12 };
+
+    for (var i = 0; i < G.ents.length; i++) {
+      var z = G.ents[i];
+      if (z.type !== 'zombie' || z.dying) continue;
+      if (z.hitId === p.swingId) continue;
+      if (z.x + 6 > box.l && z.x - 6 < box.r && z.y > box.t && z.y - 14 < box.b) {
+        z.hitId = p.swingId;
+        damageZombie(z, 1, z.x - p.x, z.y - p.y);
+      }
+    }
+  }
+
+  function damageZombie(z, dmg, dx, dy) {
+    z.hp -= dmg;
+    z.flash = 0.18;
+    var len = Math.sqrt(dx * dx + dy * dy) || 1;
+    z.kx = dx / len * 140; z.ky = dy / len * 140;
+    G.shake = 2.5;
+    if (z.hp <= 0) {
+      z.dying = 0.001;
+      if (A) A.dead();
+      if (z.boss) {
+        bossBesiegt(z);
+      } else {
+        G.kills++;
+        G.killsSinceBoss++;
+        Chat.killLine(G);
+        save();
+      }
+    } else if (A) A.hit();
+  }
+
+  /* ================= Zombies ================= */
+  function spawnZombie() {
+    var tries = 60;
+    while (tries--) {
+      var tx = 2 + ((Math.random() * (G.mapW - 4)) | 0);
+      var ty = 2 + ((Math.random() * (G.mapH - 4)) | 0);
+      if (solidTile(tileAt(tx, ty))) continue;
+      var x = tx * TILE + 8, y = ty * TILE + 14;
+      var dx = x - G.player.x, dy = y - G.player.y;
+      if (dx * dx + dy * dy < 160 * 160) continue;
+      if (ty < 12 && tx < 22) continue;                 /* nicht direkt am Haus */
+      G.ents.push({ type: 'zombie', x: x, y: y, hp: 3, dir: 'down', anim: 0,
+                    kx: 0, ky: 0, flash: 0, dying: 0, hitId: -1, wt: 0, vx: 0, vy: 0,
+                    hurtCd: 0 });
+      return;
+    }
+  }
+
+  G.zombieNear = function (r) {
+    for (var i = 0; i < G.ents.length; i++) {
+      var z = G.ents[i];
+      if (z.type === 'zombie' && !z.dying && dist(z, G.player) < r) return true;
+    }
+    return false;
+  };
+
+  function countZombies() {
+    var n = 0;
+    for (var i = 0; i < G.ents.length; i++) if (G.ents[i].type === 'zombie' && !G.ents[i].dying) n++;
+    return n;
+  }
+
+  function updateZombie(z, dt) {
+    if (z.dying) {
+      z.dying += dt;
+      return;
+    }
+    if (D.isOpen()) { z.flash = Math.max(0, z.flash - dt); return; }
+    z.flash = Math.max(0, z.flash - dt);
+    z.hurtCd = Math.max(0, z.hurtCd - dt);
+
+    var p = G.player;
+    var dx = p.x - z.x, dy = p.y - z.y;
+    var dd = Math.sqrt(dx * dx + dy * dy) || 1;
+    var sp = 0;
+
+    if (z.boss) { updateBoss(z, dt, dx, dy, dd); return; }
+
+    if (dd < 150) {
+      sp = 26; z.vx = dx / dd; z.vy = dy / dd;
+    } else {
+      z.wt -= dt;
+      if (z.wt <= 0) {
+        z.wt = 1.2 + Math.random() * 2;
+        var ang = Math.random() * Math.PI * 2;
+        z.vx = Math.cos(ang); z.vy = Math.sin(ang);
+        if (Math.random() < 0.3) { z.vx = 0; z.vy = 0; }
+      }
+      sp = 11;
+    }
+    if (Math.abs(z.vx) > Math.abs(z.vy)) z.dir = z.vx > 0 ? 'right' : 'left';
+    else if (z.vy) z.dir = z.vy > 0 ? 'down' : 'up';
+
+    moveEnt(z, z.vx * sp * dt, z.vy * sp * dt);
+    z.anim += dt * (sp > 0 ? 3.4 : 0);
+
+    if (z.kx || z.ky) {
+      moveEnt(z, z.kx * dt, z.ky * dt);
+      z.kx *= 0.8; z.ky *= 0.8;
+      if (Math.abs(z.kx) < 4) z.kx = 0;
+      if (Math.abs(z.ky) < 4) z.ky = 0;
+    }
+
+    /* Zombie berührt den Ritter */
+    if (dd < 13 && p.invuln <= 0 && G.state === 'play') hurtPlayer(1, dx, dy, dd);
+  }
+
+  /* Ein Treffer kostet ein halbes Herz, ein Bosstreffer ein ganzes. */
+  function hurtPlayer(dmg, dx, dy, dd) {
+    var p = G.player;
+    p.hp -= dmg;
+    p.invuln = 1.1;
+    p.kx = -dx / dd * 150; p.ky = -dy / dd * 150;
+    G.shake = 4;
+    if (A) A.hurt();
+    if (p.hp <= 0) { p.hp = 0; gameOver(); }
+  }
+
+  /* ================= Bosse ================= */
+
+  function mischen(arr) {
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = (Math.random() * (i + 1)) | 0, t = a[i];
+      a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+
+  function spawnBoss() {
+    if (!G.bossQueue.length) G.bossQueue = mischen(Chat.bosse);
+    var b = G.bossQueue.shift();
+
+    var pos = null, tries = 90;
+    while (tries-- && !pos) {
+      var tx = 2 + ((Math.random() * (G.mapW - 4)) | 0);
+      var ty = 2 + ((Math.random() * (G.mapH - 4)) | 0);
+      if (solidTile(tileAt(tx, ty))) continue;
+      var x = tx * TILE + 8, y = ty * TILE + 14;
+      var d = Math.sqrt((x - G.player.x) * (x - G.player.x) + (y - G.player.y) * (y - G.player.y));
+      if (d < 80 || d > 210) continue;
+      pos = { x: x, y: y };
+    }
+    if (!pos) pos = { x: G.player.x + 110, y: G.player.y };
+
+    var z = { type: 'zombie', boss: b, x: pos.x, y: pos.y, hp: b.hp, maxhp: b.hp,
+              dir: 'down', anim: 0, kx: 0, ky: 0, flash: 0, dying: 0, hitId: -1,
+              wt: 0, vx: 0, vy: 0, spT: 2.5, dash: 0, roots: 0, rage: false };
+    G.ents.push(z);
+    G.boss = z;
+    G.killsSinceBoss = 0;
+    G.shake = 6;
+    if (A) A.music('boss');
+
+    D.push('!!!', '#ff5a5a', b.intro);
+    D.push(b.name, '#ff9a8a', b.spruch);
+    if (G.party.length) {
+      var f = G.party[(Math.random() * G.party.length) | 0];
+      var pp = Chat.people[f.key];
+      var lines = Chat.bossLines.auftritt;
+      D.push(pp.name, pp.color, lines[(Math.random() * lines.length) | 0]);
+    }
+    D.begin();
+  }
+
+  function spawnZombieNear(z) {
+    for (var i = 0; i < 20; i++) {
+      var a = Math.random() * Math.PI * 2, r = 26 + Math.random() * 26;
+      var x = z.x + Math.cos(a) * r, y = z.y + Math.sin(a) * r;
+      var tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
+      if (solidTile(tileAt(tx, ty))) continue;
+      G.ents.push({ type: 'zombie', x: x, y: y, hp: 3, dir: 'down', anim: 0,
+                    kx: 0, ky: 0, flash: 0, dying: 0, hitId: -1, wt: 0,
+                    vx: 0, vy: 0, hurtCd: 0 });
+      return;
+    }
+  }
+
+  function updateBoss(z, dt, dx, dy, dd) {
+    var b = z.boss, p = G.player;
+    z.flash = Math.max(0, z.flash - dt);
+    z.spT -= dt;
+
+    var sp = b.speed * (z.rage ? 1.6 : 1);
+    z.vx = dx / dd; z.vy = dy / dd;
+
+    if (b.koennen === 'sprint') {
+      if (z.dash > 0) { z.dash -= dt; sp = 120; }
+      else if (z.spT <= 0 && dd < 190) {
+        z.spT = 2.8; z.dash = 0.45; G.shake = 2;
+        if (A) A.swing();
+      }
+    }
+    if (b.koennen === 'rufen' && z.spT <= 0 && dd < 220) {
+      z.spT = 7;
+      spawnZombieNear(z); spawnZombieNear(z);
+      hint('Grauzahn ruft Verstaerkung!');
+    }
+    if (b.koennen === 'wut' && !z.rage && z.hp <= z.maxhp / 2) {
+      z.rage = true; G.shake = 5;
+      hint('Mondfell wird wuetend!');
+    }
+    if (b.koennen === 'wurzeln') {
+      if (z.roots > 0) {
+        z.roots -= dt;
+        sp = 0;
+        if (z.roots <= 0 && dd < 46 && p.invuln <= 0 && G.state === 'play') {
+          hurtPlayer(b.dmg, dx, dy, dd);
+        }
+      } else if (z.spT <= 0 && dd < 130) {
+        z.spT = 4.5; z.roots = 0.75;
+        if (A) A.hit();
+      }
+    }
+
+    if (Math.abs(z.vx) > Math.abs(z.vy)) z.dir = z.vx > 0 ? 'right' : 'left';
+    else z.dir = z.vy > 0 ? 'down' : 'up';
+
+    moveEnt(z, z.vx * sp * dt, z.vy * sp * dt);
+    z.anim += dt * (sp > 0 ? 4 : 1.4);
+
+    if (z.kx || z.ky) {
+      moveEnt(z, z.kx * 0.5 * dt, z.ky * 0.5 * dt);
+      z.kx *= 0.78; z.ky *= 0.78;
+      if (Math.abs(z.kx) < 4) z.kx = 0;
+      if (Math.abs(z.ky) < 4) z.ky = 0;
+    }
+
+    if (dd < 14 + b.scale * 4 && p.invuln <= 0 && G.state === 'play') {
+      hurtPlayer(b.dmg, dx, dy, dd);
+    }
+  }
+
+  function bossBesiegt(z) {
+    var b = z.boss, p = G.player;
+    G.boss = null;
+    G.bossesBeaten++;
+    G.killsSinceBoss = 0;
+    G.shake = 6;
+    if (p.maxhp < 14) p.maxhp += 2;
+    p.hp = p.maxhp;
+    if (A) { A.heal(); A.music(G.map.music); }
+
+    D.push(b.name + ' besiegt!', '#ffd24a', b.sieg);
+    D.push('Belohnung', '#ffd24a',
+           'Du fuehlst dich staerker: ein Herz mehr - und alle Herzen wieder voll.');
+    if (G.party.length) {
+      var f = G.party[(Math.random() * G.party.length) | 0];
+      var pp = Chat.people[f.key];
+      var lines = Chat.bossLines.sieg;
+      D.push(pp.name, pp.color, lines[(Math.random() * lines.length) | 0]);
+    }
+    D.begin();
+    hint(b.name.split(',')[0] + ' besiegt!');
+    save();
+  }
+
+  /* ================= Begleiter ================= */
+  function updateCompanion(c, dt, idx) {
+    c.atkCd = Math.max(0, c.atkCd - dt);
+    if (c.swing > 0) c.swing -= dt;
+
+    if (c.idle) { c.anim += 0; c.moving = false; return; }
+
+    /* dem Ritter hinterher */
+    var want = G.trail[Math.min(G.trail.length - 1, 18 + idx * 15)];
+    if (want) {
+      var dx = want.x - c.x, dy = want.y - c.y;
+      var dd = Math.sqrt(dx * dx + dy * dy);
+      if (dd > 9) {
+        var sp = Math.min(SPEED * 1.05, 26 + dd * 3);
+        moveEnt(c, dx / dd * sp * dt, dy / dd * sp * dt);
+        c.moving = true;
+        if (Math.abs(dx) > Math.abs(dy)) c.dir = dx > 0 ? 'right' : 'left';
+        else c.dir = dy > 0 ? 'down' : 'up';
+      } else c.moving = false;
+    }
+    c.anim += dt * (c.moving ? 7 : 0);
+
+    /* Freunde helfen im Kampf */
+    if (c.atkCd <= 0) {
+      for (var i = 0; i < G.ents.length; i++) {
+        var z = G.ents[i];
+        if (z.type !== 'zombie' || z.dying) continue;
+        if (dist(z, c) < 22) {
+          c.atkCd = 1.5; c.swing = 0.25;
+          damageZombie(z, 1, z.x - c.x, z.y - c.y);
+          break;
+        }
+      }
+    }
+  }
+
+  function updateNPC(n, dt) {
+    if (!n.wander) return;
+    n.wt -= dt;
+    if (n.wt <= 0) {
+      n.wt = 1.5 + Math.random() * 2.5;
+      var r = Math.random();
+      n.vx = 0; n.vy = 0;
+      if (r < 0.25) n.vx = -1; else if (r < 0.5) n.vx = 1;
+      else if (r < 0.7) n.vy = -1; else if (r < 0.9) n.vy = 1;
+    }
+    if (n.vx || n.vy) {
+      moveEnt(n, (n.vx || 0) * 18 * dt, (n.vy || 0) * 18 * dt);
+      n.moving = true;
+      if (n.vx) n.dir = n.vx > 0 ? 'right' : 'left';
+      else if (n.vy) n.dir = n.vy > 0 ? 'down' : 'up';
+    } else n.moving = false;
+    n.anim += dt * (n.moving ? 6 : 0);
+  }
+
+  /* ================= Reden ================= */
+  function tryTalk() {
+    var p = G.player, best = null, bd = 30;
+    for (var i = 0; i < G.ents.length; i++) {
+      var e = G.ents[i];
+      if (e === p) continue;
+      if (e.type === 'npc' || e.type === 'friend' ||
+          (e.type === 'prop' && (e.kind === 'car' || e.kind === 'sign'))) {
+        var d = dist(e, p);
+        if (d < bd) { bd = d; best = e; }
+      }
+    }
+    if (!best) return;
+    if (best.type === 'prop' && best.kind === 'car') return talkCar();
+    if (best.type === 'prop' && best.kind === 'sign') {
+      D.say('Ein Blatt Papier', '#e8e2c8', best.text);
+      return;
+    }
+    if (best.type === 'npc') return talkNPC(best);
+    return talkFriend(best);
+  }
+
+  function talkNPC(n) {
+    var p = Chat.people[n.key];
+    if (n.key === 'mama') {
+      D.push(p.name, p.color, Chat.familyLines.mama[n.said % 3], [
+        { t: 'Ja bitte, einen Teller Eintopf!', r: 'Da, iss auf. So, jetzt bist du wieder ganz.', go: heal },
+        { t: 'Spaeter, ich muss los.', r: 'Dann pass auf dich auf, mein Ritter.' }
+      ]);
+    } else if (n.key === 'papa') {
+      D.push(p.name, p.color, Chat.familyLines.papa[n.said % 3], [
+        { t: 'Wollen wir in die Stadt fahren?', r: 'Gern! Der Wagen steht auf dem Weg draussen. Sag Bescheid.' },
+        { t: 'Ich gehe erst noch in den Wald.', r: 'Halt das Schwert fest und den Kopf unten.' }
+      ]);
+    } else if (n.key === 'mila') {
+      D.push(p.name, p.color, Chat.familyLines.mila[n.said % 3], [
+        { t: 'Wenn du groesser bist, versprochen.', r: 'Das sagst du immer! Aber gut. Ich uebe schon mal.' },
+        { t: 'In die Stadt darfst du mit.', r: 'JAAA! Ich hol meine Schuhe!' }
+      ]);
+    } else {
+      D.push(p.name, p.color, n.line || 'Schoenen Tag noch!');
+    }
+    n.said++;
+    D.begin();
+  }
+
+  function heal() {
+    G.player.hp = G.player.maxhp;
+    if (A) A.heal();
+    hint('Leben wieder voll!');
+  }
+
+  function talkFriend(f) {
+    var p = Chat.people[f.key];
+    if (f.idle) {
+      D.push(p.name + ' (' + p.rolle + ')', p.color,
+        'Na, brauchst du heute Begleitung im Wald?', [
+          { t: 'Ja, komm mit!', r: 'Endlich! Ich hol nur schnell meine Sachen.', go: function () { joinParty(f); } },
+          { t: 'Diesmal gehe ich allein.', r: 'Alles klar. Ich pass hier auf das Haus auf.' }
+        ]);
+      D.begin();
+      return;
+    }
+    /* Begleiter, der schon mitläuft: er stellt eine Frage */
+    Chat.ask(G, f);
+  }
+
+  function joinParty(f) {
+    f.idle = false;
+    G.party.push(f);
+    if (G.partyKeys.indexOf(f.key) < 0) G.partyKeys.push(f.key);
+    hint(Chat.people[f.key].name + ' kommt mit!');
+  }
+
+  function leaveParty() {
+    G.partyKeys = [];
+    G.party = [];
+    for (var i = G.ents.length - 1; i >= 0; i--) {
+      if (G.ents[i].type === 'friend') G.ents.splice(i, 1);
+    }
+  }
+
+  /* Frage beim Verlassen des Hauses */
+  function askParty() {
+    var alle = ['lisbeth', 'tarik', 'momo', 'gris'];
+    function setParty(keys) {
+      G.partyKeys = keys.slice();
+      /* Karte neu bevölkern, ohne neu zu laden */
+      for (var i = G.ents.length - 1; i >= 0; i--) {
+        if (G.ents[i].type === 'friend') G.ents.splice(i, 1);
+      }
+      G.party = [];
+      var spots = G.map.friendSpots, fi = 0;
+      for (i = 0; i < alle.length; i++) {
+        var k = alle[i];
+        if (keys.indexOf(k) >= 0) {
+          var c = makeCompanion(k, G.player.x - 10 - i * 5, G.player.y + 10 + i * 3);
+          G.ents.push(c); G.party.push(c);
+        } else {
+          var sp = spots[fi % spots.length]; fi++;
+          var f = makeCompanion(k, sp.x * TILE, sp.y * TILE);
+          f.idle = true;
+          G.ents.push(f);
+        }
+      }
+      hint(keys.length ? (keys.length + ' Begleiter dabei') : 'Du gehst allein');
+    }
+    function shuffled() {
+      var a = alle.slice();
+      for (var i = a.length - 1; i > 0; i--) {
+        var j = (Math.random() * (i + 1)) | 0, t = a[i]; a[i] = a[j]; a[j] = t;
+      }
+      return a;
+    }
+    D.push('Vor der Tuer', '#ffd24a', 'Die Sonne steht ueber den Eichen. Wer kommt heute mit in den Wald?', [
+      { t: 'Ich gehe allein.', r: 'Nur du, dein Schwert und der Wald.', go: function () { setParty([]); } },
+      { t: 'Zwei Freunde sollen mit.', r: 'Zu dritt macht der Wald mehr Spass.', go: function () { setParty(shuffled().slice(0, 2)); } },
+      { t: 'Die ganze Truppe - alle vier!', r: 'Alle vier ziehen mit dir los!', go: function () { setParty(alle.slice()); } },
+      { t: 'Ueberrasch mich.', r: 'Der Wald entscheidet.', go: function () { setParty(shuffled().slice(0, (Math.random() * 5) | 0)); } }
+    ]);
+    D.begin();
+  }
+
+  /* ================= Auto & Stadt ================= */
+  function talkCar() {
+    if (G.mapKey === 'stadt') {
+      D.push('Das Auto', '#e8a54a', 'Der Motor blubbert leise. Zurueck in den Wald?', [
+        { t: 'Ja, nach Hause.', r: 'Ihr steigt ein. Die Stadt wird klein im Rueckspiegel.', go: function () { startDrive('wald'); } },
+        { t: 'Nein, ich schau mich noch um.', r: 'Das Auto wartet geduldig.' }
+      ]);
+      D.begin();
+      return;
+    }
+    D.push('Das Auto', '#e8a54a', 'Ein klappriger Wagen aus Holz und Blech. Ab in die Stadt?', [
+      { t: 'Ja - mit der ganzen Familie!', r: 'Mama, Papa und Mila springen rein. Es wird eng und laut.',
+        go: function () { G.partyKeys = ['mama', 'papa', 'mila']; startDrive('stadt'); } },
+      { t: 'Ja, nur wir.', r: 'Tuer zu, Motor an.', go: function () { startDrive('stadt'); } },
+      { t: 'Lieber noch nicht.', r: 'Der Wagen bleibt stehen.' }
+    ]);
+    D.begin();
+  }
+
+  function startDrive(to) {
+    if (A) A.horn();
+    G.state = 'drive';
+    G.drive = { t: 0, to: to, x: 90 };
+  }
+
+  function updateDrive(dt) {
+    G.drive.t += dt;
+    if (took('talk') || took('attack')) G.drive.t = Math.max(G.drive.t, 4.2);
+    if (G.drive.t > 4.4) {
+      var to = G.drive.to;
+      G.drive = null;
+      G.state = 'play';
+      if (to === 'stadt') {
+        loadMap('stadt', 26.5, 22);
+        D.push('Mila', Chat.people.mila.color, 'Schau mal, so viele Haeuser! Und die riechen nach Brot!');
+        D.begin();
+      } else {
+        var hatFamilie = G.partyKeys.indexOf('mama') >= 0;
+        if (hatFamilie) G.partyKeys = [];
+        loadMap('wald', 26.5, 18.5);
+        if (hatFamilie) {
+          D.push('Zuhause', '#ffd24a', 'Die Familie geht mit den Einkaeufen ins Haus. Du bleibst noch draussen.');
+          D.begin();
+        }
+      }
+    }
+  }
+
+  function drawDrive() {
+    var t = G.drive.t;
+    ctx.fillStyle = '#1b2438'; ctx.fillRect(0, 0, VW, VH);
+    /* Himmel und Hügel */
+    var sky = ctx.createLinearGradient(0, 0, 0, 120);
+    sky.addColorStop(0, '#2b3f6b'); sky.addColorStop(1, '#c9713f');
+    ctx.fillStyle = sky; ctx.fillRect(0, 0, VW, 120);
+    ctx.fillStyle = '#f0d24a'; ctx.fillRect(240, 30, 18, 18);
+    ctx.fillStyle = '#2c4a2e';
+    for (var i = 0; i < 7; i++) {
+      var hx = ((i * 60 - t * 26) % 400 + 400) % 400 - 40;
+      S.blob(ctx, hx, 126, 34, '#2c4a2e');
+    }
+    ctx.fillStyle = '#3a5a3c'; ctx.fillRect(0, 118, VW, 14);
+    /* Straße */
+    ctx.fillStyle = '#434350'; ctx.fillRect(0, 130, VW, 110);
+    ctx.fillStyle = '#3b3b46'; ctx.fillRect(0, 130, VW, 4);
+    ctx.fillStyle = '#d8cf8a';
+    for (i = 0; i < 9; i++) {
+      var lx = ((i * 46 - t * 150) % 420 + 420) % 420 - 50;
+      ctx.fillRect(lx, 196, 26, 5);
+    }
+    /* Auto */
+    var bob = Math.sin(t * 18) > 0 ? 0 : 1;
+    var car = S.car;
+    ctx.save();
+    ctx.translate(110, 148 + bob);
+    ctx.scale(2, 2);
+    ctx.drawImage(car, 0, 0);
+    ctx.restore();
+    /* Staub */
+    ctx.fillStyle = 'rgba(200,190,170,0.5)';
+    for (i = 0; i < 6; i++) {
+      var dxx = 104 - ((t * 90 + i * 23) % 110);
+      ctx.fillRect(dxx, 186 + (i % 3) * 4, 3, 3);
+    }
+    var txt = G.drive.to === 'stadt' ? 'Unterwegs nach Eichenstadt...' : 'Zurueck zum Eichenwald...';
+    var bw = txt.length * 6 + 20;
+    box((VW - bw) / 2, 8, bw, 22);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#fff';
+    ctx.font = '10px "Courier New", monospace';
+    ctx.fillText(txt, VW / 2, 23);
+    ctx.fillStyle = '#cfc9e6';
+    ctx.font = '8px "Courier New", monospace';
+    ctx.fillText('Taste druecken zum Ueberspringen', VW / 2, 232);
+    ctx.textAlign = 'left';
+  }
+
+  /* ================= Game Over ================= */
+  function gameOver() {
+    G.state = 'over';
+    G.overT = 0;
+    if (A) A.dead();
+  }
+
+  /* ================= Zeichnen ================= */
+  function box(x, y, w, h) {
+    ctx.fillStyle = '#000'; ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(x, y, w, 2); ctx.fillRect(x, y + h - 2, w, 2);
+    ctx.fillRect(x, y, 2, h); ctx.fillRect(x + w - 2, y, 2, h);
+  }
+
+  function drawMapTiles() {
+    var x0 = Math.max(0, Math.floor(G.camX / TILE));
+    var y0 = Math.max(0, Math.floor(G.camY / TILE));
+    var x1 = Math.min(G.mapW - 1, Math.ceil((G.camX + VW) / TILE));
+    var y1 = Math.min(G.mapH - 1, Math.ceil((G.camY + VH) / TILE));
+    for (var y = y0; y <= y1; y++) {
+      var row = G.map.rows[y];
+      for (var x = x0; x <= x1; x++) {
+        var img = S.tiles[row[x]] || S.tiles['.'];
+        ctx.drawImage(img, x * TILE - G.camX, y * TILE - G.camY);
+      }
+    }
+  }
+
+  var WHITE = [];
+  function whiteCopy(img) {
+    for (var i = 0; i < WHITE.length; i++) if (WHITE[i][0] === img) return WHITE[i][1];
+    var c = document.createElement('canvas');
+    c.width = img.width; c.height = img.height;
+    var g = c.getContext('2d');
+    g.drawImage(img, 0, 0);
+    g.globalCompositeOperation = 'source-atop';
+    g.fillStyle = '#fff';
+    g.fillRect(0, 0, c.width, c.height);
+    WHITE.push([img, c]);
+    return c;
+  }
+
+  function frameOf(e) { return (Math.floor(e.anim) % 2) === 0 ? 0 : 1; }
+
+  function actorFor(key, isZombie) {
+    if (!ACT[key]) {
+      ACT[key] = isZombie ? S.actor(Chat.zombiePal, 'zombie')
+                          : S.actor(Chat.people[key].pal);
+    }
+    return ACT[key];
+  }
+
+  function drawEntity(e) {
+    var sx = Math.round(e.x - G.camX), sy = Math.round(e.y - G.camY);
+    if (sx < -50 || sx > VW + 50 || sy < -60 || sy > VH + 60) return;
+
+    if (e.type === 'prop') {
+      if (!e.spr) return;
+      ctx.drawImage(e.spr, sx - (e.spr.width >> 1), sy - e.spr.height);
+      return;
+    }
+
+    if (e.type === 'zombie') {
+      var set = actorFor('zombie', true);
+      var img = set[e.dir][frameOf(e)];
+      if (e.boss) { drawBoss(e, sx, sy); return; }
+      if (e.dying) {
+        var k = Math.min(1, e.dying / 0.5);
+        ctx.save();
+        ctx.globalAlpha = 1 - k;
+        ctx.translate(0, k * 4);
+        ctx.drawImage(img, sx - 8, sy - 16);
+        ctx.restore();
+        /* zerfallende Pixel */
+        ctx.fillStyle = '#7aa85f';
+        for (var i = 0; i < 10; i++) {
+          var a = i * 1.7;
+          ctx.globalAlpha = 1 - k;
+          ctx.fillRect(sx - 8 + ((i * 5) % 16), sy - 16 + ((i * 7) % 16) - k * 14, 2, 2);
+        }
+        ctx.globalAlpha = 1;
+        return;
+      }
+      ctx.drawImage(img, sx - 8, sy - 16);
+      if (e.flash > 0) {
+        ctx.globalAlpha = 0.9;
+        ctx.drawImage(whiteCopy(img), sx - 8, sy - 16);
+        ctx.globalAlpha = 1;
+      }
+      /* kleine Lebensanzeige */
+      if (e.hp < 3) {
+        ctx.fillStyle = '#1a1420'; ctx.fillRect(sx - 7, sy - 20, 14, 3);
+        ctx.fillStyle = '#8fd36a'; ctx.fillRect(sx - 6, sy - 19, (e.hp / 3) * 12, 1);
+      }
+      return;
+    }
+
+    if (e.type === 'npc' || e.type === 'friend') {
+      var s2 = actorFor(e.key, false);
+      ctx.drawImage(s2[e.dir][frameOf(e)], sx - 8, sy - 16);
+      if (e.type === 'friend' && e.idle) {
+        ctx.fillStyle = '#ffd24a';
+        ctx.font = '8px "Courier New", monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('!', sx, sy - 19);
+        ctx.textAlign = 'left';
+      }
+      if (e.swing > 0) {
+        ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(sx, sy - 8, 12, -0.6, 0.9);
+        ctx.stroke();
+      }
+      return;
+    }
+
+    if (e.type === 'player') drawKnight(e, sx, sy);
+  }
+
+  /* Werwolf: die Menschen-Vorlage mit Fell und spitzen Ohren */
+  var WOLF = null;
+  function wolfSet() {
+    if (WOLF) return WOLF;
+    var base = S.actor({ hair: '#4a4550', skin: '#6b6472', eye: '#d24b4b',
+                         shirt: '#3b3644', shirtDark: '#2a2632',
+                         pants: '#241f2c', boots: '#17131f' });
+    WOLF = {};
+    var dirs = ['down', 'up', 'left', 'right'];
+    for (var i = 0; i < dirs.length; i++) {
+      var d = dirs[i];
+      WOLF[d] = [S.withEars(base[d][0], '#4a4550'), S.withEars(base[d][1], '#4a4550')];
+    }
+    return WOLF;
+  }
+
+  function bossImage(e) {
+    var art = e.boss.art, f = frameOf(e);
+    if (art === 'spider') return S.spider[f];
+    if (art === 'treant') return S.treant;
+    if (art === 'wolf') return wolfSet()[e.dir][f];
+    return actorFor('zombie', true)[e.dir][f];
+  }
+
+  function drawBoss(e, sx, sy) {
+    var b = e.boss, s = b.scale;
+    var img = bossImage(e);
+    var w = img.width * s, h = img.height * s;
+    var x = sx - w / 2, y = sy - h;
+
+    /* Wurzeln, die aus dem Boden schiessen */
+    if (e.roots > 0) {
+      var k = 1 - e.roots / 0.75;
+      for (var i = 0; i < 10; i++) {
+        var a = i * 0.628, r = 14 + k * 30;
+        ctx.fillStyle = i % 2 ? '#5f4026' : '#3d2a18';
+        ctx.fillRect(sx + Math.cos(a) * r - 2, sy + Math.sin(a) * r * 0.6 - 6, 4, 8);
+      }
+    }
+
+    if (e.dying) {
+      var d = Math.min(1, e.dying / 0.5);
+      ctx.globalAlpha = 1 - d;
+      ctx.drawImage(img, x, y + d * 6, w, h);
+      ctx.globalAlpha = 1;
+      return;
+    }
+
+    ctx.drawImage(img, x, y, w, h);
+    if (b.art === 'zombie') {
+      var crown = S.crown;
+      ctx.drawImage(crown, sx - crown.width * s / 2, y - crown.height * s * 0.55,
+                    crown.width * s, crown.height * s);
+    }
+    if (e.flash > 0) {
+      ctx.globalAlpha = 0.85;
+      ctx.drawImage(whiteCopy(img), x, y, w, h);
+      ctx.globalAlpha = 1;
+    }
+    if (e.rage) {
+      ctx.fillStyle = 'rgba(226,58,58,0.25)';
+      ctx.fillRect(x, y, w, h);
+    }
+  }
+
+  var DIRDEG = { right: 0, down: 90, left: 180, up: 270 };
+  var HAND = { right: [4, -9], left: [-4, -9], down: [5, -7], up: [-5, -10] };
+
+  function swordAngle(p) {
+    var base = DIRDEG[p.dir];
+    if (!p.atk) return base - 70 + (p.moving ? Math.sin(p.anim * 2) * 5 : 0);
+    var k = Math.min(1, p.atk.t / 0.28);
+    var ease = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+    return base - 105 + 150 * ease;
+  }
+
+  function drawSword(p, sx, sy) {
+    var h = HAND[p.dir];
+    var hx = sx + h[0], hy = sy + h[1];
+    var deg = swordAngle(p);
+    var rad = (deg + 90) * Math.PI / 180;
+
+    if (p.atk && p.atk.t > 0.04 && p.atk.t < 0.26) {
+      var base = DIRDEG[p.dir];
+      ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(hx, hy, 15, (base - 105) * Math.PI / 180, deg * Math.PI / 180);
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(180,220,255,0.5)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(hx, hy, 19, (base - 105) * Math.PI / 180, deg * Math.PI / 180);
+      ctx.stroke();
+    }
+
+    ctx.save();
+    ctx.translate(hx, hy);
+    ctx.rotate(rad);
+    ctx.drawImage(S.sword, -2, -12);
+    ctx.restore();
+  }
+
+  function drawKnight(p, sx, sy) {
+    var img = S.knight[p.dir][frameOf(p)];
+    var blink = p.invuln > 0 && (Math.floor(p.invuln * 14) % 2 === 0);
+    if (blink) ctx.globalAlpha = 0.35;
+    if (p.dir === 'up') drawSword(p, sx, sy);
+    ctx.drawImage(img, sx - 8, sy - 16);
+    if (p.dir !== 'up') drawSword(p, sx, sy);
+    ctx.globalAlpha = 1;
+  }
+
+  function drawHUD() {
+    /* Herzen: jedes Herz sind zwei Haelften */
+    var p = G.player;
+    var anzahl = Math.ceil(p.maxhp / 2);
+    for (var i = 0; i < anzahl; i++) {
+      var x = 6 + i * 9, rest = p.hp - i * 2;
+      ctx.globalAlpha = 0.22;
+      ctx.drawImage(S.heart, x, 6);            /* leeres Herz als Umriss */
+      ctx.globalAlpha = 1;
+      if (rest >= 2) {
+        ctx.drawImage(S.heart, x, 6);
+      } else if (rest === 1) {
+        /* nur die linke Haelfte = ein halbes Herz */
+        ctx.drawImage(S.heart, 0, 0, 4, S.heart.height, x, 6, 4, S.heart.height);
+      }
+    }
+    ctx.globalAlpha = 1;
+    ctx.font = '8px "Courier New", monospace';
+    ctx.fillStyle = '#fff';
+    ctx.fillText('HP ' + p.hp + '/' + p.maxhp, 10 + anzahl * 9, 13);
+
+    /* Zombiezähler (zweite Zeile, damit der Musikknopf nichts verdeckt) */
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#8fd36a';
+    ctx.fillText('Zombies: ' + G.kills, VW - 6, 23);
+    ctx.textAlign = 'left';
+
+    /* Begleiter */
+    var names = [];
+    for (var j = 0; j < G.party.length; j++) {
+      var pp = Chat.people[G.party[j].key];
+      names.push(pp.kurz || pp.name);
+    }
+    if (names.length) {
+      ctx.fillStyle = '#c8c2e0';
+      ctx.fillText('Dabei: ' + names.join(', '), 6, 23);
+    }
+
+    /* Lebensbalken des Bosses */
+    if (G.boss && !G.boss.dying) {
+      var b = G.boss, bw = 176, bx = (VW - bw) / 2, by = 32;
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#ff9a8a';
+      ctx.fillText(b.boss.name.toUpperCase(), VW / 2, by - 3);
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#1a1420'; ctx.fillRect(bx - 1, by, bw + 2, 7);
+      ctx.fillStyle = '#3b2028'; ctx.fillRect(bx, by + 1, bw, 5);
+      var anteil = Math.max(0, b.hp) / b.maxhp;
+      ctx.fillStyle = '#e03a3a'; ctx.fillRect(bx, by + 1, bw * anteil, 5);
+      ctx.fillStyle = '#ff9a8a'; ctx.fillRect(bx, by + 1, bw * anteil, 2);
+    }
+
+    /* Kleiner Hinweis, bis der Stick einmal benutzt wurde */
+    if (stick && !stick.used && G.state === 'play' && !D.isOpen()) {
+      var puls = 0.55 + 0.45 * Math.abs(Math.sin(G.time * 2));
+      ctx.globalAlpha = puls;
+      ctx.font = '8px "Courier New", monospace';
+      ctx.fillStyle = '#cfc9e6';
+      ctx.fillText('Finger aufs Bild legen und ziehen zum Laufen', 8, VH - 10);
+      ctx.globalAlpha = 1;
+    }
+
+    /* Ortsname / Hinweis */
+    if (G.hintT > 0) {
+      ctx.globalAlpha = Math.min(1, G.hintT);
+      var w = G.hint.length * 6 + 16;
+      box((VW - w) / 2, 30, w, 18);
+      ctx.fillStyle = '#fff';
+      ctx.font = '10px "Courier New", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(G.hint, VW / 2, 43);
+      ctx.textAlign = 'left';
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  function drawTitle() {
+    ctx.fillStyle = '#08070e'; ctx.fillRect(0, 0, VW, VH);
+    /* Sterne */
+    for (var i = 0; i < 40; i++) {
+      var r = (i * 9301 + 49297) % 233280 / 233280;
+      var r2 = (i * 4913 + 7919) % 104729 / 104729;
+      ctx.fillStyle = i % 5 === 0 ? '#ffd24a' : '#4a4560';
+      ctx.fillRect((r * VW) | 0, (r2 * 110) | 0, 1, 1);
+    }
+    /* Bäume als Silhouette */
+    ctx.globalAlpha = 0.9;
+    for (i = 0; i < 8; i++) ctx.drawImage(S.pine, i * 42 - 6, 96);
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = '#111019'; ctx.fillRect(0, 130, VW, VH - 130);
+    ctx.fillStyle = '#1b1a26'; ctx.fillRect(0, 130, VW, 3);
+
+    /* Ritter in der Mitte */
+    var p = { dir: 'down', anim: G.time * 2, atk: null, moving: false, invuln: 0 };
+    ctx.save(); ctx.translate(VW / 2, 150); ctx.scale(3, 3);
+    ctx.drawImage(S.knight.down[(Math.floor(G.time * 2) % 2)], -8, -16);
+    ctx.restore();
+    ctx.save(); ctx.translate(VW / 2 + 13, 126); ctx.scale(3, 3);
+    ctx.rotate(20 * Math.PI / 180);
+    ctx.drawImage(S.sword, -2, -12);
+    ctx.restore();
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ffd24a';
+    ctx.font = 'bold 34px "Courier New", monospace';
+    ctx.fillText('OAKBLADE', VW / 2, 54);
+    ctx.fillStyle = '#8fd36a';
+    ctx.font = '9px "Courier New", monospace';
+    ctx.fillText('ein Pixel-Abenteuer mit Familie, Freunden', VW / 2, 76);
+    ctx.fillText('und viel zu vielen Zombies', VW / 2, 88);
+
+    ctx.fillStyle = (Math.floor(G.time * 1.6) % 2) ? '#fff' : '#7a748f';
+    ctx.font = '10px "Courier New", monospace';
+    ctx.fillText('[ Enter / Tippen zum Starten ]', VW / 2, 200);
+    ctx.fillStyle = '#6a6480';
+    ctx.font = '8px "Courier New", monospace';
+    ctx.fillText('Laufen: Finger aufs Bild legen und ziehen (oder WASD)', VW / 2, 216);
+    ctx.fillText('Schlagen: roter Knopf / Leertaste   Reden: E   Weiter: tippen', VW / 2, 227);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#4a4560';
+    ctx.fillText('Fassung ' + FASSUNG + ' - mit Joystick', VW - 6, VH - 5);
+    ctx.textAlign = 'left';
+  }
+
+  function drawOver() {
+    ctx.fillStyle = 'rgba(0,0,0,' + Math.min(0.9, G.overT) + ')';
+    ctx.fillRect(0, 0, VW, VH);
+    if (G.overT < 0.4) return;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#e03a3a';
+    ctx.font = 'bold 16px "Courier New", monospace';
+    ctx.fillText('DU BIST UMGEFALLEN', VW / 2, 100);
+    ctx.fillStyle = '#fff';
+    ctx.font = '10px "Courier New", monospace';
+    ctx.fillText('Die Zombies waren zu viele.', VW / 2, 122);
+    ctx.fillText('Deine Familie traegt dich nach Hause...', VW / 2, 136);
+    ctx.textAlign = 'left';
+  }
+
+  /* ================= Speichern ================= */
+  function save() {
+    try {
+      localStorage.setItem('oakblade_kills', String(G.kills));
+    } catch (e) { }
+  }
+  function load() {
+    try {
+      var k = localStorage.getItem('oakblade_kills');
+      if (k) G.kills = parseInt(k, 10) || 0;
+    } catch (e) { }
+  }
+
+  /* ================= Schleife ================= */
+  var last = 0;
+  function frame(ts) {
+    var dt = Math.min(0.05, (ts - last) / 1000 || 0);
+    last = ts;
+    G.time += dt;
+    update(dt);
+    draw();
+    requestAnimationFrame(frame);
+  }
+
+  function update(dt) {
+    updateControls();
+
+    /* Dialog hat Vorrang */
+    D.update(dt);
+    if (D.isOpen()) {
+      if (took('up')) D.move(-1);
+      if (took('down')) D.move(1);
+      if (took('talk') || took('attack')) D.press();
+    }
+
+    if (G.state === 'title') {
+      if (took('talk') || took('attack')) startGame();
+      return;
+    }
+    if (G.state === 'drive') { updateDrive(dt); return; }
+    if (G.state === 'over') {
+      G.overT += dt;
+      if (G.overT > 3) {
+        G.state = 'play';
+        G.player.hp = G.player.maxhp;
+        G.player.invuln = 1.5;
+        leaveParty();
+        loadMap('haus', 10.5, 9.5);
+        D.push('Mama Edda', Chat.people.mama.color, 'Du bist wach! Du hast uns vielleicht erschreckt. Erst Eintopf, dann Abenteuer.');
+        D.begin();
+      }
+      return;
+    }
+
+    /* Blende beim Tuerwechsel */
+    if (G.fadeTo) {
+      G.fade += dt * 3.2;
+      if (G.fade >= 1 && G.fadeTo) {
+        var fn = G.fadeTo; G.fadeTo = null;
+        fn();
+      }
+    } else if (G.fade > 0) {
+      G.fade = Math.max(0, G.fade - dt * 3.2);
+    }
+
+    if (!D.isOpen() && took('talk')) tryTalk();
+
+    updatePlayer(dt);
+
+    var ci = 0;
+    for (var i = G.ents.length - 1; i >= 0; i--) {
+      var e = G.ents[i];
+      if (e.type === 'zombie') {
+        updateZombie(e, dt);
+        if (e.dying > 0.55) G.ents.splice(i, 1);
+      }
+    }
+    for (i = 0; i < G.ents.length; i++) {
+      var e2 = G.ents[i];
+      if (e2.type === 'friend' && !e2.idle) { updateCompanion(e2, dt, ci); ci++; }
+      else if (e2.type === 'npc') updateNPC(e2, dt);
+    }
+
+    /* Zombies nachwachsen lassen */
+    if (G.map.zombies && G.state === 'play') {
+      G.spawnT -= dt;
+      if (G.spawnT <= 0) {
+        G.spawnT = 5 + Math.random() * 4;
+        if (countZombies() < 7) spawnZombie();
+      }
+      /* Nach ein paar erledigten Zombies kommt ein Boss - jedes Mal ein anderer */
+      if (!G.boss && G.killsSinceBoss >= 6 && !D.isOpen()) spawnBoss();
+    }
+
+    /* Musik im Kampf */
+    if (G.map.zombies) {
+      var nah = false;
+      for (i = 0; i < G.ents.length; i++) {
+        if (G.ents[i].type === 'zombie' && !G.ents[i].dying && dist(G.ents[i], G.player) < 70) { nah = true; break; }
+      }
+      if (A) A.music(G.boss ? 'boss' : (nah ? 'kampf' : G.map.music));
+      G.danger = nah;
+    } else G.danger = false;
+
+    Chat.update(dt, G);
+
+    if (G.hintT > 0) G.hintT -= dt;
+    if (G.shake > 0) G.shake = Math.max(0, G.shake - dt * 12);
+
+    /* Kamera */
+    G.camX = Math.max(0, Math.min(G.mapW * TILE - VW, G.player.x - VW / 2));
+    G.camY = Math.max(0, Math.min(G.mapH * TILE - VH, G.player.y - VH / 2));
+  }
+
+  function draw() {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    if (G.state === 'title') { drawTitle(); return; }
+
+    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, VW, VH);
+    if (G.state === 'drive') { drawDrive(); return; }
+
+    if (G.shake > 0) {
+      ctx.setTransform(1, 0, 0, 1,
+        (Math.random() - 0.5) * G.shake, (Math.random() - 0.5) * G.shake);
+    }
+
+    drawMapTiles();
+
+    /* alles nach Tiefe sortiert zeichnen */
+    var list = G.ents.slice().sort(function (a, b) { return a.y - b.y; });
+    for (var i = 0; i < list.length; i++) drawEntity(list[i]);
+
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+    /* Nacht/Innen-Stimmung */
+    if (G.mapKey === 'haus') {
+      ctx.fillStyle = 'rgba(60,30,10,0.10)';
+      ctx.fillRect(0, 0, VW, VH);
+    }
+
+    drawHUD();
+
+    if (G.fade > 0) {
+      ctx.fillStyle = 'rgba(0,0,0,' + Math.min(1, G.fade) + ')';
+      ctx.fillRect(0, 0, VW, VH);
+    }
+    if (G.state === 'over') drawOver();
+  }
+
+  /* ================= Start ================= */
+  function startGame() {
+    G.state = 'play';
+    G.partyKeys = [];
+    loadMap('haus', 10.5, 9.5);
+    D.push('Mama Edda', Chat.people.mama.color,
+      'Guten Morgen, mein Ritter! Draussen im Wald soll es wieder Zombies geben.');
+    D.push('Papa Gunnar', Chat.people.papa.color,
+      'Nimm dein Schwert mit. Und frag die Freunde vor der Tuer, ob sie mitkommen.');
+    D.push('Mila', Chat.people.mila.color,
+      'Und wenn du zurueck bist, fahren wir alle mit dem Auto in die Stadt! Versprochen!');
+    D.begin();
+  }
+
+  function resize() {
+    var stage = document.getElementById('stage');
+    var s = Math.min(global.innerWidth / VW, global.innerHeight / VH) * 0.98;
+    stage.style.transform = 'scale(' + s + ')';
+  }
+
+  function init() {
+    S.build();
+    D.init();
+    bindTouch();
+    bindStick();
+    load();
+    resize();
+    global.addEventListener('resize', resize);
+    global.addEventListener('orientationchange', resize);
+
+    document.getElementById('sound').addEventListener('click', function () {
+      var on = A.toggle();
+      this.classList.toggle('off', !on);
+    });
+    document.getElementById('sound').classList.add('off');
+
+    /* kleine Startabkuerzung zum Testen: ?map=stadt */
+    var q = (location.search || '').match(/map=(\w+)/);
+    if (q && MAPS[q[1]]) {
+      G.state = 'play';
+      G.partyKeys = q[1] === 'stadt' ? ['mama', 'papa', 'mila'] : ['lisbeth', 'momo'];
+      var sp = MAPS[q[1]]().spawn;
+      loadMap(q[1], sp.x, sp.y);
+    }
+
+    if (S.warnings.length) console.warn('Sprite-Hinweise:', S.warnings.slice(0, 12));
+    requestAnimationFrame(frame);
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})(window);
+
+</script>
+</body>
+</html>

@@ -5,6 +5,7 @@
   'use strict';
 
   var TILE = 16, VW = 320, VH = 240;
+  var FASSUNG = 8;                    /* steht unten auf dem Titelbild */
   var cv = document.getElementById('game');
   var ctx = cv.getContext('2d');
   ctx.imageSmoothingEnabled = false;
@@ -1239,6 +1240,9 @@
     ctx.font = '8px "Courier New", monospace';
     ctx.fillText('Laufen: Finger aufs Bild legen und ziehen (oder WASD)', VW / 2, 216);
     ctx.fillText('Schlagen: roter Knopf / Leertaste   Reden: E   Weiter: tippen', VW / 2, 227);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#4a4560';
+    ctx.fillText('Fassung ' + FASSUNG + ' - mit Joystick', VW - 6, VH - 5);
     ctx.textAlign = 'left';
   }
 

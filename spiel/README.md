@@ -98,6 +98,7 @@ acht. Lässt du los, springt der Stick zurück in seine Ecke.
 | `maps.js` | Die drei Welten: Wald, Haus, Stadt |
 | `game.js` | Spielablauf: Laufen, Kämpfen, Begleiter, Türen, Autofahrt |
 | `joystick.js` | Der virtuelle Joystick (erscheint unter dem Daumen) |
+| `build.mjs` | Baut alles zu `oakblade-einzeldatei.html` zusammen |
 | `chat.js` | Die Personen und alle Fragen und Antworten |
 | `dialog.js` | Textbox mit tippenden Buchstaben und Auswahl |
 | `audio.js` | 8-Bit-Musik und Geräusche |
