@@ -49,10 +49,13 @@
     keys[k] = false;
   });
 
-  /* ================= Daumen-Stick ================= */
-  var stick = { on: false, id: null, bx: 0, by: 0, vx: 0, vy: 0 };
-  var stickEl = null, knobEl = null, zoneEl = null;
-  var STICK_R = 46;                 /* so weit laesst sich der Knopf ziehen */
+  /* ================= Daumen-Stick =================
+     Bewusst einfach gehalten: echte Touch- und Maus-Ereignisse direkt am
+     Dokument. Keine Zonen-Elemente, keine Pointer-Capture-Tricks - das
+     funktioniert auf iPad, Handy und am Rechner gleichermassen. */
+  var stick = { on: false, id: null, bx: 0, by: 0, vx: 0, vy: 0, moved: false };
+  var stickEl = null, knobEl = null;
+  var STICK_R = 46;
 
   function stickRuhe() {
     if (!stickEl) return;
@@ -80,9 +83,8 @@
     if (len > STICK_R) { kx = dx / len * STICK_R; ky = dy / len * STICK_R; }
     knobEl.style.transform = 'translate(' + kx + 'px, ' + ky + 'px)';
     var nx = kx / STICK_R, ny = ky / STICK_R;
-    var n = Math.sqrt(nx * nx + ny * ny);
-    if (n < 0.22) { stick.vx = 0; stick.vy = 0; }     /* kleiner Totbereich */
-    else { stick.vx = nx; stick.vy = ny; }
+    if (Math.sqrt(nx * nx + ny * ny) < 0.2) { stick.vx = 0; stick.vy = 0; }
+    else { stick.vx = nx; stick.vy = ny; stick.moved = true; }
   }
 
   function stickAus() {
@@ -90,32 +92,67 @@
     stickRuhe();
   }
 
+  function aufKnopf(target) {
+    return !!(target && target.closest && target.closest('button'));
+  }
+
+  function stickStart(x, y, id, target) {
+    if (stick.on) return false;
+    if (G.state !== 'play' || D.isOpen()) return false;
+    if (aufKnopf(target)) return false;    /* die Knoepfe haben Vorrang */
+    if (!stickEl) return false;
+    stick.on = true; stick.id = id; stick.moved = false;
+    if (A) A.resume();
+    stickEl.classList.add('used');   /* Hinweis wird nicht mehr gebraucht */
+    stickSetzen(x, y);
+    stickZiehen(x, y);
+    return true;
+  }
+
   function bindStick() {
-    zoneEl = document.getElementById('stickzone');
     stickEl = document.getElementById('stick');
     knobEl = document.getElementById('knob');
-    if (!zoneEl) return;
+    if (!stickEl || !knobEl) return;
     stickRuhe();
-    global.addEventListener('resize', stickRuhe);
+    global.addEventListener('resize', function () { if (!stick.on) stickRuhe(); });
 
-    zoneEl.addEventListener('pointerdown', function (e) {
-      if (G.state !== 'play' || D.isOpen()) return;
-      e.preventDefault();
-      if (A) A.resume();
-      stick.on = true; stick.id = e.pointerId;
-      try { zoneEl.setPointerCapture(e.pointerId); } catch (err) { }
-      stickSetzen(e.clientX, e.clientY);
-      stickZiehen(e.clientX, e.clientY);
+    /* --- Finger --- */
+    document.addEventListener('touchstart', function (e) {
+      var t = e.changedTouches[0];
+      if (!t) return;
+      if (stickStart(t.clientX, t.clientY, t.identifier, e.target)) e.preventDefault();
+    }, { passive: false });
+
+    document.addEventListener('touchmove', function (e) {
+      if (!stick.on) return;
+      for (var i = 0; i < e.changedTouches.length; i++) {
+        var t = e.changedTouches[i];
+        if (t.identifier === stick.id) {
+          stickZiehen(t.clientX, t.clientY);
+          e.preventDefault();
+          return;
+        }
+      }
+    }, { passive: false });
+
+    function fingerWeg(e) {
+      if (!stick.on) return;
+      for (var i = 0; i < e.changedTouches.length; i++) {
+        if (e.changedTouches[i].identifier === stick.id) { stickAus(); return; }
+      }
+    }
+    document.addEventListener('touchend', fingerWeg);
+    document.addEventListener('touchcancel', fingerWeg);
+
+    /* --- Maus --- */
+    document.addEventListener('mousedown', function (e) {
+      if (stickStart(e.clientX, e.clientY, 'maus', e.target)) e.preventDefault();
     });
-    zoneEl.addEventListener('pointermove', function (e) {
-      if (!stick.on || e.pointerId !== stick.id) return;
-      e.preventDefault();
-      stickZiehen(e.clientX, e.clientY);
+    document.addEventListener('mousemove', function (e) {
+      if (stick.on && stick.id === 'maus') stickZiehen(e.clientX, e.clientY);
     });
-    zoneEl.addEventListener('pointerup', stickAus);
-    zoneEl.addEventListener('pointercancel', stickAus);
-    zoneEl.addEventListener('pointerleave', function (e) {
-      if (stick.on && e.pointerId === stick.id) stickAus();
+    document.addEventListener('mouseup', function () {
+      if (stick.on && stick.id === 'maus') stickAus();
     });
   }
 

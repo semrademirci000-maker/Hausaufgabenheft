@@ -29,8 +29,8 @@ fährst du mit der ganzen Familie im Auto in die Stadt.
 | Antwort wählen | ↑ ↓ + Enter | Antwort antippen |
 | Musik an/aus | – | ♪ oben rechts |
 
-Der Stick ist ein echter Analog-Stick: Du kannst den Finger **irgendwo** in der
-linken unteren Hälfte aufsetzen – der Stick springt dorthin. Je weiter du ziehst,
+Der Stick ist ein echter Analog-Stick: Du kannst den Finger **irgendwo** auf dem
+Bild aufsetzen (nur nicht auf den beiden Knöpfen) – der Stick springt dorthin. Je weiter du ziehst,
 desto schneller läuft der Ritter, und er läuft in **jede** Richtung, nicht nur in
 acht. Lässt du los, springt der Stick zurück in seine Ecke.
 

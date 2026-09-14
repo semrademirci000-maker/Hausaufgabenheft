@@ -89,13 +89,9 @@ html, body {
 }
 /* Beim Reden und auf dem Titelbild stören die Knöpfe nur */
 #touch.off { display: none; }
-/* Daumen-Stick: unten links ziehen, der Ritter laeuft in die Richtung */
-#stickzone {
-  position: fixed; left: 0; bottom: 0;
-  width: 54%; height: 78%;
-  pointer-events: auto;
-  touch-action: none;
-}
+/* Daumen-Stick: unten links ziehen, der Ritter laeuft in die Richtung.
+   Der Stick selbst faengt keine Beruehrungen ab - das macht das Spiel
+   direkt am Dokument, damit es auf jedem Geraet klappt. */
 #stick {
   position: fixed;
   width: 118px; height: 118px;
@@ -107,7 +103,19 @@ html, body {
   display: flex; align-items: center; justify-content: center;
   pointer-events: none;
 }
-#stick.on { opacity: 1; transition: none; }
+#stick.on { opacity: 1; transition: none; animation: none; }
+#stick:not(.on):not(.used) { animation: stickpuls 2s ease-in-out infinite; }
+@keyframes stickpuls {
+  0%, 100% { opacity: .45; }
+  50%      { opacity: .8; }
+}
+#stickhint {
+  position: absolute; top: 100%; left: 50%;
+  transform: translate(-50%, 8px);
+  font-size: 11px; color: #cfc9e6; white-space: nowrap;
+  text-shadow: 0 1px 3px #000;
+}
+#stick.on #stickhint, #stick.used #stickhint { display: none; }
 #knob {
   width: 52px; height: 52px; border-radius: 50%;
   background: rgba(96,90,140,.92);

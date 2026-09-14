@@ -89,6 +89,7 @@ struct JoystickView: View {
 
     @State private var center: CGPoint?
     @State private var knob: CGSize = .zero
+    @State private var used = false
 
     var body: some View {
         GeometryReader { geo in
@@ -99,13 +100,26 @@ struct JoystickView: View {
                     .opacity(center == nil ? 0.5 : 1)
                     .position(center ?? restingPoint(in: geo.size))
                     .allowsHitTesting(false)
+
+                if !used, center == nil {
+                    Text("ziehen zum Laufen")
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundColor(Color(hex: 0xCFC9E6))
+                        .shadow(color: .black, radius: 2)
+                        .position(x: restingPoint(in: geo.size).x,
+                                  y: restingPoint(in: geo.size).y + baseSize / 2 + 14)
+                        .allowsHitTesting(false)
+                }
             }
             .contentShape(Rectangle())
             .gesture(
                 DragGesture(minimumDistance: 0)
                     .onChanged { value in
                         let base = center ?? clamped(value.startLocation, in: geo.size)
-                        if center == nil { center = base }
+                        if center == nil {
+                            center = base
+                            used = true
+                        }
                         let dx = value.location.x - base.x
                         let dy = value.location.y - base.y
                         let distance = sqrt(dx * dx + dy * dy)
@@ -164,9 +178,9 @@ struct ControlsOverlay: View {
     var body: some View {
         GeometryReader { geo in
             ZStack(alignment: .bottomTrailing) {
+                // Der Stick nimmt die ganze Flaeche an: Finger irgendwo
+                // aufsetzen, er springt dorthin. Die Knoepfe liegen darueber.
                 JoystickView(world: world)
-                    .frame(width: geo.size.width * 0.54, height: geo.size.height * 0.78)
-                    .position(x: geo.size.width * 0.27, y: geo.size.height * 0.61)
 
                 HStack(alignment: .bottom, spacing: 14) {
                     HoldButton(world: world, button: .talk, label: "E", caption: "reden",
