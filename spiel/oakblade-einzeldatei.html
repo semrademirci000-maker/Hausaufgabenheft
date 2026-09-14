@@ -3190,6 +3190,13 @@ html, body {
       ctx.fillStyle = '#ff9a8a'; ctx.fillRect(bx, by + 1, bw * anteil, 2);
     }
 
+    /* Fassungsnummer immer in der Ecke */
+    ctx.font = '8px "Courier New", monospace';
+    ctx.fillStyle = 'rgba(207,201,230,0.45)';
+    ctx.textAlign = 'right';
+    ctx.fillText('F' + FASSUNG, VW - 4, VH - 4);
+    ctx.textAlign = 'left';
+
     /* Kleiner Hinweis, bis der Stick einmal benutzt wurde */
     if (stick && !stick.used && G.state === 'play' && !D.isOpen()) {
       var puls = 0.55 + 0.45 * Math.abs(Math.sin(G.time * 2));
@@ -3248,6 +3255,9 @@ html, body {
     ctx.font = '9px "Courier New", monospace';
     ctx.fillText('ein Pixel-Abenteuer mit Familie, Freunden', VW / 2, 76);
     ctx.fillText('und viel zu vielen Zombies', VW / 2, 88);
+    ctx.fillStyle = '#ffd24a';
+    ctx.font = 'bold 12px "Courier New", monospace';
+    ctx.fillText('FASSUNG ' + FASSUNG + ' - JOYSTICK + AUTO', VW / 2, 106);
 
     ctx.fillStyle = (Math.floor(G.time * 1.6) % 2) ? '#fff' : '#7a748f';
     ctx.font = '10px "Courier New", monospace';
@@ -3256,9 +3266,7 @@ html, body {
     ctx.font = '8px "Courier New", monospace';
     ctx.fillText('Laufen: Joystick unten links ziehen (oder irgendwo aufs Bild)', VW / 2, 216);
     ctx.fillText('Schlagen: roter Knopf / Leertaste   Reden: E   Weiter: tippen', VW / 2, 227);
-    ctx.textAlign = 'right';
-    ctx.fillStyle = '#4a4560';
-    ctx.fillText('Fassung ' + FASSUNG + ' - mit Joystick', VW - 6, VH - 5);
+
     ctx.textAlign = 'left';
   }
 
