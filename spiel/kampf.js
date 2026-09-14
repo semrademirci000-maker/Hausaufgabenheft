@@ -261,7 +261,9 @@
       if (k.t > 5.5) {
         k.phase = 'menue';
         k.schuesse = [];
-        k.text = k.boss.name + ' wartet auf deinen Zug.';
+        k.text = k.runde <= 2
+          ? k.boss.name + ' wartet auf deinen Zug.\nKAEMPFEN bis sein Balken leer ist - oder dreimal HANDELN und dann SCHONEN.'
+          : k.boss.name + ' wartet auf deinen Zug.';
       }
     }
   }
@@ -368,6 +370,16 @@
       if (!(k.invuln > 0 && Math.floor(k.invuln * 14) % 2)) {
         ctx.drawImage(W.S.heart, Math.round(k.soul.x - 3), Math.round(k.soul.y - 3));
       }
+
+      /* Erklaerung, solange man noch neu ist */
+      if (k.runde <= 2) {
+        ctx.font = '8px "Courier New", monospace';
+        ctx.fillStyle = '#ffd24a';
+        ctx.textAlign = 'center';
+        ctx.fillText('Joystick ziehen: dein rotes Herz ausweichen lassen!',
+                     W.VW / 2, BOX.y + BOX.h + 11);
+        ctx.textAlign = 'left';
+      }
     } else if (k.phase === 'balken') {
       ctx.fillStyle = '#c8c2e0';
       ctx.font = '9px "Courier New", monospace';
@@ -397,7 +409,11 @@
       /* Text im Fenster */
       ctx.font = '10px "Courier New", monospace';
       ctx.fillStyle = '#fff';
-      var zeilen = umbrechen(k.text, 40);
+      var zeilen = [];
+      var absaetze = String(k.text || '').split('\n');
+      for (var a = 0; a < absaetze.length; a++) {
+        zeilen = zeilen.concat(umbrechen(absaetze[a], 40));
+      }
       for (var z = 0; z < zeilen.length; z++) {
         ctx.fillText(zeilen[z], BOX.x + 10, BOX.y + 22 + z * 13);
       }

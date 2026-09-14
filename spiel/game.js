@@ -5,7 +5,7 @@
   'use strict';
 
   var TILE = 16, VW = 320, VH = 240;
-  var FASSUNG = 13;                    /* steht unten auf dem Titelbild */
+  var FASSUNG = 14;                    /* steht unten auf dem Titelbild */
   var cv = document.getElementById('game');
   var ctx = cv.getContext('2d');
   ctx.imageSmoothingEnabled = false;
@@ -65,9 +65,9 @@
       radius: 60,
       deadZone: 0.18,
 
-      /* Gelaufen wird, sobald das Spiel laeuft - auch waehrend geredet wird. */
+      /* Gelaufen (und im Kampf ausgewichen) wird, sobald das Spiel laeuft. */
       canStart: function () {
-        return G.state === 'play' || G.state === 'over';
+        return G.state === 'play' || G.state === 'over' || G.state === 'kampf';
       },
 
       /* Knoepfe und die Textbox behalten ihre eigenen Beruehrungen. */
@@ -133,7 +133,8 @@
   function updateControls() {
     if (!touchEl) touchEl = document.getElementById('touch');
     var spielt = (G.state === 'play' || G.state === 'over');
-    if (stick) stick.setVisible(spielt);          /* Stick ist immer zu sehen */
+    /* Im Kampf steuert der Stick das rote Herz - also auch dort zeigen. */
+    if (stick) stick.setVisible(spielt || G.state === 'kampf');
     var show = spielt && !D.isOpen();
     if (show === controlsOn) return;
     controlsOn = show;
