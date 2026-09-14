@@ -78,39 +78,105 @@ struct HoldButton: View {
     }
 }
 
+/// Der Daumen-Stick: irgendwo links unten den Finger aufsetzen und ziehen.
+struct JoystickView: View {
+
+    let world: GameWorld
+
+    private let baseSize: CGFloat = 118
+    private let knobSize: CGFloat = 52
+    private let radius: CGFloat = 46
+
+    @State private var center: CGPoint?
+    @State private var knob: CGSize = .zero
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack(alignment: .topLeading) {
+                Color.clear.contentShape(Rectangle())
+
+                stick
+                    .opacity(center == nil ? 0.5 : 1)
+                    .position(center ?? restingPoint(in: geo.size))
+                    .allowsHitTesting(false)
+            }
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { value in
+                        let base = center ?? clamped(value.startLocation, in: geo.size)
+                        if center == nil { center = base }
+                        let dx = value.location.x - base.x
+                        let dy = value.location.y - base.y
+                        let distance = sqrt(dx * dx + dy * dy)
+                        var kx = dx, ky = dy
+                        if distance > radius {
+                            kx = dx / distance * radius
+                            ky = dy / distance * radius
+                        }
+                        knob = CGSize(width: kx, height: ky)
+                        var nx = Double(kx / radius)
+                        var ny = Double(ky / radius)
+                        if (nx * nx + ny * ny).squareRoot() < 0.22 { nx = 0; ny = 0 }
+                        world.input.stick = Vec(x: nx, y: ny)
+                    }
+                    .onEnded { _ in
+                        center = nil
+                        knob = .zero
+                        world.input.stick = .zero
+                    }
+            )
+        }
+        .onDisappear { world.input.stick = .zero }
+    }
+
+    private var stick: some View {
+        ZStack {
+            Circle()
+                .fill(Color(hex: 0x161422).opacity(0.72))
+                .overlay(Circle().stroke(Color(hex: 0x7A72A0).opacity(0.45), lineWidth: 2))
+                .frame(width: baseSize, height: baseSize)
+            Circle()
+                .fill(Color(hex: 0x605A8C).opacity(0.92))
+                .overlay(Circle().stroke(Color(hex: 0xCFC9E6), lineWidth: 2))
+                .frame(width: knobSize, height: knobSize)
+                .offset(knob)
+        }
+        .frame(width: baseSize, height: baseSize)
+    }
+
+    private func restingPoint(in size: CGSize) -> CGPoint {
+        CGPoint(x: 24 + baseSize / 2, y: size.height - 24 - baseSize / 2)
+    }
+
+    /// Der Stick soll ganz im Bild bleiben.
+    private func clamped(_ point: CGPoint, in size: CGSize) -> CGPoint {
+        let half = baseSize / 2 + 6
+        return CGPoint(x: min(max(point.x, half), max(half, size.width - half)),
+                       y: min(max(point.y, half), max(half, size.height - half)))
+    }
+}
+
 struct ControlsOverlay: View {
 
     let world: GameWorld
 
     var body: some View {
-        VStack {
-            Spacer()
-            HStack(alignment: .bottom) {
-                dpad
-                Spacer()
-                actions
+        GeometryReader { geo in
+            ZStack(alignment: .bottomTrailing) {
+                JoystickView(world: world)
+                    .frame(width: geo.size.width * 0.54, height: geo.size.height * 0.78)
+                    .position(x: geo.size.width * 0.27, y: geo.size.height * 0.61)
+
+                HStack(alignment: .bottom, spacing: 14) {
+                    HoldButton(world: world, button: .talk, label: "E", caption: "reden",
+                               size: 58, tint: Color(hex: 0xCFC9E6), round: true)
+                    HoldButton(world: world, button: .attack, label: "⚔", caption: "schlagen",
+                               size: 76, tint: Color(hex: 0xFF9A8A), round: true)
+                }
+                .padding(.trailing, 20)
+                .padding(.bottom, 20)
             }
-        }
-        .padding(.horizontal, 20)
-        .padding(.bottom, 16)
-    }
-
-    private var dpad: some View {
-        ZStack {
-            HoldButton(world: world, button: .up, label: "▲").offset(x: 0, y: -48)
-            HoldButton(world: world, button: .down, label: "▼").offset(x: 0, y: 48)
-            HoldButton(world: world, button: .left, label: "◀").offset(x: -48, y: 0)
-            HoldButton(world: world, button: .right, label: "▶").offset(x: 48, y: 0)
-        }
-        .frame(width: 142, height: 142)
-    }
-
-    private var actions: some View {
-        HStack(alignment: .bottom, spacing: 14) {
-            HoldButton(world: world, button: .talk, label: "E", caption: "reden",
-                       size: 58, tint: Color(hex: 0xCFC9E6), round: true)
-            HoldButton(world: world, button: .attack, label: "⚔", caption: "schlagen",
-                       size: 76, tint: Color(hex: 0xFF9A8A), round: true)
         }
     }
 }

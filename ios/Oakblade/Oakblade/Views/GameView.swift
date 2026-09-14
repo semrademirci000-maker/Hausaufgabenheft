@@ -592,7 +592,7 @@ struct GameView: View {
                     .font(.system(size: 11, design: .monospaced))
                     .foregroundColor(blink ? .white : Color(hex: 0x7A748F)),
                  at: CGPoint(x: gameWidth / 2, y: 204))
-        ctx.draw(Text("Steuerkreuz laufen   Schwert schlagen   E reden")
+        ctx.draw(Text("Stick links ziehen   \u{2694} schlagen   E reden")
                     .font(.system(size: 8, design: .monospaced))
                     .foregroundColor(Color(hex: 0x6A6480)),
                  at: CGPoint(x: gameWidth / 2, y: 224))

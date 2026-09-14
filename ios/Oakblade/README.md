@@ -31,7 +31,7 @@ Pixel groß und wird passend hochskaliert).
 
 | | auf dem Bildschirm | mit Tastatur (iPad) |
 |---|---|---|
-| Laufen | Steuerkreuz unten links | WASD oder Pfeiltasten |
+| Laufen | **Daumen-Stick** unten links ziehen | WASD oder Pfeiltasten |
 | Schlagen | großer roter Knopf ⚔ | Leertaste (oder X / J) |
 | Reden / Weiter | Knopf **E** oder auf die Textbox tippen | E, Enter oder Z |
 | Antwort wählen | Antwort antippen | ↑ ↓ und Enter |
@@ -51,7 +51,7 @@ Pixel groß und wird passend hochskaliert).
 | `World/DialogState.swift` | Textbox: Buchstaben tippen sich einzeln, Antworten auswählen |
 | `World/GameWorld.swift` | Der Ablauf: laufen, Wände, Kampf, Begleiter, Türen, Autofahrt |
 | `Views/GameView.swift` | Zeichnet alles in eine `Canvas`-Fläche (Karte, Figuren, Schwertbogen, Herzen) |
-| `Views/Controls.swift` | Steuerkreuz und Knöpfe zum Antippen |
+| `Views/Controls.swift` | Daumen-Stick (`JoystickView`) und Knöpfe zum Antippen |
 | `Audio/ChipEngine.swift` | 8-Bit-Musik und Geräusche, Ton für Ton berechnet (AVAudioEngine) |
 
 ### Wie das Bild entsteht

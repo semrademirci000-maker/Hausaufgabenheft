@@ -23,11 +23,16 @@ fährst du mit der ganzen Familie im Auto in die Stadt.
 
 | | Tastatur | iPad / Handy |
 |---|---|---|
-| Laufen | WASD oder Pfeiltasten | Steuerkreuz unten links |
+| Laufen | WASD oder Pfeiltasten | **Daumen-Stick** unten links ziehen |
 | Schlagen | Leertaste (oder X / J) | großer roter Knopf ⚔ |
 | Reden / Weiter | E oder Enter | Knopf **E**, oder auf die Textbox tippen |
 | Antwort wählen | ↑ ↓ + Enter | Antwort antippen |
 | Musik an/aus | – | ♪ oben rechts |
+
+Der Stick ist ein echter Analog-Stick: Du kannst den Finger **irgendwo** in der
+linken unteren Hälfte aufsetzen – der Stick springt dorthin. Je weiter du ziehst,
+desto schneller läuft der Ritter, und er läuft in **jede** Richtung, nicht nur in
+acht. Lässt du los, springt der Stick zurück in seine Ecke.
 
 ## Was es alles gibt
 

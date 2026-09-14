@@ -49,6 +49,76 @@
     keys[k] = false;
   });
 
+  /* ================= Daumen-Stick ================= */
+  var stick = { on: false, id: null, bx: 0, by: 0, vx: 0, vy: 0 };
+  var stickEl = null, knobEl = null, zoneEl = null;
+  var STICK_R = 46;                 /* so weit laesst sich der Knopf ziehen */
+
+  function stickRuhe() {
+    if (!stickEl) return;
+    stickEl.style.left = '24px';
+    stickEl.style.top = (global.innerHeight - 150) + 'px';
+    stickEl.classList.remove('on');
+    knobEl.style.transform = 'translate(0px, 0px)';
+  }
+
+  function stickSetzen(x, y) {
+    var halb = 59;
+    var left = Math.max(6, Math.min(global.innerWidth - 2 * halb - 6, x - halb));
+    var top = Math.max(6, Math.min(global.innerHeight - 2 * halb - 6, y - halb));
+    stickEl.style.left = left + 'px';
+    stickEl.style.top = top + 'px';
+    stick.bx = left + halb;
+    stick.by = top + halb;
+    stickEl.classList.add('on');
+  }
+
+  function stickZiehen(x, y) {
+    var dx = x - stick.bx, dy = y - stick.by;
+    var len = Math.sqrt(dx * dx + dy * dy);
+    var kx = dx, ky = dy;
+    if (len > STICK_R) { kx = dx / len * STICK_R; ky = dy / len * STICK_R; }
+    knobEl.style.transform = 'translate(' + kx + 'px, ' + ky + 'px)';
+    var nx = kx / STICK_R, ny = ky / STICK_R;
+    var n = Math.sqrt(nx * nx + ny * ny);
+    if (n < 0.22) { stick.vx = 0; stick.vy = 0; }     /* kleiner Totbereich */
+    else { stick.vx = nx; stick.vy = ny; }
+  }
+
+  function stickAus() {
+    stick.on = false; stick.id = null; stick.vx = 0; stick.vy = 0;
+    stickRuhe();
+  }
+
+  function bindStick() {
+    zoneEl = document.getElementById('stickzone');
+    stickEl = document.getElementById('stick');
+    knobEl = document.getElementById('knob');
+    if (!zoneEl) return;
+    stickRuhe();
+    global.addEventListener('resize', stickRuhe);
+
+    zoneEl.addEventListener('pointerdown', function (e) {
+      if (G.state !== 'play' || D.isOpen()) return;
+      e.preventDefault();
+      if (A) A.resume();
+      stick.on = true; stick.id = e.pointerId;
+      try { zoneEl.setPointerCapture(e.pointerId); } catch (err) { }
+      stickSetzen(e.clientX, e.clientY);
+      stickZiehen(e.clientX, e.clientY);
+    });
+    zoneEl.addEventListener('pointermove', function (e) {
+      if (!stick.on || e.pointerId !== stick.id) return;
+      e.preventDefault();
+      stickZiehen(e.clientX, e.clientY);
+    });
+    zoneEl.addEventListener('pointerup', stickAus);
+    zoneEl.addEventListener('pointercancel', stickAus);
+    zoneEl.addEventListener('pointerleave', function (e) {
+      if (stick.on && e.pointerId === stick.id) stickAus();
+    });
+  }
+
   function bindTouch() {
     var btns = document.querySelectorAll('#touch button');
     for (var i = 0; i < btns.length; i++) {
@@ -79,6 +149,7 @@
     if (!show) {
       /* Finger weg vom Knopf: nichts darf gedrückt bleiben */
       for (var k in keys) keys[k] = false;
+      stickAus();
     }
   }
 
@@ -236,12 +307,17 @@
 
     var dx = 0, dy = 0;
     if (!D.isOpen()) {
-      if (keys.left) dx -= 1;
-      if (keys.right) dx += 1;
-      if (keys.up) dy -= 1;
-      if (keys.down) dy += 1;
+      if (stick.on && (stick.vx || stick.vy)) {
+        dx = stick.vx; dy = stick.vy;            /* Stick: jede Richtung */
+      } else {
+        if (keys.left) dx -= 1;
+        if (keys.right) dx += 1;
+        if (keys.up) dy -= 1;
+        if (keys.down) dy += 1;
+      }
     }
-    if (dx && dy) { dx *= 0.7071; dy *= 0.7071; }
+    var laenge = Math.sqrt(dx * dx + dy * dy);
+    if (laenge > 1) { dx /= laenge; dy /= laenge; }
 
     p.moving = !!(dx || dy);
     if (p.moving && !p.atk) {
@@ -1183,8 +1259,8 @@
     ctx.fillText('[ Enter / Tippen zum Starten ]', VW / 2, 200);
     ctx.fillStyle = '#6a6480';
     ctx.font = '8px "Courier New", monospace';
-    ctx.fillText('Laufen: Knoepfe unten oder WASD   Schlagen: Leertaste', VW / 2, 216);
-    ctx.fillText('Reden und weiter: E, Enter oder aufs Bild tippen', VW / 2, 227);
+    ctx.fillText('Laufen: Stick unten links ziehen (oder WASD)', VW / 2, 216);
+    ctx.fillText('Schlagen: roter Knopf / Leertaste   Reden: E   Weiter: tippen', VW / 2, 227);
     ctx.textAlign = 'left';
   }
 
@@ -1376,6 +1452,7 @@
     S.build();
     D.init();
     bindTouch();
+    bindStick();
     load();
     resize();
     global.addEventListener('resize', resize);

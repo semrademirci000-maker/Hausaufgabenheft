@@ -89,21 +89,32 @@ html, body {
 }
 /* Beim Reden und auf dem Titelbild stören die Knöpfe nur */
 #touch.off { display: none; }
-#dpad {
-  position: absolute; left: 14px; bottom: calc(14px + env(safe-area-inset-bottom));
-  width: 132px; height: 132px; pointer-events: auto;
+/* Daumen-Stick: unten links ziehen, der Ritter laeuft in die Richtung */
+#stickzone {
+  position: fixed; left: 0; bottom: 0;
+  width: 54%; height: 78%;
+  pointer-events: auto;
+  touch-action: none;
 }
-.pad {
-  position: absolute; width: 44px; height: 44px;
-  background: rgba(30,28,44,.82); color: #cfc9e6;
-  border: 2px solid #4a4560; border-radius: 9px;
-  font-size: 15px; line-height: 1; padding: 0; cursor: pointer;
+#stick {
+  position: fixed;
+  width: 118px; height: 118px;
+  margin: 0; border-radius: 50%;
+  background: radial-gradient(circle at 50% 45%, rgba(58,54,88,.55), rgba(22,20,34,.78));
+  border: 2px solid rgba(122,114,160,.45);
+  opacity: .5;
+  transition: opacity .15s ease;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
 }
-.pad:active { background: #3b3660; }
-.pad[data-k="up"]    { left: 44px; top: 0; }
-.pad[data-k="left"]  { left: 0; top: 44px; }
-.pad[data-k="right"] { left: 88px; top: 44px; }
-.pad[data-k="down"]  { left: 44px; top: 88px; }
+#stick.on { opacity: 1; transition: none; }
+#knob {
+  width: 52px; height: 52px; border-radius: 50%;
+  background: rgba(96,90,140,.92);
+  border: 2px solid #cfc9e6;
+  box-shadow: 0 0 0 2px rgba(12,10,20,.5);
+  transform: translate(0, 0);
+}
 
 #abtn {
   position: absolute; right: 14px; bottom: calc(20px + env(safe-area-inset-bottom));
@@ -121,6 +132,6 @@ html, body {
 
 /* Mit Maus und Tastatur halten sich die Knöpfe zurück */
 @media (pointer: fine) {
-  #dpad, #abtn { opacity: .55; transition: opacity .2s; }
-  #dpad:hover, #abtn:hover { opacity: 1; }
+  #abtn { opacity: .55; transition: opacity .2s; }
+  #abtn:hover { opacity: 1; }
 }

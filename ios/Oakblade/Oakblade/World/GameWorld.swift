@@ -14,6 +14,9 @@ final class InputState {
     private var held: Set<GameButton> = []
     private var taps: Set<GameButton> = []
 
+    /// Richtung vom Daumen-Stick: -1 bis 1, kürzer = langsamer laufen.
+    var stick = Vec.zero
+
     func press(_ button: GameButton) {
         if !held.contains(button) { taps.insert(button) }
         held.insert(button)
@@ -37,6 +40,7 @@ final class InputState {
     func releaseAll() {
         held.removeAll()
         taps.removeAll()
+        stick = .zero
     }
 }
 
@@ -417,12 +421,18 @@ final class GameWorld {
 
         var dx = 0.0, dy = 0.0
         if !dialog.isOpen {
-            if input.isHeld(.left) { dx -= 1 }
-            if input.isHeld(.right) { dx += 1 }
-            if input.isHeld(.up) { dy -= 1 }
-            if input.isHeld(.down) { dy += 1 }
+            if input.stick.x != 0 || input.stick.y != 0 {
+                dx = input.stick.x          // Stick: jede Richtung, auch langsam
+                dy = input.stick.y
+            } else {
+                if input.isHeld(.left) { dx -= 1 }
+                if input.isHeld(.right) { dx += 1 }
+                if input.isHeld(.up) { dy -= 1 }
+                if input.isHeld(.down) { dy += 1 }
+            }
         }
-        if dx != 0, dy != 0 { dx *= 0.7071; dy *= 0.7071 }
+        let length = (dx * dx + dy * dy).squareRoot()
+        if length > 1 { dx /= length; dy /= length }
 
         player.moving = dx != 0 || dy != 0
         if player.moving, player.attackTimer == nil {
