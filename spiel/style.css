@@ -101,8 +101,17 @@ html, body {
 }
 .act.big { width: 74px; height: 74px; border-color: #b8453f; color: #ff9a8a; font-size: 22px; }
 .act.auto { border-color: #e8a54a; color: #ffd24a; }
+.act.karte { border-color: #4a7fb8; color: #9fd0f0; }
 .act small { font-size: 7px; opacity: .75; margin-top: 2px; }
 .act:active { background: #3b3660; }
+
+/* Auf schmalen Bildschirmen ruecken die vier Knoepfe zusammen */
+@media (max-width: 520px) {
+  #abtn { right: 8px; gap: 6px; }
+  .act { width: 48px; height: 48px; font-size: 14px; }
+  .act.big { width: 60px; height: 60px; font-size: 18px; }
+  .act small { font-size: 6px; }
+}
 
 /* Mit Maus und Tastatur halten sich die Knöpfe zurück */
 @media (pointer: fine) {

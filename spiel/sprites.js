@@ -910,7 +910,40 @@
     TILES['x'] = TILES['.'];
   }
 
+  /* ---------- Farben fuer die Karte ----------
+     Jede Kachel bekommt eine einzige Farbe, damit man die ganze Welt
+     als kleines Bild zeichnen kann (ein Pixel = eine Kachel). */
+  var KARTENFARBEN = {
+    '.': '#3d6b38', ',': '#446f3c', 'f': '#4a7a40', 'x': '#3d6b38',
+    'T': '#1e3a1c', 't': '#1b3320', '*': '#2f5a2c', 'r': '#6b6b74',
+    '-': '#8a7350', '~': '#2f6296',
+    '#': '#a9743f', '^': '#8f4034', 'W': '#6fd0e0',
+    'D': '#e8c05a', 'd': '#e8c05a', '=': '#7b6b57', '_': '#b08a5c',
+    'c': '#8a3f55', 'b': '#d4d4e4', 'n': '#c2c2d4', 'm': '#a9743f',
+    'h': '#8a5c31', 'F': '#ff8a3a',
+    'R': '#4a4750', 'M': '#5d5a66', 'S': '#8a8798', 'l': '#8a8798',
+    'P': '#8a8798', 'B': '#5e5872', 'C': '#6a6480', 'V': '#544e68',
+    'K': '#e8a54a', 'O': '#7a5a4a', 'Q': '#9a4a3a'
+  };
+  function karteFarbe(ch) { return KARTENFARBEN[ch] || '#2a2633'; }
+
+  /* Macht aus den Kachelzeilen einer Karte ein winziges Bild:
+     ein Pixel je Kachel. Das wird nur einmal je Karte gebaut. */
+  function karteBauen(rows) {
+    var h = rows.length, w = rows[0].length;
+    var c = mk(w, h), g = c.getContext('2d');
+    for (var y = 0; y < h; y++) {
+      for (var x = 0; x < w; x++) {
+        g.fillStyle = karteFarbe(rows[y][x]);
+        g.fillRect(x, y, 1, 1);
+      }
+    }
+    return c;
+  }
+
   global.Sprites = {
+    karteFarbe: karteFarbe,
+    karteBauen: karteBauen,
     knight: KNIGHT,
     sword: SWORD,
     heart: makeHeart(),

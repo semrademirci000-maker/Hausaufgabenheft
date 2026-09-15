@@ -27,6 +27,7 @@ fährst du mit der ganzen Familie im Auto in die Stadt.
 | Schlagen | Leertaste (oder X / J) | großer roter Knopf ⚔ |
 | Reden / Weiter | E oder Enter | Knopf **E**, oder kurz aufs Bild tippen |
 | Antwort wählen | ↑ ↓ + Enter | Antwort antippen |
+| Karte | **M** | Knopf 🗺 **Karte** |
 | Musik an/aus | – | ♪ oben rechts |
 
 Der Stick ist ein echter Analog-Stick: Du kannst den Finger **irgendwo** auf dem
@@ -140,6 +141,19 @@ acht. Lässt du los, springt der Stick zurück in seine Ecke.
   Brunnen und Bänken, **zwölf Leute** zum Anquatschen (Bäckerin, Stadtwache,
   Botin, Rentner, Kinder …), der Marktstand und ein Blatt am Stadttor,
   das man lesen kann. Mit dem Auto geht es wieder zurück.
+
+**Die Karte**
+- Oben rechts läuft immer eine **kleine Karte** mit: die ganze Gegend als
+  Kacheln, ein Pixel je Kachel, mit blinkendem Kreuz für dich.
+- Der Knopf 🗺 (oder die Taste **M**) macht die **große Karte** auf. Dabei
+  steht die Welt still – wie ein Menü.
+- Darauf zu sehen: das Kachelgitter, der Ausschnitt, den du gerade siehst
+  (weißer Rahmen), und farbige Punkte für Zombies (grün), verschonte Zombies
+  (gelb), Leute (blau), Auto (gelb), Laden (orange), Türen (orange), Pilze und
+  Beeren. Unten steht die Zeichenerklärung.
+- Die Karte wird aus denselben Kacheln gebaut wie die Welt: Dächer sind rot,
+  Straßen grau, Wasser blau, Wald dunkelgrün – man erkennt Haus, Weg, Teich,
+  den Park und den Marktstand sofort wieder.
 
 **Musik**
 - 8-Bit-Musik direkt im Browser erzeugt: ein Thema für den Wald, eins fürs

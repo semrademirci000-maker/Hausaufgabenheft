@@ -5,7 +5,7 @@
   'use strict';
 
   var TILE = 16, VW = 320, VH = 240;
-  var FASSUNG = 16;                    /* steht unten auf dem Titelbild */
+  var FASSUNG = 17;                    /* steht unten auf dem Titelbild */
   var cv = document.getElementById('game');
   var ctx = cv.getContext('2d');
   ctx.imageSmoothingEnabled = false;
@@ -25,7 +25,8 @@
     coins: 0, swordLevel: 0, armorLevel: 0,
     pilze: 0, beeren: 0, spared: 0, pets: 0, hundBonus: false,
     zeit: 0.28, quest: null, sammelT: 6,
-    drive: null, overT: 0, lastSave: 0, maxhpGesichert: 10
+    drive: null, overT: 0, lastSave: 0, maxhpGesichert: 10,
+    karteOffen: false, entdeckt: null
   };
   global.GAME = G;
 
@@ -36,7 +37,8 @@
     w: 'up', s: 'down', a: 'left', d: 'right',
     W: 'up', S: 'down', A: 'left', D: 'right',
     ' ': 'attack', Enter: 'talk', e: 'talk', E: 'talk',
-    z: 'talk', Z: 'talk', x: 'attack', X: 'attack', j: 'attack', J: 'attack'
+    z: 'talk', Z: 'talk', x: 'attack', X: 'attack', j: 'attack', J: 'attack',
+    m: 'karte', M: 'karte'
   };
 
   global.addEventListener('keydown', function (e) {
@@ -80,6 +82,7 @@
       onTap: function (x, y) {
         if (A) A.resume();
         if (G.state === 'title') { startGame(); return; }
+        if (G.karteOffen) { G.karteOffen = false; return; }
         if (D.isOpen()) { D.press(); return; }
         if (G.state === 'kampf') {
           /* Bildschirmpunkt in Spielpunkte umrechnen */
@@ -159,6 +162,8 @@
     var m = MAPS[key]();
     G.map = m; G.mapKey = key;
     G.mapH = m.rows.length; G.mapW = m.rows[0].length;
+    karteBild = S.karteBauen(m.rows);      /* kleines Bild der ganzen Karte */
+    G.karteOffen = false;
     G.ents = []; G.party = []; G.trail = [];
     G.boss = null;
     G.blocks = [];
@@ -1617,6 +1622,148 @@
     ctx.globalAlpha = 1;
   }
 
+
+  /* ================= Die Karte =================
+     Das kleine Bild der Welt (ein Pixel je Kachel) wird beim Laden
+     einer Karte einmal gebaut und danach nur noch vergroessert
+     gezeichnet - einmal klein oben rechts, einmal gross als Uebersicht. */
+  var karteBild = null;
+
+  /* Alles, was auf der Karte einen Punkt bekommt */
+  function kartenPunkte() {
+    var pk = [], i, e;
+    if (!G.map) return pk;
+
+    /* Tueren zwischen den Karten */
+    if (G.map.triggers) {
+      for (i = 0; i < G.map.triggers.length; i++) {
+        var t = G.map.triggers[i];
+        pk.push({ x: t.x + t.w / 2, y: t.y + t.h / 2, f: '#ff9a5a' });
+      }
+    }
+    for (i = 0; i < G.ents.length; i++) {
+      e = G.ents[i];
+      if (e === G.player) continue;
+      if (e.type === 'prop') {
+        if (e.kind === 'car') pk.push({ x: e.x / TILE, y: e.y / TILE, f: '#ffd24a' });
+        else if (e.kind === 'stall') pk.push({ x: e.x / TILE, y: e.y / TILE, f: '#ffa93a' });
+      } else if (e.type === 'pickup') {
+        pk.push({ x: e.x / TILE, y: e.y / TILE,
+                  f: e.art === 'pilz' ? '#e8d0a0' : '#e05a7a', klein: true });
+      } else if (e.type === 'npc') {
+        pk.push({ x: e.x / TILE, y: e.y / TILE, f: '#6fb8e0', klein: true });
+      } else if (e.type === 'zombie' && !e.dying) {
+        pk.push({ x: e.x / TILE, y: e.y / TILE,
+                  f: e.spared ? '#ffe066' : (e.mercy ? '#ffe066' : '#7ad048'), klein: true });
+      }
+    }
+    return pk;
+  }
+
+  /* Zeichnet die Karte in ein Rechteck. gross = mit Gitter und Beschriftung. */
+  function karteZeichnen(bx, by, bw, bh, gross) {
+    if (!karteBild) return;
+    var skala = Math.min(bw / G.mapW, bh / G.mapH);
+    var kw = Math.floor(G.mapW * skala), kh = Math.floor(G.mapH * skala);
+    var kx = Math.round(bx + (bw - kw) / 2), ky = Math.round(by + (bh - kh) / 2);
+
+    /* Rahmen im Undertale-Stil */
+    ctx.fillStyle = '#000';
+    ctx.fillRect(kx - 3, ky - 3, kw + 6, kh + 6);
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(kx - 3, ky - 3, kw + 6, 2);
+    ctx.fillRect(kx - 3, ky + kh + 1, kw + 6, 2);
+    ctx.fillRect(kx - 3, ky - 3, 2, kh + 6);
+    ctx.fillRect(kx + kw + 1, ky - 3, 2, kh + 6);
+
+    var alt = ctx.imageSmoothingEnabled;
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(karteBild, 0, 0, G.mapW, G.mapH, kx, ky, kw, kh);
+    ctx.imageSmoothingEnabled = alt;
+
+    /* Gitter: damit man die einzelnen Kacheln sieht */
+    if (gross && skala >= 3) {
+      ctx.fillStyle = 'rgba(0,0,0,0.20)';
+      for (var gx = 1; gx < G.mapW; gx++) ctx.fillRect(kx + Math.round(gx * skala), ky, 1, kh);
+      for (var gy = 1; gy < G.mapH; gy++) ctx.fillRect(kx, ky + Math.round(gy * skala), kw, 1);
+    }
+
+    /* Der Ausschnitt, den man gerade sieht */
+    if (gross) {
+      var sx = kx + (G.camX / TILE) * skala, sy = ky + (G.camY / TILE) * skala;
+      ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(Math.round(sx) + 0.5, Math.round(sy) + 0.5,
+                     Math.round((VW / TILE) * skala), Math.round((VH / TILE) * skala));
+    }
+
+    /* Punkte */
+    var pk = kartenPunkte();
+    for (var i = 0; i < pk.length; i++) {
+      var d = pk[i];
+      var px = kx + d.x * skala, py = ky + d.y * skala;
+      if (px < kx || px > kx + kw || py < ky || py > ky + kh) continue;
+      var gr = Math.max(gross ? 3 : 2, Math.round(skala * (d.klein ? 0.7 : 1)));
+      var dx = Math.round(px - gr / 2), dy = Math.round(py - gr / 2);
+      /* schwarzer Rand, sonst verschwindet z.B. gruen auf gruen */
+      ctx.fillStyle = 'rgba(0,0,0,0.75)';
+      ctx.fillRect(dx - 1, dy - 1, gr + 2, gr + 2);
+      ctx.fillStyle = d.f;
+      ctx.fillRect(dx, dy, gr, gr);
+    }
+
+    /* Und der Ritter: ein blinkendes weisses Kreuz */
+    if (G.player) {
+      var rx = kx + (G.player.x / TILE) * skala, ry = ky + (G.player.y / TILE) * skala;
+      var arm = gross ? 4 : 3;
+      ctx.fillStyle = 'rgba(0,0,0,0.8)';
+      ctx.fillRect(Math.round(rx - arm) - 1, Math.round(ry) - 2, arm * 2 + 3, 4);
+      ctx.fillRect(Math.round(rx) - 2, Math.round(ry - arm) - 1, 4, arm * 2 + 3);
+      ctx.fillStyle = (Math.floor(G.time * 3) % 2) ? '#fff' : '#ff5a5a';
+      ctx.fillRect(Math.round(rx - arm), Math.round(ry) - 1, arm * 2 + 1, 2);
+      ctx.fillRect(Math.round(rx) - 1, Math.round(ry - arm), 2, arm * 2 + 1);
+    }
+    return { x: kx, y: ky, w: kw, h: kh };
+  }
+
+  /* Die grosse Uebersicht ueber dem Spiel */
+  function karteBildschirm() {
+    ctx.fillStyle = 'rgba(6,5,12,0.88)';
+    ctx.fillRect(0, 0, VW, VH);
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ffd24a';
+    ctx.font = 'bold 12px "Courier New", monospace';
+    ctx.fillText('KARTE - ' + (G.map ? G.map.name.toUpperCase() : ''), VW / 2, 16);
+    ctx.textAlign = 'left';
+
+    karteZeichnen(24, 24, VW - 48, VH - 62, true);
+
+    /* Zeichenerklaerung */
+    var legende = [
+      ['#fff', 'Du'], ['#7ad048', 'Zombie'], ['#ffe066', 'verschont'],
+      ['#6fb8e0', 'Leute'], ['#ffd24a', 'Auto'], ['#ffa93a', 'Laden'],
+      ['#ff9a5a', 'Tuer'], ['#e8d0a0', 'Pilz'], ['#e05a7a', 'Beeren']
+    ];
+    ctx.font = '8px "Courier New", monospace';
+    var lx = 14, ly = VH - 26;
+    for (var i = 0; i < legende.length; i++) {
+      if (i === 4) { lx = 14; ly += 11; }
+      ctx.fillStyle = legende[i][0];
+      ctx.fillRect(lx, ly - 5, 4, 4);
+      ctx.fillStyle = '#cfc9e6';
+      ctx.fillText(legende[i][1], lx + 7, ly - 1);
+      lx += 12 + legende[i][1].length * 5;
+    }
+
+    ctx.textAlign = 'center';
+    ctx.globalAlpha = 0.55 + 0.45 * Math.abs(Math.sin(G.time * 2.4));
+    ctx.fillStyle = '#fff';
+    ctx.fillText('[ tippen oder M zum Schliessen ]', VW / 2, VH - 4);
+    ctx.globalAlpha = 1;
+    ctx.textAlign = 'left';
+  }
+
   function drawHUD() {
     /* Herzen: jedes Herz sind zwei Haelften */
     var p = G.player;
@@ -1679,6 +1826,9 @@
       ctx.fillStyle = '#e03a3a'; ctx.fillRect(bx, by + 1, bw * anteil, 5);
       ctx.fillStyle = '#ff9a8a'; ctx.fillRect(bx, by + 1, bw * anteil, 2);
     }
+
+    /* Kleine Karte oben rechts */
+    if (!G.karteOffen) karteZeichnen(VW - 70, 58, 64, 50, false);
 
     /* Fassungsnummer immer in der Ecke */
     ctx.font = '8px "Courier New", monospace';
@@ -1756,7 +1906,7 @@
     ctx.fillText('und viel zu vielen Zombies', VW / 2, 88);
     ctx.fillStyle = '#ffd24a';
     ctx.font = 'bold 12px "Courier New", monospace';
-    ctx.fillText('FASSUNG ' + FASSUNG + ' - SPEICHERT JETZT', VW / 2, 106);
+    ctx.fillText('FASSUNG ' + FASSUNG + ' - MIT KARTE', VW / 2, 106);
 
     ctx.fillStyle = (Math.floor(G.time * 1.6) % 2) ? '#fff' : '#7a748f';
     ctx.font = '10px "Courier New", monospace';
@@ -1936,6 +2086,14 @@
       G.fade = Math.max(0, G.fade - dt * 3.2);
     }
 
+    /* Karte auf und zu */
+    if (took('karte') && !D.isOpen()) G.karteOffen = !G.karteOffen;
+    if (G.karteOffen) {
+      /* Bei offener Karte steht die Welt still - wie ein Menue. */
+      if (took('talk') || took('attack') || took('auto')) G.karteOffen = false;
+      return;
+    }
+
     /* Auto-Knopf: sofort losfahren, kein Suchen noetig */
     if (took('auto') && !D.isOpen()) starteFahrt();
 
@@ -2044,6 +2202,7 @@
     }
 
     drawHUD();
+    if (G.karteOffen) karteBildschirm();
 
     if (G.fade > 0) {
       ctx.fillStyle = 'rgba(0,0,0,' + Math.min(1, G.fade) + ')';
