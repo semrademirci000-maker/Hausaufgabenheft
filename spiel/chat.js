@@ -5,19 +5,23 @@
 
   var PEOPLE = {
     lisbeth: {
-      name: 'Lisbeth', rolle: 'Bogenschuetzin', color: '#8fd36a', kurz: 'Lisbeth',
+      name: 'Lisbeth', rolle: 'Ritterin mit Bogen', color: '#8fd36a', kurz: 'Lisbeth',
+      ritter: { a: '#cfe8bf', b: '#7ab05e', c: '#4a7a3a', t: '#4f9b45', u: '#3a7a34', r: '#8fd36a' },
       pal: { hair: '#a8642a', skin: '#f0c191', shirt: '#4f9b45', shirtDark: '#3a7a34', pants: '#5b4326', boots: '#3a2a18' }
     },
     tarik: {
-      name: 'Tarik', rolle: 'Schmied', color: '#e8a54a', kurz: 'Tarik',
+      name: 'Tarik', rolle: 'Ritter und Schmied', color: '#e8a54a', kurz: 'Tarik',
+      ritter: { a: '#f0d0a0', b: '#c08a4a', c: '#8a5a28', t: '#b8603a', u: '#94472a', r: '#e8a54a' },
       pal: { hair: '#2a1d14', skin: '#c08a5a', shirt: '#b8603a', shirtDark: '#94472a', pants: '#3b3b46', boots: '#2a2a33' }
     },
     momo: {
-      name: 'Momo', rolle: 'Magierin', color: '#c78ce0', kurz: 'Momo',
+      name: 'Momo', rolle: 'Zauberritterin', color: '#c78ce0', kurz: 'Momo',
+      ritter: { a: '#e8d0f5', b: '#a878c8', c: '#6b44a0', t: '#8a5ac4', u: '#6b44a0', r: '#c78ce0' },
       pal: { hair: '#6b3f8a', skin: '#f5cfa8', shirt: '#8a5ac4', shirtDark: '#6b44a0', pants: '#4a3a6b', boots: '#2f2545' }
     },
     gris: {
-      name: 'Griswold', rolle: 'alter Waechter', color: '#a9c0d8', kurz: 'Griswold',
+      name: 'Griswold', rolle: 'alter Ritter', color: '#a9c0d8', kurz: 'Griswold',
+      ritter: { a: '#dfe8f2', b: '#9aa8bc', c: '#5a6478', t: '#5a6478', u: '#454e60', r: '#a9c0d8' },
       pal: { hair: '#cfd4dc', skin: '#e0b48a', shirt: '#5a6478', shirtDark: '#454e60', pants: '#3b4250', boots: '#2a2f3a' }
     },
     mama: {
@@ -63,6 +67,18 @@
     haendler: {
       name: 'Haendler Bosko', rolle: 'Waffenschmied', color: '#ffd24a', kurz: 'Bosko',
       pal: { hair: '#5a3a1a', skin: '#d8a070', shirt: '#8a5a2a', shirtDark: '#6b4420', pants: '#4a3a2a', boots: '#33261a' }
+    },
+    schmied: {
+      name: 'Schmiedin Halda', rolle: 'Ruestungsschmiedin', color: '#b8c8e0', kurz: 'Halda',
+      pal: { hair: '#3a3a44', skin: '#c89a62', shirt: '#5a6478', shirtDark: '#454e60', pants: '#3b3b46', boots: '#24242c' }
+    },
+    alchi: {
+      name: 'Alchemist Vex', rolle: 'Traenkemischer', color: '#ff9ab0', kurz: 'Vex',
+      pal: { hair: '#6b3f8a', skin: '#e8c0a0', shirt: '#a04a70', shirtDark: '#7a3554', pants: '#4a2a44', boots: '#2e1a2a' }
+    },
+    meister: {
+      name: 'Waffenmeister Orin', rolle: 'alter Kaempfer', color: '#ffb06a', kurz: 'Orin',
+      pal: { hair: '#c8c8d0', skin: '#d8a070', shirt: '#7a3a2a', shirtDark: '#5a2a1e', pants: '#3a3228', boots: '#241e18' }
     }
   };
 
@@ -204,36 +220,71 @@
   ];
 
   /* ---------- Die Bosse ---------- */
+  /* Die Bosse. Gekaempft wird direkt im Wald - mit Schwert und Rolle.
+     angriffe = was er kann. Jeder Angriff wird vorher angekuendigt,
+     damit man wegrollen kann. Wer stehen bleibt, kassiert. */
   var BOSSE = [
     {
       key: 'koenig', name: 'Grauzahn, der Zombiekoenig', art: 'zombie',
-      scale: 1.8, hp: 12, speed: 22, dmg: 2, koennen: 'rufen',
+      scale: 1.9, hp: 75, speed: 34, dmg: 2, farbe: '#7ad048',
+      angriffe: ['sturm', 'rufen', 'stampf'],
       intro: 'Der Boden bebt. Ein riesiger Zombie mit schiefer Krone stapft aus dem Dickicht.',
       spruch: 'GRRRAAA! MEIN WALD! MEINE WUERMER!',
       sieg: 'Die Krone kullert ins Gras. Grauzahn faellt um wie ein nasser Sack.'
     },
     {
       key: 'spinne', name: 'Nachtweberin, die Waldspinne', art: 'spider',
-      scale: 1.5, hp: 10, speed: 28, dmg: 1, koennen: 'sprint',
+      scale: 1.6, hp: 90, speed: 50, dmg: 2, farbe: '#c78ce0',
+      angriffe: ['sturm', 'salve', 'sprung'],
       intro: 'Zwischen zwei Eichen haengt ein Netz so gross wie eine Tuer. Acht Beine kommen heraus.',
       spruch: 'ssssss... bleib doch ein biiisschen kleben.',
       sieg: 'Die Nachtweberin rollt sich ein und verschwindet im Gebuesch.'
     },
     {
       key: 'wolf', name: 'Mondfell, der Werwolf', art: 'wolf',
-      scale: 1.5, hp: 11, speed: 34, dmg: 1, koennen: 'wut',
+      scale: 1.6, hp: 105, speed: 56, dmg: 3, farbe: '#d8d0e8',
+      angriffe: ['sturm', 'fegen', 'sprung'],
       intro: 'Ein Heulen, viel zu nah. Etwas Grosses laeuft auf zwei Beinen zwischen den Baeumen.',
       spruch: 'Du riechst nach Eintopf, kleiner Ritter.',
       sieg: 'Mondfell schuettelt sich, brummt beleidigt und trottet davon.'
     },
     {
       key: 'knorr', name: 'Alter Knorr, der Baumgeist', art: 'treant',
-      scale: 1.3, hp: 14, speed: 12, dmg: 2, koennen: 'wurzeln',
+      scale: 1.5, hp: 130, speed: 26, dmg: 3, farbe: '#8fd36a',
+      angriffe: ['wurzeln', 'stampf', 'regen'],
       intro: 'Der Baum vor dir macht die Augen auf. Und dann macht er einen Schritt.',
       spruch: 'Ihr... trampelt... auf... meinen... Wurzeln.',
       sieg: 'Alter Knorr setzt sich wieder hin und ist einfach nur noch ein Baum.'
+    },
+    {
+      key: 'ritter', name: 'Sir Moder, der gefallene Ritter', art: 'ritter',
+      scale: 1.7, hp: 165, speed: 52, dmg: 3, farbe: '#9aa4b8',
+      angriffe: ['sturm', 'fegen', 'sprung', 'salve'],
+      intro: 'Eine rostige Ruestung richtet sich auf. Sie war mal einer von euch.',
+      spruch: 'ICH... WAR... DER BESTE... VON... UNS.',
+      sieg: 'Der Helm rollt davon. Innen drin war schon lange niemand mehr.'
+    },
+    {
+      key: 'fuerst', name: 'Der Seuchenfuerst', art: 'fuerst',
+      scale: 2.1, hp: 220, speed: 46, dmg: 4, farbe: '#ff5a9a',
+      angriffe: ['regen', 'rufen', 'stampf', 'salve', 'sturm'],
+      intro: 'Der Himmel wird gruen. Etwas sehr Altes und sehr Boeses richtet sich auf.',
+      spruch: 'IHR SEID NUR DER ANFANG MEINER ARMEE.',
+      sieg: 'Der Seuchenfuerst zerfaellt zu Staub. Der Himmel wird wieder blau.'
     }
   ];
+
+  /* Was der Boss beim Angriff ruft */
+  var BOSS_ANSAGEN = {
+    sturm: 'STURMANGRIFF!',
+    stampf: 'ER STAMPFT!',
+    fegen: 'RUNDUMSCHLAG!',
+    salve: 'SALVE!',
+    rufen: 'ER RUFT VERSTAERKUNG!',
+    wurzeln: 'WURZELN!',
+    sprung: 'ER SPRINGT!',
+    regen: 'ES REGNET SEUCHE!'
+  };
 
   var BOSS_LINES = {
     auftritt: [
@@ -256,6 +307,7 @@
     spareLines: SPARE_LINES,
     shopLines: SHOP_LINES,
     bosse: BOSSE,
+    bossAnsagen: BOSS_ANSAGEN,
     bossLines: BOSS_LINES,
     people: PEOPLE,
     zombiePal: ZOMBIE_PAL,

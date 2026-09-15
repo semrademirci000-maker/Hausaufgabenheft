@@ -1,4 +1,6 @@
 * { box-sizing: border-box; }
+/* Muss ueber .act stehen, sonst zeigt sich der Zorn-Knopf immer */
+[hidden] { display: none !important; }
 
 html, body {
   margin: 0; padding: 0; height: 100%;
@@ -81,6 +83,13 @@ html, body {
 }
 #sound.off { color: #5a5670; }
 
+#mapbtn {
+  position: fixed; top: 48px; right: 8px;
+  width: 34px; height: 34px; border-radius: 50%;
+  border: 2px solid #4a7fb8; background: #14121c; color: #9fd0f0;
+  font-size: 15px; line-height: 1; cursor: pointer; z-index: 5;
+}
+
 /* ---------- Steuerkreuz und Knöpfe: immer da ---------- */
 #touch {
   display: block;
@@ -103,15 +112,23 @@ html, body {
 .act.auto { border-color: #e8a54a; color: #ffd24a; }
 .act.karte { border-color: #4a7fb8; color: #9fd0f0; }
 .act.rolle { border-color: #6ab87f; color: #9fe0b0; }
+.act.heil { border-color: #d84a6a; color: #ff9ab0; }
+.act.heil.leer { border-color: #3a3444; color: #55506a; }
+.act.zorn {
+  border-color: #ffd24a; color: #ffe89a;
+  box-shadow: 0 0 10px rgba(255,210,74,.7);
+  animation: zornpuls .8s ease-in-out infinite;
+}
+@keyframes zornpuls { 50% { box-shadow: 0 0 18px rgba(255,210,74,1); } }
 .act small { font-size: 7px; opacity: .75; margin-top: 2px; }
 .act:active { background: #3b3660; }
 
 /* Auf schmalen Bildschirmen ruecken die vier Knoepfe zusammen */
-@media (max-width: 760px) {
-  #abtn { right: 8px; gap: 5px; }
-  .act { width: 46px; height: 46px; font-size: 13px; }
-  .act.big { width: 58px; height: 58px; font-size: 17px; }
-  .act small { font-size: 6px; }
+@media (max-width: 860px) {
+  #abtn { right: 6px; gap: 4px; }
+  .act { width: 42px; height: 42px; font-size: 12px; }
+  .act.big { width: 54px; height: 54px; font-size: 16px; }
+  .act small { font-size: 6px; margin-top: 1px; }
 }
 
 /* Mit Maus und Tastatur halten sich die Knöpfe zurück */

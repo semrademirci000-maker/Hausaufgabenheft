@@ -27,9 +27,11 @@ fährst du mit der ganzen Familie im Auto in die Stadt.
 | Schlagen | Leertaste (oder X / J) | großer roter Knopf ⚔ |
 | **Wirbelschlag** | Schlagtaste **halten**, dann loslassen | Knopf ⚔ **halten** |
 | **Ausweichrolle** | Shift, C oder Q | Knopf 💨 **Rolle** |
+| **Heiltrank** | H | Knopf ❤ **Heilen** |
+| **Ritterzorn** | F | Knopf ⚡ (nur wenn geladen) |
 | Reden / Weiter | E oder Enter | Knopf **E**, oder kurz aufs Bild tippen |
 | Antwort wählen | ↑ ↓ + Enter | Antwort antippen |
-| Karte | **M** | Knopf 🗺 **Karte** |
+| Karte | **M** | Knopf 🗺 oben rechts |
 | Musik an/aus | – | ♪ oben rechts |
 
 Der Stick ist ein echter Analog-Stick: Du kannst den Finger **irgendwo** auf dem
@@ -45,8 +47,9 @@ acht. Lässt du los, springt der Stick zurück in seine Ecke.
 - Gehst du zur Tür raus, wirst du gefragt, wer heute mitkommt:
   allein, zwei Freunde, alle vier oder „überrasch mich“.
 
-**Die Freunde (Bots)**
-- Lisbeth (Bogenschützin), Tarik (Schmied), Momo (Magierin), Griswold (Wächter).
+**Die Freunde – vier Ritter**
+- Lisbeth, Tarik, Momo und Griswold tragen jetzt **eigene Rüstungen** in
+  ihren Farben, mit **Schild und Schwert** – vier Ritter, die mitkommen.
 - Sie laufen dir hinterher, hauen im Kampf mit drauf …
 - … und **stellen dir von selbst Fragen**. Du bekommst zwei oder drei
   Antworten zur Auswahl, sie reagieren auf deine Antwort. Die Fragen passen
@@ -60,27 +63,31 @@ acht. Lässt du los, springt der Stick zurück in seine Ecke.
 - Für jeden besiegten Boss bekommst du **ein Herz dazu** (bis zu sieben) und
   bist sofort wieder ganz voll.
 
-**Bosskämpfe im Kampf-Fenster (wie in Undertale)**
-- Nach jeweils sechs erledigten Zombies taucht ein **Boss** auf – jedes Mal ein
-  anderer. Dann wechselt das Spiel in ein echtes **Kampf-Fenster**:
-- Oben der Boss mit Lebensbalken, unten vier Knöpfe:
-  - **KÄMPFEN** – ein Zeiger saust hin und her. Tippe, wenn er in der Mitte ist:
-    je mittiger, desto mehr Schaden (VOLLTREFFER!).
-  - **HANDELN** – für jeden Boss etwas anderes: dem Zombiekönig die Krone
-    richten, die Spinne für ihr Netz loben, den Werwolf hinter den Ohren
-    kraulen, den Baumgeist gießen. Dreimal nett sein …
-  - **ITEM** – Pilz oder Beeren essen und heilen.
-  - **SCHONEN** – … und dann kannst du ihn gehen lassen. Gibt **mehr** Münzen
-    als ihn zu besiegen.
-- Danach greift der Boss an: Du steuerst dein **rotes Herz** mit dem Joystick
-  durch das Kampf-Fenster und weichst aus. Jeder Boss hat ein eigenes Muster –
-  Würmer regnen herunter, Netzfäden schießen von der Seite, Krallen zielen auf
-  dich, Wurzeln schießen aus dem Boden.
-- **Grauzahn, der Zombiekönig** – riesig, mit Krone, ruft Verstärkung.
-- **Nachtweberin, die Waldspinne** – schnell, schießt in Sprints auf dich zu.
-- **Mondfell, der Werwolf** – wird bei der Hälfte seiner Kraft wütend und noch schneller.
-- **Alter Knorr, der Baumgeist** – langsam und zäh, lässt Wurzeln um sich
-  aus dem Boden schießen.
+**Echte Bosskämpfe – mitten im Wald, mit Schwert und Rolle**
+- Kein Kampf-Fenster, kein Herz, keine Menüs. Der Boss steht im Wald
+  und du musst ihn **wirklich besiegen**.
+- Jeder Angriff wird **angekündigt**: der Boss blinkt rot, eine rote Linie
+  zeigt, wohin er stürmt, ein roter Kreis, wie weit sein Stampfer reicht.
+  Wer dann wegrollt, kommt heil davon. Wer stehen bleibt, verliert Herzen.
+- Acht Angriffsarten: **Sturmangriff**, **Stampfer** (Schockwelle),
+  **Rundumschlag**, **Salve** (Säurefächer), **Verstärkung rufen**,
+  **Wurzeln**, **Sprung** und **Seuchenregen**. Wurzeln und Regen markieren
+  vorher den Boden – da darfst du nicht mehr stehen.
+- Rennt er ins Leere, **taumelt** er: freie Schläge, und die machen
+  **mehr Schaden**. Genug Treffer am Stück lassen ihn auch so taumeln –
+  der Balken unter seinem Leben zeigt es.
+- **Drei Phasen**: bei zwei Dritteln und einem Drittel Leben wird er
+  schneller und greift öfter an. In der letzten Phase glüht er rot.
+- **Sechs Bosse, und jeder Kampf ist härter als der letzte**: jeder besiegte
+  Boss gibt dem nächsten **42 % mehr Leben**, mehr Tempo und mehr Schaden.
+  - **Grauzahn, der Zombiekönig** – ruft Verstärkung, stürmt, stampft.
+  - **Nachtweberin, die Waldspinne** – stürmt, springt, schießt Fächer.
+  - **Mondfell, der Werwolf** – schnell, Rundumschläge, Sprünge.
+  - **Alter Knorr, der Baumgeist** – Wurzeln, Stampfer, Seuchenregen.
+  - **Sir Moder, der gefallene Ritter** – kann fast alles.
+  - **Der Seuchenfürst** – 220 Leben, alle fünf Angriffe, der Himmel wird grün.
+- Deine Freunde helfen gegen Bosse **nur ein bisschen** – da musst du ran.
+- Belohnung: ein Herz mehr, alle Herzen voll, zwei Tränke und Münzen.
 
 **Reden statt kämpfen (wie in Undertale)**
 - Geh nah an einen Zombie und drücke **E** – statt zuzuschlagen redest du mit ihm:
@@ -94,6 +101,16 @@ acht. Lässt du los, springt der Stick zurück in seine Ecke.
 - Im Wald liegen Pilze und Beeren herum; du sammelst sie einfach durch Drüberlaufen.
 - Beim Händler verkaufen (Pilz 4, Beere 3 Münzen) – oder **Mama drei Pilze bringen**:
   Sie macht eine Pilzpfanne daraus, die **ein Herz dazugibt**.
+
+**Der Wald ist doppelt so groß**
+- 64 × 48 Kacheln statt 44 × 34, mit richtigen Gegenden:
+  - die **Lichtung** mit Haus, Lagerfeuer, Zaun und Fässern
+  - der große **See** im Osten mit Ufersteinen, Bank und Feuerstelle
+  - das **Dickicht** im Nordosten: dichte Tannen, eine schmale Schneise,
+    und eine Tafel, die vom Reingehen abrät
+  - die **alte Ruine** im Südwesten mit Mauerresten und Feuerstelle
+  - der **Friedhof** im Süden mit zehn Grabsteinen
+- Wege verbinden alles, und auf der großen Karte sieht man sofort, wo man ist.
 
 **Tag und Nacht**
 - Draußen vergeht die Zeit: Abendrot, dann Nacht, dann Sonnenaufgang.
@@ -135,6 +152,33 @@ acht. Lässt du los, springt der Stick zurück in seine Ecke.
   **alles rundherum** mit fast doppeltem Schaden.
 - **Ausweichrolle**: kurz unverwundbar durch alles hindurch. Danach eine
   Dreiviertelsekunde Pause (der Balken unten links zeigt sie an).
+
+**Heiltrank – nicht immer, wenn du willst**
+- Du hast drei Tränke am Gürtel (unten links). Einer füllt **zwei Herzen**.
+- Danach **sieben Sekunden Pause** – mitten im Bosskampf musst du dir den
+  richtigen Moment suchen. Der Knopf wird grau und zählt runter.
+- Nachfüllen: schlafen, Boss besiegen, Haus verteidigen, oder beim
+  **Alchemisten Vex** in der Stadt kaufen.
+
+**Ritterzorn – die Superkraft**
+- Der Balken unten links füllt sich mit jedem erledigten Zombie.
+- Ist er voll, taucht der **⚡-Knopf** auf. Drücken: **acht Sekunden**
+  Flammenschwert, **dreifacher Schaden**, jeder Schlag wirft eine
+  Schockwelle, die auch die Nachbarn erwischt.
+
+**Nachts kommen sie ins Haus**
+- Wer sich nachts zu Hause verkriecht, ist nicht sicher: die Zombies
+  **treten die Tür ein** und kommen einer nach dem anderen rein.
+- Mila schreit, Mama stellt sich vor sie, Papa verrammelt die Fenster –
+  die Tür gehört dir. Je weiter du im Spiel bist, desto mehr kommen.
+
+**Eichenstadt wird angegriffen**
+- Ab dem zweiten besiegten Boss ist die Stadt nicht mehr sicher. Kommst du
+  an, **brennt es schon**: Rauch über den Dächern, Zombies in den Gassen,
+  der Bildschirm glüht orange.
+- Erst die Gassen leerräumen, dann kommt **der Anführer** – ein richtiger
+  Boss, mitten auf dem Marktplatz.
+- Belohnung: dicker Batzen Münzen, alle Tränke voll, Ritterzorn voll geladen.
 
 **Zombie-Wellen**
 - Alle paar Minuten wird es draußen richtig voll: **WELLE 1, 2, 3 …**
@@ -179,11 +223,17 @@ acht. Lässt du los, springt der Stick zurück in seine Ecke.
 - Während ein Gespräch läuft, bleiben die Zombies stehen – niemand wird beim
   Reden von hinten gebissen.
 
-**Münzen und der Laden**
+**Münzen und die vier Läden**
 - Jeder erledigte Zombie lässt **1 bis 3 Münzen** fallen, ein Boss **12 bis 19**.
   Die Münzen fliegen von selbst zu dir – du musst sie nicht einsammeln.
-- In Eichenstadt steht am Brunnen ein **Marktstand**. Der Händler **Bosko**
-  (mit dem Schild *LADEN* über dem Kopf) verkauft dir:
+- In Eichenstadt gibt es jetzt **vier Läden**, jeder mit eigenem Stand und
+  dem Schild *LADEN* über dem Kopf:
+  - **Händler Bosko** – Schwerter, und er kauft dir Pilze und Beeren ab.
+  - **Schmiedin Halda** – Rüstungen und Beulen ausklopfen.
+  - **Alchemist Vex** – Heiltränke, größerer Gürtel, Wutkristalle.
+  - **Waffenmeister Orin** – Kampfkunst, die **für immer** bleibt:
+    schnellere Rolle, größerer Wirbelschlag, schnellerer Ritterzorn.
+- Bei Bosko:
   - **Schwert**: Geschärfte Klinge (25) → Stahlklinge (60) → Goldene Klinge (120).
     Jede Stufe macht **einen Schaden mehr** – und die Klinge sieht anders aus.
   - **Rüstung**: Lederwams (30) → Kettenhemd (70) → Goldene Rüstung (140).

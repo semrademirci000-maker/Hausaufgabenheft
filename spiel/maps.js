@@ -41,11 +41,14 @@
     return out;
   }
 
-  /* ============================ WALD ============================ */
+  /* ============================ WALD ============================
+     Der Wald ist jetzt doppelt so gross: Lichtung mit Haus, Teich,
+     Friedhof, eine alte Ruine und ganz oben rechts das Dickicht,
+     in dem es richtig ungemuetlich wird. */
   function buildWald() {
-    var W = 44, H = 34, r = rng(20250914);
+    var W = 64, H = 48, r = rng(20250914);
     var g = grid(W, H, '.');
-    var x, y;
+    var x, y, i, k;
 
     /* Grasvarianten */
     for (y = 0; y < H; y++) {
@@ -62,30 +65,46 @@
       }
     }
     /* Baumgruppen im Inneren */
-    for (var i = 0; i < 34; i++) {
+    for (i = 0; i < 80; i++) {
       var cx = 4 + ((r() * (W - 8)) | 0), cy = 4 + ((r() * (H - 8)) | 0);
       var n = 1 + ((r() * 4) | 0);
-      for (var k = 0; k < n; k++) {
+      for (k = 0; k < n; k++) {
         var tx = cx + ((r() * 4) | 0) - 2, ty = cy + ((r() * 4) | 0) - 2;
         if (g[ty] && g[ty][tx]) g[ty][tx] = r() > 0.65 ? 't' : 'T';
       }
     }
+    /* Das Dickicht oben rechts: dichte Tannen, kaum Platz */
+    for (y = 3; y < 17; y++) {
+      for (x = 40; x < W - 3; x++) {
+        if (r() > 0.55) g[y][x] = 't';
+        else if (r() > 0.85) g[y][x] = 'r';
+      }
+    }
+    /* eine Schneise mitten durchs Dickicht */
+    for (x = 40; x < W - 4; x++) { g[10][x] = ','; g[11][x] = ','; }
+
     /* Büsche, Steine */
-    for (i = 0; i < 24; i++) {
+    for (i = 0; i < 48; i++) {
       x = 3 + ((r() * (W - 6)) | 0); y = 3 + ((r() * (H - 6)) | 0);
       g[y][x] = r() > 0.45 ? '*' : 'r';
     }
-    /* Teich unten rechts */
-    for (y = 24; y < 31; y++) {
-      for (x = 31; x < 41; x++) {
-        var dx = (x - 36) / 5, dy = (y - 27.5) / 3.4;
+
+    /* Grosser See unten rechts */
+    for (y = 32; y < 45; y++) {
+      for (x = 40; x < 60; x++) {
+        var dx = (x - 50) / 9.5, dy = (y - 38.5) / 6;
         if (dx * dx + dy * dy < 1) g[y][x] = '~';
       }
     }
+    /* Ufersteine */
+    for (i = 0; i < 14; i++) {
+      x = 40 + ((r() * 20) | 0); y = 31 + ((r() * 14) | 0);
+      if (g[y] && g[y][x] === '.') g[y][x] = 'r';
+    }
 
     /* Lichtung ums Haus frei räumen */
-    rect(g, 3, 2, 18, 12, '.');
-    for (y = 2; y < 14; y++) for (x = 3; x < 21; x++) if (r() > 0.75) g[y][x] = ',';
+    rect(g, 3, 2, 20, 14, '.');
+    for (y = 2; y < 16; y++) for (x = 3; x < 23; x++) if (r() > 0.75) g[y][x] = ',';
 
     /* Holzhaus (8 breit) bei x=6, y=3 */
     stamp(g, 6, 3, [
@@ -97,25 +116,36 @@
       '..--------..'
     ]);
 
-    /* Weg vom Haus nach unten und nach rechts zum Auto */
-    for (y = 9; y <= 17; y++) { g[y][11] = '-'; g[y][12] = '-'; }
-    for (x = 11; x <= 27; x++) { g[17][x] = '-'; g[18][x] = '-'; }
-    for (y = 17; y <= 22; y++) { g[y][26] = '-'; g[y][27] = '-'; }
+    /* Wege: vom Haus runter, dann quer nach rechts zum Auto */
+    for (y = 9; y <= 19; y++) { g[y][11] = '-'; g[y][12] = '-'; }
+    for (x = 11; x <= 31; x++) { g[19][x] = '-'; g[20][x] = '-'; }
+    for (y = 19; y <= 26; y++) { g[y][30] = '-'; g[y][31] = '-'; }
+    /* Weg weiter nach Osten zum See und nach Norden ins Dickicht */
+    for (x = 31; x <= 47; x++) { g[26][x] = '-'; g[27][x] = '-'; }
+    for (y = 11; y <= 19; y++) { g[y][41] = '-'; g[y][42] = '-'; }
     /* Platz fürs Auto frei halten */
-    rect(g, 24, 14, 6, 4, '-');
+    rect(g, 24, 15, 6, 4, '-');
 
-    /* Lichtung in der Mitte (Kampfplatz) */
-    rect(g, 14, 21, 12, 8, ',');
-    for (y = 21; y < 29; y++) for (x = 14; x < 26; x++) if (r() > 0.82) g[y][x] = 'f';
-    /* ein paar einzelne Bäume als Deko in der Lichtung */
-    g[23][16] = 'T'; g[27][23] = 't'; g[25][20] = '*';
+    /* Grosse Lichtung in der Mitte (Kampfplatz) */
+    rect(g, 14, 24, 16, 11, ',');
+    for (y = 24; y < 35; y++) for (x = 14; x < 30; x++) if (r() > 0.82) g[y][x] = 'f';
+    g[27][17] = 'T'; g[32][26] = 't'; g[29][22] = '*';
 
-    /* --- Der alte Friedhof unten links: da kommen die Zombies her --- */
-    rect(g, 4, 24, 8, 7, ',');
-    for (y = 24; y < 31; y++) for (x = 4; x < 12; x++) if (r() > 0.7) g[y][x] = '.';
-    /* Trampelpfad vom Weg zum Friedhof */
-    for (x = 8; x <= 14; x++) { g[23][x] = '-'; }
-    for (y = 19; y <= 23; y++) { g[y][14] = '-'; }
+    /* --- Die alte Ruine links unten --- */
+    stamp(g, 4, 36, [
+      '==..===',
+      '=.....=',
+      '=.....|',
+      '==...==',
+      '=..=.=='
+    ]);
+    for (y = 35; y < 43; y++) for (x = 3; x < 12; x++) if (g[y][x] === '.') g[y][x] = ',';
+    for (x = 11; x <= 17; x++) { g[38][x] = '-'; }
+
+    /* --- Der alte Friedhof unten in der Mitte --- */
+    rect(g, 16, 38, 10, 8, ',');
+    for (y = 38; y < 46; y++) for (x = 16; x < 26; x++) if (r() > 0.7) g[y][x] = '.';
+    for (y = 34; y <= 38; y++) { g[y][20] = '-'; g[y][21] = '-'; }
 
     return {
       key: 'wald',
@@ -129,25 +159,37 @@
       ],
       props: [
         { kind: 'car', x: 16.8, y: 10.4 },
-        { kind: 'sign', x: 28, y: 20.9, text: 'Wegweiser: Nach Osten geht es zur Stadt Eichenstadt. Zu Fuss viel zu weit - nimm das Auto!' },
-        /* Lagerfeuer vor dem Haus - nachts sitzen hier alle */
-        { kind: 'fire', x: 13.5, y: 13.5 },
+        { kind: 'sign', x: 32.5, y: 22.9, text: 'Wegweiser: Nach Osten geht es zur Stadt Eichenstadt. Zu Fuss viel zu weit - nimm das Auto!' },
+        /* Lagerfeuer vor dem Haus */
+        { kind: 'fire', x: 13.5, y: 14.5 },
         { kind: 'barrel', x: 9.6, y: 9.4 },
         { kind: 'barrel', x: 9.6, y: 10.6 },
-        /* Zaun links neben dem Haus */
-        { kind: 'fence', x: 8.5, y: 12.5 },
-        { kind: 'fence', x: 9.5, y: 12.5 },
-        { kind: 'fence', x: 10.5, y: 12.5 },
+        { kind: 'fence', x: 8.5, y: 13.5 },
+        { kind: 'fence', x: 9.5, y: 13.5 },
+        { kind: 'fence', x: 10.5, y: 13.5 },
         /* Der Friedhof */
-        { kind: 'grave', x: 5.5, y: 25.5, art: 0 },
-        { kind: 'grave', x: 7.5, y: 25.5, art: 1 },
-        { kind: 'grave', x: 9.5, y: 25.5, art: 2 },
-        { kind: 'grave', x: 5.5, y: 27.5, art: 1 },
-        { kind: 'grave', x: 7.5, y: 27.5, art: 2 },
-        { kind: 'grave', x: 9.5, y: 27.5, art: 0 },
-        { kind: 'grave', x: 6.5, y: 29.5, art: 2 },
-        { kind: 'grave', x: 8.5, y: 29.5, art: 1 },
-        { kind: 'sign', x: 11.6, y: 23.4, text: 'Verwitterte Tafel: HIER RUHT NIEMAND MEHR RICHTIG. Nachts wird es hier ungemuetlich.' }
+        { kind: 'grave', x: 17.5, y: 39.5, art: 0 },
+        { kind: 'grave', x: 19.5, y: 39.5, art: 1 },
+        { kind: 'grave', x: 21.5, y: 39.5, art: 2 },
+        { kind: 'grave', x: 23.5, y: 39.5, art: 1 },
+        { kind: 'grave', x: 17.5, y: 42.5, art: 1 },
+        { kind: 'grave', x: 19.5, y: 42.5, art: 2 },
+        { kind: 'grave', x: 21.5, y: 42.5, art: 0 },
+        { kind: 'grave', x: 23.5, y: 42.5, art: 2 },
+        { kind: 'grave', x: 18.5, y: 45.2, art: 2 },
+        { kind: 'grave', x: 22.5, y: 45.2, art: 1 },
+        { kind: 'sign', x: 20.6, y: 36.4, text: 'Verwitterte Tafel: HIER RUHT NIEMAND MEHR RICHTIG. Nachts wird es hier ungemuetlich.' },
+        /* Die Ruine */
+        { kind: 'fire', x: 6.5, y: 39.5 },
+        { kind: 'barrel', x: 8.5, y: 40.5 },
+        { kind: 'sign', x: 11.5, y: 37.4, text: 'Halb zerfallene Tafel: ...RITTERBURG... hier stand mal etwas Grosses.' },
+        /* Das Dickicht */
+        { kind: 'sign', x: 40.5, y: 12.4, text: 'Grob geschnitzt: DICKICHT. WER NACHTS REINGEHT, KOMMT NICHT RAUS.' },
+        { kind: 'rock', x: 45.5, y: 14.5 },
+        { kind: 'rock', x: 52.5, y: 9.5 },
+        /* Am See */
+        { kind: 'bench', x: 45.5, y: 31.5 },
+        { kind: 'fire', x: 43.5, y: 30.5 }
       ],
       /* Startplätze für die vier Freunde vor dem Haus */
       friendSpots: [
@@ -292,8 +334,13 @@
         { x: 5, y: 19, wer: 'buerger4' },
         { x: 39, y: 12, wer: 'buerger5' }
       ],
-      /* Der Haendler steht an seinem Stand, gleich neben dem Auto. */
-      haendler: { x: 26.9, y: 23.9 }
+      /* Vier Laeden, jeder mit eigenem Stand */
+      haendler: { x: 26.9, y: 23.9 },
+      laeden: [
+        { wer: 'schmied', x: 13.5, y: 15.9, stand: true },
+        { wer: 'alchi', x: 34.5, y: 15.9, stand: true },
+        { wer: 'meister', x: 20.5, y: 27.9, stand: true }
+      ]
     };
   }
 

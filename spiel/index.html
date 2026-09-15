@@ -32,11 +32,14 @@
 
 <button id="sound" title="Musik an/aus">♪</button>
 
+<button id="mapbtn" data-k="karte" title="Karte">&#128506;</button>
+
 <div id="touch">
   <div id="abtn">
+    <button class="act zorn" data-k="zorn" hidden>&#9889;<small>ZORN</small></button>
     <button class="act auto" data-k="auto">&#128663;<small id="autotext">Stadt</small></button>
-    <button class="act karte" data-k="karte">&#128506;<small>Karte</small></button>
     <button class="act" data-k="talk">E<small>reden</small></button>
+    <button class="act heil" data-k="heil">&#10084;<small id="heiltext">3</small></button>
     <button class="act rolle" data-k="rolle">&#128168;<small>Rolle</small></button>
     <button class="act big" data-k="attack">⚔<small>schlagen</small></button>
   </div>
@@ -50,7 +53,6 @@
 <script src="audio.js"></script>
 <script src="dialog.js"></script>
 <script src="chat.js"></script>
-<script src="kampf.js"></script>
 <script src="game.js"></script>
 </body>
 </html>

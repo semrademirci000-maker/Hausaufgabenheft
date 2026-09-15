@@ -12,6 +12,8 @@
 <link rel="icon" href="icon-192.png">
 <style>
 * { box-sizing: border-box; }
+/* Muss ueber .act stehen, sonst zeigt sich der Zorn-Knopf immer */
+[hidden] { display: none !important; }
 
 html, body {
   margin: 0; padding: 0; height: 100%;
@@ -94,6 +96,13 @@ html, body {
 }
 #sound.off { color: #5a5670; }
 
+#mapbtn {
+  position: fixed; top: 48px; right: 8px;
+  width: 34px; height: 34px; border-radius: 50%;
+  border: 2px solid #4a7fb8; background: #14121c; color: #9fd0f0;
+  font-size: 15px; line-height: 1; cursor: pointer; z-index: 5;
+}
+
 /* ---------- Steuerkreuz und Knöpfe: immer da ---------- */
 #touch {
   display: block;
@@ -116,15 +125,23 @@ html, body {
 .act.auto { border-color: #e8a54a; color: #ffd24a; }
 .act.karte { border-color: #4a7fb8; color: #9fd0f0; }
 .act.rolle { border-color: #6ab87f; color: #9fe0b0; }
+.act.heil { border-color: #d84a6a; color: #ff9ab0; }
+.act.heil.leer { border-color: #3a3444; color: #55506a; }
+.act.zorn {
+  border-color: #ffd24a; color: #ffe89a;
+  box-shadow: 0 0 10px rgba(255,210,74,.7);
+  animation: zornpuls .8s ease-in-out infinite;
+}
+@keyframes zornpuls { 50% { box-shadow: 0 0 18px rgba(255,210,74,1); } }
 .act small { font-size: 7px; opacity: .75; margin-top: 2px; }
 .act:active { background: #3b3660; }
 
 /* Auf schmalen Bildschirmen ruecken die vier Knoepfe zusammen */
-@media (max-width: 760px) {
-  #abtn { right: 8px; gap: 5px; }
-  .act { width: 46px; height: 46px; font-size: 13px; }
-  .act.big { width: 58px; height: 58px; font-size: 17px; }
-  .act small { font-size: 6px; }
+@media (max-width: 860px) {
+  #abtn { right: 6px; gap: 4px; }
+  .act { width: 42px; height: 42px; font-size: 12px; }
+  .act.big { width: 54px; height: 54px; font-size: 16px; }
+  .act small { font-size: 6px; margin-top: 1px; }
 }
 
 /* Mit Maus und Tastatur halten sich die Knöpfe zurück */
@@ -155,11 +172,14 @@ html, body {
 
 <button id="sound" title="Musik an/aus">♪</button>
 
+<button id="mapbtn" data-k="karte" title="Karte">&#128506;</button>
+
 <div id="touch">
   <div id="abtn">
+    <button class="act zorn" data-k="zorn" hidden>&#9889;<small>ZORN</small></button>
     <button class="act auto" data-k="auto">&#128663;<small id="autotext">Stadt</small></button>
-    <button class="act karte" data-k="karte">&#128506;<small>Karte</small></button>
     <button class="act" data-k="talk">E<small>reden</small></button>
+    <button class="act heil" data-k="heil">&#10084;<small id="heiltext">3</small></button>
     <button class="act rolle" data-k="rolle">&#128168;<small>Rolle</small></button>
     <button class="act big" data-k="attack">⚔<small>schlagen</small></button>
   </div>
@@ -1252,6 +1272,36 @@ html, body {
     return knightCache[stufe];
   }
 
+  /* Die Freunde sind jetzt auch Ritter - jeder in seiner eigenen Farbe.
+     rue = Ruestung (a hell, b mittel, c dunkel), t/u = Wappenrock,
+     r = Helmbusch. */
+  var ritterCache = {};
+  function ritterFuer(schluessel, f) {
+    if (ritterCache[schluessel]) return ritterCache[schluessel];
+    var pal = {
+      o: KP.o, a: f.a, b: f.b, c: f.c, t: f.t, u: f.u,
+      s: f.s || KP.s, r: f.r, k: KP.k, n: KP.n
+    };
+    var side = [sprite(knightSide, pal), sprite(knightSide2, pal)];
+    ritterCache[schluessel] = {
+      down: [sprite(knightDown, pal), sprite(knightDown2, pal)],
+      up: [sprite(knightUp, pal), sprite(knightUp2, pal)],
+      right: side,
+      left: [flipX(side[0]), flipX(side[1])]
+    };
+    return ritterCache[schluessel];
+  }
+
+  /* Schilde der Freunde */
+  function makeSchild(farbe, rand) {
+    var c = mk(9, 11), g = c.getContext('2d');
+    g.fillStyle = rand; g.fillRect(0, 0, 9, 9);
+    g.fillRect(1, 9, 7, 1); g.fillRect(3, 10, 3, 1);
+    g.fillStyle = farbe; g.fillRect(1, 1, 7, 8); g.fillRect(2, 9, 5, 1);
+    g.fillStyle = rand; g.fillRect(4, 2, 1, 6); g.fillRect(2, 4, 5, 1);
+    return c;
+  }
+
   function swordFor(stufe) {
     stufe = Math.max(0, Math.min(KLINGEN.length - 1, stufe || 0));
     if (swordCache[stufe]) return swordCache[stufe];
@@ -1626,6 +1676,42 @@ html, body {
     return c;
   }
 
+  /* Der gefallene Ritter: rostige Ruestung, roter Blick */
+  function makeBossRitter() {
+    var c = mk(18, 20), g = c.getContext('2d');
+    g.fillStyle = '#5a5044'; g.fillRect(4, 0, 10, 8);       /* Helm */
+    g.fillStyle = '#6e6252'; g.fillRect(5, 1, 8, 6);
+    g.fillStyle = '#1a1420'; g.fillRect(6, 3, 6, 3);        /* Sehschlitz */
+    g.fillStyle = '#ff3a3a'; g.fillRect(7, 4, 1, 1); g.fillRect(10, 4, 1, 1);
+    g.fillStyle = '#8a2a2a'; g.fillRect(8, -0 + 0, 2, 2);   /* Helmbusch */
+    g.fillStyle = '#4a4238'; g.fillRect(2, 8, 14, 9);       /* Brustpanzer */
+    g.fillStyle = '#5e5648'; g.fillRect(3, 9, 12, 4);
+    g.fillStyle = '#7a3a2a'; g.fillRect(7, 10, 4, 5);       /* Rost */
+    g.fillStyle = '#3a3228'; g.fillRect(3, 17, 5, 3); g.fillRect(10, 17, 5, 3);
+    g.fillStyle = '#9aa4b8'; g.fillRect(15, 4, 2, 12);      /* Klinge */
+    g.fillStyle = '#d3dbe8'; g.fillRect(15, 4, 1, 12);
+    return c;
+  }
+
+  /* Der Seuchenfuerst: Umhang, Hoerner, gruenes Leuchten */
+  function makeFuerst(frame) {
+    var c = mk(20, 24), g = c.getContext('2d');
+    var w = frame ? 1 : 0;
+    g.fillStyle = '#2a1230'; g.fillRect(2, 6, 16, 17);      /* Umhang */
+    g.fillStyle = '#3d1a45'; g.fillRect(3, 7, 14, 12);
+    g.fillStyle = '#5a2468'; g.fillRect(4, 8, 5, 9);
+    g.fillStyle = '#1a0f20'; g.fillRect(6, 1, 8, 8);        /* Kopf */
+    g.fillStyle = '#3a2448'; g.fillRect(7, 2, 6, 6);
+    g.fillStyle = '#9aff6a'; g.fillRect(7, 4 - w, 2, 2); g.fillRect(11, 4 - w, 2, 2);
+    g.fillStyle = '#c8b0d8';                                /* Hoerner */
+    g.fillRect(4, 0, 2, 4); g.fillRect(14, 0, 2, 4);
+    g.fillRect(3, 0, 1, 2); g.fillRect(16, 0, 1, 2);
+    g.fillStyle = '#ff5a9a'; g.fillRect(9, 12, 2, 3);       /* Herz im Umhang */
+    g.fillStyle = '#9aff6a';
+    g.fillRect(2, 20 + w, 2, 2); g.fillRect(16, 21 - w, 2, 2);
+    return c;
+  }
+
   var TILES = {};
   function buildTiles() {
     TILES['.'] = grassTile(1, false, false);
@@ -1719,12 +1805,16 @@ html, body {
     spider: [makeSpider(0), makeSpider(1)],
     crown: makeCrown(),
     treant: makeTreant(),
+    bossRitter: makeBossRitter(),
+    fuerst: [makeFuerst(0), makeFuerst(1)],
     coin: [makeCoin(false), makeCoin(true)],
     stall: makeStall(),
     mushroom: makeMushroom(),
     berries: makeBerries(),
     dog: [makeDog(false), makeDog(true)],
     knightFor: knightFor,
+    ritterFuer: ritterFuer,
+    schild: makeSchild,
     swordFor: swordFor,
     withEars: withEars,
     actor: buildActor,
@@ -1781,11 +1871,14 @@ html, body {
     return out;
   }
 
-  /* ============================ WALD ============================ */
+  /* ============================ WALD ============================
+     Der Wald ist jetzt doppelt so gross: Lichtung mit Haus, Teich,
+     Friedhof, eine alte Ruine und ganz oben rechts das Dickicht,
+     in dem es richtig ungemuetlich wird. */
   function buildWald() {
-    var W = 44, H = 34, r = rng(20250914);
+    var W = 64, H = 48, r = rng(20250914);
     var g = grid(W, H, '.');
-    var x, y;
+    var x, y, i, k;
 
     /* Grasvarianten */
     for (y = 0; y < H; y++) {
@@ -1802,30 +1895,46 @@ html, body {
       }
     }
     /* Baumgruppen im Inneren */
-    for (var i = 0; i < 34; i++) {
+    for (i = 0; i < 80; i++) {
       var cx = 4 + ((r() * (W - 8)) | 0), cy = 4 + ((r() * (H - 8)) | 0);
       var n = 1 + ((r() * 4) | 0);
-      for (var k = 0; k < n; k++) {
+      for (k = 0; k < n; k++) {
         var tx = cx + ((r() * 4) | 0) - 2, ty = cy + ((r() * 4) | 0) - 2;
         if (g[ty] && g[ty][tx]) g[ty][tx] = r() > 0.65 ? 't' : 'T';
       }
     }
+    /* Das Dickicht oben rechts: dichte Tannen, kaum Platz */
+    for (y = 3; y < 17; y++) {
+      for (x = 40; x < W - 3; x++) {
+        if (r() > 0.55) g[y][x] = 't';
+        else if (r() > 0.85) g[y][x] = 'r';
+      }
+    }
+    /* eine Schneise mitten durchs Dickicht */
+    for (x = 40; x < W - 4; x++) { g[10][x] = ','; g[11][x] = ','; }
+
     /* Büsche, Steine */
-    for (i = 0; i < 24; i++) {
+    for (i = 0; i < 48; i++) {
       x = 3 + ((r() * (W - 6)) | 0); y = 3 + ((r() * (H - 6)) | 0);
       g[y][x] = r() > 0.45 ? '*' : 'r';
     }
-    /* Teich unten rechts */
-    for (y = 24; y < 31; y++) {
-      for (x = 31; x < 41; x++) {
-        var dx = (x - 36) / 5, dy = (y - 27.5) / 3.4;
+
+    /* Grosser See unten rechts */
+    for (y = 32; y < 45; y++) {
+      for (x = 40; x < 60; x++) {
+        var dx = (x - 50) / 9.5, dy = (y - 38.5) / 6;
         if (dx * dx + dy * dy < 1) g[y][x] = '~';
       }
     }
+    /* Ufersteine */
+    for (i = 0; i < 14; i++) {
+      x = 40 + ((r() * 20) | 0); y = 31 + ((r() * 14) | 0);
+      if (g[y] && g[y][x] === '.') g[y][x] = 'r';
+    }
 
     /* Lichtung ums Haus frei räumen */
-    rect(g, 3, 2, 18, 12, '.');
-    for (y = 2; y < 14; y++) for (x = 3; x < 21; x++) if (r() > 0.75) g[y][x] = ',';
+    rect(g, 3, 2, 20, 14, '.');
+    for (y = 2; y < 16; y++) for (x = 3; x < 23; x++) if (r() > 0.75) g[y][x] = ',';
 
     /* Holzhaus (8 breit) bei x=6, y=3 */
     stamp(g, 6, 3, [
@@ -1837,25 +1946,36 @@ html, body {
       '..--------..'
     ]);
 
-    /* Weg vom Haus nach unten und nach rechts zum Auto */
-    for (y = 9; y <= 17; y++) { g[y][11] = '-'; g[y][12] = '-'; }
-    for (x = 11; x <= 27; x++) { g[17][x] = '-'; g[18][x] = '-'; }
-    for (y = 17; y <= 22; y++) { g[y][26] = '-'; g[y][27] = '-'; }
+    /* Wege: vom Haus runter, dann quer nach rechts zum Auto */
+    for (y = 9; y <= 19; y++) { g[y][11] = '-'; g[y][12] = '-'; }
+    for (x = 11; x <= 31; x++) { g[19][x] = '-'; g[20][x] = '-'; }
+    for (y = 19; y <= 26; y++) { g[y][30] = '-'; g[y][31] = '-'; }
+    /* Weg weiter nach Osten zum See und nach Norden ins Dickicht */
+    for (x = 31; x <= 47; x++) { g[26][x] = '-'; g[27][x] = '-'; }
+    for (y = 11; y <= 19; y++) { g[y][41] = '-'; g[y][42] = '-'; }
     /* Platz fürs Auto frei halten */
-    rect(g, 24, 14, 6, 4, '-');
+    rect(g, 24, 15, 6, 4, '-');
 
-    /* Lichtung in der Mitte (Kampfplatz) */
-    rect(g, 14, 21, 12, 8, ',');
-    for (y = 21; y < 29; y++) for (x = 14; x < 26; x++) if (r() > 0.82) g[y][x] = 'f';
-    /* ein paar einzelne Bäume als Deko in der Lichtung */
-    g[23][16] = 'T'; g[27][23] = 't'; g[25][20] = '*';
+    /* Grosse Lichtung in der Mitte (Kampfplatz) */
+    rect(g, 14, 24, 16, 11, ',');
+    for (y = 24; y < 35; y++) for (x = 14; x < 30; x++) if (r() > 0.82) g[y][x] = 'f';
+    g[27][17] = 'T'; g[32][26] = 't'; g[29][22] = '*';
 
-    /* --- Der alte Friedhof unten links: da kommen die Zombies her --- */
-    rect(g, 4, 24, 8, 7, ',');
-    for (y = 24; y < 31; y++) for (x = 4; x < 12; x++) if (r() > 0.7) g[y][x] = '.';
-    /* Trampelpfad vom Weg zum Friedhof */
-    for (x = 8; x <= 14; x++) { g[23][x] = '-'; }
-    for (y = 19; y <= 23; y++) { g[y][14] = '-'; }
+    /* --- Die alte Ruine links unten --- */
+    stamp(g, 4, 36, [
+      '==..===',
+      '=.....=',
+      '=.....|',
+      '==...==',
+      '=..=.=='
+    ]);
+    for (y = 35; y < 43; y++) for (x = 3; x < 12; x++) if (g[y][x] === '.') g[y][x] = ',';
+    for (x = 11; x <= 17; x++) { g[38][x] = '-'; }
+
+    /* --- Der alte Friedhof unten in der Mitte --- */
+    rect(g, 16, 38, 10, 8, ',');
+    for (y = 38; y < 46; y++) for (x = 16; x < 26; x++) if (r() > 0.7) g[y][x] = '.';
+    for (y = 34; y <= 38; y++) { g[y][20] = '-'; g[y][21] = '-'; }
 
     return {
       key: 'wald',
@@ -1869,25 +1989,37 @@ html, body {
       ],
       props: [
         { kind: 'car', x: 16.8, y: 10.4 },
-        { kind: 'sign', x: 28, y: 20.9, text: 'Wegweiser: Nach Osten geht es zur Stadt Eichenstadt. Zu Fuss viel zu weit - nimm das Auto!' },
-        /* Lagerfeuer vor dem Haus - nachts sitzen hier alle */
-        { kind: 'fire', x: 13.5, y: 13.5 },
+        { kind: 'sign', x: 32.5, y: 22.9, text: 'Wegweiser: Nach Osten geht es zur Stadt Eichenstadt. Zu Fuss viel zu weit - nimm das Auto!' },
+        /* Lagerfeuer vor dem Haus */
+        { kind: 'fire', x: 13.5, y: 14.5 },
         { kind: 'barrel', x: 9.6, y: 9.4 },
         { kind: 'barrel', x: 9.6, y: 10.6 },
-        /* Zaun links neben dem Haus */
-        { kind: 'fence', x: 8.5, y: 12.5 },
-        { kind: 'fence', x: 9.5, y: 12.5 },
-        { kind: 'fence', x: 10.5, y: 12.5 },
+        { kind: 'fence', x: 8.5, y: 13.5 },
+        { kind: 'fence', x: 9.5, y: 13.5 },
+        { kind: 'fence', x: 10.5, y: 13.5 },
         /* Der Friedhof */
-        { kind: 'grave', x: 5.5, y: 25.5, art: 0 },
-        { kind: 'grave', x: 7.5, y: 25.5, art: 1 },
-        { kind: 'grave', x: 9.5, y: 25.5, art: 2 },
-        { kind: 'grave', x: 5.5, y: 27.5, art: 1 },
-        { kind: 'grave', x: 7.5, y: 27.5, art: 2 },
-        { kind: 'grave', x: 9.5, y: 27.5, art: 0 },
-        { kind: 'grave', x: 6.5, y: 29.5, art: 2 },
-        { kind: 'grave', x: 8.5, y: 29.5, art: 1 },
-        { kind: 'sign', x: 11.6, y: 23.4, text: 'Verwitterte Tafel: HIER RUHT NIEMAND MEHR RICHTIG. Nachts wird es hier ungemuetlich.' }
+        { kind: 'grave', x: 17.5, y: 39.5, art: 0 },
+        { kind: 'grave', x: 19.5, y: 39.5, art: 1 },
+        { kind: 'grave', x: 21.5, y: 39.5, art: 2 },
+        { kind: 'grave', x: 23.5, y: 39.5, art: 1 },
+        { kind: 'grave', x: 17.5, y: 42.5, art: 1 },
+        { kind: 'grave', x: 19.5, y: 42.5, art: 2 },
+        { kind: 'grave', x: 21.5, y: 42.5, art: 0 },
+        { kind: 'grave', x: 23.5, y: 42.5, art: 2 },
+        { kind: 'grave', x: 18.5, y: 45.2, art: 2 },
+        { kind: 'grave', x: 22.5, y: 45.2, art: 1 },
+        { kind: 'sign', x: 20.6, y: 36.4, text: 'Verwitterte Tafel: HIER RUHT NIEMAND MEHR RICHTIG. Nachts wird es hier ungemuetlich.' },
+        /* Die Ruine */
+        { kind: 'fire', x: 6.5, y: 39.5 },
+        { kind: 'barrel', x: 8.5, y: 40.5 },
+        { kind: 'sign', x: 11.5, y: 37.4, text: 'Halb zerfallene Tafel: ...RITTERBURG... hier stand mal etwas Grosses.' },
+        /* Das Dickicht */
+        { kind: 'sign', x: 40.5, y: 12.4, text: 'Grob geschnitzt: DICKICHT. WER NACHTS REINGEHT, KOMMT NICHT RAUS.' },
+        { kind: 'rock', x: 45.5, y: 14.5 },
+        { kind: 'rock', x: 52.5, y: 9.5 },
+        /* Am See */
+        { kind: 'bench', x: 45.5, y: 31.5 },
+        { kind: 'fire', x: 43.5, y: 30.5 }
       ],
       /* Startplätze für die vier Freunde vor dem Haus */
       friendSpots: [
@@ -2032,8 +2164,13 @@ html, body {
         { x: 5, y: 19, wer: 'buerger4' },
         { x: 39, y: 12, wer: 'buerger5' }
       ],
-      /* Der Haendler steht an seinem Stand, gleich neben dem Auto. */
-      haendler: { x: 26.9, y: 23.9 }
+      /* Vier Laeden, jeder mit eigenem Stand */
+      haendler: { x: 26.9, y: 23.9 },
+      laeden: [
+        { wer: 'schmied', x: 13.5, y: 15.9, stand: true },
+        { wer: 'alchi', x: 34.5, y: 15.9, stand: true },
+        { wer: 'meister', x: 20.5, y: 27.9, stand: true }
+      ]
     };
   }
 
@@ -2330,19 +2467,23 @@ html, body {
 
   var PEOPLE = {
     lisbeth: {
-      name: 'Lisbeth', rolle: 'Bogenschuetzin', color: '#8fd36a', kurz: 'Lisbeth',
+      name: 'Lisbeth', rolle: 'Ritterin mit Bogen', color: '#8fd36a', kurz: 'Lisbeth',
+      ritter: { a: '#cfe8bf', b: '#7ab05e', c: '#4a7a3a', t: '#4f9b45', u: '#3a7a34', r: '#8fd36a' },
       pal: { hair: '#a8642a', skin: '#f0c191', shirt: '#4f9b45', shirtDark: '#3a7a34', pants: '#5b4326', boots: '#3a2a18' }
     },
     tarik: {
-      name: 'Tarik', rolle: 'Schmied', color: '#e8a54a', kurz: 'Tarik',
+      name: 'Tarik', rolle: 'Ritter und Schmied', color: '#e8a54a', kurz: 'Tarik',
+      ritter: { a: '#f0d0a0', b: '#c08a4a', c: '#8a5a28', t: '#b8603a', u: '#94472a', r: '#e8a54a' },
       pal: { hair: '#2a1d14', skin: '#c08a5a', shirt: '#b8603a', shirtDark: '#94472a', pants: '#3b3b46', boots: '#2a2a33' }
     },
     momo: {
-      name: 'Momo', rolle: 'Magierin', color: '#c78ce0', kurz: 'Momo',
+      name: 'Momo', rolle: 'Zauberritterin', color: '#c78ce0', kurz: 'Momo',
+      ritter: { a: '#e8d0f5', b: '#a878c8', c: '#6b44a0', t: '#8a5ac4', u: '#6b44a0', r: '#c78ce0' },
       pal: { hair: '#6b3f8a', skin: '#f5cfa8', shirt: '#8a5ac4', shirtDark: '#6b44a0', pants: '#4a3a6b', boots: '#2f2545' }
     },
     gris: {
-      name: 'Griswold', rolle: 'alter Waechter', color: '#a9c0d8', kurz: 'Griswold',
+      name: 'Griswold', rolle: 'alter Ritter', color: '#a9c0d8', kurz: 'Griswold',
+      ritter: { a: '#dfe8f2', b: '#9aa8bc', c: '#5a6478', t: '#5a6478', u: '#454e60', r: '#a9c0d8' },
       pal: { hair: '#cfd4dc', skin: '#e0b48a', shirt: '#5a6478', shirtDark: '#454e60', pants: '#3b4250', boots: '#2a2f3a' }
     },
     mama: {
@@ -2388,6 +2529,18 @@ html, body {
     haendler: {
       name: 'Haendler Bosko', rolle: 'Waffenschmied', color: '#ffd24a', kurz: 'Bosko',
       pal: { hair: '#5a3a1a', skin: '#d8a070', shirt: '#8a5a2a', shirtDark: '#6b4420', pants: '#4a3a2a', boots: '#33261a' }
+    },
+    schmied: {
+      name: 'Schmiedin Halda', rolle: 'Ruestungsschmiedin', color: '#b8c8e0', kurz: 'Halda',
+      pal: { hair: '#3a3a44', skin: '#c89a62', shirt: '#5a6478', shirtDark: '#454e60', pants: '#3b3b46', boots: '#24242c' }
+    },
+    alchi: {
+      name: 'Alchemist Vex', rolle: 'Traenkemischer', color: '#ff9ab0', kurz: 'Vex',
+      pal: { hair: '#6b3f8a', skin: '#e8c0a0', shirt: '#a04a70', shirtDark: '#7a3554', pants: '#4a2a44', boots: '#2e1a2a' }
+    },
+    meister: {
+      name: 'Waffenmeister Orin', rolle: 'alter Kaempfer', color: '#ffb06a', kurz: 'Orin',
+      pal: { hair: '#c8c8d0', skin: '#d8a070', shirt: '#7a3a2a', shirtDark: '#5a2a1e', pants: '#3a3228', boots: '#241e18' }
     }
   };
 
@@ -2529,36 +2682,71 @@ html, body {
   ];
 
   /* ---------- Die Bosse ---------- */
+  /* Die Bosse. Gekaempft wird direkt im Wald - mit Schwert und Rolle.
+     angriffe = was er kann. Jeder Angriff wird vorher angekuendigt,
+     damit man wegrollen kann. Wer stehen bleibt, kassiert. */
   var BOSSE = [
     {
       key: 'koenig', name: 'Grauzahn, der Zombiekoenig', art: 'zombie',
-      scale: 1.8, hp: 12, speed: 22, dmg: 2, koennen: 'rufen',
+      scale: 1.9, hp: 75, speed: 34, dmg: 2, farbe: '#7ad048',
+      angriffe: ['sturm', 'rufen', 'stampf'],
       intro: 'Der Boden bebt. Ein riesiger Zombie mit schiefer Krone stapft aus dem Dickicht.',
       spruch: 'GRRRAAA! MEIN WALD! MEINE WUERMER!',
       sieg: 'Die Krone kullert ins Gras. Grauzahn faellt um wie ein nasser Sack.'
     },
     {
       key: 'spinne', name: 'Nachtweberin, die Waldspinne', art: 'spider',
-      scale: 1.5, hp: 10, speed: 28, dmg: 1, koennen: 'sprint',
+      scale: 1.6, hp: 90, speed: 50, dmg: 2, farbe: '#c78ce0',
+      angriffe: ['sturm', 'salve', 'sprung'],
       intro: 'Zwischen zwei Eichen haengt ein Netz so gross wie eine Tuer. Acht Beine kommen heraus.',
       spruch: 'ssssss... bleib doch ein biiisschen kleben.',
       sieg: 'Die Nachtweberin rollt sich ein und verschwindet im Gebuesch.'
     },
     {
       key: 'wolf', name: 'Mondfell, der Werwolf', art: 'wolf',
-      scale: 1.5, hp: 11, speed: 34, dmg: 1, koennen: 'wut',
+      scale: 1.6, hp: 105, speed: 56, dmg: 3, farbe: '#d8d0e8',
+      angriffe: ['sturm', 'fegen', 'sprung'],
       intro: 'Ein Heulen, viel zu nah. Etwas Grosses laeuft auf zwei Beinen zwischen den Baeumen.',
       spruch: 'Du riechst nach Eintopf, kleiner Ritter.',
       sieg: 'Mondfell schuettelt sich, brummt beleidigt und trottet davon.'
     },
     {
       key: 'knorr', name: 'Alter Knorr, der Baumgeist', art: 'treant',
-      scale: 1.3, hp: 14, speed: 12, dmg: 2, koennen: 'wurzeln',
+      scale: 1.5, hp: 130, speed: 26, dmg: 3, farbe: '#8fd36a',
+      angriffe: ['wurzeln', 'stampf', 'regen'],
       intro: 'Der Baum vor dir macht die Augen auf. Und dann macht er einen Schritt.',
       spruch: 'Ihr... trampelt... auf... meinen... Wurzeln.',
       sieg: 'Alter Knorr setzt sich wieder hin und ist einfach nur noch ein Baum.'
+    },
+    {
+      key: 'ritter', name: 'Sir Moder, der gefallene Ritter', art: 'ritter',
+      scale: 1.7, hp: 165, speed: 52, dmg: 3, farbe: '#9aa4b8',
+      angriffe: ['sturm', 'fegen', 'sprung', 'salve'],
+      intro: 'Eine rostige Ruestung richtet sich auf. Sie war mal einer von euch.',
+      spruch: 'ICH... WAR... DER BESTE... VON... UNS.',
+      sieg: 'Der Helm rollt davon. Innen drin war schon lange niemand mehr.'
+    },
+    {
+      key: 'fuerst', name: 'Der Seuchenfuerst', art: 'fuerst',
+      scale: 2.1, hp: 220, speed: 46, dmg: 4, farbe: '#ff5a9a',
+      angriffe: ['regen', 'rufen', 'stampf', 'salve', 'sturm'],
+      intro: 'Der Himmel wird gruen. Etwas sehr Altes und sehr Boeses richtet sich auf.',
+      spruch: 'IHR SEID NUR DER ANFANG MEINER ARMEE.',
+      sieg: 'Der Seuchenfuerst zerfaellt zu Staub. Der Himmel wird wieder blau.'
     }
   ];
+
+  /* Was der Boss beim Angriff ruft */
+  var BOSS_ANSAGEN = {
+    sturm: 'STURMANGRIFF!',
+    stampf: 'ER STAMPFT!',
+    fegen: 'RUNDUMSCHLAG!',
+    salve: 'SALVE!',
+    rufen: 'ER RUFT VERSTAERKUNG!',
+    wurzeln: 'WURZELN!',
+    sprung: 'ER SPRINGT!',
+    regen: 'ES REGNET SEUCHE!'
+  };
 
   var BOSS_LINES = {
     auftritt: [
@@ -2581,6 +2769,7 @@ html, body {
     spareLines: SPARE_LINES,
     shopLines: SHOP_LINES,
     bosse: BOSSE,
+    bossAnsagen: BOSS_ANSAGEN,
     bossLines: BOSS_LINES,
     people: PEOPLE,
     zombiePal: ZOMBIE_PAL,
@@ -2635,510 +2824,6 @@ html, body {
 
 </script>
 <script>
-/* kampf.js – Der Bosskampf im Kampf-Fenster, ganz wie in Undertale.
-   Du hast einen Zug (KÄMPFEN / HANDELN / ITEM / SCHONEN), danach greift
-   der Boss an und du weichst mit deinem roten Herz den Geschossen aus. */
-(function (global) {
-  'use strict';
-
-  var W = null;            // Verbindung zum Spiel (wird bei init gesetzt)
-  var k = null;            // der laufende Kampf
-
-  /* Das Kampf-Fenster */
-  var BOX = { x: 18, y: 78, w: 284, h: 92 };
-  var KNOEPFE = ['KAEMPFEN', 'HANDELN', 'ITEM', 'SCHONEN'];
-
-  /* Was man bei welchem Boss alles machen kann */
-  var HANDLUNGEN = {
-    koenig: [
-      { t: 'Krone zurechtruecken', r: 'Du richtest die schiefe Krone. Grauzahn brummt geschmeichelt.' },
-      { t: 'Ueber Wuermer reden', r: 'Ihr fachsimpelt ueber Regenwuermer. Er nickt begeistert.' },
-      { t: 'Mitstoehnen', r: 'Du machst "Grrraaah". Er macht "Grrraaah". Fast schon ein Duett.' }
-    ],
-    spinne: [
-      { t: 'Das Netz loben', r: 'Du lobst die Netzkunst. Die Nachtweberin wird ganz verlegen.' },
-      { t: 'Eine Fliege anbieten', r: 'Du fischst eine Fliege aus der Luft. Sie nimmt sie vorsichtig.' },
-      { t: 'Langsam blinzeln', r: 'Ihr blinzelt euch an. Alle acht Augen blinzeln zurueck.' }
-    ],
-    wolf: [
-      { t: 'Hinter den Ohren kraulen', r: 'Mondfell brummt. Das Bein zuckt. Es ist um ihn geschehen.' },
-      { t: 'Stoeckchen werfen', r: 'Er rast los. Er kommt mit dem Stock zurueck. Er schaemt sich.' },
-      { t: 'Zurueckheulen', r: 'Du heulst. Er heult. Der halbe Wald heult mit.' }
-    ],
-    knorr: [
-      { t: 'Giessen', r: 'Du kippst deine Feldflasche an die Wurzeln. Knorr seufzt wohlig.' },
-      { t: 'Blaetter putzen', r: 'Du wischst Staub von den Blaettern. Er glaenzt richtig.' },
-      { t: 'Ein Lied summen', r: 'Du summst. Seine Aeste wiegen ganz langsam mit.' }
-    ]
-  };
-
-  /* --------- Start und Ende --------- */
-
-  function start(bossDaten) {
-    k = {
-      boss: bossDaten,
-      hp: bossDaten.hp * 4,
-      maxhp: bossDaten.hp * 4,
-      phase: 'text',
-      text: bossDaten.spruch,
-      auswahl: 0,
-      untermenue: null,
-      mercy: 0,
-      mercyZiel: 3,
-      soul: { x: BOX.x + BOX.w / 2, y: BOX.y + BOX.h / 2 },
-      invuln: 0,
-      schuesse: [],
-      t: 0,
-      runde: 0,
-      barX: 0, barRichtung: 1,
-      ende: null,
-      anim: 0
-    };
-    if (W.A) W.A.music('boss');
-  }
-
-  function beenden(wie) {
-    var boss = k.boss;
-    k = null;
-    if (wie === 'sieg') W.onSieg(boss);
-    else if (wie === 'verschont') W.onVerschont(boss);
-  }
-
-  /* --------- Der eigene Zug --------- */
-
-  function menueWaehlen(nr) {
-    if (k.phase !== 'menue') return;
-    k.auswahl = nr;
-    if (nr === 0) {                       /* KAEMPFEN */
-      k.phase = 'balken';
-      k.barX = 0; k.barRichtung = 1;
-      if (W.A) W.A.blip();
-    } else if (nr === 1) {                /* HANDELN */
-      k.untermenue = (HANDLUNGEN[k.boss.key] || HANDLUNGEN.koenig).map(function (h) { return h; });
-      k.phase = 'untermenue';
-      if (W.A) W.A.blip();
-    } else if (nr === 2) {                /* ITEM */
-      itemBenutzen();
-    } else {                              /* SCHONEN */
-      schonen();
-    }
-  }
-
-  function balkenStoppen() {
-    var mitte = BOX.w / 2;
-    var abstand = Math.abs(k.barX - mitte);
-    var guete = Math.max(0.15, 1 - abstand / mitte);        /* je mittiger, desto besser */
-    var schaden = Math.round((3 + W.G.swordLevel * 2) * (1 + guete * 2));
-    k.hp -= schaden;
-    if (W.A) W.A.hit();
-    W.G.shake = 4;
-    k.phase = 'text';
-    k.t = 0;
-    k.text = guete > 0.85 ? 'VOLLTREFFER! ' + schaden + ' Schaden!'
-           : guete > 0.5 ? 'Guter Treffer! ' + schaden + ' Schaden.'
-           : 'Nur gestreift. ' + schaden + ' Schaden.';
-    if (k.hp <= 0) { k.ende = 'sieg'; k.text = k.boss.sieg; }
-  }
-
-  function handlungWaehlen(nr) {
-    var h = k.untermenue[nr];
-    if (!h) return;
-    k.untermenue = null;
-    k.mercy = Math.min(k.mercyZiel, k.mercy + 1);
-    k.phase = 'text';
-    k.t = 0;
-    k.text = h.r + (k.mercy >= k.mercyZiel
-      ? '  -  Jetzt kannst du ihn SCHONEN!'
-      : '  (' + k.mercy + '/' + k.mercyZiel + ')');
-    if (W.A) W.A.select();
-  }
-
-  function itemBenutzen() {
-    var G = W.G;
-    k.phase = 'text';
-    k.t = 0;
-    if (G.pilze > 0) {
-      G.pilze--;
-      G.player.hp = Math.min(G.player.maxhp, G.player.hp + 4);
-      k.text = 'Du isst einen Pilz. Zwei Herzen zurueck!';
-      if (W.A) W.A.heal();
-    } else if (G.beeren > 0) {
-      G.beeren--;
-      G.player.hp = Math.min(G.player.maxhp, G.player.hp + 2);
-      k.text = 'Du isst ein paar Beeren. Ein Herz zurueck!';
-      if (W.A) W.A.heal();
-    } else {
-      k.text = 'Deine Taschen sind leer. Nur Fusseln und ein Stein.';
-    }
-  }
-
-  function schonen() {
-    k.phase = 'text';
-    k.t = 0;
-    if (k.mercy >= k.mercyZiel) {
-      k.ende = 'verschont';
-      k.text = k.boss.name + ' laesst die Schultern sinken und laechelt schief. Ihr seid fertig hier.';
-      if (W.A) W.A.heal();
-    } else {
-      k.text = 'Noch will er nicht. Sei erst mal nett zu ihm (HANDELN).';
-    }
-  }
-
-  /* --------- Der Zug des Bosses --------- */
-
-  function angriffStarten() {
-    k.phase = 'gegner';
-    k.t = 0;
-    k.schuesse = [];
-    k.soul.x = BOX.x + BOX.w / 2;
-    k.soul.y = BOX.y + BOX.h / 2;
-    k.runde++;
-    k.text = '';
-  }
-
-  function schussSetzen(x, y, vx, vy, r, farbe, art) {
-    k.schuesse.push({ x: x, y: y, vx: vx, vy: vy, r: r, farbe: farbe, art: art || 'kugel', t: 0 });
-  }
-
-  function angriffMuster(dt) {
-    var art = k.boss.key;
-    k.spawnT = (k.spawnT || 0) - dt;
-    if (k.spawnT > 0) return;
-
-    if (art === 'koenig') {                 /* Wuermer regnen herunter */
-      k.spawnT = 0.35;
-      var x = BOX.x + 10 + Math.random() * (BOX.w - 20);
-      schussSetzen(x, BOX.y - 6, 0, 46 + Math.random() * 34, 3, '#8a5a3a', 'wurm');
-    } else if (art === 'spinne') {          /* Netzfaeden von den Seiten */
-      k.spawnT = 0.45;
-      var vonLinks = Math.random() > 0.5;
-      var y = BOX.y + 12 + Math.random() * (BOX.h - 24);
-      schussSetzen(vonLinks ? BOX.x - 6 : BOX.x + BOX.w + 6, y,
-                   (vonLinks ? 1 : -1) * (55 + Math.random() * 35), 0, 3, '#c8c2e0', 'faden');
-    } else if (art === 'wolf') {            /* Krallen zielen auf dich */
-      k.spawnT = 0.7;
-      var sx = Math.random() > 0.5 ? BOX.x - 6 : BOX.x + BOX.w + 6;
-      var sy = BOX.y + Math.random() * BOX.h;
-      var dx = k.soul.x - sx, dy = k.soul.y - sy;
-      var len = Math.sqrt(dx * dx + dy * dy) || 1;
-      schussSetzen(sx, sy, dx / len * 85, dy / len * 85, 4, '#d24b4b', 'kralle');
-    } else {                                /* Wurzeln schiessen hoch */
-      k.spawnT = 0.8;
-      var wx = BOX.x + 12 + Math.random() * (BOX.w - 24);
-      schussSetzen(wx, BOX.y + BOX.h + 8, 0, -60, 4, '#5f4026', 'wurzel');
-    }
-  }
-
-  function seeleBewegen(dt) {
-    var dx = 0, dy = 0;
-    var stick = W.stick();
-    if (stick && stick.active && (stick.x || stick.y)) { dx = stick.x; dy = stick.y; }
-    else {
-      if (W.keys.left) dx -= 1;
-      if (W.keys.right) dx += 1;
-      if (W.keys.up) dy -= 1;
-      if (W.keys.down) dy += 1;
-    }
-    var len = Math.sqrt(dx * dx + dy * dy);
-    if (len > 1) { dx /= len; dy /= len; }
-
-    k.soul.x += dx * 78 * dt;
-    k.soul.y += dy * 78 * dt;
-    k.soul.x = Math.max(BOX.x + 6, Math.min(BOX.x + BOX.w - 6, k.soul.x));
-    k.soul.y = Math.max(BOX.y + 6, Math.min(BOX.y + BOX.h - 6, k.soul.y));
-  }
-
-  function schuesseBewegen(dt) {
-    for (var i = k.schuesse.length - 1; i >= 0; i--) {
-      var s = k.schuesse[i];
-      s.t += dt;
-      s.x += s.vx * dt;
-      s.y += s.vy * dt;
-      if (s.x < BOX.x - 20 || s.x > BOX.x + BOX.w + 20 ||
-          s.y < BOX.y - 20 || s.y > BOX.y + BOX.h + 20) {
-        k.schuesse.splice(i, 1);
-        continue;
-      }
-      if (k.invuln <= 0) {
-        var dx = s.x - k.soul.x, dy = s.y - k.soul.y;
-        if (dx * dx + dy * dy < (s.r + 4) * (s.r + 4)) {
-          k.invuln = 0.9;
-          W.G.player.hp -= k.boss.dmg;
-          W.G.shake = 4;
-          if (W.A) W.A.hurt();
-          if (W.G.player.hp <= 0) { W.G.player.hp = 0; k = null; W.onTod(); return; }
-        }
-      }
-    }
-  }
-
-  /* --------- Takt --------- */
-
-  function update(dt) {
-    if (!k) return;
-    k.anim += dt;
-    k.invuln = Math.max(0, k.invuln - dt);
-    if (k.zugFlash > 0) k.zugFlash -= dt;
-
-    if (k.phase === 'text') {
-      k.t += dt;
-      if (k.t > 1.9) {
-        if (k.ende) beenden(k.ende);
-        else angriffStarten();
-      }
-    } else if (k.phase === 'balken') {
-      k.barX += k.barRichtung * 200 * dt;
-      if (k.barX > BOX.w) { k.barX = BOX.w; k.barRichtung = -1; }
-      if (k.barX < 0) { k.barX = 0; k.barRichtung = 1; }
-    } else if (k.phase === 'gegner') {
-      k.t += dt;
-      angriffMuster(dt);
-      seeleBewegen(dt);
-      schuesseBewegen(dt);
-      if (!k) return;
-      if (k.t > 6.5) {
-        k.phase = 'menue';
-        k.zugFlash = 1.3;                 /* "DEIN ZUG!" kurz einblenden */
-        k.schuesse = [];
-        k.text = k.runde <= 3
-          ? 'Angriff vorbei - jetzt bist DU dran.\nKAEMPFEN bis sein Balken leer ist,\noder dreimal HANDELN und dann SCHONEN.'
-          : k.boss.name + ' holt Luft. Du bist dran.';
-      }
-    }
-  }
-
-  /* Tippen und Tasten */
-  function tippen(gx, gy) {
-    if (!k) return false;
-
-    if (k.phase === 'balken') { balkenStoppen(); return true; }
-    if (k.phase === 'text') { k.t = 99; return true; }
-
-    if (k.phase === 'untermenue') {
-      for (var i = 0; i < k.untermenue.length; i++) {
-        var y = BOX.y + 22 + i * 16;
-        if (gy > y - 10 && gy < y + 8) { handlungWaehlen(i); return true; }
-      }
-      k.untermenue = null;                   /* daneben getippt: zurueck */
-      k.phase = 'menue';
-      return true;
-    }
-
-    if (k.phase === 'menue') {
-      for (var j = 0; j < 4; j++) {
-        var bx = 10 + j * 76;
-        if (gx > bx && gx < bx + 72 && gy > 180 && gy < 206) { menueWaehlen(j); return true; }
-      }
-    }
-    return true;
-  }
-
-  function taste(was) {
-    if (!k) return;
-    if (k.phase === 'balken') { balkenStoppen(); return; }
-    if (k.phase === 'text') { k.t = 99; return; }
-    if (k.phase === 'untermenue') {
-      if (was === 'left') k.auswahl = Math.max(0, k.auswahl - 1);
-      if (was === 'right') k.auswahl = Math.min(k.untermenue.length - 1, k.auswahl + 1);
-      if (was === 'ok') handlungWaehlen(k.auswahl);
-      return;
-    }
-    if (k.phase === 'menue') {
-      if (was === 'left') k.auswahl = (k.auswahl + 3) % 4;
-      if (was === 'right') k.auswahl = (k.auswahl + 1) % 4;
-      if (was === 'ok') menueWaehlen(k.auswahl);
-    }
-  }
-
-  /* --------- Zeichnen --------- */
-
-  function rahmen(ctx, x, y, w, h, farbe) {
-    ctx.fillStyle = '#000';
-    ctx.fillRect(x, y, w, h);
-    ctx.fillStyle = farbe || '#fff';
-    ctx.fillRect(x, y, w, 2);
-    ctx.fillRect(x, y + h - 2, w, 2);
-    ctx.fillRect(x, y, 2, h);
-    ctx.fillRect(x + w - 2, y, 2, h);
-  }
-
-  function draw() {
-    if (!k) return;
-    var ctx = W.ctx, VW = W.VW, VH = W.VH, G = W.G;
-
-    ctx.fillStyle = '#05040a';
-    ctx.fillRect(0, 0, VW, VH);
-
-    /* Der Boss oben */
-    var bild = W.bossBild(k.boss, Math.floor(k.anim * 4) % 2);
-    var s = k.boss.art === 'treant' ? 1.4 : 2.2;
-    var bw = bild.width * s, bh = bild.height * s;
-    var by = 60 - bh;
-    ctx.drawImage(bild, VW / 2 - bw / 2, Math.max(2, by), bw, bh);
-
-    /* Name und Lebensbalken des Bosses */
-    ctx.font = '8px "Courier New", monospace';
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#ff9a8a';
-    ctx.fillText(k.boss.name.toUpperCase(), VW / 2, 67);
-    var bbw = 150, bbx = (VW - bbw) / 2;
-    ctx.fillStyle = '#3b2028'; ctx.fillRect(bbx, 70, bbw, 5);
-    ctx.fillStyle = '#e03a3a';
-    ctx.fillRect(bbx, 70, bbw * Math.max(0, k.hp) / k.maxhp, 5);
-    ctx.fillStyle = '#ff9a8a';
-    ctx.fillRect(bbx, 70, bbw * Math.max(0, k.hp) / k.maxhp, 2);
-    ctx.textAlign = 'left';
-
-    /* Das Kampf-Fenster */
-    rahmen(ctx, BOX.x, BOX.y, BOX.w, BOX.h);
-
-    if (k.phase === 'gegner') {
-      /* Geschosse */
-      for (var i = 0; i < k.schuesse.length; i++) {
-        var sch = k.schuesse[i];
-        ctx.fillStyle = sch.farbe;
-        if (sch.art === 'wurzel' || sch.art === 'faden') {
-          ctx.fillRect(Math.round(sch.x - sch.r), Math.round(sch.y - sch.r * 2), sch.r * 2, sch.r * 4);
-        } else {
-          ctx.fillRect(Math.round(sch.x - sch.r), Math.round(sch.y - sch.r), sch.r * 2, sch.r * 2);
-          ctx.fillStyle = '#fff';
-          ctx.fillRect(Math.round(sch.x - 1), Math.round(sch.y - sch.r), 1, 2);
-        }
-      }
-      /* Das rote Herz - das bist du */
-      if (!(k.invuln > 0 && Math.floor(k.invuln * 14) % 2)) {
-        ctx.drawImage(W.S.heart, Math.round(k.soul.x - 3), Math.round(k.soul.y - 3));
-      }
-
-      /* Wie lange greift er noch an? */
-      var rest = Math.max(0, 1 - k.t / 6.5);
-      ctx.fillStyle = '#2a2633';
-      ctx.fillRect(BOX.x + 4, BOX.y + BOX.h - 6, BOX.w - 8, 3);
-      ctx.fillStyle = '#8fd36a';
-      ctx.fillRect(BOX.x + 4, BOX.y + BOX.h - 6, (BOX.w - 8) * rest, 3);
-
-      /* Erklaerung, solange man noch neu ist */
-      if (k.runde <= 2) {
-        ctx.font = '8px "Courier New", monospace';
-        ctx.fillStyle = '#ffd24a';
-        ctx.textAlign = 'center';
-        ctx.fillText('Joystick ziehen: dein rotes Herz ausweichen lassen!',
-                     W.VW / 2, BOX.y + BOX.h + 11);
-        ctx.textAlign = 'left';
-      }
-    } else if (k.phase === 'balken') {
-      ctx.fillStyle = '#c8c2e0';
-      ctx.font = '9px "Courier New", monospace';
-      ctx.textAlign = 'center';
-      ctx.fillText('Tippen, wenn der Zeiger in der Mitte ist!', W.VW / 2, BOX.y + 24);
-      ctx.textAlign = 'left';
-      /* Balken */
-      ctx.fillStyle = '#2a2633';
-      ctx.fillRect(BOX.x + 8, BOX.y + 44, BOX.w - 16, 22);
-      ctx.fillStyle = '#4a4560';
-      ctx.fillRect(BOX.x + BOX.w / 2 - 12, BOX.y + 44, 24, 22);
-      ctx.fillStyle = '#ffd24a';
-      ctx.fillRect(BOX.x + BOX.w / 2 - 2, BOX.y + 44, 4, 22);
-      var zx = BOX.x + 8 + (k.barX / BOX.w) * (BOX.w - 16);
-      ctx.fillStyle = '#fff';
-      ctx.fillRect(Math.round(zx) - 1, BOX.y + 40, 3, 30);
-    } else if (k.phase === 'untermenue') {
-      ctx.font = '10px "Courier New", monospace';
-      for (var j = 0; j < k.untermenue.length; j++) {
-        var y = BOX.y + 22 + j * 16;
-        ctx.fillStyle = (j === k.auswahl) ? '#ff5a5a' : '#000';
-        if (j === k.auswahl) ctx.drawImage(W.S.heart, BOX.x + 10, y - 5);
-        ctx.fillStyle = '#fff';
-        ctx.fillText(k.untermenue[j].t, BOX.x + 24, y + 3);
-      }
-    } else {
-      /* Text im Fenster */
-      ctx.font = '10px "Courier New", monospace';
-      ctx.fillStyle = '#fff';
-      var zeilen = [];
-      var absaetze = String(k.text || '').split('\n');
-      for (var a = 0; a < absaetze.length; a++) {
-        zeilen = zeilen.concat(umbrechen(absaetze[a], 40));
-      }
-      for (var z = 0; z < zeilen.length; z++) {
-        ctx.fillText(zeilen[z], BOX.x + 10, BOX.y + 22 + z * 13);
-      }
-    }
-
-    /* Kurz anzeigen, dass du wieder dran bist */
-    if (k.zugFlash > 0 && k.phase === 'menue') {
-      ctx.globalAlpha = Math.min(1, k.zugFlash);
-      ctx.font = 'bold 16px "Courier New", monospace';
-      ctx.fillStyle = '#ffd24a';
-      ctx.textAlign = 'center';
-      ctx.fillText('DEIN ZUG!', W.VW / 2, BOX.y + BOX.h - 14);
-      ctx.textAlign = 'left';
-      ctx.globalAlpha = 1;
-    }
-
-    /* Die vier Knoepfe */
-    if (k.phase === 'menue') {
-      ctx.font = '9px "Courier New", monospace';
-      for (var n = 0; n < 4; n++) {
-        var bx = 10 + n * 76;
-        var aktiv = (n === k.auswahl);
-        rahmen(ctx, bx, 180, 72, 26, aktiv ? '#ffd24a' : '#e8a54a');
-        ctx.fillStyle = aktiv ? '#ffd24a' : '#e8a54a';
-        ctx.textAlign = 'center';
-        ctx.fillText(KNOEPFE[n], bx + 36, 197);
-        ctx.textAlign = 'left';
-      }
-    }
-
-    /* Deine Herzen */
-    var herzen = Math.ceil(G.player.maxhp / 2);
-    for (var h2 = 0; h2 < herzen; h2++) {
-      var hx = 10 + h2 * 9, rest = G.player.hp - h2 * 2;
-      ctx.globalAlpha = 0.25;
-      ctx.drawImage(W.S.heart, hx, 214);
-      ctx.globalAlpha = 1;
-      if (rest >= 2) ctx.drawImage(W.S.heart, hx, 214);
-      else if (rest === 1) ctx.drawImage(W.S.heart, 0, 0, 4, W.S.heart.height, hx, 214, 4, W.S.heart.height);
-    }
-    ctx.font = '8px "Courier New", monospace';
-    ctx.fillStyle = '#fff';
-    ctx.fillText('HP ' + G.player.hp + '/' + G.player.maxhp, 14 + herzen * 9, 221);
-    if (k.mercy >= k.mercyZiel) {
-      ctx.fillStyle = '#ffd24a';
-      ctx.textAlign = 'right';
-      ctx.fillText('SCHONEN moeglich!', W.VW - 8, 221);
-      ctx.textAlign = 'left';
-    }
-  }
-
-  function umbrechen(text, max) {
-    var worte = String(text || '').split(' '), zeilen = [], zeile = '';
-    for (var i = 0; i < worte.length; i++) {
-      var probe = zeile ? zeile + ' ' + worte[i] : worte[i];
-      if (probe.length > max && zeile) { zeilen.push(zeile); zeile = worte[i]; }
-      else zeile = probe;
-    }
-    if (zeile) zeilen.push(zeile);
-    return zeilen;
-  }
-
-  global.Kampf = {
-    init: function (welt) { W = welt; },
-    start: start,
-    update: update,
-    draw: draw,
-    tippen: tippen,
-    taste: taste,
-    aktiv: function () { return !!k; },
-    /* nur zum Nachschauen (auch praktisch beim Testen) */
-    stand: function () {
-      return k ? { phase: k.phase, hp: k.hp, maxhp: k.maxhp, mercy: k.mercy, ende: k.ende } : null;
-    }
-  };
-})(window);
-
-</script>
-<script>
 /* game.js – Oakblade
    Ein kleines Pixel-Rollenspiel: Wald, Holzhaus, Familie, Freunde,
    Zombies, Schwertschlag-Animation und Autofahrt in die Stadt. */
@@ -3146,7 +2831,7 @@ html, body {
   'use strict';
 
   var TILE = 16, VW = 320, VH = 240;
-  var FASSUNG = 18;                    /* steht unten auf dem Titelbild */
+  var FASSUNG = 19;                    /* steht unten auf dem Titelbild */
   var cv = document.getElementById('game');
   var ctx = cv.getContext('2d');
   ctx.imageSmoothingEnabled = false;
@@ -3170,7 +2855,9 @@ html, body {
     drive: null, overT: 0, lastSave: 0, maxhpGesichert: 10,
     karteOffen: false, entdeckt: null,
     kombo: 0, komboT: 0, komboBest: 0, serie: 0,
-    welle: null, welleNr: 0, welleCd: 55, wirbel: 0, rollCd: 0, wut: 0
+    welle: null, welleNr: 0, welleCd: 55, wirbel: 0, rollCd: 0, wut: 0,
+    traenke: 3, traenkeMax: 3, heilCd: 0, zorn: 0, zornAn: 0, koennen: null,
+    hausAngriff: null, hausCd: 0, belagerung: null, stadtBesuche: 0
   };
   global.GAME = G;
 
@@ -3183,7 +2870,8 @@ html, body {
     ' ': 'attack', Enter: 'talk', e: 'talk', E: 'talk',
     z: 'talk', Z: 'talk', x: 'attack', X: 'attack', j: 'attack', J: 'attack',
     m: 'karte', M: 'karte',
-    Shift: 'rolle', c: 'rolle', C: 'rolle', q: 'rolle', Q: 'rolle'
+    Shift: 'rolle', c: 'rolle', C: 'rolle', q: 'rolle', Q: 'rolle',
+    h: 'heil', H: 'heil', f: 'zorn', F: 'zorn'
   };
 
   global.addEventListener('keydown', function (e) {
@@ -3214,7 +2902,7 @@ html, body {
 
       /* Gelaufen (und im Kampf ausgewichen) wird, sobald das Spiel laeuft. */
       canStart: function () {
-        return G.state === 'play' || G.state === 'over' || G.state === 'kampf';
+        return G.state === 'play' || G.state === 'over';
       },
 
       /* Knoepfe und die Textbox behalten ihre eigenen Beruehrungen. */
@@ -3229,12 +2917,6 @@ html, body {
         if (G.state === 'title') { startGame(); return; }
         if (G.karteOffen) { G.karteOffen = false; return; }
         if (D.isOpen()) { D.press(); return; }
-        if (G.state === 'kampf') {
-          /* Bildschirmpunkt in Spielpunkte umrechnen */
-          var r = cv.getBoundingClientRect();
-          Kampf.tippen((x - r.left) / r.width * VW, (y - r.top) / r.height * VH);
-          return;
-        }
         if (G.state === 'drive') { tapped.talk = true; }
       }
     });
@@ -3258,7 +2940,7 @@ html, body {
   }
 
   function bindTouch() {
-    var btns = document.querySelectorAll('#touch button');
+    var btns = document.querySelectorAll('#touch button, #mapbtn');
     for (var i = 0; i < btns.length; i++) {
       (function (b) {
         var k = b.getAttribute('data-k');
@@ -3278,11 +2960,34 @@ html, body {
 
   /* Die Lauf-Knöpfe nur zeigen, wenn man auch laufen darf. */
   var touchEl = null, controlsOn = null;
+  var heilBtn = null, heilTxt = null, zornBtn = null;
+
+  /* Der Heilknopf zeigt, wie viele Traenke du noch hast, und wird
+     grau, wenn gerade keiner geht. Der Zorn-Knopf taucht nur auf,
+     wenn die Superkraft wirklich geladen ist. */
+  function knoepfeNachziehen() {
+    if (!heilBtn) {
+      heilBtn = document.querySelector('[data-k="heil"]');
+      heilTxt = document.getElementById('heiltext');
+      zornBtn = document.querySelector('[data-k="zorn"]');
+    }
+    if (heilBtn) {
+      var geht = G.traenke > 0 && G.heilCd <= 0;
+      heilBtn.classList.toggle('leer', !geht);
+      var neu2 = G.heilCd > 0 ? Math.ceil(G.heilCd) + 's' : String(G.traenke);
+      if (heilTxt && heilTxt.textContent !== neu2) heilTxt.textContent = neu2;
+    }
+    if (zornBtn) {
+      var zeigen = (G.zorn >= 100 || G.zornAn > 0);
+      if (zornBtn.hidden === zeigen) zornBtn.hidden = !zeigen;
+    }
+  }
+
   function updateControls() {
     if (!touchEl) touchEl = document.getElementById('touch');
+    knoepfeNachziehen();
     var spielt = (G.state === 'play' || G.state === 'over');
-    /* Im Kampf steuert der Stick das rote Herz - also auch dort zeigen. */
-    if (stick) stick.setVisible(spielt || G.state === 'kampf');
+    if (stick) stick.setVisible(spielt);
     var show = spielt && !D.isOpen();
     if (show === controlsOn) return;
     controlsOn = show;
@@ -3378,12 +3083,31 @@ html, body {
       }
       if (m.haendler) {
         var h = addNPC('haendler', m.haendler.x, m.haendler.y, 'down');
-        h.shop = true;
+        h.shop = 'waffen';
+      }
+      if (m.laeden) {
+        for (i = 0; i < m.laeden.length; i++) {
+          var L = m.laeden[i];
+          if (L.stand) addProp('stall', L.x, L.y + 1.1);
+          var ln = addNPC(L.wer, L.x, L.y, 'down');
+          ln.shop = L.wer;
+        }
       }
     }
 
     if (key === 'wald') {
       for (i = 0; i < 9; i++) sammelStueckSetzen();
+    }
+
+    /* Ab dem zweiten Boss ist die Stadt nicht mehr sicher */
+    if (key === 'stadt') {
+      G.stadtBesuche++;
+      G.belagerung = null;
+      if (G.bossesBeaten >= 2 && G.stadtBesuche % 2 === 0) {
+        G.belagerungGleich = true;
+      }
+    } else {
+      G.belagerung = null;
     }
 
     G.spawnT = 3;
@@ -3494,7 +3218,7 @@ html, body {
       p.roll = { t: 0, x: rr.x, y: rr.y };
       p.atk = null;
       p.invuln = Math.max(p.invuln, 0.34);
-      G.rollCd = 0.75;
+      G.rollCd = (G.koennen && G.koennen.rolle) ? 0.45 : 0.75;
       Fx.ring(p.x, p.y - 7, 16, 'rgba(180,240,200,0.8)', 2);
       Fx.funken(p.x, p.y, 7, 'rgba(210,230,210,0.9)', 55);
       if (A) A.swing();
@@ -3597,7 +3321,8 @@ html, body {
       var z = G.ents[i];
       if (z.type !== 'zombie' || z.dying || z.spared) continue;
       if (z.hitId === p.swingId) continue;
-      if (z.x + 6 > box.l && z.x - 6 < box.r && z.y > box.t && z.y - 14 < box.b) {
+      var w = z.boss ? 14 : 6, h = z.boss ? 24 : 14;
+      if (z.x + w > box.l && z.x - w < box.r && z.y > box.t && z.y - h < box.b) {
         z.hitId = p.swingId;
         schlagTreffer(z, false);
       }
@@ -3630,7 +3355,8 @@ html, body {
     for (var i = 0; i < G.ents.length; i++) {
       var z = G.ents[i];
       if (z.type !== 'zombie' || z.dying || z.spared) continue;
-      if (dist(z, p) < 38) { z.hitId = p.swingId; schlagTreffer(z, true); getroffen++; }
+      var wr = (G.koennen && G.koennen.wirbel) ? 56 : 38;
+      if (dist(z, p) < (z.boss ? wr + 14 : wr)) { z.hitId = p.swingId; schlagTreffer(z, true); getroffen++; }
     }
     if (getroffen >= 3) Fx.text(p.x, p.y - 42, getroffen + ' AUF EINMAL!', '#ff8a3a', true);
   }
@@ -3639,12 +3365,13 @@ html, body {
   function schlagTreffer(z, wirbel) {
     var p = G.player;
     var grund = 1 + G.swordLevel;
-    var komboBonus = Math.floor(G.kombo / 3);
+    var komboBonus = z.boss ? Math.min(3, Math.floor(G.kombo / 5)) : Math.floor(G.kombo / 3);
     var krit = Math.random() < (0.1 + G.swordLevel * 0.04);
     var dmg = grund + komboBonus;
     if (wirbel) dmg = Math.round(dmg * 1.8);
     if (krit) dmg *= 2;
     if (G.wut > 0) dmg *= 2;
+    if (G.zornAn > 0) dmg *= 3;
 
     G.kombo++;
     G.komboT = 2.4;
@@ -3658,6 +3385,17 @@ html, body {
     if (krit) Fx.blitz(0.09, '#fff');
 
     var art = Ge.arten[z.art] || Ge.arten.normal;
+    if (G.zornAn > 0) {
+      Fx.ring(z.x, z.y - 9, 34, 'rgba(255,170,60,0.9)', 3);
+      Fx.funken(z.x, z.y - 9, 10, '#ffd24a', 110);
+      /* Flammenwelle trifft auch die Nachbarn */
+      for (var q = 0; q < G.ents.length; q++) {
+        var n2 = G.ents[q];
+        if (n2 === z || n2.type !== 'zombie' || n2.dying || n2.spared) continue;
+        if (n2.hitId === p.swingId) continue;
+        if (dist(n2, z) < 30) { n2.hitId = p.swingId; damageZombie(n2, 2, n2.x - z.x, n2.y - z.y); }
+      }
+    }
     Fx.spritzer(z.x, z.y - 9, krit ? 16 : 9, art.fetzen, z.x - p.x, z.y - p.y);
     Fx.ring(z.x, z.y - 9, krit ? 22 : 14, krit ? 'rgba(255,220,120,0.95)' : 'rgba(255,255,255,0.8)', krit ? 3 : 2);
     Fx.text(z.x, z.y - 22, krit ? dmg + '!' : dmg, krit ? '#ffd24a' : '#fff', krit);
@@ -3668,6 +3406,34 @@ html, body {
 
   function damageZombie(z, dmg, dx, dy) {
     var art = Ge.arten[z.art] || Ge.arten.normal;
+    /* Bosse: kein Wegfliegen, dafuer ein Taumelbalken */
+    if (z.boss) {
+      if (z.taumelT > 0) dmg = Math.round(dmg * 1.6);   /* wer taumelt, kassiert doppelt */
+      z.hp -= dmg;
+      z.flash = 0.18;
+      Fx.spritzer(z.x, z.y - 14, 8, z.boss.farbe, dx, dy);
+      if (z.taumelT <= 0) {
+        z.taumel = (z.taumel || 0) + dmg;
+        if (z.taumel >= 16 + z.phase * 6 + z.bossStufe * 4) {
+          z.taumel = 0;
+          z.taumelT = 1.3;
+          z.zustand = 'taumel';
+          G.shake = 7;
+          Fx.ring(z.x, z.y - 12, 46, 'rgba(255,220,120,0.95)', 3);
+          Fx.text(z.x, z.y - 40, 'ER TAUMELT!', '#8fd36a', true);
+          if (A) A.hit();
+        }
+      }
+      if (z.hp <= 0) {
+        z.dying = 0.001;
+        if (A) A.dead();
+        Fx.blitz(0.25, '#fff');
+        Fx.funken(z.x, z.y - 14, 40, z.boss.farbe, 170);
+        muenzenAbwerfen(z.x, z.y - 8, 20 + z.bossStufe * 6);
+        bossBesiegt(z);
+      } else if (A) A.hit();
+      return;
+    }
     z.hp -= dmg;
     z.flash = 0.18;
     var len = Math.sqrt(dx * dx + dy * dy) || 1;
@@ -3691,6 +3457,7 @@ html, body {
         G.kills++;
         G.killsSinceBoss++;
         G.serie++;
+        zornLaden((G.koennen && G.koennen.zorn) ? 15 : 9);
         G.killsHeute = (G.killsHeute || 0) + 1;
         questFortschritt('zombies', 1);
         serienRuf();
@@ -3719,8 +3486,12 @@ html, body {
   /* Baut einen Zombie einer bestimmten Sorte */
   function zombieBauen(art, x, y) {
     var a = Ge.arten[art] || Ge.arten.normal;
-    return { type: 'zombie', art: art, x: x, y: y,
-             hp: a.hp, maxhpZ: a.hp, dir: 'down', anim: 0,
+    /* Je weiter du bist, desto zaeher werden sie. */
+    var stufe = Math.floor(G.kills / 14) + G.bossesBeaten;
+    var hp = a.hp + Math.floor(stufe * (a.hp >= 8 ? 1.4 : 0.7));
+    return { type: 'zombie', art: art, x: x, y: y, stufe: stufe,
+             tempoBonus: 1 + Math.min(0.6, stufe * 0.05),
+             hp: hp, maxhpZ: hp, dir: 'down', anim: 0,
              kx: 0, ky: 0, flash: 0, dying: 0, hitId: -1, wt: 0, vx: 0, vy: 0,
              hurtCd: 0, spuckCd: 1 + Math.random() * 2, blinzelCd: 2 + Math.random() * 2,
              sprintCd: Math.random() * 2, sprint: 0 };
@@ -3866,6 +3637,7 @@ html, body {
     if (Math.abs(z.vx) > Math.abs(z.vy)) z.dir = z.vx > 0 ? 'right' : 'left';
     else if (z.vy) z.dir = z.vy > 0 ? 'down' : 'up';
 
+    sp *= (z.tempoBonus || 1);
     moveEnt(z, z.vx * sp * dt, z.vy * sp * dt);
     z.anim += dt * (sp > 0 ? 3.4 + sp / 22 : 0);
 
@@ -3882,7 +3654,7 @@ html, body {
     /* Zombie berührt den Ritter */
     var reichweite = 13 * (a.gr || 1);
     if (dd < reichweite && p.invuln <= 0 && G.state === 'play') {
-      hurtPlayer(a.schaden || 1, dx, dy, dd);
+      hurtPlayer((a.schaden || 1) + (z.stufe >= 6 ? 1 : 0), dx, dy, dd);
     }
   }
 
@@ -3929,10 +3701,13 @@ html, body {
         var z = G.ents[i];
         if (z.type !== 'zombie' || z.dying || z.spared || z.reden || z.mercy > 0) continue;
         var zx = z.x - e.x, zy = (z.y - 9) - e.y;
-        if (zx * zx + zy * zy < 100) {
+        var reich = z.boss ? 240 : 100;
+        if (zx * zx + zy * zy < reich) {
           e.weg = true; schussPlatzt(e);
-          Fx.text(z.x, z.y - 24, e.art === 'feuer' ? '2' : '1', '#9fd0f0', false);
-          damageZombie(z, e.art === 'feuer' ? 2 : 1, -zx, -zy);
+          /* Gegen Bosse helfen die Freunde nur ein bisschen - du musst ran */
+          var fs = z.boss ? 1 : (e.art === 'feuer' ? 2 : 1);
+          Fx.text(z.x, z.y - 24, String(fs), '#9fd0f0', false);
+          damageZombie(z, fs, -zx, -zy);
           return;
         }
       }
@@ -3966,6 +3741,218 @@ html, body {
     Fx.text(p.x, p.y - 26, '-' + dmg, '#ff5a5a', dmg > 1);
     if (A) A.hurt();
     if (p.hp <= 0) { p.hp = 0; gameOver(); }
+  }
+
+  /* ================= Heiltrank =================
+     Drei Stueck zum Start. Nachfuellen: schlafen, Mama, Alchemist,
+     Boss besiegen. Nach dem Trinken sieben Sekunden Pause -
+     mitten im Bosskampf muss man sich den richtigen Moment suchen. */
+  function trankTrinken() {
+    var p = G.player;
+    if (G.traenke <= 0) {
+      hint('Keine Traenke mehr! Beim Alchemisten in der Stadt nachfuellen.');
+      Fx.text(p.x, p.y - 26, 'leer!', '#8a8798', false);
+      return;
+    }
+    if (G.heilCd > 0) {
+      hint('Der Trank wirkt noch nach - ' + G.heilCd.toFixed(1) + 's.');
+      return;
+    }
+    if (p.hp >= p.maxhp) { hint('Du bist schon ganz gesund.'); return; }
+    G.traenke--;
+    G.heilCd = 7;
+    p.hp = Math.min(p.maxhp, p.hp + 4);
+    Fx.text(p.x, p.y - 32, '+2 HERZEN', '#ff5a5a', true);
+    Fx.ring(p.x, p.y - 8, 30, 'rgba(255,120,140,0.95)', 3);
+    Fx.funken(p.x, p.y - 8, 16, '#ff9ab0', 70);
+    Fx.blitz(0.08, '#ff9ab0');
+    if (A) A.heal();
+    save();
+  }
+
+  /* ================= Ritterzorn =================
+     Die Superkraft. Der Balken fuellt sich mit jedem erledigten Zombie.
+     Ist er voll, blinkt der Blitz-Knopf: acht Sekunden Flammenschwert,
+     dreifacher Schaden, jeder Schlag wirft eine Schockwelle. */
+  function zornZuenden() {
+    if (G.zornAn > 0) return;
+    if (G.zorn < 100) {
+      hint('Der Ritterzorn ist erst zu ' + Math.floor(G.zorn) + '% geladen.');
+      return;
+    }
+    G.zorn = 0;
+    G.zornAn = 8;
+    G.shake = 12;
+    G.player.invuln = Math.max(G.player.invuln, 0.9);
+    Fx.blitz(0.3, '#ffd24a');
+    Fx.ring(G.player.x, G.player.y - 8, 90, 'rgba(255,210,74,0.95)', 4);
+    Fx.ring(G.player.x, G.player.y - 8, 60, 'rgba(255,255,255,0.9)', 3);
+    Fx.funken(G.player.x, G.player.y - 8, 40, '#ffd24a', 180);
+    Fx.text(G.player.x, G.player.y - 46, 'RITTERZORN!', '#ffd24a', true);
+    hint('RITTERZORN! Dreifacher Schaden fuer 8 Sekunden!');
+    if (A) { A.heal(); A.swing(); }
+    /* alles in der Naehe fliegt sofort weg */
+    for (var i = 0; i < G.ents.length; i++) {
+      var z = G.ents[i];
+      if (z.type === 'zombie' && !z.dying && !z.spared && dist(z, G.player) < 60) {
+        damageZombie(z, 2, z.x - G.player.x, z.y - G.player.y);
+      }
+    }
+  }
+
+  function zornLaden(n) {
+    if (G.zornAn > 0) return;
+    var vorher = G.zorn;
+    G.zorn = Math.min(100, G.zorn + n);
+    if (vorher < 100 && G.zorn >= 100) {
+      Fx.text(G.player.x, G.player.y - 40, 'ZORN BEREIT!', '#ffd24a', true);
+      Fx.blitz(0.1, '#ffd24a');
+      hint('Ritterzorn bereit! Blitz-Knopf druecken (oder F).');
+    }
+  }
+
+  /* ================= Nachts kommen sie ins Haus =================
+     Wer sich nachts zu Hause verkriecht, ist nicht sicher: die Zombies
+     treten die Tuer ein. Die Familie flieht in die Ecke, du musst sie
+     alle erledigen, bevor sie bei Mama und Mila sind. */
+  function hausAngriffStarten() {
+    var anzahl = 4 + Math.min(8, Math.floor(G.kills / 8) + G.bossesBeaten * 2);
+    G.hausAngriff = { uebrig: 0, gesamt: anzahl, wartend: anzahl, t: 0, spawnT: 0.4 };
+    G.shake = 9;
+    Fx.blitz(0.3, '#ff3a3a');
+    if (A) { A.music('boss'); A.dead(); }
+    D.push('Mila', Chat.people.mila.color, 'Da!! An der Tuer!! Die kommen REIN!');
+    D.push('Mama Edda', Chat.people.mama.color, 'Hinter mich, Mila! Ritter - halt sie auf!!');
+    D.push('Papa Gunnar', Chat.people.papa.color,
+           'Ich verrammle die Fenster. Die Tuer gehoert dir, mein Junge.');
+    D.begin();
+    hint('ZOMBIES IM HAUS! Lass sie nicht durch!');
+  }
+
+  function hausAngriffUpdate(dt) {
+    var h = G.hausAngriff;
+    if (!h) {
+      /* Kommt nur nachts, nur zu Hause, und nicht sofort wieder */
+      G.hausCd = Math.max(0, G.hausCd - dt);
+      if (G.mapKey === 'haus' && istNacht() && G.kills >= 6 &&
+          G.hausCd <= 0 && !D.isOpen()) {
+        hausAngriffStarten();
+      }
+      return;
+    }
+    h.t += dt;
+    /* Sie kommen nacheinander durch die Tuer */
+    if (h.wartend > 0) {
+      h.spawnT -= dt;
+      if (h.spawnT <= 0) {
+        h.spawnT = 1.1 + Math.random() * 0.8;
+        h.wartend--;
+        h.uebrig++;
+        var tuer = { x: 10.5 * TILE, y: 13.6 * TILE };
+        var art = Ge.wuerfelArt(G.kills, true, true);
+        var z = zombieBauen(art, tuer.x + (Math.random() - 0.5) * 22, tuer.y);
+        G.ents.push(z);
+        Fx.funken(z.x, z.y - 8, 12, '#8fd36a', 70);
+        G.shake = Math.max(G.shake, 4);
+      }
+    }
+    /* Wie viele laufen noch herum? */
+    var echt = 0;
+    for (var i = 0; i < G.ents.length; i++) {
+      var e = G.ents[i];
+      if (e.type === 'zombie' && !e.dying && !e.spared) echt++;
+    }
+    h.uebrig = echt;
+    if (h.wartend <= 0 && echt === 0) hausAngriffGeschafft();
+  }
+
+  function hausAngriffGeschafft() {
+    var h = G.hausAngriff;
+    var lohn = 30 + h.gesamt * 8;
+    G.hausAngriff = null;
+    G.hausCd = 160;
+    G.coins += lohn;
+    G.traenke = Math.min(G.traenkeMax, G.traenke + 1);
+    Fx.text(G.player.x, G.player.y - 44, 'HAUS VERTEIDIGT!', '#8fd36a', true);
+    Fx.blitz(0.16, '#8fd36a');
+    if (A) A.music(G.map.music);
+    D.push('Mama Edda', Chat.people.mama.color,
+           'Alle weg. ALLE WEG! Komm her, du blutest ja... nein, das ist Zombie. Auch gut.');
+    D.push('Belohnung', '#ffd24a', '+' + lohn + ' Muenzen und ein Heiltrank von Papa.');
+    D.begin();
+    hint('Haus verteidigt! +' + lohn + ' Muenzen');
+    save();
+  }
+
+  /* ================= Die Stadt wird angegriffen =================
+     Ab dem zweiten besiegten Boss ist Eichenstadt nicht mehr sicher.
+     Kommst du an, brennt es schon - und mitten auf dem Platz steht
+     ein Boss. */
+  function belagerungStarten() {
+    G.belagerung = { t: 0, uebrig: 0, spawnT: 0, wellen: 3 + G.bossesBeaten };
+    G.shake = 10;
+    Fx.blitz(0.35, '#ff3a3a');
+    if (A) A.music('boss');
+    D.push('!!!', '#ff5a5a',
+           'Rauch ueber den Daechern. Auf dem Marktplatz schreit jemand.');
+    D.push('Stadtwache', '#a9c0d8',
+           'RITTER! Endlich! Sie sind durch das Tor! Helft uns - wir halten den Platz nicht!');
+    D.begin();
+    hint('EICHENSTADT WIRD ANGEGRIFFEN!');
+    /* Sofort ein paar in die Gassen */
+    for (var i = 0; i < 6; i++) spawnZombie(Ge.wuerfelArt(G.kills, false, true), 60, 200);
+  }
+
+  function belagerungUpdate(dt) {
+    var b = G.belagerung;
+    if (!b) return;
+    b.t += dt;
+    var echt = 0;
+    for (var i = 0; i < G.ents.length; i++) {
+      var e = G.ents[i];
+      if (e.type === 'zombie' && !e.dying && !e.spared) echt++;
+    }
+    b.uebrig = echt;
+    /* Nachschub, bis alle Wellen durch sind */
+    if (b.wellen > 0) {
+      b.spawnT -= dt;
+      if (b.spawnT <= 0 && echt < 9) {
+        b.spawnT = 1.6;
+        spawnZombie(Ge.wuerfelArt(G.kills + 8, false, true), 70, 220);
+        b.wellen -= 0.34;
+      }
+    } else if (echt === 0 && !G.boss) {
+      if (!b.bossDa) {
+        /* Zum Schluss der Anfuehrer */
+        b.bossDa = true;
+        spawnBoss();
+      } else {
+        belagerungGeschafft();
+      }
+    }
+    /* Rauch ueber der Stadt */
+    if (Math.random() < 0.25) {
+      Fx.schweben(G.camX + Math.random() * VW, G.camY + Math.random() * VH,
+                  'rgba(90,90,100,0.7)');
+    }
+  }
+
+  function belagerungGeschafft() {
+    G.belagerung = null;
+    var lohn = 120 + G.bossesBeaten * 40;
+    G.coins += lohn;
+    G.traenke = G.traenkeMax;
+    G.zorn = 100;
+    if (A) A.music(G.map.music);
+    Fx.blitz(0.2, '#8fd36a');
+    Fx.text(G.player.x, G.player.y - 46, 'STADT GERETTET!', '#8fd36a', true);
+    D.push('Stadtwache', '#a9c0d8',
+           'Sie sind weg. Alle weg. Ihr... ihr habt die ganze Stadt gerettet.');
+    D.push('Belohnung', '#ffd24a',
+           '+' + lohn + ' Muenzen, alle Traenke aufgefuellt und der Ritterzorn voll geladen.');
+    D.begin();
+    hint('Eichenstadt gerettet! +' + lohn + ' Muenzen');
+    save();
   }
 
   /* ================= Zombie-Wellen =================
@@ -4154,8 +4141,10 @@ html, body {
               go: function () {
                 G.zeit = 0.3;
                 G.player.hp = G.player.maxhp;
+                G.traenke = G.traenkeMax;
                 if (A) A.heal();
-                hint('Guten Morgen!');
+                hint('Guten Morgen! Traenke wieder voll.');
+                save();
               } },
             { t: 'Doch nicht muede', r: 'Du stehst wieder auf.' }]);
     D.begin();
@@ -4216,21 +4205,43 @@ html, body {
     if (!G.bossQueue.length) G.bossQueue = mischen(Chat.bosse);
     var b = G.bossQueue.shift();
     G.killsSinceBoss = 0;
-    G.shake = 6;
+    G.shake = 8;
+    Fx.blitz(0.3, '#ff3a3a');
     if (A) A.music('boss');
 
+    /* Je mehr Bosse du schon geschafft hast, desto haerter der naechste. */
+    var stufe = G.bossesBeaten;
+    var hp = Math.round(b.hp * (1 + stufe * 0.42));
+    var tempo = b.speed * (1 + stufe * 0.07);
+    var schaden = b.dmg + Math.floor(stufe / 3);
+
+    var pl = freierPlatz(90, 190) || { x: G.player.x + 70, y: G.player.y };
+    var z = {
+      type: 'zombie', art: 'boss', boss: b, bossStufe: stufe,
+      x: pl.x, y: pl.y, hp: hp, maxhp: hp, maxhpZ: hp,
+      tempo: tempo, schaden: schaden,
+      dir: 'down', anim: 0, kx: 0, ky: 0, flash: 0, dying: 0, hitId: -1,
+      zustand: 'jagen', zT: 1.2, angriff: null, phase: 1,
+      taumel: 0, taumelT: 0, marken: [], salve: 0, sprungT: 0
+    };
+    G.ents.push(z);
+    G.boss = z;
+
+    Fx.ring(z.x, z.y - 10, 60, 'rgba(255,60,60,0.9)', 3);
+    Fx.funken(z.x, z.y - 10, 26, b.farbe, 120);
+
     D.push('!!!', '#ff5a5a', b.intro);
+    D.push(b.name, b.farbe, b.spruch);
+    D.push('So kaempft man', '#ffd24a',
+           'Rollen, wenn er ausholt! Wenn er taumelt, drauf mit dem Schwert.\n' +
+           'Stufe ' + (stufe + 1) + ': ' + hp + ' Leben. Der naechste wird haerter.');
     if (G.party.length) {
       var f = G.party[(Math.random() * G.party.length) | 0];
       var pp = Chat.people[f.key];
       var lines = Chat.bossLines.auftritt;
       D.push(pp.name, pp.color, lines[(Math.random() * lines.length) | 0]);
     }
-    /* Wenn die Einleitung durch ist, geht der Kampf los. */
-    D.begin(function () {
-      G.state = 'kampf';
-      Kampf.start(b);
-    });
+    D.begin();
   }
 
   /* Bild des Bosses fuer das Kampf-Fenster */
@@ -4286,58 +4297,230 @@ html, body {
     }
   }
 
+  /* ================= Der Bosskampf =================
+     Der Boss kuendigt jeden Angriff an (rote Markierung, Ruf).
+     Wer wegrollt, kommt heil davon. Wer trifft, fuellt seinen
+     Taumelbalken - ist der voll, steht der Boss kurz still. */
   function updateBoss(z, dt, dx, dy, dd) {
     var b = z.boss, p = G.player;
     z.flash = Math.max(0, z.flash - dt);
-    z.spT -= dt;
+    z.anim += dt * 3;
+    z.zT -= dt;
 
-    var sp = b.speed * (z.rage ? 1.6 : 1);
+    /* Phasenwechsel: bei zwei Dritteln und einem Drittel wird er wilder */
+    var anteil = z.hp / z.maxhp;
+    if (z.phase === 1 && anteil <= 0.66) bossPhase(z, 2);
+    else if (z.phase === 2 && anteil <= 0.33) bossPhase(z, 3);
+
+    /* Taumeln: freie Schlaege fuer dich */
+    if (z.taumelT > 0) {
+      z.taumelT -= dt;
+      z.zustand = 'taumel';
+      if (Math.random() < 0.3) Fx.funken(z.x, z.y - 14, 1, '#ffd24a', 25);
+      if (z.taumelT <= 0) { z.zustand = 'jagen'; z.zT = 0.3; z.taumel = 0; }
+      bossMarken(z, dt);
+      return;
+    }
+
+    var tempo = z.tempo * (z.phase === 3 ? 1.35 : z.phase === 2 ? 1.15 : 1);
     z.vx = dx / dd; z.vy = dy / dd;
-
-    if (b.koennen === 'sprint') {
-      if (z.dash > 0) { z.dash -= dt; sp = 120; }
-      else if (z.spT <= 0 && dd < 190) {
-        z.spT = 2.8; z.dash = 0.45; G.shake = 2;
-        if (A) A.swing();
-      }
-    }
-    if (b.koennen === 'rufen' && z.spT <= 0 && dd < 220) {
-      z.spT = 7;
-      spawnZombieNear(z); spawnZombieNear(z);
-      hint('Grauzahn ruft Verstaerkung!');
-    }
-    if (b.koennen === 'wut' && !z.rage && z.hp <= z.maxhp / 2) {
-      z.rage = true; G.shake = 5;
-      hint('Mondfell wird wuetend!');
-    }
-    if (b.koennen === 'wurzeln') {
-      if (z.roots > 0) {
-        z.roots -= dt;
-        sp = 0;
-        if (z.roots <= 0 && dd < 46 && p.invuln <= 0 && G.state === 'play') {
-          hurtPlayer(b.dmg, dx, dy, dd);
-        }
-      } else if (z.spT <= 0 && dd < 130) {
-        z.spT = 4.5; z.roots = 0.75;
-        if (A) A.hit();
-      }
-    }
-
     if (Math.abs(z.vx) > Math.abs(z.vy)) z.dir = z.vx > 0 ? 'right' : 'left';
     else z.dir = z.vy > 0 ? 'down' : 'up';
 
-    moveEnt(z, z.vx * sp * dt, z.vy * sp * dt);
-    z.anim += dt * (sp > 0 ? 4 : 1.4);
-
-    if (z.kx || z.ky) {
-      moveEnt(z, z.kx * 0.5 * dt, z.ky * 0.5 * dt);
-      z.kx *= 0.78; z.ky *= 0.78;
-      if (Math.abs(z.kx) < 4) z.kx = 0;
-      if (Math.abs(z.ky) < 4) z.ky = 0;
+    if (z.zustand === 'jagen') {
+      /* hinterher, aber nicht kleben bleiben */
+      if (dd > 26) moveEnt(z, z.vx * tempo * dt, z.vy * tempo * dt);
+      if (z.zT <= 0) bossAngriffWaehlen(z, dd);
+    }
+    else if (z.zustand === 'ansage') {
+      /* Er holt aus. Jetzt wegrollen! */
+      if (z.angriff === 'sturm') {
+        z.zielX = p.x; z.zielY = p.y;      /* er merkt sich, wo du JETZT stehst */
+      }
+      if (Math.random() < 0.5) Fx.funken(z.x, z.y - 14, 1, '#ff3a3a', 30);
+      if (z.zT <= 0) bossAngriffStarten(z, dx, dy, dd);
+    }
+    else if (z.zustand === 'angriff') {
+      bossAngriffLaeuft(z, dt, dx, dy, dd);
+    }
+    else if (z.zustand === 'erholen') {
+      if (z.zT <= 0) { z.zustand = 'jagen'; z.zT = (z.phase === 3 ? 0.12 : 0.28) + Math.random() * 0.3; }
     }
 
-    if (dd < 14 + b.scale * 4 && p.invuln <= 0 && G.state === 'play') {
-      hurtPlayer(b.dmg, dx, dy, dd);
+    /* Beruehrung tut auch so weh */
+    if (dd < 15 + b.scale * 5 && p.invuln <= 0 && G.state === 'play' && z.zustand !== 'taumel') {
+      hurtPlayer(1, dx, dy, dd);
+    }
+
+    bossMarken(z, dt);
+  }
+
+  function bossPhase(z, n) {
+    z.phase = n;
+    z.zustand = 'taumel'; z.taumelT = 0.9;
+    G.shake = 9;
+    Fx.blitz(0.2, z.boss.farbe);
+    Fx.ring(z.x, z.y - 12, 70, 'rgba(255,60,60,0.95)', 4);
+    Fx.funken(z.x, z.y - 12, 30, z.boss.farbe, 150);
+    Fx.text(z.x, z.y - 40, n === 3 ? 'LETZTE PHASE!' : 'PHASE ' + n + '!', '#ff3a3a', true);
+    hint(z.boss.name.split(',')[0] + ' wird wuetender!');
+    if (A) A.dead();
+  }
+
+  function bossAngriffWaehlen(z, dd) {
+    var moeglich = z.boss.angriffe.slice();
+    /* Nahkampf nur aus der Naehe, Fernkampf nur aus der Ferne */
+    if (dd > 70) moeglich = moeglich.filter(function (a) { return a !== 'fegen'; });
+    if (dd < 40) moeglich = moeglich.filter(function (a) { return a !== 'sturm'; });
+    if (!moeglich.length) moeglich = z.boss.angriffe;
+    z.angriff = moeglich[(Math.random() * moeglich.length) | 0];
+    z.zustand = 'ansage';
+    z.zT = z.phase === 3 ? 0.45 : z.phase === 2 ? 0.55 : 0.7;
+    Fx.text(z.x, z.y - 36, Chat.bossAnsagen[z.angriff] || '!', '#ff3a3a', true);
+    if (A) A.swing();
+  }
+
+  function bossAngriffStarten(z, dx, dy, dd) {
+    var p = G.player;
+    z.zustand = 'angriff';
+    z.aT = 0;
+    if (z.angriff === 'sturm') {
+      var zx = (z.zielX || p.x) - z.x, zy = (z.zielY || p.y) - z.y;
+      var l = Math.sqrt(zx * zx + zy * zy) || 1;
+      z.sx = zx / l; z.sy = zy / l;
+      z.zT = 0.75;
+      G.shake = 4;
+    } else if (z.angriff === 'stampf') {
+      z.zT = 0.5;
+    } else if (z.angriff === 'fegen') {
+      z.zT = 0.45;
+    } else if (z.angriff === 'salve') {
+      z.salve = z.phase === 3 ? 9 : z.phase === 2 ? 7 : 5;
+      z.zT = 0.9;
+    } else if (z.angriff === 'rufen') {
+      var n = 1 + z.phase;
+      for (var i = 0; i < n; i++) {
+        var art = Ge.wuerfelArt(G.kills + 10, istNacht(), true);
+        spawnZombie(art, 40, 130);
+      }
+      Fx.ring(z.x, z.y - 12, 54, 'rgba(255,120,60,0.9)', 3);
+      hint(z.boss.name.split(',')[0] + ' ruft ' + n + ' Zombies!');
+      z.zustand = 'erholen'; z.zT = 0.8;
+    } else if (z.angriff === 'wurzeln' || z.angriff === 'regen') {
+      /* Markierungen auf den Boden - dort schlaegt es gleich ein */
+      var anzahl = z.angriff === 'regen' ? (3 + z.phase * 2) : (2 + z.phase);
+      for (var j = 0; j < anzahl; j++) {
+        z.marken.push({
+          x: p.x + (Math.random() - 0.5) * (j === 0 ? 12 : 110),
+          y: p.y + (Math.random() - 0.5) * (j === 0 ? 12 : 90),
+          t: 0, warn: 0.85, r: z.angriff === 'regen' ? 15 : 19,
+          farbe: z.angriff === 'regen' ? '#9aff6a' : '#8a5a2a'
+        });
+      }
+      z.zustand = 'erholen'; z.zT = 1.1;
+    } else if (z.angriff === 'sprung') {
+      z.zielX = p.x; z.zielY = p.y;
+      z.startX = z.x; z.startY = z.y;
+      z.zT = 0.55;
+    }
+  }
+
+  function bossAngriffLaeuft(z, dt, dx, dy, dd) {
+    var p = G.player;
+    z.aT += dt;
+
+    if (z.angriff === 'sturm') {
+      var v = 210 + z.phase * 30;
+      moveEnt(z, z.sx * v * dt, z.sy * v * dt, true);
+      if (Math.random() < 0.7) Fx.staub(z.x, z.y);
+      if (dd < 20 + z.boss.scale * 5 && p.invuln <= 0) {
+        hurtPlayer(z.schaden, dx, dy, dd);
+        bossEnde(z, 0.75);
+      }
+      if (z.zT <= 0) {
+        /* Er kracht ins Leere und ist kurz benommen */
+        G.shake = 7;
+        Fx.ring(z.x, z.y - 8, 40, 'rgba(255,255,255,0.8)', 2);
+        Fx.funken(z.x, z.y, 14, '#d8d0c0', 90);
+        z.zustand = 'taumel'; z.taumelT = 1.15;
+        Fx.text(z.x, z.y - 34, 'JETZT DRAUF!', '#8fd36a', true);
+      }
+    }
+    else if (z.angriff === 'stampf') {
+      if (z.zT <= 0) {
+        G.shake = 12;
+        Fx.blitz(0.1, '#ffffff');
+        var rr = 54 + z.phase * 10;
+        Fx.ring(z.x, z.y - 4, rr, 'rgba(255,180,80,0.95)', 4);
+        Fx.ring(z.x, z.y - 4, rr * 0.6, 'rgba(255,255,255,0.8)', 2);
+        Fx.funken(z.x, z.y, 26, '#c8b090', 140);
+        if (dd < rr && p.invuln <= 0) hurtPlayer(z.schaden, dx, dy, dd);
+        bossEnde(z, 0.85);
+      }
+    }
+    else if (z.angriff === 'fegen') {
+      if (z.zT <= 0) {
+        G.shake = 8;
+        var rf = 42 + z.phase * 6;
+        Fx.ring(z.x, z.y - 10, rf, 'rgba(255,90,90,0.95)', 3);
+        if (dd < rf && p.invuln <= 0) hurtPlayer(z.schaden, dx, dy, dd);
+        bossEnde(z, 0.6);
+      }
+    }
+    else if (z.angriff === 'salve') {
+      z.salveT = (z.salveT || 0) - dt;
+      if (z.salve > 0 && z.salveT <= 0) {
+        z.salveT = 0.09;
+        z.salve--;
+        var winkel = Math.atan2(dy, dx) + (z.salve - 3) * 0.19;
+        schussSetzen(z.x, z.y - 12, Math.cos(winkel), Math.sin(winkel), 92, 'saeure');
+        if (A) A.hit();
+      }
+      if (z.salve <= 0 && z.zT <= 0) bossEnde(z, 0.7);
+    }
+    else if (z.angriff === 'sprung') {
+      var k = Math.min(1, z.aT / 0.55);
+      z.x = z.startX + (z.zielX - z.startX) * k;
+      z.y = z.startY + (z.zielY - z.startY) * k;
+      z.hoehe = Math.sin(k * Math.PI) * 26;
+      if (k >= 1) {
+        z.hoehe = 0;
+        G.shake = 10;
+        var rs = 40 + z.phase * 8;
+        Fx.ring(z.x, z.y - 4, rs, 'rgba(255,140,60,0.95)', 3);
+        Fx.funken(z.x, z.y, 20, '#c8b090', 120);
+        if (dist(z, p) < rs && p.invuln <= 0) {
+          var ndx = p.x - z.x, ndy = p.y - z.y;
+          hurtPlayer(z.schaden, ndx, ndy, Math.sqrt(ndx * ndx + ndy * ndy) || 1);
+        }
+        bossEnde(z, 0.8);
+      }
+    }
+  }
+
+  function bossEnde(z, ruhe) {
+    z.zustand = 'erholen';
+    z.zT = ruhe;
+    z.hoehe = 0;
+  }
+
+  /* Die Bodenmarkierungen, die gleich explodieren */
+  function bossMarken(z, dt) {
+    for (var i = z.marken.length - 1; i >= 0; i--) {
+      var m = z.marken[i];
+      m.t += dt;
+      if (m.t >= m.warn && !m.knall) {
+        m.knall = true;
+        G.shake = Math.max(G.shake, 5);
+        Fx.ring(m.x, m.y, m.r + 6, 'rgba(255,90,90,0.9)', 3);
+        Fx.funken(m.x, m.y, 16, m.farbe, 100);
+        var p = G.player;
+        var ddx = p.x - m.x, ddy = (p.y - 6) - m.y;
+        if (Math.sqrt(ddx * ddx + ddy * ddy) < m.r && p.invuln <= 0 && G.state === 'play') {
+          hurtPlayer(z.schaden, ddx, ddy, Math.sqrt(ddx * ddx + ddy * ddy) || 1);
+        }
+      }
+      if (m.t > m.warn + 0.3) z.marken.splice(i, 1);
     }
   }
 
@@ -4347,14 +4530,18 @@ html, body {
     G.bossesBeaten++;
     G.killsSinceBoss = 0;
     questFortschritt('boss', 1);
-    G.shake = 6;
-    if (p.maxhp < 14) p.maxhp += 2;
+    G.shake = 10;
+    if (p.maxhp < 20) p.maxhp += 2;
     p.hp = p.maxhp;
+    G.traenke = Math.min(G.traenkeMax, G.traenke + 2);
+    var lohn = 60 + z.bossStufe * 30;
+    G.coins += lohn;
     if (A) { A.heal(); A.music(G.map.music); }
 
     D.push(b.name + ' besiegt!', '#ffd24a', b.sieg);
     D.push('Belohnung', '#ffd24a',
-           'Du fuehlst dich staerker: ein Herz mehr - und alle Herzen wieder voll.');
+           'Ein Herz mehr, alle Herzen voll, zwei Traenke und ' + lohn + ' Muenzen.\n' +
+           'Das war Boss Nummer ' + G.bossesBeaten + '. Der naechste ist staerker.');
     if (G.party.length) {
       var f = G.party[(Math.random() * G.party.length) | 0];
       var pp = Chat.people[f.key];
@@ -4412,6 +4599,7 @@ html, body {
             Fx.spritzer(z.x, z.y - 9, 5, '#9fd0f0', z.x - c.x, z.y - c.y);
             Fx.text(z.x, z.y - 22, '1', '#9fd0f0', false);
             damageZombie(z, 1, z.x - c.x, z.y - c.y);
+            c.atkCd = z.boss ? 2.8 : 1.5;
           }
           break;
         }
@@ -4536,83 +4724,173 @@ html, body {
     { name: 'Goldene Ruestung', preis: 140 }
   ];
 
-  function ladenOeffnen(ersterBesuch) {
-    var h = Chat.people.haendler;
+  /* Vier Laeden in Eichenstadt, jeder verkauft etwas anderes:
+     waffen = Schwerter, schmied = Ruestung, alchi = Traenke,
+     meister = Kampfkunst (dauerhafte Verbesserungen). */
+  function ladenWer(art) {
+    if (art === 'schmied') return Chat.people.schmied;
+    if (art === 'alchi') return Chat.people.alchi;
+    if (art === 'meister') return Chat.people.meister;
+    return Chat.people.haendler;
+  }
+
+  function ladenOeffnen(ersterBesuch, art) {
+    art = art || 'waffen';
+    var h = ladenWer(art);
     var opts = [];
-    var sw = SCHWERT_STUFEN[G.swordLevel];
-    var ru = RUESTUNG_STUFEN[G.armorLevel];
+    var text;
 
-    if (sw) {
-      opts.push({ t: 'Schwert: ' + sw.name + ' - ' + sw.preis + ' Muenzen',
-                  go: function () { kaufen('schwert', sw); } });
+    if (art === 'waffen') {
+      var sw = SCHWERT_STUFEN[G.swordLevel];
+      if (sw) {
+        opts.push({ t: 'Schwert: ' + sw.name + ' - ' + sw.preis + ' Muenzen',
+                    go: function () { kaufen('schwert', sw, art); } });
+      } else {
+        opts.push({ t: '(Du hast schon die beste Klinge)', r: 'Besser wird es nicht. Pass gut drauf auf!' });
+      }
+      if (G.pilze > 0) {
+        opts.push({ t: G.pilze + ' Pilze verkaufen (je 4)',
+                    go: function () {
+                      var lohn = G.pilze * 4; G.coins += lohn; G.pilze = 0;
+                      if (A) A.coin(); hint('+' + lohn + ' Muenzen');
+                      D.push(h.name, h.color, 'Schoene Pilze! Die kommen heute Abend in die Pfanne.');
+                      save(); ladenOeffnen(false, art);
+                    } });
+      }
+      if (G.beeren > 0) {
+        opts.push({ t: G.beeren + ' Beeren verkaufen (je 3)',
+                    go: function () {
+                      var lohn = G.beeren * 3; G.coins += lohn; G.beeren = 0;
+                      if (A) A.coin(); hint('+' + lohn + ' Muenzen');
+                      D.push(h.name, h.color, 'Beeren! Meine Frau macht Marmelade draus.');
+                      save(); ladenOeffnen(false, art);
+                    } });
+      }
+      text = ersterBesuch
+        ? Chat.shopLines[(Math.random() * Chat.shopLines.length) | 0]
+        : 'Sonst noch was?';
     }
-    if (ru) {
-      opts.push({ t: 'Ruestung: ' + ru.name + ' - ' + ru.preis + ' Muenzen',
-                  go: function () { kaufen('ruestung', ru); } });
+    else if (art === 'schmied') {
+      var ru = RUESTUNG_STUFEN[G.armorLevel];
+      if (ru) {
+        opts.push({ t: 'Ruestung: ' + ru.name + ' - ' + ru.preis + ' Muenzen',
+                    go: function () { kaufen('ruestung', ru, art); } });
+      } else {
+        opts.push({ t: '(Beste Ruestung schon an)', r: 'Da geht nichts mehr drueber. Bleib trotzdem beweglich!' });
+      }
+      if (G.player.hp < G.player.maxhp) {
+        opts.push({ t: 'Beulen ausklopfen, alle Herzen voll - 12 Muenzen',
+                    go: function () { kaufen('eintopf', { name: 'Reparatur', preis: 12 }, art); } });
+      }
+      text = ersterBesuch
+        ? 'Rein in die Esse, drauf mit dem Hammer. Was brauchst du, Ritter?'
+        : 'Noch was?';
     }
-    if (G.pilze > 0) {
-      opts.push({ t: G.pilze + ' Pilze verkaufen (je 4)',
-                  go: function () {
-                    var lohn = G.pilze * 4; G.coins += lohn; G.pilze = 0;
-                    if (A) A.coin(); hint('+' + lohn + ' Muenzen');
-                    D.push(h.name, h.color, 'Schoene Pilze! Die kommen heute Abend in die Pfanne.');
-                    save(); ladenOeffnen(false);
-                  } });
+    else if (art === 'alchi') {
+      var preis = 18 + G.traenke * 6;
+      if (G.traenke < G.traenkeMax) {
+        opts.push({ t: 'Heiltrank kaufen (' + G.traenke + '/' + G.traenkeMax + ') - ' + preis + ' Muenzen',
+                    go: function () { kaufen('trank', { name: 'Heiltrank', preis: preis }, art); } });
+      } else {
+        opts.push({ t: '(Guertel voll)', r: 'Mehr passt nicht an den Guertel. Trink erst mal einen leer!' });
+      }
+      if (G.traenkeMax < 5) {
+        opts.push({ t: 'Groesserer Guertel: Platz fuer einen Trank mehr - 90 Muenzen',
+                    go: function () { kaufen('guertel', { name: 'Guertel', preis: 90 }, art); } });
+      }
+      opts.push({ t: 'Wutkristall - 55 Muenzen',
+                  go: function () { kaufen('kristall', { name: 'Wutkristall', preis: 55 }, art); } });
+      text = ersterBesuch
+        ? 'Pssst. Rot macht heil, pink macht wuetend. Frag nicht, woraus.'
+        : 'Noch ein Schlueckchen?';
     }
-    if (G.beeren > 0) {
-      opts.push({ t: G.beeren + ' Beeren verkaufen (je 3)',
-                  go: function () {
-                    var lohn = G.beeren * 3; G.coins += lohn; G.beeren = 0;
-                    if (A) A.coin(); hint('+' + lohn + ' Muenzen');
-                    D.push(h.name, h.color, 'Beeren! Meine Frau macht Marmelade draus.');
-                    save(); ladenOeffnen(false);
-                  } });
+    else {
+      /* Waffenmeister: dauerhafte Kampfkunst */
+      if (!G.koennen) G.koennen = {};
+      if (!G.koennen.rolle) {
+        opts.push({ t: 'Schnellere Rolle - 70 Muenzen',
+                    go: function () { kaufen('rolle', { name: 'Schnellere Rolle', preis: 70 }, art); } });
+      }
+      if (!G.koennen.wirbel) {
+        opts.push({ t: 'Grosser Wirbelschlag - 110 Muenzen',
+                    go: function () { kaufen('wirbel', { name: 'Grosser Wirbel', preis: 110 }, art); } });
+      }
+      if (!G.koennen.zorn) {
+        opts.push({ t: 'Zorn laedt schneller - 130 Muenzen',
+                    go: function () { kaufen('zornkunst', { name: 'Schneller Zorn', preis: 130 }, art); } });
+      }
+      if (!opts.length) {
+        opts.push({ t: '(Du kannst schon alles)', r: 'Mehr kann ich dir nicht beibringen. Jetzt geh und raeum auf.' });
+      }
+      text = ersterBesuch
+        ? 'Du haust drauf wie ein Holzfaeller. Ich zeig dir was Besseres.'
+        : 'Noch eine Lektion?';
     }
-    if (G.player.hp < G.player.maxhp) {
-      opts.push({ t: 'Eintopf, alle Herzen voll - 10 Muenzen',
-                  go: function () { kaufen('eintopf', { name: 'Eintopf', preis: 10 }); } });
-    }
+
     opts.push({ t: 'Nur schauen, danke.', r: 'Kein Problem. Komm wieder, wenn die Tasche klimpert!' });
-
-    var text = ersterBesuch
-      ? Chat.shopLines[(Math.random() * Chat.shopLines.length) | 0]
-      : 'Sonst noch was?';
     text += '  (Du hast ' + G.coins + ' Muenzen)';
 
     D.push(h.name + ' (' + h.rolle + ')', h.color, text, opts);
     D.begin();
   }
 
-  function kaufen(art, stufe) {
-    var h = Chat.people.haendler;
+  function kaufen(was, stufe, art) {
+    var h = ladenWer(art);
     if (G.coins < stufe.preis) {
       D.push(h.name, h.color,
              'Dafuer fehlen dir ' + (stufe.preis - G.coins) +
              ' Muenzen. Im Wald liegen genug herum - in Zombies!');
-      ladenOeffnen(false);
+      ladenOeffnen(false, art);
       return;
     }
     G.coins -= stufe.preis;
+    if (!G.koennen) G.koennen = {};
 
-    if (art === 'schwert') {
+    if (was === 'schwert') {
       G.swordLevel++;
       D.push(h.name, h.color, 'Die ' + stufe.name + ' gehoert dir. Damit haust du haerter zu!');
       hint('Schwert aufgewertet!');
       if (A) A.select();
-    } else if (art === 'ruestung') {
+    } else if (was === 'ruestung') {
       G.armorLevel++;
       G.player.maxhp = Math.min(20, G.player.maxhp + 2);
       G.player.hp = G.player.maxhp;
       D.push(h.name, h.color, stufe.name + ' sitzt wie angegossen. Ein Herz mehr - und alle voll!');
       hint('Ruestung aufgewertet!');
       if (A) A.heal();
+    } else if (was === 'trank') {
+      G.traenke = Math.min(G.traenkeMax, G.traenke + 1);
+      D.push(h.name, h.color, 'Einer noch fuer den Guertel. Nicht alles auf einmal!');
+      hint('Heiltrank gekauft (' + G.traenke + ')');
+      if (A) A.heal();
+    } else if (was === 'guertel') {
+      G.traenkeMax = Math.min(5, G.traenkeMax + 1);
+      G.traenke = Math.min(G.traenkeMax, G.traenke + 1);
+      D.push(h.name, h.color, 'Mehr Schlaufen, mehr Traenke. Logisch, oder?');
+      hint('Platz fuer ' + G.traenkeMax + ' Traenke');
+    } else if (was === 'kristall') {
+      G.wut = 11;
+      D.push(h.name, h.color, 'Trink. Und dann RENN auf sie zu.');
+      hint('WUT! Doppelter Schaden!');
+    } else if (was === 'rolle') {
+      G.koennen.rolle = true;
+      D.push(h.name, h.color, 'Nicht wegspringen - abrollen. So kommst du schneller wieder hoch.');
+      hint('Die Rolle geht jetzt oefter!');
+    } else if (was === 'wirbel') {
+      G.koennen.wirbel = true;
+      D.push(h.name, h.color, 'Das Schwert schwingt sich fast von selbst. Nutz den Schwung.');
+      hint('Der Wirbelschlag trifft weiter!');
+    } else if (was === 'zornkunst') {
+      G.koennen.zorn = true;
+      D.push(h.name, h.color, 'Zorn ist ein Werkzeug. Halt ihn scharf.');
+      hint('Der Ritterzorn laedt schneller!');
     } else {
       G.player.hp = G.player.maxhp;
-      D.push(h.name, h.color, 'Loeffel leer, Herzen voll. Guten Appetit!');
+      D.push(h.name, h.color, 'Fertig. Herzen voll, Beulen weg.');
       if (A) A.heal();
     }
     save();
-    ladenOeffnen(false);
+    ladenOeffnen(false, art);
   }
 
   /* ================= Reden ================= */
@@ -4659,7 +4937,7 @@ html, body {
       return;
     }
     if (best.type === 'npc' && best.hund) return streicheln(best);
-    if (best.type === 'npc' && best.shop) return ladenOeffnen(true);
+    if (best.type === 'npc' && best.shop) return ladenOeffnen(true, best.shop);
     if (best.type === 'npc') return talkNPC(best);
     return talkFriend(best);
   }
@@ -5160,6 +5438,34 @@ html, body {
     }
 
     if (e.type === 'npc' || e.type === 'friend') {
+      var pers = Chat.people[e.key];
+      /* Die vier Freunde sind Ritter - mit Ruestung, Schild und Schwert */
+      if (e.type === 'friend' && pers && pers.ritter) {
+        var rs = S.ritterFuer(e.key, pers.ritter);
+        var rimg = rs[e.dir][frameOf(e)];
+        ctx.globalAlpha = 0.26; ctx.fillStyle = '#000';
+        ctx.fillRect(sx - 5, sy - 2, 10, 3); ctx.globalAlpha = 1;
+        /* Schild auf der einen, Schwert auf der anderen Seite */
+        if (!e.schild) e.schild = S.schild(pers.ritter.t, pers.ritter.c);
+        if (e.dir === 'up') ritterWaffe(e, sx, sy, pers);
+        ctx.drawImage(rimg, sx - 8, sy - 16);
+        if (e.dir !== 'up') ritterWaffe(e, sx, sy, pers);
+        if (e.swing > 0) {
+          ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(sx, sy - 8, 13, -0.7, 1.0);
+          ctx.stroke();
+        }
+        if (e.idle) {
+          ctx.fillStyle = '#ffd24a';
+          ctx.font = '8px "Courier New", monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText('!', sx, sy - 19);
+          ctx.textAlign = 'left';
+        }
+        return;
+      }
       var s2 = actorFor(e.key, false);
       ctx.drawImage(s2[e.dir][frameOf(e)], sx - 8, sy - 16);
       if (e.shop) {
@@ -5189,6 +5495,22 @@ html, body {
     if (e.type === 'player') drawKnight(e, sx, sy);
   }
 
+  /* Schild und Schwert eines befreundeten Ritters */
+  function ritterWaffe(e, sx, sy, pers) {
+    var links = (e.dir === 'left');
+    var sxs = links ? sx + 3 : sx - 10;
+    ctx.drawImage(e.schild, sxs, sy - 14);
+    /* Schwert: beim Zuschlagen ausgeholt, sonst an der Seite */
+    var deg = e.swing > 0 ? -40 + (1 - e.swing / 0.25) * 110 : -70;
+    if (links) deg = 180 - deg;
+    var hx = sx + (links ? -4 : 4), hy = sy - 9;
+    ctx.save();
+    ctx.translate(hx, hy);
+    ctx.rotate((deg + 90) * Math.PI / 180);
+    ctx.drawImage(S.swordFor(1), -2, -11);
+    ctx.restore();
+  }
+
   /* Werwolf: die Menschen-Vorlage mit Fell und spitzen Ohren */
   var WOLF = null;
   function wolfSet() {
@@ -5206,51 +5528,100 @@ html, body {
   }
 
   function bossImage(e) {
-    var art = e.boss.art, f = frameOf(e);
-    if (art === 'spider') return S.spider[f];
-    if (art === 'treant') return S.treant;
-    if (art === 'wolf') return wolfSet()[e.dir][f];
+    var b = e.boss, f = frameOf(e);
+    if (b.art === 'spider') return S.spider[f];
+    if (b.art === 'treant') return S.treant;
+    if (b.art === 'wolf') return wolfSet()[e.dir][f];
+    if (b.art === 'ritter') return S.bossRitter;
+    if (b.art === 'fuerst') return S.fuerst[f];
     return actorFor('zombie', true)[e.dir][f];
   }
 
   function drawBoss(e, sx, sy) {
-    var b = e.boss, s = b.scale;
+    var b = e.boss, sk = b.scale;
     var img = bossImage(e);
-    var w = img.width * s, h = img.height * s;
-    var x = sx - w / 2, y = sy - h;
+    var hoehe = e.hoehe || 0;
+    var w = img.width * sk, h = img.height * sk;
+    var x = sx - w / 2, y = sy - h - hoehe;
 
-    /* Wurzeln, die aus dem Boden schiessen */
-    if (e.roots > 0) {
-      var k = 1 - e.roots / 0.75;
-      for (var i = 0; i < 10; i++) {
-        var a = i * 0.628, r = 14 + k * 30;
-        ctx.fillStyle = i % 2 ? '#5f4026' : '#3d2a18';
-        ctx.fillRect(sx + Math.cos(a) * r - 2, sy + Math.sin(a) * r * 0.6 - 6, 4, 8);
-      }
+    /* Bodenmarkierungen: hier schlaegt es gleich ein */
+    for (var mi = 0; mi < e.marken.length; mi++) {
+      var m = e.marken[mi];
+      var mk2 = Math.min(1, m.t / m.warn);
+      var mx = Math.round(m.x - G.camX), my = Math.round(m.y - G.camY);
+      ctx.globalAlpha = m.knall ? 0 : 0.28 + 0.3 * mk2;
+      ctx.fillStyle = '#ff3a3a';
+      ctx.beginPath(); ctx.ellipse(mx, my, m.r, m.r * 0.6, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = m.knall ? 0 : 0.9;
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.ellipse(mx, my, m.r * mk2, m.r * mk2 * 0.6, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.globalAlpha = 1;
     }
 
     if (e.dying) {
-      var d = Math.min(1, e.dying / 0.5);
+      var d = Math.min(1, e.dying / 0.6);
       ctx.globalAlpha = 1 - d;
-      ctx.drawImage(img, x, y + d * 6, w, h);
+      ctx.drawImage(img, x, y + d * 8, w, h);
       ctx.globalAlpha = 1;
       return;
+    }
+
+    /* Schatten - beim Sprung bleibt er am Boden */
+    ctx.globalAlpha = 0.3; ctx.fillStyle = '#000';
+    ctx.fillRect(sx - w / 2 + 2, sy - 3, w - 4, 4);
+    ctx.globalAlpha = 1;
+
+    /* Ansage: er blinkt rot und eine Linie zeigt, wohin er stuermt */
+    if (e.zustand === 'ansage') {
+      if (e.angriff === 'sturm' && e.zielX !== undefined) {
+        ctx.globalAlpha = 0.5 + 0.3 * Math.abs(Math.sin(G.time * 22));
+        ctx.strokeStyle = '#ff3a3a'; ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(sx, sy - 8);
+        ctx.lineTo(Math.round(e.zielX - G.camX), Math.round(e.zielY - G.camY) - 8);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+      if (e.angriff === 'stampf' || e.angriff === 'fegen') {
+        var rr = e.angriff === 'stampf' ? 54 + e.phase * 10 : 42 + e.phase * 6;
+        ctx.globalAlpha = 0.25 + 0.25 * Math.abs(Math.sin(G.time * 20));
+        ctx.fillStyle = '#ff3a3a';
+        ctx.beginPath(); ctx.ellipse(sx, sy - 4, rr, rr * 0.55, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = 1;
+      }
     }
 
     ctx.drawImage(img, x, y, w, h);
     if (b.art === 'zombie') {
       var crown = S.crown;
-      ctx.drawImage(crown, sx - crown.width * s / 2, y - crown.height * s * 0.55,
-                    crown.width * s, crown.height * s);
+      ctx.drawImage(crown, sx - crown.width * sk / 2, y - crown.height * sk * 0.55,
+                    crown.width * sk, crown.height * sk);
     }
     if (e.flash > 0) {
       ctx.globalAlpha = 0.85;
       ctx.drawImage(whiteCopy(img), x, y, w, h);
       ctx.globalAlpha = 1;
     }
-    if (e.rage) {
-      ctx.fillStyle = 'rgba(226,58,58,0.25)';
-      ctx.fillRect(x, y, w, h);
+    /* Rot bei der Ansage, golden beim Taumeln */
+    if (e.zustand === 'ansage') {
+      ctx.globalAlpha = 0.2 + 0.2 * Math.abs(Math.sin(G.time * 22));
+      ctx.fillStyle = '#ff2a2a'; ctx.fillRect(x, y, w, h);
+      ctx.globalAlpha = 1;
+    } else if (e.taumelT > 0) {
+      ctx.globalAlpha = 0.25 + 0.2 * Math.abs(Math.sin(G.time * 12));
+      ctx.fillStyle = '#ffd24a'; ctx.fillRect(x, y, w, h);
+      ctx.globalAlpha = 1;
+      /* Sternchen ueber dem Kopf */
+      ctx.fillStyle = '#ffd24a';
+      ctx.font = '9px "Courier New", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('* * *', sx, y - 4 + Math.sin(G.time * 8) * 2);
+      ctx.textAlign = 'left';
+    }
+    if (e.phase >= 3) {
+      ctx.globalAlpha = 0.16;
+      ctx.fillStyle = '#ff2a2a'; ctx.fillRect(x, y, w, h);
+      ctx.globalAlpha = 1;
     }
   }
 
@@ -5305,6 +5676,15 @@ html, body {
     ctx.save();
     ctx.translate(hx, hy);
     ctx.rotate(rad);
+    if (G.zornAn > 0) {
+      /* Flammenschwert */
+      ctx.globalAlpha = 0.5 + 0.3 * Math.abs(Math.sin(G.time * 18));
+      ctx.fillStyle = '#ff7a2a';
+      ctx.fillRect(-4, -14, 8, 16);
+      ctx.fillStyle = '#ffd24a';
+      ctx.fillRect(-3, -13, 6, 13);
+      ctx.globalAlpha = 1;
+    }
     ctx.drawImage(S.swordFor(G.swordLevel), -2, -12);
     ctx.restore();
   }
@@ -5313,19 +5693,49 @@ html, body {
     var img = S.knightFor(G.armorLevel)[p.dir][frameOf(p)];
     var blink = p.invuln > 0 && (Math.floor(p.invuln * 14) % 2 === 0);
 
+    /* Im Ritterzorn brennt die ganze Ruestung */
+    if (G.zornAn > 0) {
+      ctx.globalAlpha = 0.28 + 0.22 * Math.abs(Math.sin(G.time * 10));
+      ctx.fillStyle = '#ff9a2a';
+      ctx.beginPath(); ctx.arc(sx, sy - 8, 14, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1;
+    }
     /* Aufgeladen? Dann glimmt der Ritter golden. */
     if (p.laden > 0.42) {
       ctx.globalAlpha = 0.35 + 0.35 * Math.abs(Math.sin(G.time * 14));
       ctx.drawImage(whiteCopy(img), sx - 9, sy - 17, 18, 18);
       ctx.globalAlpha = 1;
     }
-    /* Bei der Rolle zieht er eine Spur hinter sich her */
+    /* --- Die Rolle: er ueberschlaegt sich wirklich --- */
     if (p.roll) {
-      ctx.globalAlpha = 0.3;
-      ctx.drawImage(img, sx - 8 - p.roll.x * 7, sy - 16 - p.roll.y * 7);
-      ctx.globalAlpha = 0.16;
-      ctx.drawImage(img, sx - 8 - p.roll.x * 13, sy - 16 - p.roll.y * 13);
+      var rk = Math.min(1, p.roll.t / 0.28);
+      /* Nachziehbilder */
+      ctx.globalAlpha = 0.28;
+      ctx.drawImage(img, sx - 8 - p.roll.x * 8, sy - 16 - p.roll.y * 8);
+      ctx.globalAlpha = 0.14;
+      ctx.drawImage(img, sx - 8 - p.roll.x * 15, sy - 16 - p.roll.y * 15);
       ctx.globalAlpha = 1;
+      /* Eine ganze Umdrehung in Laufrichtung, dazu huepft er etwas */
+      var drehung = rk * Math.PI * 2 * (p.roll.x < -0.1 ? -1 : 1);
+      var huepf = Math.sin(rk * Math.PI) * 5;
+      ctx.save();
+      ctx.translate(sx, sy - 8 - huepf);
+      ctx.rotate(drehung);
+      ctx.scale(1, 1 - Math.sin(rk * Math.PI) * 0.12);
+      ctx.drawImage(img, -8, -8);
+      /* das Schwert wirbelt mit */
+      ctx.rotate(0.8);
+      ctx.drawImage(S.swordFor(G.swordLevel), 5, -4);
+      ctx.restore();
+      /* Staubkringel unter ihm */
+      ctx.globalAlpha = 0.35 * (1 - rk);
+      ctx.strokeStyle = '#d8d0c0';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.ellipse(sx, sy - 1, 10 + rk * 8, 3 + rk * 2, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+      return;
     }
     if (blink) ctx.globalAlpha = 0.35;
     if (p.dir === 'up') drawSword(p, sx, sy);
@@ -5527,16 +5937,41 @@ html, body {
 
     /* Lebensbalken des Bosses */
     if (G.boss && !G.boss.dying) {
-      var b = G.boss, bw = 176, bx = (VW - bw) / 2, by = 32;
+      var b = G.boss, bw = 220, bx = (VW - bw) / 2, by = 34;
       ctx.textAlign = 'center';
+      ctx.font = 'bold 9px "Courier New", monospace';
       ctx.fillStyle = '#ff9a8a';
-      ctx.fillText(b.boss.name.toUpperCase(), VW / 2, by - 3);
+      ctx.fillText(b.boss.name.toUpperCase() + '  [' + (b.bossStufe + 1) + '. BOSS]', VW / 2, by - 4);
+      ctx.font = '8px "Courier New", monospace';
       ctx.textAlign = 'left';
-      ctx.fillStyle = '#1a1420'; ctx.fillRect(bx - 1, by, bw + 2, 7);
-      ctx.fillStyle = '#3b2028'; ctx.fillRect(bx, by + 1, bw, 5);
+      ctx.fillStyle = '#1a1420'; ctx.fillRect(bx - 1, by, bw + 2, 9);
+      ctx.fillStyle = '#3b2028'; ctx.fillRect(bx, by + 1, bw, 7);
       var anteil = Math.max(0, b.hp) / b.maxhp;
-      ctx.fillStyle = '#e03a3a'; ctx.fillRect(bx, by + 1, bw * anteil, 5);
+      ctx.fillStyle = b.phase >= 3 ? '#ff2a6a' : b.phase === 2 ? '#e85a2a' : '#e03a3a';
+      ctx.fillRect(bx, by + 1, bw * anteil, 7);
       ctx.fillStyle = '#ff9a8a'; ctx.fillRect(bx, by + 1, bw * anteil, 2);
+      /* Phasenmarken bei zwei Dritteln und einem Drittel */
+      ctx.fillStyle = '#1a1420';
+      ctx.fillRect(bx + bw * 0.66, by, 1, 9);
+      ctx.fillRect(bx + bw * 0.33, by, 1, 9);
+      /* Taumelbalken darunter */
+      var tg = 9 + b.phase * 3;
+      ctx.fillStyle = '#2a2633'; ctx.fillRect(bx, by + 11, bw, 3);
+      ctx.fillStyle = b.taumelT > 0 ? '#ffd24a' : '#8fd36a';
+      ctx.fillRect(bx, by + 11, bw * Math.min(1, b.taumelT > 0 ? 1 : (b.taumel || 0) / tg), 3);
+      ctx.textAlign = 'center';
+      ctx.fillStyle = b.taumelT > 0 ? '#ffd24a' : '#8a8798';
+      ctx.fillText(b.taumelT > 0 ? 'ER TAUMELT - DRAUF!' : 'Taumel', VW / 2, by + 22);
+      ctx.textAlign = 'left';
+      /* Was er gerade macht */
+      if (b.zustand === 'ansage') {
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#ff3a3a';
+        ctx.font = 'bold 10px "Courier New", monospace';
+        ctx.fillText('AUSWEICHEN! ' + (Chat.bossAnsagen[b.angriff] || ''), VW / 2, 70);
+        ctx.font = '8px "Courier New", monospace';
+        ctx.textAlign = 'left';
+      }
     }
 
     /* --- Kombozaehler --- */
@@ -5561,6 +5996,46 @@ html, body {
       ctx.fillStyle = farbe;
       ctx.fillRect(kx - bw2 / 2, ky + 11, bw2 * Math.min(1, G.komboT / 2.4), 2);
       ctx.textAlign = 'left';
+    }
+
+    /* --- Hausangriff --- */
+    if (G.hausAngriff) {
+      ctx.textAlign = 'center';
+      ctx.font = 'bold 10px "Courier New", monospace';
+      ctx.globalAlpha = 0.6 + 0.4 * Math.abs(Math.sin(G.time * 5));
+      ctx.fillStyle = '#ff3a3a';
+      ctx.fillText('SIE SIND IM HAUS!', VW / 2, 16);
+      ctx.globalAlpha = 1;
+      ctx.font = '8px "Courier New", monospace';
+      ctx.fillStyle = '#ffd24a';
+      ctx.fillText('noch ' + (G.hausAngriff.uebrig + G.hausAngriff.wartend) + ' Zombies', VW / 2, 26);
+      ctx.textAlign = 'left';
+      ctx.globalAlpha = 0.18 + 0.1 * Math.abs(Math.sin(G.time * 4));
+      ctx.fillStyle = '#ff2a2a';
+      ctx.fillRect(0, 0, VW, 4); ctx.fillRect(0, VH - 4, VW, 4);
+      ctx.fillRect(0, 0, 4, VH); ctx.fillRect(VW - 4, 0, 4, VH);
+      ctx.globalAlpha = 1;
+    }
+
+    /* --- Belagerung der Stadt --- */
+    if (G.belagerung) {
+      ctx.textAlign = 'center';
+      ctx.font = 'bold 10px "Courier New", monospace';
+      ctx.globalAlpha = 0.6 + 0.4 * Math.abs(Math.sin(G.time * 5));
+      ctx.fillStyle = '#ff3a3a';
+      ctx.fillText('EICHENSTADT BRENNT!', VW / 2, 16);
+      ctx.globalAlpha = 1;
+      ctx.font = '8px "Courier New", monospace';
+      ctx.fillStyle = '#ffd24a';
+      ctx.fillText(G.belagerung.wellen > 0
+        ? 'Halte den Platz! (' + G.belagerung.uebrig + ' in den Gassen)'
+        : 'Der Anfuehrer kommt!', VW / 2, 26);
+      ctx.textAlign = 'left';
+      /* Feuerschein */
+      ctx.globalAlpha = 0.10 + 0.06 * Math.abs(Math.sin(G.time * 3));
+      ctx.fillStyle = '#ff6a2a';
+      ctx.fillRect(0, 0, VW, VH);
+      ctx.globalAlpha = 1;
     }
 
     /* --- laufende Welle --- */
@@ -5621,10 +6096,43 @@ html, body {
       ctx.textAlign = 'left';
     }
 
+    /* --- Traenke unten links --- */
+    for (var ti = 0; ti < G.traenkeMax; ti++) {
+      var tx2 = 6 + ti * 7, ty2 = VH - 16;
+      ctx.fillStyle = ti < G.traenke ? '#d84a6a' : '#2a2633';
+      ctx.fillRect(tx2, ty2, 5, 7);
+      ctx.fillStyle = ti < G.traenke ? '#ff9ab0' : '#3a3444';
+      ctx.fillRect(tx2, ty2, 5, 2);
+    }
+    ctx.font = '7px "Courier New", monospace';
+    ctx.fillStyle = G.heilCd > 0 ? '#8a8798' : '#ff9ab0';
+    ctx.fillText(G.heilCd > 0 ? G.heilCd.toFixed(1) + 's' : 'Traenke', 6 + G.traenkeMax * 7 + 3, VH - 10);
+    ctx.font = '8px "Courier New", monospace';
+
+    /* --- Ritterzorn: Ladebalken --- */
+    var zx = 6, zy = VH - 24, zw = 64;
+    ctx.fillStyle = '#1a1420'; ctx.fillRect(zx - 1, zy - 1, zw + 2, 5);
+    ctx.fillStyle = '#2a2633'; ctx.fillRect(zx, zy, zw, 3);
+    if (G.zornAn > 0) {
+      ctx.fillStyle = '#ffd24a';
+      ctx.fillRect(zx, zy, zw * (G.zornAn / 8), 3);
+      ctx.fillStyle = '#ffd24a';
+      ctx.font = 'bold 8px "Courier New", monospace';
+      ctx.fillText('RITTERZORN ' + G.zornAn.toFixed(1) + 's', zx, zy - 3);
+      ctx.font = '8px "Courier New", monospace';
+    } else {
+      ctx.fillStyle = G.zorn >= 100 ? '#ffd24a' : '#6a6480';
+      ctx.fillRect(zx, zy, zw * (G.zorn / 100), 3);
+      ctx.fillStyle = G.zorn >= 100 ? '#ffd24a' : '#6a6480';
+      ctx.font = '7px "Courier New", monospace';
+      ctx.fillText(G.zorn >= 100 ? 'ZORN BEREIT - Blitz druecken!' : 'Zorn ' + Math.floor(G.zorn) + '%', zx, zy - 3);
+      ctx.font = '8px "Courier New", monospace';
+    }
+
     /* --- Rolle wieder bereit --- */
     if (G.rollCd > 0) {
       ctx.fillStyle = 'rgba(159,224,176,0.5)';
-      ctx.fillRect(6, VH - 8, 30 * (1 - G.rollCd / 0.75), 2);
+      ctx.fillRect(6, VH - 8, 30 * (1 - G.rollCd / ((G.koennen && G.koennen.rolle) ? 0.45 : 0.75)), 2);
     }
 
     /* Kleine Karte oben rechts */
@@ -5706,7 +6214,7 @@ html, body {
     ctx.fillText('und viel zu vielen Zombies', VW / 2, 88);
     ctx.fillStyle = '#ffd24a';
     ctx.font = 'bold 12px "Courier New", monospace';
-    ctx.fillText('FASSUNG ' + FASSUNG + ' - VOLLE ACTION', VW / 2, 106);
+    ctx.fillText('FASSUNG ' + FASSUNG + ' - ECHTE BOSSE', VW / 2, 106);
 
     ctx.fillStyle = (Math.floor(G.time * 1.6) % 2) ? '#fff' : '#7a748f';
     ctx.font = '10px "Courier New", monospace';
@@ -5753,6 +6261,7 @@ html, body {
       pilze: G.pilze, beeren: G.beeren, spared: G.spared,
       pets: G.pets, hundBonus: G.hundBonus,
       bosse: G.bossesBeaten,
+      traenke: G.traenke, traenkeMax: G.traenkeMax, zorn: G.zorn, koennen: G.koennen,
       gespeichert: Date.now()
     };
   }
@@ -5769,6 +6278,10 @@ html, body {
     G.pets = d.pets || 0;
     G.hundBonus = !!d.hundBonus;
     if (typeof d.bosse === 'number') G.bossesBeaten = d.bosse;
+    if (typeof d.traenkeMax === 'number') G.traenkeMax = Math.max(3, Math.min(5, d.traenkeMax));
+    if (typeof d.traenke === 'number') G.traenke = Math.max(0, Math.min(G.traenkeMax, d.traenke));
+    if (d.koennen) G.koennen = d.koennen;
+    if (typeof d.zorn === 'number') G.zorn = Math.max(0, Math.min(100, d.zorn));
     var mh = Math.max(10, Math.min(20, d.maxhp || 10));
     G.maxhpGesichert = mh;          /* wird beim Erschaffen des Ritters gesetzt */
     if (G.player) {
@@ -5851,17 +6364,10 @@ html, body {
       if (took('talk') || took('attack')) D.press();
     }
 
-    if (G.state === 'kampf') {
-      if (took('left')) Kampf.taste('left');
-      if (took('right')) Kampf.taste('right');
-      if (took('talk') || took('attack')) Kampf.taste('ok');
-    }
-
     if (G.state === 'title') {
       if (took('talk') || took('attack')) startGame();
       return;
     }
-    if (G.state === 'kampf') { Kampf.update(dt); return; }
     if (G.state === 'drive') { updateDrive(dt); return; }
     if (G.state === 'over') {
       G.overT += dt;
@@ -5887,6 +6393,22 @@ html, body {
     } else if (G.fade > 0) {
       G.fade = Math.max(0, G.fade - dt * 3.2);
     }
+
+    /* --- Heiltrank --- */
+    G.heilCd = Math.max(0, G.heilCd - dt);
+    if (took('heil') && !D.isOpen()) trankTrinken();
+
+    /* --- Ritterzorn --- */
+    if (G.zornAn > 0) {
+      G.zornAn -= dt;
+      if (Math.random() < 0.8) {
+        Fx.funken(G.player.x + (Math.random() - 0.5) * 18,
+                  G.player.y - 6 - Math.random() * 14, 1,
+                  Math.random() < 0.5 ? '#ffd24a' : '#ff7a2a', 24);
+      }
+      if (G.zornAn <= 0) { G.zornAn = 0; hint('Der Ritterzorn verraucht.'); }
+    }
+    if (took('zorn') && !D.isOpen()) zornZuenden();
 
     /* Karte auf und zu */
     if (took('karte') && !D.isOpen()) G.karteOffen = !G.karteOffen;
@@ -5946,6 +6468,19 @@ html, body {
       }
     }
 
+    /* Nachts im Haus und die Belagerung der Stadt */
+    if (G.state === 'play') {
+      if (G.mapKey === 'haus') hausAngriffUpdate(dt);
+      else if (G.hausAngriff) G.hausAngriff = null;
+      if (G.mapKey === 'stadt') {
+        if (G.belagerungGleich && !D.isOpen()) {
+          G.belagerungGleich = false;
+          belagerungStarten();
+        }
+        belagerungUpdate(dt);
+      }
+    }
+
     /* Zombies nachwachsen lassen */
     if (G.map.zombies && G.state === 'play') {
       welleUpdate(dt);
@@ -5973,7 +6508,7 @@ html, body {
       for (i = 0; i < G.ents.length; i++) {
         if (G.ents[i].type === 'zombie' && !G.ents[i].dying && dist(G.ents[i], G.player) < 70) { nah = true; break; }
       }
-      if (A) A.music((G.boss || G.welle) ? 'boss' : (nah ? 'kampf' : G.map.music));
+      if (A) A.music((G.boss || G.welle || G.hausAngriff || G.belagerung) ? 'boss' : (nah ? 'kampf' : G.map.music));
       G.danger = nah;
     } else G.danger = false;
 
@@ -6000,7 +6535,6 @@ html, body {
     if (G.state === 'title') { drawTitle(); return; }
 
     ctx.fillStyle = '#000'; ctx.fillRect(0, 0, VW, VH);
-    if (G.state === 'kampf') { Kampf.draw(); return; }
     if (G.state === 'drive') { drawDrive(); return; }
 
     if (G.shake > 0) {
@@ -6069,18 +6603,6 @@ html, body {
     bindTouch();
     bindStick();
 
-    /* Das Kampf-Fenster bekommt alles, was es braucht */
-    if (global.Kampf) {
-      Kampf.init({
-        ctx: ctx, S: S, D: D, A: A, G: G, VW: VW, VH: VH,
-        keys: keys,
-        stick: function () { return stick; },
-        bossBild: bossBild,
-        onSieg: function (b) { bossBelohnung(b, false); },
-        onVerschont: function (b) { bossBelohnung(b, true); },
-        onTod: function () { gameOver(); }
-      });
-    }
     load();
     resize();
     /* wenn man die Seite verlaesst oder wegwischt: schnell noch sichern */

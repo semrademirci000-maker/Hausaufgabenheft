@@ -568,6 +568,36 @@
     return knightCache[stufe];
   }
 
+  /* Die Freunde sind jetzt auch Ritter - jeder in seiner eigenen Farbe.
+     rue = Ruestung (a hell, b mittel, c dunkel), t/u = Wappenrock,
+     r = Helmbusch. */
+  var ritterCache = {};
+  function ritterFuer(schluessel, f) {
+    if (ritterCache[schluessel]) return ritterCache[schluessel];
+    var pal = {
+      o: KP.o, a: f.a, b: f.b, c: f.c, t: f.t, u: f.u,
+      s: f.s || KP.s, r: f.r, k: KP.k, n: KP.n
+    };
+    var side = [sprite(knightSide, pal), sprite(knightSide2, pal)];
+    ritterCache[schluessel] = {
+      down: [sprite(knightDown, pal), sprite(knightDown2, pal)],
+      up: [sprite(knightUp, pal), sprite(knightUp2, pal)],
+      right: side,
+      left: [flipX(side[0]), flipX(side[1])]
+    };
+    return ritterCache[schluessel];
+  }
+
+  /* Schilde der Freunde */
+  function makeSchild(farbe, rand) {
+    var c = mk(9, 11), g = c.getContext('2d');
+    g.fillStyle = rand; g.fillRect(0, 0, 9, 9);
+    g.fillRect(1, 9, 7, 1); g.fillRect(3, 10, 3, 1);
+    g.fillStyle = farbe; g.fillRect(1, 1, 7, 8); g.fillRect(2, 9, 5, 1);
+    g.fillStyle = rand; g.fillRect(4, 2, 1, 6); g.fillRect(2, 4, 5, 1);
+    return c;
+  }
+
   function swordFor(stufe) {
     stufe = Math.max(0, Math.min(KLINGEN.length - 1, stufe || 0));
     if (swordCache[stufe]) return swordCache[stufe];
@@ -942,6 +972,42 @@
     return c;
   }
 
+  /* Der gefallene Ritter: rostige Ruestung, roter Blick */
+  function makeBossRitter() {
+    var c = mk(18, 20), g = c.getContext('2d');
+    g.fillStyle = '#5a5044'; g.fillRect(4, 0, 10, 8);       /* Helm */
+    g.fillStyle = '#6e6252'; g.fillRect(5, 1, 8, 6);
+    g.fillStyle = '#1a1420'; g.fillRect(6, 3, 6, 3);        /* Sehschlitz */
+    g.fillStyle = '#ff3a3a'; g.fillRect(7, 4, 1, 1); g.fillRect(10, 4, 1, 1);
+    g.fillStyle = '#8a2a2a'; g.fillRect(8, -0 + 0, 2, 2);   /* Helmbusch */
+    g.fillStyle = '#4a4238'; g.fillRect(2, 8, 14, 9);       /* Brustpanzer */
+    g.fillStyle = '#5e5648'; g.fillRect(3, 9, 12, 4);
+    g.fillStyle = '#7a3a2a'; g.fillRect(7, 10, 4, 5);       /* Rost */
+    g.fillStyle = '#3a3228'; g.fillRect(3, 17, 5, 3); g.fillRect(10, 17, 5, 3);
+    g.fillStyle = '#9aa4b8'; g.fillRect(15, 4, 2, 12);      /* Klinge */
+    g.fillStyle = '#d3dbe8'; g.fillRect(15, 4, 1, 12);
+    return c;
+  }
+
+  /* Der Seuchenfuerst: Umhang, Hoerner, gruenes Leuchten */
+  function makeFuerst(frame) {
+    var c = mk(20, 24), g = c.getContext('2d');
+    var w = frame ? 1 : 0;
+    g.fillStyle = '#2a1230'; g.fillRect(2, 6, 16, 17);      /* Umhang */
+    g.fillStyle = '#3d1a45'; g.fillRect(3, 7, 14, 12);
+    g.fillStyle = '#5a2468'; g.fillRect(4, 8, 5, 9);
+    g.fillStyle = '#1a0f20'; g.fillRect(6, 1, 8, 8);        /* Kopf */
+    g.fillStyle = '#3a2448'; g.fillRect(7, 2, 6, 6);
+    g.fillStyle = '#9aff6a'; g.fillRect(7, 4 - w, 2, 2); g.fillRect(11, 4 - w, 2, 2);
+    g.fillStyle = '#c8b0d8';                                /* Hoerner */
+    g.fillRect(4, 0, 2, 4); g.fillRect(14, 0, 2, 4);
+    g.fillRect(3, 0, 1, 2); g.fillRect(16, 0, 1, 2);
+    g.fillStyle = '#ff5a9a'; g.fillRect(9, 12, 2, 3);       /* Herz im Umhang */
+    g.fillStyle = '#9aff6a';
+    g.fillRect(2, 20 + w, 2, 2); g.fillRect(16, 21 - w, 2, 2);
+    return c;
+  }
+
   var TILES = {};
   function buildTiles() {
     TILES['.'] = grassTile(1, false, false);
@@ -1035,12 +1101,16 @@
     spider: [makeSpider(0), makeSpider(1)],
     crown: makeCrown(),
     treant: makeTreant(),
+    bossRitter: makeBossRitter(),
+    fuerst: [makeFuerst(0), makeFuerst(1)],
     coin: [makeCoin(false), makeCoin(true)],
     stall: makeStall(),
     mushroom: makeMushroom(),
     berries: makeBerries(),
     dog: [makeDog(false), makeDog(true)],
     knightFor: knightFor,
+    ritterFuer: ritterFuer,
+    schild: makeSchild,
     swordFor: swordFor,
     withEars: withEars,
     actor: buildActor,
