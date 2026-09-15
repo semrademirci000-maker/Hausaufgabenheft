@@ -241,6 +241,7 @@
     if (!k) return;
     k.anim += dt;
     k.invuln = Math.max(0, k.invuln - dt);
+    if (k.zugFlash > 0) k.zugFlash -= dt;
 
     if (k.phase === 'text') {
       k.t += dt;
@@ -258,12 +259,13 @@
       seeleBewegen(dt);
       schuesseBewegen(dt);
       if (!k) return;
-      if (k.t > 5.5) {
+      if (k.t > 6.5) {
         k.phase = 'menue';
+        k.zugFlash = 1.3;                 /* "DEIN ZUG!" kurz einblenden */
         k.schuesse = [];
-        k.text = k.runde <= 2
-          ? k.boss.name + ' wartet auf deinen Zug.\nKAEMPFEN bis sein Balken leer ist - oder dreimal HANDELN und dann SCHONEN.'
-          : k.boss.name + ' wartet auf deinen Zug.';
+        k.text = k.runde <= 3
+          ? 'Angriff vorbei - jetzt bist DU dran.\nKAEMPFEN bis sein Balken leer ist,\noder dreimal HANDELN und dann SCHONEN.'
+          : k.boss.name + ' holt Luft. Du bist dran.';
       }
     }
   }
@@ -371,6 +373,13 @@
         ctx.drawImage(W.S.heart, Math.round(k.soul.x - 3), Math.round(k.soul.y - 3));
       }
 
+      /* Wie lange greift er noch an? */
+      var rest = Math.max(0, 1 - k.t / 6.5);
+      ctx.fillStyle = '#2a2633';
+      ctx.fillRect(BOX.x + 4, BOX.y + BOX.h - 6, BOX.w - 8, 3);
+      ctx.fillStyle = '#8fd36a';
+      ctx.fillRect(BOX.x + 4, BOX.y + BOX.h - 6, (BOX.w - 8) * rest, 3);
+
       /* Erklaerung, solange man noch neu ist */
       if (k.runde <= 2) {
         ctx.font = '8px "Courier New", monospace';
@@ -417,6 +426,17 @@
       for (var z = 0; z < zeilen.length; z++) {
         ctx.fillText(zeilen[z], BOX.x + 10, BOX.y + 22 + z * 13);
       }
+    }
+
+    /* Kurz anzeigen, dass du wieder dran bist */
+    if (k.zugFlash > 0 && k.phase === 'menue') {
+      ctx.globalAlpha = Math.min(1, k.zugFlash);
+      ctx.font = 'bold 16px "Courier New", monospace';
+      ctx.fillStyle = '#ffd24a';
+      ctx.textAlign = 'center';
+      ctx.fillText('DEIN ZUG!', W.VW / 2, BOX.y + BOX.h - 14);
+      ctx.textAlign = 'left';
+      ctx.globalAlpha = 1;
     }
 
     /* Die vier Knoepfe */

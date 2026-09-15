@@ -5,7 +5,7 @@
   'use strict';
 
   var TILE = 16, VW = 320, VH = 240;
-  var FASSUNG = 14;                    /* steht unten auf dem Titelbild */
+  var FASSUNG = 15;                    /* steht unten auf dem Titelbild */
   var cv = document.getElementById('game');
   var ctx = cv.getContext('2d');
   ctx.imageSmoothingEnabled = false;
@@ -1755,7 +1755,7 @@
     ctx.fillText('und viel zu vielen Zombies', VW / 2, 88);
     ctx.fillStyle = '#ffd24a';
     ctx.font = 'bold 12px "Courier New", monospace';
-    ctx.fillText('FASSUNG ' + FASSUNG + ' - JOYSTICK + AUTO', VW / 2, 106);
+    ctx.fillText('FASSUNG ' + FASSUNG + ' - BOSSKAMPF', VW / 2, 106);
 
     ctx.fillStyle = (Math.floor(G.time * 1.6) % 2) ? '#fff' : '#7a748f';
     ctx.font = '10px "Courier New", monospace';
