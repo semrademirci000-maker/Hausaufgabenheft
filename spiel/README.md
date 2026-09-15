@@ -15,9 +15,17 @@ Der Name: *oak* ist die Eiche, *blade* die Klinge – dein Schwert im Eichenwald
 
 Du bist ein Ritter und wohnst mit deiner Familie in einem Holzhaus mitten im
 Eichenwald: **Mama Edda**, **Papa Gunnar** und deine kleine Schwester **Mila**.
-Draußen im Wald stolpern Zombies herum. Vor der Tür warten vier Freunde, die
-mit dir rausgehen wollen – oder du gehst allein. Und wenn du genug hast,
-fährst du mit der ganzen Familie im Auto in die Stadt.
+Vor der Tür warten vier befreundete Ritter, die mit dir rausgehen.
+
+Der eigentliche Mittelpunkt des Spiels ist aber **Eichenstadt**. Dort holst du
+dir an der **Auftragstafel** Arbeit, dort sind die **sechs Läden**, und dort
+gibst du aus, was du draußen verdient hast. Der Wald ist die Werkstatt, die
+Stadt ist das Zuhause: Zombies erledigst du, **um an Münzen zu kommen** – nicht,
+weil es der Zweck des Spiels wäre.
+
+**Die Schleife:** Auftrag an der Tafel holen → mit dem Auto in den Wald →
+Zombies erledigen, Pilze und Beeren sammeln → zurück in die Stadt → abkassieren,
+Ruf steigt, Aufträge zahlen besser → einkaufen gehen.
 
 ## Steuerung
 
@@ -172,23 +180,6 @@ acht. Lässt du los, springt der Stick zurück in seine Ecke.
 - Mila schreit, Mama stellt sich vor sie, Papa verrammelt die Fenster –
   die Tür gehört dir. Je weiter du im Spiel bist, desto mehr kommen.
 
-**Eichenstadt wird angegriffen**
-- Ab dem zweiten besiegten Boss ist die Stadt nicht mehr sicher. Kommst du
-  an, **brennt es schon**: Rauch über den Dächern, Zombies in den Gassen,
-  der Bildschirm glüht orange.
-- Erst die Gassen leerräumen, dann kommt **der Anführer** – ein richtiger
-  Boss, mitten auf dem Marktplatz.
-- Belohnung: dicker Batzen Münzen, alle Tränke voll, Ritterzorn voll geladen.
-
-**Zombie-Wellen**
-- Alle paar Minuten wird es draußen richtig voll: **WELLE 1, 2, 3 …**
-  Fünf bis sechzehn Zombies erscheinen **im Ring um dich herum**, der
-  Bildschirmrand pocht rot, die Musik wechselt.
-- Oben steht, wie viele noch übrig sind. Erst wenn alle weg sind, ist die
-  Welle vorbei – dafür gibt es einen Haufen Münzen, und **jede dritte Welle
-  ein Herz dazu**.
-- Ab Welle 2 ist immer ein Panzer dabei, ab Welle 3 auch ein Spucker.
-
 **Beute, die Zombies fallen lassen**
 - **Herz** (rot, fliegt dir entgegen) – füllt ein Herz auf. Fällt nur, wenn
   du wirklich verletzt bist.
@@ -223,48 +214,53 @@ acht. Lässt du los, springt der Stick zurück in seine Ecke.
 - Während ein Gespräch läuft, bleiben die Zombies stehen – niemand wird beim
   Reden von hinten gebissen.
 
-**Münzen und die vier Läden**
-- Jeder erledigte Zombie lässt **1 bis 3 Münzen** fallen, ein Boss **12 bis 19**.
-  Die Münzen fliegen von selbst zu dir – du musst sie nicht einsammeln.
-- In Eichenstadt gibt es jetzt **vier Läden**, jeder mit eigenem Stand und
-  dem Schild *LADEN* über dem Kopf:
-  - **Händler Bosko** – Schwerter, und er kauft dir Pilze und Beeren ab.
-  - **Schmiedin Halda** – Rüstungen und Beulen ausklopfen.
-  - **Alchemist Vex** – Heiltränke, größerer Gürtel, Wutkristalle.
-  - **Waffenmeister Orin** – Kampfkunst, die **für immer** bleibt:
-    schnellere Rolle, größerer Wirbelschlag, schnellerer Ritterzorn.
-- Bei Bosko:
-  - **Schwert**: Geschärfte Klinge (25) → Stahlklinge (60) → Goldene Klinge (120).
-    Jede Stufe macht **einen Schaden mehr** – und die Klinge sieht anders aus.
-  - **Rüstung**: Lederwams (30) → Kettenhemd (70) → Goldene Rüstung (140).
-    Jede Stufe gibt **ein Herz dazu** – und der Ritter glänzt anders.
-  - **Eintopf** für 10 Münzen macht alle Herzen wieder voll.
-- Dein Stand (Münzen, Stufen, Herzen, Bosse) wird doppelt gespeichert:
-  im `localStorage` des Geräts **und**, wenn die Seite als Vorschau läuft,
-  in der Wolke der Vorschau (`claude.use('db')`, Dokument `spielstand/ritter`).
-  Beim Start gewinnt der neuere der beiden Stände. Das ist nötig, weil iPhones
-  den `localStorage` in einem eingebetteten Fenster gerne wieder löschen.
+**Münzen**
+- Jeder erledigte Zombie lässt **1 bis 3 Münzen** fallen, ein Boss viele mehr.
+  Nachts gibt es doppelt, mit Glücksring die Hälfte obendrauf.
+  Die Münzen fliegen von selbst zu dir.
+- Das Geld ist der Zweck: In der Stadt wartet genug, wofür man es ausgeben kann.
 
-**Das Auto und die Stadt**
+**Eichenstadt – der Mittelpunkt**
 - Auf dem Waldweg steht ein Auto. Mit **E** ansprechen → „mit der ganzen
   Familie“ oder „nur wir“ → kleine Pixel-Fahrt-Animation mit Sonnenuntergang.
-- In **Eichenstadt**: Straßen, Häuserdächer, Läden, Laternen, ein Park mit
-  Brunnen und Bänken, **zwölf Leute** zum Anquatschen (Bäckerin, Stadtwache,
-  Botin, Rentner, Kinder …), der Marktstand und ein Blatt am Stadttor,
-  das man lesen kann. Mit dem Auto geht es wieder zurück.
+- Die Stadt ist jetzt **56 × 40 Kacheln** groß mit einem richtigen Stadtplan:
+  zwei **Ladenstraßen** übereinander, eine Hauptkreuzung, und unten ein großer
+  **Marktplatz** mit Brunnen, Bänken, Bäumen, Fässern und Feuerstelle.
+- **18 Leute** laufen herum und lassen sich ansprechen.
 
-**Die Karte**
-- Oben rechts läuft immer eine **kleine Karte** mit: die ganze Gegend als
-  Kacheln, ein Pixel je Kachel, mit blinkendem Kreuz für dich.
-- Der Knopf 🗺 (oder die Taste **M**) macht die **große Karte** auf. Dabei
-  steht die Welt still – wie ein Menü.
-- Darauf zu sehen: das Kachelgitter, der Ausschnitt, den du gerade siehst
-  (weißer Rahmen), und farbige Punkte für Zombies (grün), verschonte Zombies
-  (gelb), Leute (blau), Auto (gelb), Laden (orange), Türen (orange), Pilze und
-  Beeren. Unten steht die Zeichenerklärung.
-- Die Karte wird aus denselben Kacheln gebaut wie die Welt: Dächer sind rot,
-  Straßen grau, Wasser blau, Wald dunkelgrün – man erkennt Haus, Weg, Teich,
-  den Park und den Marktstand sofort wieder.
+**Die Auftragstafel am Brunnen**
+- Hier hängen **drei Zettel** zur Auswahl. Du nimmst einen mit:
+  - *n Zombies erledigen* (Stadtwache)
+  - *n Pilze sammeln* / *n Beeren sammeln* (Bäckerin Rosa)
+  - *n Zombies verschonen* (Juwelier Perla)
+  - *Einen Boss besiegen* (Bürgermeister, dickes Kopfgeld)
+- Der Fortschritt steht oben links mit. Fertig? Zurück zur Tafel, Geld holen.
+- Jeder abgegebene Auftrag gibt einen **Ruf-Stern** (oben rechts). Je mehr
+  Sterne, desto **besser bezahlen** die nächsten Aufträge (+12 % pro Stern).
+- Du kannst einen Auftrag auch wieder zurückgeben.
+
+**Sechs Läden**
+- **Händler Bosko** (Waffenschmied) – Schwerter, kauft Pilze (4) und Beeren (3).
+- **Schmiedin Halda** – Rüstungen und Beulen ausklopfen.
+- **Alchemist Vex** – Heiltränke, größerer Gürtel, Wutkristalle.
+- **Waffenmeister Orin** – Kampfkunst, die **für immer** bleibt: schnellere
+  Rolle, größerer Wirbelschlag, schnellerer Ritterzorn.
+- **Bäckerin Rosa** – warmes Brot, Proviant, und sie zahlt für Pilze (7) und
+  Beeren (6) **deutlich mehr als Bosko**.
+- **Juwelier Perla** – **Schmuck, der dauerhaft wirkt**:
+  - **Glücksring** (120) – die Hälfte mehr Münzen von jedem Zombie
+  - **Herzamulett** (150) – ein Herz mehr, für immer
+  - **Schnellstiefel** (130) – ein Fünftel schneller unterwegs
+  - **Händlersiegel** (190) – alles in der Stadt ein Fünftel günstiger
+  Was du trägst, siehst du unten links im Bild.
+
+**Eichenstadt wird angegriffen**
+- Ab dem zweiten besiegten Boss ist die Stadt nicht mehr sicher. Kommst du
+  an, **brennt es schon**: Rauch über den Dächern, Zombies in den Gassen,
+  der Bildschirm glüht orange.
+- Erst die Gassen leerräumen, dann kommt **der Anführer** – ein richtiger
+  Boss, mitten auf dem Marktplatz.
+- Belohnung: dicker Batzen Münzen, alle Tränke voll, Ritterzorn voll geladen.
 
 **Musik**
 - 8-Bit-Musik direkt im Browser erzeugt: ein Thema für den Wald, eins fürs

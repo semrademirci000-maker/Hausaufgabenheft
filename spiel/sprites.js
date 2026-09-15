@@ -1008,6 +1008,48 @@
     return c;
   }
 
+  /* Die Auftragstafel am Marktplatz */
+  function makeTafel() {
+    var c = mk(22, 20), g = c.getContext('2d');
+    g.fillStyle = '#5b3d22'; g.fillRect(2, 14, 3, 6); g.fillRect(17, 14, 3, 6);
+    g.fillStyle = '#6b4626'; g.fillRect(0, 0, 22, 16);
+    g.fillStyle = '#3f2a16'; g.fillRect(1, 1, 20, 14);
+    g.fillStyle = '#8a5c31'; g.fillRect(0, 0, 22, 2);
+    /* Zettel */
+    var zettel = [[3, 3, 6, 5], [11, 3, 7, 4], [4, 9, 5, 4], [12, 8, 6, 5]];
+    for (var i = 0; i < zettel.length; i++) {
+      var z = zettel[i];
+      g.fillStyle = i % 2 ? '#efe6cf' : '#e0d4b8';
+      g.fillRect(z[0], z[1], z[2], z[3]);
+      g.fillStyle = '#8a8070';
+      for (var l = 1; l < z[3] - 1; l += 2) g.fillRect(z[0] + 1, z[1] + l, z[2] - 2, 1);
+      g.fillStyle = '#c84a3a'; g.fillRect(z[0] + (z[2] >> 1), z[1], 1, 1);
+    }
+    return c;
+  }
+
+  /* Schmuckstuecke fuer den Juwelier */
+  function makeSchmuck(art) {
+    var c = mk(10, 10), g = c.getContext('2d');
+    if (art === 'ring') {
+      g.fillStyle = '#d8a43a'; g.fillRect(2, 3, 6, 6);
+      g.fillStyle = '#3f2a16'; g.fillRect(3, 4, 4, 4);
+      g.fillStyle = '#8fd36a'; g.fillRect(4, 1, 2, 2);
+    } else if (art === 'amulett') {
+      g.fillStyle = '#d8a43a'; g.fillRect(3, 1, 4, 1); g.fillRect(2, 2, 1, 2); g.fillRect(7, 2, 1, 2);
+      g.fillStyle = '#e03a5a'; g.fillRect(3, 4, 4, 4); g.fillRect(4, 8, 2, 1);
+      g.fillStyle = '#ff9ab0'; g.fillRect(4, 5, 1, 1);
+    } else if (art === 'stiefel') {
+      g.fillStyle = '#6b4626'; g.fillRect(2, 3, 3, 5); g.fillRect(2, 7, 6, 2);
+      g.fillStyle = '#9fd0f0'; g.fillRect(2, 2, 3, 1);
+    } else {
+      g.fillStyle = '#c8b090'; g.fillRect(2, 2, 6, 6);
+      g.fillStyle = '#d8a43a'; g.fillRect(3, 3, 4, 4);
+      g.fillStyle = '#5b3d22'; g.fillRect(4, 4, 2, 2);
+    }
+    return c;
+  }
+
   var TILES = {};
   function buildTiles() {
     TILES['.'] = grassTile(1, false, false);
@@ -1102,6 +1144,9 @@
     crown: makeCrown(),
     treant: makeTreant(),
     bossRitter: makeBossRitter(),
+    tafel: makeTafel(),
+    schmuck: { ring: makeSchmuck('ring'), amulett: makeSchmuck('amulett'),
+               stiefel: makeSchmuck('stiefel'), siegel: makeSchmuck('siegel') },
     fuerst: [makeFuerst(0), makeFuerst(1)],
     coin: [makeCoin(false), makeCoin(true)],
     stall: makeStall(),

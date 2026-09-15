@@ -51,7 +51,7 @@
 
   /* Welche Sorten dürfen wann auftauchen?
      stufe = wie viele Zombies man insgesamt schon erledigt hat. */
-  function wuerfelArt(stufe, nachts, welle) {
+  function wuerfelArt(stufe, nachts, hart) {
     var topf = ['normal', 'normal', 'normal'];
     if (stufe >= 4) topf.push('renner');
     if (stufe >= 8) topf.push('renner', 'kriecher');
@@ -61,27 +61,9 @@
       topf.push('schatten');
       if (stufe >= 10) topf.push('schatten', 'renner');
     }
-    if (welle) topf.push('renner', 'kriecher', 'panzer');
+    if (hart) topf.push('renner', 'kriecher', 'panzer');
     return topf[(Math.random() * topf.length) | 0];
   }
-
-  /* Die Wellen werden mit jeder Runde dicker. */
-  function welleBauen(nummer, stufe, nachts) {
-    var anzahl = Math.min(16, 5 + nummer * 2);
-    var liste = [];
-    for (var i = 0; i < anzahl; i++) liste.push(wuerfelArt(stufe + nummer * 4, nachts, true));
-    /* ab Welle 2 ist mindestens ein Panzer dabei */
-    if (nummer >= 2) liste[0] = 'panzer';
-    if (nummer >= 3) liste[1] = 'spucker';
-    return liste;
-  }
-
-  var WELLE_RUFE = [
-    'Sie kommen aus allen Richtungen!',
-    'Das Gebuesch bewegt sich... ueberall!',
-    'Haltet zusammen - das sind zu viele!',
-    'Habt ihr das gehoert? Die ganze Meute!'
-  ];
 
   var SERIEN = [
     { n: 3, t: '3er SERIE', f: '#ffd24a' },
@@ -93,8 +75,6 @@
   global.Gegner = {
     arten: ARTEN,
     wuerfelArt: wuerfelArt,
-    welleBauen: welleBauen,
-    welleRufe: WELLE_RUFE,
     serien: SERIEN
   };
 })(window);

@@ -233,20 +233,20 @@
 
   /* ============================ STADT ============================ */
   function buildStadt() {
-    var W = 44, H = 30, r = rng(31415);
+    var W = 56, H = 40, r = rng(31415);
     var g = grid(W, H, 'S');
     var x, y, i;
 
-    /* Alles Gehweg, dann Straßen einzeichnen */
+    /* Alles Gehweg, dann Strassen einzeichnen */
     for (y = 0; y < H; y++) {
       for (x = 0; x < W; x++) {
-        /* Waagerechte Hauptstraße */
-        if (y >= 13 && y <= 17) g[y][x] = (y === 15 ? 'M' : 'R');
-        /* Senkrechte Straße */
-        if (x >= 20 && x <= 24) g[y][x] = (x === 22 && !(y >= 13 && y <= 17) ? 'M' : 'R');
+        if (y >= 17 && y <= 21) g[y][x] = (y === 19 ? 'M' : 'R');     /* Hauptstrasse */
+        if (x >= 25 && x <= 29) g[y][x] = (x === 27 && !(y >= 17 && y <= 21) ? 'M' : 'R');
       }
     }
-    /* Häuserblöcke */
+    /* Zweite Querstrasse oben: die Ladenstrasse */
+    for (y = 8; y <= 10; y++) for (x = 0; x < W; x++) g[y][x] = (y === 9 ? 'M' : 'R');
+
     function block(x0, y0, w, h, kinds) {
       for (var yy = y0; yy < y0 + h; yy++) {
         for (var xx = x0; xx < x0 + w; xx++) {
@@ -256,29 +256,33 @@
         }
       }
     }
-    block(2, 2, 14, 8, ['B', 'B', 'C', 'V']);
-    block(27, 2, 14, 8, ['V', 'C', 'B', 'B']);
-    block(2, 21, 13, 7, ['C', 'B', 'V', 'C']);
-    block(28, 21, 13, 7, ['B', 'V', 'C', 'B']);
-    /* Ladenzeile an der Hauptstraße */
-    for (x = 4; x < 14; x++) g[10][x] = 'K';
-    for (x = 29; x < 39; x++) g[10][x] = 'K';
-    for (x = 5; x < 13; x++) g[20][x] = 'K';
-    /* Park mit Brunnen in der Mitte unten */
-    rect(g, 16, 19, 8, 8, 'S');
-    rect(g, 17, 20, 6, 6, '.');
-    for (y = 20; y < 26; y++) for (x = 17; x < 23; x++) if (r() > 0.7) g[y][x] = ',';
+    block(2, 2, 20, 5, ['B', 'B', 'C', 'V']);
+    block(32, 2, 20, 5, ['V', 'C', 'B', 'B']);
+    block(2, 12, 20, 4, ['C', 'B', 'V', 'C']);
+    block(32, 12, 20, 4, ['B', 'V', 'C', 'B']);
+    block(2, 29, 18, 8, ['C', 'B', 'V', 'C']);
+    block(38, 29, 15, 8, ['B', 'V', 'C', 'B']);
 
-    /* Raender: aussen Gebaeude, damit man nicht rauslaeuft */
-    for (y = 0; y < H; y++) {
-      g[y][0] = 'B'; g[y][1] = 'B'; g[y][W - 1] = 'B'; g[y][W - 2] = 'B';
-    }
+    /* --- Die Ladenzeile: lauter Laeden nebeneinander --- */
+    for (x = 3; x < 22; x++) g[11][x] = 'K';
+    for (x = 33; x < 52; x++) g[11][x] = 'K';
+    for (x = 4; x < 21; x++) g[7][x] = 'K';
+    for (x = 34; x < 51; x++) g[7][x] = 'K';
+    /* Ladenzeile am Marktplatz */
+    for (x = 4; x < 19; x++) g[28][x] = 'K';
+    for (x = 39; x < 52; x++) g[28][x] = 'K';
+
+    /* --- Der Marktplatz: gepflastert, mit Brunnen --- */
+    rect(g, 20, 23, 16, 13, 'S');
+    rect(g, 22, 25, 12, 9, '.');
+    for (y = 25; y < 34; y++) for (x = 22; x < 34; x++) if (r() > 0.75) g[y][x] = ',';
+
+    /* Raender: aussen Gebaeude */
+    for (y = 0; y < H; y++) { g[y][0] = 'B'; g[y][1] = 'B'; g[y][W - 1] = 'B'; g[y][W - 2] = 'B'; }
+    for (x = 0; x < W; x++) { g[0][x] = 'B'; g[1][x] = 'B'; g[H - 1][x] = 'B'; g[H - 2][x] = 'B'; }
+    /* Strassen bis zum Rand offen lassen */
     for (x = 0; x < W; x++) {
-      g[0][x] = 'B'; g[1][x] = 'B'; g[H - 1][x] = 'B'; g[H - 2][x] = 'B';
-    }
-    /* Strassen bis zum Rand offen lassen (Ein- und Ausfahrt) */
-    for (x = 0; x < W; x++) {
-      if (x < 2 || x > W - 3) { g[14][x] = 'R'; g[15][x] = 'M'; g[16][x] = 'R'; }
+      if (x < 2 || x > W - 3) { g[18][x] = 'R'; g[19][x] = 'M'; g[20][x] = 'R'; }
     }
 
     /* Von oben sieht man Daecher - nur die Seite zur Strasse ist Hauswand */
@@ -296,19 +300,29 @@
     g = g2;
 
     var props = [
-      { kind: 'sign', x: 18.5, y: 12.6, text: 'Auf dem Blatt am Stadttor steht: "EICHENSTADT - 412 Einwohner, 3 Baecker, 0 Zombies. Bitte Schwert stecken lassen!"' },
-      { kind: 'lamp', x: 18.5, y: 18.6 },
-      { kind: 'lamp', x: 26.5, y: 18.6 },
-      { kind: 'lamp', x: 18.5, y: 11.6 },
-      { kind: 'lamp', x: 26.5, y: 11.6 },
-      { kind: 'car', x: 26.5, y: 20.5 },
-      { kind: 'fountain', x: 19.9, y: 23.5 },
-      { kind: 'bench', x: 17.5, y: 25.6 },
-      { kind: 'bench', x: 22.3, y: 25.6 },
-      { kind: 'tree', x: 17.5, y: 21.2 },
-      { kind: 'tree', x: 22.5, y: 21.2 },
-      { kind: 'lamp', x: 25.4, y: 24.6 },
-      { kind: 'stall', x: 25.6, y: 23.2 }
+      { kind: 'sign', x: 23.5, y: 16.6, text: 'Am Stadttor: "EICHENSTADT - 412 Einwohner, 3 Baecker, 0 Zombies. Bitte Schwert stecken lassen!"' },
+      { kind: 'car', x: 31.5, y: 24.5 },
+      /* Marktplatz */
+      { kind: 'fountain', x: 27.9, y: 29.5 },
+      { kind: 'bench', x: 23.5, y: 32.6 },
+      { kind: 'bench', x: 32.3, y: 32.6 },
+      { kind: 'bench', x: 23.5, y: 26.6 },
+      { kind: 'bench', x: 32.3, y: 26.6 },
+      { kind: 'tree', x: 22.5, y: 27.2 },
+      { kind: 'tree', x: 33.5, y: 27.2 },
+      { kind: 'tree', x: 22.5, y: 33.2 },
+      { kind: 'tree', x: 33.5, y: 33.2 },
+      { kind: 'fire', x: 30.5, y: 33.5 },
+      { kind: 'barrel', x: 21.5, y: 30.5 },
+      { kind: 'barrel', x: 21.5, y: 31.5 },
+      { kind: 'barrel', x: 34.5, y: 30.5 },
+      /* Laternen an beiden Strassen */
+      { kind: 'lamp', x: 12.5, y: 12.6 }, { kind: 'lamp', x: 20.5, y: 12.6 },
+      { kind: 'lamp', x: 34.5, y: 12.6 }, { kind: 'lamp', x: 44.5, y: 12.6 },
+      { kind: 'lamp', x: 12.5, y: 16.6 }, { kind: 'lamp', x: 20.5, y: 16.6 },
+      { kind: 'lamp', x: 34.5, y: 16.6 }, { kind: 'lamp', x: 44.5, y: 16.6 },
+      { kind: 'lamp', x: 23.5, y: 22.6 }, { kind: 'lamp', x: 32.5, y: 22.6 },
+      { kind: 'lamp', x: 23.5, y: 35.6 }, { kind: 'lamp', x: 32.5, y: 35.6 }
     ];
 
     return {
@@ -316,30 +330,40 @@
       name: 'Eichenstadt',
       rows: toStrings(g),
       music: 'stadt',
-      spawn: { x: 26.5, y: 22 },
+      spawn: { x: 31.5, y: 26 },
       zombies: false,
       triggers: [],
       props: props,
+      /* Die Auftragstafel am Brunnen - hier holt man sich Arbeit */
+      tafel: { x: 25.5, y: 27.6 },
       wanderSpots: [
-        { x: 12, y: 18, wer: 'buerger' },
-        { x: 31, y: 12, wer: 'buerger5' },
-        { x: 18, y: 12, wer: 'buerger2' },
-        { x: 34, y: 19, wer: 'buerger3' },
-        { x: 26, y: 26, wer: 'buerger6' },
-        { x: 8, y: 12, wer: 'buerger4' },
-        { x: 37, y: 24, wer: 'buerger' },
+        { x: 12, y: 19, wer: 'buerger' },
+        { x: 38, y: 13, wer: 'buerger5' },
+        { x: 18, y: 13, wer: 'buerger2' },
+        { x: 44, y: 19, wer: 'buerger3' },
+        { x: 30, y: 35, wer: 'buerger6' },
+        { x: 8, y: 13, wer: 'buerger4' },
+        { x: 47, y: 25, wer: 'buerger' },
         { x: 14, y: 26, wer: 'buerger2' },
-        { x: 30, y: 18, wer: 'buerger6' },
-        { x: 20, y: 18, wer: 'buerger3' },
+        { x: 36, y: 19, wer: 'buerger6' },
+        { x: 24, y: 19, wer: 'buerger3' },
         { x: 5, y: 19, wer: 'buerger4' },
-        { x: 39, y: 12, wer: 'buerger5' }
+        { x: 49, y: 13, wer: 'buerger5' },
+        { x: 25, y: 31, wer: 'buerger' },
+        { x: 34, y: 31, wer: 'buerger2' },
+        { x: 16, y: 34, wer: 'buerger3' },
+        { x: 42, y: 34, wer: 'buerger6' },
+        { x: 9, y: 25, wer: 'buerger5' },
+        { x: 46, y: 31, wer: 'buerger4' }
       ],
-      /* Vier Laeden, jeder mit eigenem Stand */
-      haendler: { x: 26.9, y: 23.9 },
+      /* Sechs Laeden, jeder mit eigenem Stand */
+      haendler: { x: 27.9, y: 12.9 },
       laeden: [
-        { wer: 'schmied', x: 13.5, y: 15.9, stand: true },
-        { wer: 'alchi', x: 34.5, y: 15.9, stand: true },
-        { wer: 'meister', x: 20.5, y: 27.9, stand: true }
+        { wer: 'schmied', x: 13.5, y: 12.9, stand: true },
+        { wer: 'alchi', x: 40.5, y: 12.9, stand: true },
+        { wer: 'meister', x: 19.5, y: 29.9, stand: true },
+        { wer: 'baecker', x: 8.5, y: 12.9, stand: true },
+        { wer: 'juwel', x: 47.5, y: 12.9, stand: true }
       ]
     };
   }

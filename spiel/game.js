@@ -5,7 +5,7 @@
   'use strict';
 
   var TILE = 16, VW = 320, VH = 240;
-  var FASSUNG = 19;                    /* steht unten auf dem Titelbild */
+  var FASSUNG = 20;                    /* steht unten auf dem Titelbild */
   var cv = document.getElementById('game');
   var ctx = cv.getContext('2d');
   ctx.imageSmoothingEnabled = false;
@@ -29,9 +29,10 @@
     drive: null, overT: 0, lastSave: 0, maxhpGesichert: 10,
     karteOffen: false, entdeckt: null,
     kombo: 0, komboT: 0, komboBest: 0, serie: 0,
-    welle: null, welleNr: 0, welleCd: 55, wirbel: 0, rollCd: 0, wut: 0,
+    wirbel: 0, rollCd: 0, wut: 0,
     traenke: 3, traenkeMax: 3, heilCd: 0, zorn: 0, zornAn: 0, koennen: null,
-    hausAngriff: null, hausCd: 0, belagerung: null, stadtBesuche: 0
+    hausAngriff: null, hausCd: 0, belagerung: null, stadtBesuche: 0,
+    schmuck: null, auftrag: null, tafelAuswahl: null, ruf: 0
   };
   global.GAME = G;
 
@@ -188,7 +189,6 @@
     G.mapH = m.rows.length; G.mapW = m.rows[0].length;
     karteBild = S.karteBauen(m.rows);      /* kleines Bild der ganzen Karte */
     G.karteOffen = false;
-    G.welle = null;
     G.kombo = 0; G.komboT = 0; G.serie = 0;
     if (Fx) Fx.leeren();
     G.ents = []; G.party = []; G.trail = [];
@@ -259,6 +259,7 @@
         var h = addNPC('haendler', m.haendler.x, m.haendler.y, 'down');
         h.shop = 'waffen';
       }
+      if (m.tafel) addProp('tafel', m.tafel.x, m.tafel.y);
       if (m.laeden) {
         for (i = 0; i < m.laeden.length; i++) {
           var L = m.laeden[i];
@@ -297,7 +298,7 @@
               kind === 'bench' ? S.bench : kind === 'stall' ? S.stall :
               kind === 'grave' ? S.graves[(data && data.art) || 0] :
               kind === 'barrel' ? S.barrel : kind === 'fence' ? S.fence :
-              kind === 'fire' ? S.fire[0] : null;
+              kind === 'fire' ? S.fire[0] : kind === 'tafel' ? S.tafel : null;
     var p = { type: 'prop', kind: kind, x: x * TILE, y: y * TILE, spr: spr,
               text: data && data.text, anim: Math.random() * 2 };
     G.ents.push(p);
@@ -311,6 +312,7 @@
     if (kind === 'barrel') G.blocks.push({ l: p.x - 6, r: p.x + 6, t: p.y - 7, b: p.y });
     if (kind === 'fence') G.blocks.push({ l: p.x - 8, r: p.x + 8, t: p.y - 5, b: p.y });
     if (kind === 'fire') G.blocks.push({ l: p.x - 7, r: p.x + 7, t: p.y - 5, b: p.y });
+    if (kind === 'tafel') G.blocks.push({ l: p.x - 10, r: p.x + 10, t: p.y - 6, b: p.y });
     return p;
   }
 
@@ -398,7 +400,7 @@
       if (A) A.swing();
     }
 
-    var sp = p.atk ? SPEED * 0.35 : SPEED;
+    var sp = (p.atk ? SPEED * 0.35 : SPEED) * (hatSchmuck('stiefel') ? 1.2 : 1);
     if (p.roll) {
       moveEnt(p, p.roll.x * SPEED * 3.1 * dt, p.roll.y * SPEED * 3.1 * dt);
     } else {
@@ -626,6 +628,7 @@
         var mz = art.muenzen || [1, 3];
         var anzahl = mz[0] + ((Math.random() * (mz[1] - mz[0] + 1)) | 0);
         anzahl += Math.floor(G.kombo / 4);
+        if (hatSchmuck('ring')) anzahl = Math.ceil(anzahl * 1.5);
         muenzenAbwerfen(z.x, z.y - 8, anzahl * (istNacht() ? 2 : 1));
         beuteAbwerfen(z);
         G.kills++;
@@ -634,8 +637,8 @@
         zornLaden((G.koennen && G.koennen.zorn) ? 15 : 9);
         G.killsHeute = (G.killsHeute || 0) + 1;
         questFortschritt('zombies', 1);
+        tafelFortschritt('zombies', 1);
         serienRuf();
-        if (G.welle) welleZaehlen();
         if (G.killsHeute === 3) hint('Genug gekaempft? Der Auto-Knopf bringt euch in die Stadt!');
         Chat.killLine(G);
         save();
@@ -692,7 +695,7 @@
   function spawnZombie(art, minAbstand, maxAbstand) {
     var pl = freierPlatz(minAbstand || 160, maxAbstand || 0);
     if (!pl) return null;
-    if (!art) art = Ge.wuerfelArt(G.kills, istNacht(), !!G.welle);
+    if (!art) art = Ge.wuerfelArt(G.kills, istNacht(), false);
     var z = zombieBauen(art, pl.x, pl.y);
     G.ents.push(z);
     /* Kriecher kommen nie allein */
@@ -917,6 +920,119 @@
     if (p.hp <= 0) { p.hp = 0; gameOver(); }
   }
 
+  /* ================= Die Auftragstafel =================
+     Das Herz des Spiels: In der Stadt holst du dir Arbeit, draussen
+     erledigst du sie, hier kassierst du. Von dem Geld kaufst du bei
+     den sechs Laeden ein. */
+  var TAFEL_JOBS = [
+    { art: 'zombies', min: 4, max: 9, lohn: 9,
+      text: function (n) { return n + ' Zombies erledigen'; },
+      wer: 'Stadtwache', farbe: '#a9c0d8',
+      zettel: function (n) { return 'Die Wache sucht jemanden, der ' + n + ' Zombies aus dem Wald raeumt.'; } },
+    { art: 'pilze', min: 3, max: 8, lohn: 11,
+      text: function (n) { return n + ' Pilze sammeln'; },
+      wer: 'Baeckerin Rosa', farbe: '#f0b0c0',
+      zettel: function (n) { return 'Rosa braucht ' + n + ' Pilze fuer ihr Pilzbrot. Zahlt gut.'; } },
+    { art: 'beeren', min: 3, max: 8, lohn: 10,
+      text: function (n) { return n + ' Beeren sammeln'; },
+      wer: 'Baeckerin Rosa', farbe: '#f0b0c0',
+      zettel: function (n) { return 'Fuer den Beerenkuchen fehlen noch ' + n + ' Beeren.'; } },
+    { art: 'verschonen', min: 2, max: 5, lohn: 20,
+      text: function (n) { return n + ' Zombies verschonen'; },
+      wer: 'Juwelier Perla', farbe: '#9ad8e0',
+      zettel: function (n) { return 'Perla glaubt, dass ' + n + ' verschonte Zombies Glueck bringen. Sie zahlt dafuer.'; } },
+    { art: 'boss', min: 1, max: 1, lohn: 130,
+      text: function () { return 'Einen Boss besiegen'; },
+      wer: 'Buergermeister', farbe: '#ffd24a',
+      zettel: function () { return 'Kopfgeld: Im Wald treibt sich etwas Grosses herum. Erledige es.'; } }
+  ];
+
+  function tafelJobBauen() {
+    var v = TAFEL_JOBS[(Math.random() * TAFEL_JOBS.length) | 0];
+    var n = v.min + ((Math.random() * (v.max - v.min + 1)) | 0);
+    var bonus = 1 + (G.ruf || 0) * 0.12;          /* mit gutem Ruf zahlt die Stadt mehr */
+    return {
+      art: v.art, ziel: n, stand: 0, fertig: false,
+      text: v.text(n), wer: v.wer, farbe: v.farbe, zettel: v.zettel(n),
+      lohn: Math.round(v.lohn * n * bonus)
+    };
+  }
+
+  function tafelOeffnen() {
+    if (G.auftrag) {
+      if (G.auftrag.fertig) return auftragAbgebenTafel();
+      D.push('Auftragstafel', '#ffd24a',
+             'Dein Auftrag laeuft noch:\n' + G.auftrag.text +
+             '  (' + Math.min(G.auftrag.stand, G.auftrag.ziel) + '/' + G.auftrag.ziel + ')\n' +
+             'Lohn: ' + G.auftrag.lohn + ' Muenzen.',
+             [{ t: 'Alles klar, ich mach weiter.', r: 'Die Stadt wartet.' },
+              { t: 'Auftrag zurueckgeben', r: 'Der Zettel haengt wieder an der Tafel.',
+                go: function () { G.auftrag = null; save(); } }]);
+      D.begin();
+      return;
+    }
+    /* Drei Zettel zur Auswahl */
+    if (!G.tafelAuswahl || G.tafelAuswahl.length !== 3) {
+      G.tafelAuswahl = [tafelJobBauen(), tafelJobBauen(), tafelJobBauen()];
+    }
+    var opts = [];
+    for (var i = 0; i < G.tafelAuswahl.length; i++) {
+      (function (job) {
+        opts.push({
+          t: job.text + '  (' + job.lohn + ' Muenzen)',
+          r: job.zettel + '\nAushang von: ' + job.wer,
+          go: function () {
+            G.auftrag = job;
+            G.tafelAuswahl = null;
+            hint('Auftrag angenommen: ' + job.text);
+            if (A) A.select();
+            save();
+          }
+        });
+      })(G.tafelAuswahl[i]);
+    }
+    opts.push({ t: 'Heute nicht.', r: 'Die Zettel bleiben haengen.' });
+    D.push('Auftragstafel am Brunnen', '#ffd24a',
+           'Vier Zettel flattern im Wind. Ruf in der Stadt: ' +
+           (G.ruf || 0) + ' Sterne.\nWas nimmst du?', opts);
+    D.begin();
+  }
+
+  function auftragAbgebenTafel() {
+    var a = G.auftrag;
+    G.coins += a.lohn;
+    G.ruf = (G.ruf || 0) + 1;
+    G.auftrag = null;
+    G.tafelAuswahl = null;
+    if (A) A.coin();
+    Fx.text(G.player.x, G.player.y - 34, '+' + a.lohn + ' Muenzen', '#ffd24a', true);
+    Fx.ring(G.player.x, G.player.y - 8, 40, 'rgba(255,210,74,0.9)', 3);
+    D.push(a.wer, a.farbe,
+           'Erledigt? Sauber. Hier, ' + a.lohn + ' Muenzen - und ein gutes Wort in der Stadt.');
+    D.push('Ruf in Eichenstadt', '#ffd24a',
+           'Du hast jetzt ' + G.ruf + ' Sterne. Je hoeher dein Ruf, desto besser\n' +
+           'bezahlen die Auftraege an der Tafel.');
+    D.begin();
+    hint('Auftrag abgegeben! +' + a.lohn + ' Muenzen');
+    save();
+  }
+
+  /* Fortschritt auf dem Tafelauftrag */
+  function tafelFortschritt(art, n) {
+    var a = G.auftrag;
+    if (!n || !a || a.art !== art || a.fertig) return;
+    a.stand += n;
+    if (a.stand >= a.ziel) {
+      a.fertig = true;
+      hint('Auftrag fertig! Zurueck zur Tafel in der Stadt.');
+      Fx.text(G.player.x, G.player.y - 38, 'AUFTRAG FERTIG!', '#8fd36a', true);
+      if (A) A.select();
+    } else {
+      Fx.text(G.player.x, G.player.y - 30, a.stand + '/' + a.ziel, '#ffd24a', false);
+    }
+    save();
+  }
+
   /* ================= Heiltrank =================
      Drei Stueck zum Start. Nachfuellen: schlafen, Mama, Alchemist,
      Boss besiegen. Nach dem Trinken sieben Sekunden Pause -
@@ -1129,80 +1245,6 @@
     save();
   }
 
-  /* ================= Zombie-Wellen =================
-     Alle paar Minuten wird es draussen richtig voll. Die Welle ist
-     erst vorbei, wenn alle Zombies daraus erledigt sind. */
-  function welleStarten() {
-    G.welleNr++;
-    var liste = Ge.welleBauen(G.welleNr, G.kills, istNacht());
-    G.welle = { nr: G.welleNr, uebrig: 0, t: 0, warnT: 2.6 };
-    G.shake = 8;
-    Fx.blitz(0.25, '#ff3a3a');
-    if (A) { A.music('boss'); A.dead(); }
-
-    /* im Ring um den Ritter herum, damit es wirklich von ueberall kommt */
-    for (var i = 0; i < liste.length; i++) {
-      var z = spawnZombie(liste[i], 95, 230);
-      if (z) G.welle.uebrig++;
-    }
-    if (!G.welle.uebrig) { G.welle = null; return; }
-
-    hint('WELLE ' + G.welleNr + ': ' + G.welle.uebrig + ' Zombies!');
-    Fx.text(G.player.x, G.player.y - 46, 'WELLE ' + G.welleNr + '!', '#ff3a3a', true);
-    if (G.party.length) {
-      var f = G.party[(Math.random() * G.party.length) | 0];
-      var pp = Chat.people[f.key];
-      var rufe = Ge.welleRufe;
-      D.push(pp.name, pp.color, rufe[(Math.random() * rufe.length) | 0]);
-      D.begin();
-    }
-  }
-
-  function welleZaehlen() {
-    if (!G.welle) return;
-    G.welle.uebrig--;
-    if (G.welle.uebrig <= 0) welleGeschafft();
-  }
-
-  function welleGeschafft() {
-    var nr = G.welle.nr;
-    var lohn = 18 + nr * 12;
-    G.welle = null;
-    G.welleCd = 95 + Math.random() * 45;
-    muenzenAbwerfen(G.player.x, G.player.y - 10, Math.min(28, 8 + nr * 3));
-    G.coins += lohn;
-    Fx.text(G.player.x, G.player.y - 44, 'WELLE ' + nr + ' GESCHAFFT!', '#8fd36a', true);
-    Fx.text(G.player.x, G.player.y - 30, '+' + lohn + ' Muenzen', '#ffd24a', false);
-    Fx.blitz(0.16, '#8fd36a');
-    Fx.ring(G.player.x, G.player.y - 8, 70, 'rgba(143,211,106,0.9)', 3);
-    /* Belohnung: ein Herz dazu, alle drei Wellen */
-    if (nr % 3 === 0 && G.player.maxhp < 20) {
-      G.player.maxhp += 2;
-      G.player.hp = G.player.maxhp;
-      Fx.text(G.player.x, G.player.y - 58, 'HERZ DAZU!', '#ff5a5a', true);
-    }
-    hint('Welle ' + nr + ' ueberstanden! +' + lohn + ' Muenzen');
-    questFortschritt('welle', 1);
-    save();
-  }
-
-  function welleUpdate(dt) {
-    if (G.welle) {
-      G.welle.t += dt;
-      /* Sicherheitsnetz: falls doch mal einer verschont wird */
-      var echt = 0;
-      for (var i = 0; i < G.ents.length; i++) {
-        var z = G.ents[i];
-        if (z.type === 'zombie' && !z.dying && !z.spared && !z.boss) echt++;
-      }
-      if (echt === 0) welleGeschafft();
-      return;
-    }
-    if (G.kills < 5) return;           /* erst mal in Ruhe warm werden */
-    G.welleCd -= dt;
-    if (G.welleCd <= 0 && !D.isOpen() && !G.boss) welleStarten();
-  }
-
   /* Glutfunken bei Nacht, Blaetter am Tag - nur fuers Auge */
   function stimmungsPixel(dt) {
     G.stimmT = (G.stimmT || 0) + dt;
@@ -1270,7 +1312,10 @@
         Fx.ring(G.player.x, G.player.y - 8, 44, 'rgba(255,122,208,0.95)', 3);
         hint('WUT! Doppelter Schaden fuer 11 Sekunden!');
       }
-      if (e.art === 'pilz' || e.art === 'beere') questFortschritt('pilze', e.art === 'pilz' ? 1 : 0);
+      if (e.art === 'pilz' || e.art === 'beere') {
+        questFortschritt('pilze', e.art === 'pilz' ? 1 : 0);
+        tafelFortschritt(e.art === 'pilz' ? 'pilze' : 'beeren', 1);
+      }
       if (A) A.coin();
       save();
     }
@@ -1433,6 +1478,7 @@
     G.killsSinceBoss = 0;
     G.shake = 4;
     questFortschritt('boss', 1);
+    tafelFortschritt('boss', 1);
     if (p.maxhp < 20) p.maxhp += 2;
     p.hp = p.maxhp;
     G.coins += verschont ? 60 : 40;
@@ -1704,6 +1750,7 @@
     G.bossesBeaten++;
     G.killsSinceBoss = 0;
     questFortschritt('boss', 1);
+    tafelFortschritt('boss', 1);
     G.shake = 10;
     if (p.maxhp < 20) p.maxhp += 2;
     p.hp = p.maxhp;
@@ -1807,7 +1854,6 @@
     { art: 'pilze', ziel: 5, text: 'Sammle 5 Pilze', lohn: 35 },
     { art: 'verschonen', ziel: 3, text: 'Verschone 3 Zombies', lohn: 55 },
     { art: 'boss', ziel: 1, text: 'Besiege einen Boss', lohn: 80 },
-    { art: 'welle', ziel: 1, text: 'Ueberstehe eine ganze Welle', lohn: 90 },
     { art: 'kombo', ziel: 6, text: 'Schaffe eine 6er-Kombo', lohn: 60 }
   ];
 
@@ -1871,6 +1917,7 @@
     var len = Math.sqrt(z.vx * z.vx + z.vy * z.vy) || 1;
     z.vx /= len; z.vy /= len;
     G.spared++;
+    tafelFortschritt('verschonen', 1);
     muenzenAbwerfen(z.x, z.y - 8, 2 + ((Math.random() * 3) | 0));
     questFortschritt('verschonen', 1);
     if (A) A.heal();
@@ -1902,11 +1949,18 @@
      waffen = Schwerter, schmied = Ruestung, alchi = Traenke,
      meister = Kampfkunst (dauerhafte Verbesserungen). */
   function ladenWer(art) {
-    if (art === 'schmied') return Chat.people.schmied;
-    if (art === 'alchi') return Chat.people.alchi;
-    if (art === 'meister') return Chat.people.meister;
-    return Chat.people.haendler;
+    return Chat.people[art] || Chat.people.haendler;
   }
+
+  /* ---------- Schmuck: wirkt dauerhaft ---------- */
+  var SCHMUCK = {
+    ring:    { name: 'Gluecksring', preis: 120, text: 'Die Haelfte mehr Muenzen von jedem Zombie.' },
+    amulett: { name: 'Herzamulett', preis: 150, text: 'Ein Herz mehr, fuer immer.' },
+    stiefel: { name: 'Schnellstiefel', preis: 130, text: 'Ein Fuenftel schneller unterwegs.' },
+    siegel:  { name: 'Haendlersiegel', preis: 190, text: 'Alles in der Stadt ist ein Fuenftel guenstiger.' }
+  };
+  function hatSchmuck(k) { return !!(G.schmuck && G.schmuck[k]); }
+  function preisMit(p2) { return hatSchmuck('siegel') ? Math.ceil(p2 * 0.8) : p2; }
 
   function ladenOeffnen(ersterBesuch, art) {
     art = art || 'waffen';
@@ -1917,8 +1971,8 @@
     if (art === 'waffen') {
       var sw = SCHWERT_STUFEN[G.swordLevel];
       if (sw) {
-        opts.push({ t: 'Schwert: ' + sw.name + ' - ' + sw.preis + ' Muenzen',
-                    go: function () { kaufen('schwert', sw, art); } });
+        opts.push({ t: 'Schwert: ' + sw.name + ' - ' + preisMit(sw.preis) + ' Muenzen',
+                    go: function () { kaufen('schwert', { name: sw.name, preis: preisMit(sw.preis) }, art); } });
       } else {
         opts.push({ t: '(Du hast schon die beste Klinge)', r: 'Besser wird es nicht. Pass gut drauf auf!' });
       }
@@ -1947,21 +2001,21 @@
     else if (art === 'schmied') {
       var ru = RUESTUNG_STUFEN[G.armorLevel];
       if (ru) {
-        opts.push({ t: 'Ruestung: ' + ru.name + ' - ' + ru.preis + ' Muenzen',
-                    go: function () { kaufen('ruestung', ru, art); } });
+        opts.push({ t: 'Ruestung: ' + ru.name + ' - ' + preisMit(ru.preis) + ' Muenzen',
+                    go: function () { kaufen('ruestung', { name: ru.name, preis: preisMit(ru.preis) }, art); } });
       } else {
         opts.push({ t: '(Beste Ruestung schon an)', r: 'Da geht nichts mehr drueber. Bleib trotzdem beweglich!' });
       }
       if (G.player.hp < G.player.maxhp) {
-        opts.push({ t: 'Beulen ausklopfen, alle Herzen voll - 12 Muenzen',
-                    go: function () { kaufen('eintopf', { name: 'Reparatur', preis: 12 }, art); } });
+        opts.push({ t: 'Beulen ausklopfen, alle Herzen voll - ' + preisMit(12) + ' Muenzen',
+                    go: function () { kaufen('eintopf', { name: 'Reparatur', preis: preisMit(12) }, art); } });
       }
       text = ersterBesuch
         ? 'Rein in die Esse, drauf mit dem Hammer. Was brauchst du, Ritter?'
         : 'Noch was?';
     }
     else if (art === 'alchi') {
-      var preis = 18 + G.traenke * 6;
+      var preis = preisMit(18 + G.traenke * 6);
       if (G.traenke < G.traenkeMax) {
         opts.push({ t: 'Heiltrank kaufen (' + G.traenke + '/' + G.traenkeMax + ') - ' + preis + ' Muenzen',
                     go: function () { kaufen('trank', { name: 'Heiltrank', preis: preis }, art); } });
@@ -1969,29 +2023,76 @@
         opts.push({ t: '(Guertel voll)', r: 'Mehr passt nicht an den Guertel. Trink erst mal einen leer!' });
       }
       if (G.traenkeMax < 5) {
-        opts.push({ t: 'Groesserer Guertel: Platz fuer einen Trank mehr - 90 Muenzen',
-                    go: function () { kaufen('guertel', { name: 'Guertel', preis: 90 }, art); } });
+        opts.push({ t: 'Groesserer Guertel: Platz fuer einen Trank mehr - ' + preisMit(90) + ' Muenzen',
+                    go: function () { kaufen('guertel', { name: 'Guertel', preis: preisMit(90) }, art); } });
       }
-      opts.push({ t: 'Wutkristall - 55 Muenzen',
-                  go: function () { kaufen('kristall', { name: 'Wutkristall', preis: 55 }, art); } });
+      opts.push({ t: 'Wutkristall - ' + preisMit(55) + ' Muenzen',
+                  go: function () { kaufen('kristall', { name: 'Wutkristall', preis: preisMit(55) }, art); } });
       text = ersterBesuch
         ? 'Pssst. Rot macht heil, pink macht wuetend. Frag nicht, woraus.'
         : 'Noch ein Schlueckchen?';
+    }
+    else if (art === 'baecker') {
+      opts.push({ t: 'Warmes Brot, alle Herzen voll - ' + preisMit(9) + ' Muenzen',
+                  go: function () { kaufen('eintopf', { name: 'Brot', preis: preisMit(9) }, art); } });
+      if (G.pilze > 0) {
+        opts.push({ t: G.pilze + ' Pilze verkaufen (je 7 - mehr als bei Bosko!)',
+                    go: function () {
+                      var lohn = G.pilze * 7; G.coins += lohn; G.pilze = 0;
+                      if (A) A.coin(); hint('+' + lohn + ' Muenzen');
+                      D.push(h.name, h.color, 'Pilzbrot! Das kauft mir die halbe Strasse ab.');
+                      save(); ladenOeffnen(false, art);
+                    } });
+      }
+      if (G.beeren > 0) {
+        opts.push({ t: G.beeren + ' Beeren verkaufen (je 6 - mehr als bei Bosko!)',
+                    go: function () {
+                      var lohn = G.beeren * 6; G.coins += lohn; G.beeren = 0;
+                      if (A) A.coin(); hint('+' + lohn + ' Muenzen');
+                      D.push(h.name, h.color, 'Beerenkuchen. Komm morgen wieder, dann kriegst du ein Stueck.');
+                      save(); ladenOeffnen(false, art);
+                    } });
+      }
+      if (G.traenke < G.traenkeMax) {
+        opts.push({ t: 'Proviant fuer unterwegs (1 Trank) - ' + preisMit(22) + ' Muenzen',
+                    go: function () { kaufen('trank', { name: 'Proviant', preis: preisMit(22) }, art); } });
+      }
+      text = ersterBesuch
+        ? 'Frisch aus dem Ofen! Und wenn du Pilze hast - ich zahl besser als Bosko.'
+        : 'Noch ein Stueck?';
+    }
+    else if (art === 'juwel') {
+      var keys = ['ring', 'amulett', 'stiefel', 'siegel'];
+      for (var si = 0; si < keys.length; si++) {
+        (function (k) {
+          var sm = SCHMUCK[k];
+          if (hatSchmuck(k)) {
+            opts.push({ t: '\u2713 ' + sm.name + ' (haengt schon an dir)',
+                        r: sm.text });
+          } else {
+            opts.push({ t: sm.name + ' - ' + preisMit(sm.preis) + ' Muenzen',
+                        go: function () { kaufen('schmuck:' + k, { name: sm.name, preis: preisMit(sm.preis) }, art); } });
+          }
+        })(keys[si]);
+      }
+      text = ersterBesuch
+        ? 'Schmuck? Kann man nicht essen. Aber er bringt Glueck - und Glueck bringt Muenzen.'
+        : 'Noch ein Stueck fuer den Guertel?';
     }
     else {
       /* Waffenmeister: dauerhafte Kampfkunst */
       if (!G.koennen) G.koennen = {};
       if (!G.koennen.rolle) {
-        opts.push({ t: 'Schnellere Rolle - 70 Muenzen',
-                    go: function () { kaufen('rolle', { name: 'Schnellere Rolle', preis: 70 }, art); } });
+        opts.push({ t: 'Schnellere Rolle - ' + preisMit(70) + ' Muenzen',
+                    go: function () { kaufen('rolle', { name: 'Schnellere Rolle', preis: preisMit(70) }, art); } });
       }
       if (!G.koennen.wirbel) {
-        opts.push({ t: 'Grosser Wirbelschlag - 110 Muenzen',
-                    go: function () { kaufen('wirbel', { name: 'Grosser Wirbel', preis: 110 }, art); } });
+        opts.push({ t: 'Grosser Wirbelschlag - ' + preisMit(110) + ' Muenzen',
+                    go: function () { kaufen('wirbel', { name: 'Grosser Wirbel', preis: preisMit(110) }, art); } });
       }
       if (!G.koennen.zorn) {
-        opts.push({ t: 'Zorn laedt schneller - 130 Muenzen',
-                    go: function () { kaufen('zornkunst', { name: 'Schneller Zorn', preis: 130 }, art); } });
+        opts.push({ t: 'Zorn laedt schneller - ' + preisMit(130) + ' Muenzen',
+                    go: function () { kaufen('zornkunst', { name: 'Schneller Zorn', preis: preisMit(130) }, art); } });
       }
       if (!opts.length) {
         opts.push({ t: '(Du kannst schon alles)', r: 'Mehr kann ich dir nicht beibringen. Jetzt geh und raeum auf.' });
@@ -2054,6 +2155,17 @@
       G.koennen.wirbel = true;
       D.push(h.name, h.color, 'Das Schwert schwingt sich fast von selbst. Nutz den Schwung.');
       hint('Der Wirbelschlag trifft weiter!');
+    } else if (was.indexOf('schmuck:') === 0) {
+      var sk = was.split(':')[1];
+      if (!G.schmuck) G.schmuck = {};
+      G.schmuck[sk] = true;
+      if (sk === 'amulett') {
+        G.player.maxhp = Math.min(20, G.player.maxhp + 2);
+        G.player.hp = G.player.maxhp;
+      }
+      D.push(h.name, h.color, SCHMUCK[sk].name + ': ' + SCHMUCK[sk].text);
+      hint(SCHMUCK[sk].name + ' angelegt!');
+      if (A) A.select();
     } else if (was === 'zornkunst') {
       G.koennen.zorn = true;
       D.push(h.name, h.color, 'Zorn ist ein Werkzeug. Halt ihn scharf.');
@@ -2099,12 +2211,13 @@
       var e = G.ents[i];
       if (e === p) continue;
       if (e.type === 'npc' || e.type === 'friend' ||
-          (e.type === 'prop' && (e.kind === 'car' || e.kind === 'sign'))) {
+          (e.type === 'prop' && (e.kind === 'car' || e.kind === 'sign' || e.kind === 'tafel'))) {
         var d = dist(e, p);
         if (d < bd) { bd = d; best = e; }
       }
     }
     if (!best) return;
+    if (best.type === 'prop' && best.kind === 'tafel') return tafelOeffnen();
     if (best.type === 'prop' && best.kind === 'car') return talkCar();
     if (best.type === 'prop' && best.kind === 'sign') {
       D.say('Ein Blatt Papier', '#e8e2c8', best.text);
@@ -3087,7 +3200,10 @@
     ctx.fillText('Zombies: ' + G.kills, VW - 6, 23);
     ctx.fillStyle = '#ffd24a';
     ctx.fillText(G.coins + ' Muenzen', VW - 6, 33);
-    if (G.spared > 0) {
+    if (G.ruf) {
+      ctx.fillStyle = '#ffd24a';
+      ctx.fillText('Ruf: ' + '\u2605'.repeat(Math.min(5, G.ruf)) + (G.ruf > 5 ? '+' + (G.ruf - 5) : ''), VW - 6, 43);
+    } else if (G.spared > 0) {
       ctx.fillStyle = '#8fd0e0';
       ctx.fillText('Verschont: ' + G.spared, VW - 6, 43);
     }
@@ -3212,27 +3328,6 @@
       ctx.globalAlpha = 1;
     }
 
-    /* --- laufende Welle --- */
-    if (G.welle) {
-      ctx.textAlign = 'center';
-      ctx.font = 'bold 10px "Courier New", monospace';
-      var puls2 = 0.6 + 0.4 * Math.abs(Math.sin(G.time * 5));
-      ctx.globalAlpha = puls2;
-      ctx.fillStyle = '#ff3a3a';
-      ctx.fillText('WELLE ' + G.welle.nr, VW / 2, 16);
-      ctx.globalAlpha = 1;
-      ctx.font = '8px "Courier New", monospace';
-      ctx.fillStyle = '#ffd24a';
-      ctx.fillText('noch ' + Math.max(0, G.welle.uebrig) + ' Zombies', VW / 2, 26);
-      ctx.textAlign = 'left';
-      /* roter Rand rundherum */
-      ctx.globalAlpha = 0.16 + 0.1 * Math.abs(Math.sin(G.time * 3));
-      ctx.fillStyle = '#ff2a2a';
-      ctx.fillRect(0, 0, VW, 4); ctx.fillRect(0, VH - 4, VW, 4);
-      ctx.fillRect(0, 0, 4, VH); ctx.fillRect(VW - 4, 0, 4, VH);
-      ctx.globalAlpha = 1;
-    }
-
     /* --- wenig Leben: alles pocht rot --- */
     if (p.hp <= 2 && p.hp > 0) {
       ctx.globalAlpha = 0.10 + 0.14 * Math.abs(Math.sin(G.time * 5));
@@ -3309,6 +3404,16 @@
       ctx.fillRect(6, VH - 8, 30 * (1 - G.rollCd / ((G.koennen && G.koennen.rolle) ? 0.45 : 0.75)), 2);
     }
 
+    /* --- Schmuck, den du traegst --- */
+    if (G.schmuck) {
+      var sk2 = ['ring', 'amulett', 'stiefel', 'siegel'], sx3 = 6;
+      for (var mi2 = 0; mi2 < sk2.length; mi2++) {
+        if (!G.schmuck[sk2[mi2]]) continue;
+        ctx.drawImage(S.schmuck[sk2[mi2]], sx3, VH - 36);
+        sx3 += 11;
+      }
+    }
+
     /* Kleine Karte oben rechts */
     if (!G.karteOffen) karteZeichnen(VW - 70, 58, 64, 50, false);
 
@@ -3327,6 +3432,16 @@
       ctx.fillStyle = '#cfc9e6';
       ctx.fillText('Finger aufs Bild legen und ziehen zum Laufen', 8, VH - 10);
       ctx.globalAlpha = 1;
+    }
+
+    /* Auftrag von der Stadttafel */
+    if (G.auftrag) {
+      ctx.fillStyle = G.auftrag.fertig ? '#8fd36a' : '#ffd24a';
+      ctx.fillText(G.auftrag.fertig
+        ? 'Fertig! Zurueck zur Tafel in der Stadt (' + G.auftrag.lohn + ' Muenzen)'
+        : 'Stadtauftrag: ' + G.auftrag.text + ' (' +
+          Math.min(G.auftrag.stand, G.auftrag.ziel) + '/' + G.auftrag.ziel + ')',
+        6, 43);
     }
 
     /* Laufender Auftrag */
@@ -3388,7 +3503,7 @@
     ctx.fillText('und viel zu vielen Zombies', VW / 2, 88);
     ctx.fillStyle = '#ffd24a';
     ctx.font = 'bold 12px "Courier New", monospace';
-    ctx.fillText('FASSUNG ' + FASSUNG + ' - ECHTE BOSSE', VW / 2, 106);
+    ctx.fillText('FASSUNG ' + FASSUNG + ' - EICHENSTADT', VW / 2, 106);
 
     ctx.fillStyle = (Math.floor(G.time * 1.6) % 2) ? '#fff' : '#7a748f';
     ctx.font = '10px "Courier New", monospace';
@@ -3436,6 +3551,7 @@
       pets: G.pets, hundBonus: G.hundBonus,
       bosse: G.bossesBeaten,
       traenke: G.traenke, traenkeMax: G.traenkeMax, zorn: G.zorn, koennen: G.koennen,
+      schmuck: G.schmuck, auftrag: G.auftrag, ruf: G.ruf,
       gespeichert: Date.now()
     };
   }
@@ -3455,6 +3571,9 @@
     if (typeof d.traenkeMax === 'number') G.traenkeMax = Math.max(3, Math.min(5, d.traenkeMax));
     if (typeof d.traenke === 'number') G.traenke = Math.max(0, Math.min(G.traenkeMax, d.traenke));
     if (d.koennen) G.koennen = d.koennen;
+    if (d.schmuck) G.schmuck = d.schmuck;
+    if (d.auftrag) G.auftrag = d.auftrag;
+    if (typeof d.ruf === 'number') G.ruf = d.ruf;
     if (typeof d.zorn === 'number') G.zorn = Math.max(0, Math.min(100, d.zorn));
     var mh = Math.max(10, Math.min(20, d.maxhp || 10));
     G.maxhpGesichert = mh;          /* wird beim Erschaffen des Ritters gesetzt */
@@ -3657,16 +3776,15 @@
 
     /* Zombies nachwachsen lassen */
     if (G.map.zombies && G.state === 'play') {
-      welleUpdate(dt);
       stimmungsPixel(dt);
       G.spawnT -= dt;
       if (G.spawnT <= 0) {
         G.spawnT = (istNacht() ? 3 : 5) + Math.random() * 4;
-        var grenze = istNacht() ? 10 : 7;
-        if (!G.welle && countZombies() < grenze) spawnZombie();
+        var grenze = istNacht() ? 7 : 5;
+        if (countZombies() < grenze) spawnZombie();
       }
       /* Nach ein paar erledigten Zombies kommt ein Boss - jedes Mal ein anderer */
-      if (!G.boss && !G.welle && G.killsSinceBoss >= 6 && !D.isOpen()) spawnBoss();
+      if (!G.boss && G.killsSinceBoss >= 8 && !D.isOpen()) spawnBoss();
 
       /* Pilze und Beeren wachsen nach */
       G.sammelT -= dt;
@@ -3682,7 +3800,7 @@
       for (i = 0; i < G.ents.length; i++) {
         if (G.ents[i].type === 'zombie' && !G.ents[i].dying && dist(G.ents[i], G.player) < 70) { nah = true; break; }
       }
-      if (A) A.music((G.boss || G.welle || G.hausAngriff || G.belagerung) ? 'boss' : (nah ? 'kampf' : G.map.music));
+      if (A) A.music((G.boss || G.hausAngriff || G.belagerung) ? 'boss' : (nah ? 'kampf' : G.map.music));
       G.danger = nah;
     } else G.danger = false;
 

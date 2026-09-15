@@ -79,6 +79,14 @@
     meister: {
       name: 'Waffenmeister Orin', rolle: 'alter Kaempfer', color: '#ffb06a', kurz: 'Orin',
       pal: { hair: '#c8c8d0', skin: '#d8a070', shirt: '#7a3a2a', shirtDark: '#5a2a1e', pants: '#3a3228', boots: '#241e18' }
+    },
+    baecker: {
+      name: 'Baeckerin Rosa', rolle: 'Baeckerei am Markt', color: '#f0b0c0', kurz: 'Rosa',
+      pal: { hair: '#8a5a2a', skin: '#f0c191', shirt: '#e8d8c0', shirtDark: '#c8b8a0', pants: '#a06a4a', boots: '#5b4326' }
+    },
+    juwel: {
+      name: 'Juwelier Perla', rolle: 'Schmuck und Glueck', color: '#9ad8e0', kurz: 'Perla',
+      pal: { hair: '#2a2a44', skin: '#e8c0a0', shirt: '#3a7a8a', shirtDark: '#2a5a68', pants: '#4a3a6b', boots: '#2f2545' }
     }
   };
 
