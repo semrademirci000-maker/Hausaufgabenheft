@@ -871,6 +871,77 @@
     return c;
   }
 
+  /* ---------- Neue Deko: Grabsteine, Lagerfeuer, Fass, Zaun ---------- */
+  function makeGrave(art) {
+    var c = mk(12, 16), g = c.getContext('2d');
+    g.fillStyle = '#4a4a54';
+    if (art === 0) {                       /* runder Grabstein */
+      g.fillRect(3, 4, 6, 11);
+      g.fillRect(2, 6, 8, 9);
+      g.fillStyle = '#5e5e6a'; g.fillRect(3, 5, 4, 8);
+      g.fillStyle = '#33333c'; g.fillRect(3, 9, 6, 1); g.fillRect(5, 6, 2, 6);
+    } else if (art === 1) {                /* Kreuz */
+      g.fillRect(4, 2, 4, 13);
+      g.fillRect(1, 5, 10, 3);
+      g.fillStyle = '#5e5e6a'; g.fillRect(4, 2, 2, 12); g.fillRect(1, 5, 9, 1);
+    } else {                               /* schiefer Stein */
+      g.fillRect(2, 5, 7, 10);
+      g.fillStyle = '#5e5e6a'; g.fillRect(3, 6, 3, 8);
+      g.fillStyle = '#33333c'; g.fillRect(2, 10, 7, 1);
+    }
+    g.fillStyle = '#3a5a32'; g.fillRect(1, 14, 10, 2);   /* Grasbueschel */
+    return c;
+  }
+
+  function makeFire(frame) {
+    var c = mk(16, 16), g = c.getContext('2d');
+    /* Holzscheite */
+    g.fillStyle = '#5b3d22'; g.fillRect(2, 11, 12, 3);
+    g.fillStyle = '#7a5327'; g.fillRect(3, 11, 10, 1);
+    g.fillStyle = '#3a2a1a'; g.fillRect(5, 13, 6, 1);
+    /* Steine drumherum */
+    g.fillStyle = '#6a6a74';
+    g.fillRect(0, 12, 3, 3); g.fillRect(13, 12, 3, 3);
+    /* Flamme, zwei Bilder */
+    var h = frame ? 0 : 1;
+    g.fillStyle = '#ff4a1a'; g.fillRect(5, 5 + h, 6, 7);
+    g.fillStyle = '#ff9a2a'; g.fillRect(6, 4 + h, 4, 7);
+    g.fillStyle = '#ffd24a'; g.fillRect(7, 3 + h, 2, 6);
+    g.fillStyle = '#fff2b0'; g.fillRect(7, 6 + h, 2, 2);
+    if (frame) { g.fillStyle = '#ff9a2a'; g.fillRect(4, 8, 1, 2); g.fillRect(11, 7, 1, 2); }
+    return c;
+  }
+
+  function makeBarrel() {
+    var c = mk(12, 14), g = c.getContext('2d');
+    g.fillStyle = '#6b4626'; g.fillRect(1, 2, 10, 12);
+    g.fillStyle = '#8a5c31'; g.fillRect(2, 2, 3, 12);
+    g.fillStyle = '#3f2a16'; g.fillRect(1, 5, 10, 1); g.fillRect(1, 10, 10, 1);
+    g.fillStyle = '#9a7a4a'; g.fillRect(1, 1, 10, 2);
+    return c;
+  }
+
+  function makeFence() {
+    var c = mk(16, 14), g = c.getContext('2d');
+    g.fillStyle = '#6b4626';
+    g.fillRect(1, 3, 2, 11); g.fillRect(12, 3, 2, 11);
+    g.fillRect(0, 5, 16, 2); g.fillRect(0, 9, 16, 2);
+    g.fillStyle = '#8a5c31';
+    g.fillRect(1, 3, 1, 10); g.fillRect(12, 3, 1, 10); g.fillRect(0, 5, 16, 1);
+    return c;
+  }
+
+  /* Belohnungen, die Zombies fallen lassen */
+  function makeKristall(frame) {
+    var c = mk(10, 12), g = c.getContext('2d');
+    var hell = frame ? '#ffb0e0' : '#ff7ad0';
+    g.fillStyle = '#8a1a5a'; g.fillRect(3, 1, 4, 10);
+    g.fillStyle = '#e03a9a'; g.fillRect(3, 2, 3, 8);
+    g.fillStyle = hell; g.fillRect(4, 3, 1, 5);
+    g.fillStyle = '#fff'; g.fillRect(4, 3, 1, 2);
+    return c;
+  }
+
   var TILES = {};
   function buildTiles() {
     TILES['.'] = grassTile(1, false, false);
@@ -943,6 +1014,11 @@
 
   global.Sprites = {
     karteFarbe: karteFarbe,
+    graves: [makeGrave(0), makeGrave(1), makeGrave(2)],
+    fire: [makeFire(0), makeFire(1)],
+    barrel: makeBarrel(),
+    fence: makeFence(),
+    kristall: [makeKristall(0), makeKristall(1)],
     karteBauen: karteBauen,
     knight: KNIGHT,
     sword: SWORD,

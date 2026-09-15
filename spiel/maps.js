@@ -110,6 +110,13 @@
     /* ein paar einzelne Bäume als Deko in der Lichtung */
     g[23][16] = 'T'; g[27][23] = 't'; g[25][20] = '*';
 
+    /* --- Der alte Friedhof unten links: da kommen die Zombies her --- */
+    rect(g, 4, 24, 8, 7, ',');
+    for (y = 24; y < 31; y++) for (x = 4; x < 12; x++) if (r() > 0.7) g[y][x] = '.';
+    /* Trampelpfad vom Weg zum Friedhof */
+    for (x = 8; x <= 14; x++) { g[23][x] = '-'; }
+    for (y = 19; y <= 23; y++) { g[y][14] = '-'; }
+
     return {
       key: 'wald',
       name: 'Eichenwald',
@@ -122,7 +129,25 @@
       ],
       props: [
         { kind: 'car', x: 16.8, y: 10.4 },
-        { kind: 'sign', x: 28, y: 20.9, text: 'Wegweiser: Nach Osten geht es zur Stadt Eichenstadt. Zu Fuss viel zu weit - nimm das Auto!' }
+        { kind: 'sign', x: 28, y: 20.9, text: 'Wegweiser: Nach Osten geht es zur Stadt Eichenstadt. Zu Fuss viel zu weit - nimm das Auto!' },
+        /* Lagerfeuer vor dem Haus - nachts sitzen hier alle */
+        { kind: 'fire', x: 13.5, y: 13.5 },
+        { kind: 'barrel', x: 9.6, y: 9.4 },
+        { kind: 'barrel', x: 9.6, y: 10.6 },
+        /* Zaun links neben dem Haus */
+        { kind: 'fence', x: 8.5, y: 12.5 },
+        { kind: 'fence', x: 9.5, y: 12.5 },
+        { kind: 'fence', x: 10.5, y: 12.5 },
+        /* Der Friedhof */
+        { kind: 'grave', x: 5.5, y: 25.5, art: 0 },
+        { kind: 'grave', x: 7.5, y: 25.5, art: 1 },
+        { kind: 'grave', x: 9.5, y: 25.5, art: 2 },
+        { kind: 'grave', x: 5.5, y: 27.5, art: 1 },
+        { kind: 'grave', x: 7.5, y: 27.5, art: 2 },
+        { kind: 'grave', x: 9.5, y: 27.5, art: 0 },
+        { kind: 'grave', x: 6.5, y: 29.5, art: 2 },
+        { kind: 'grave', x: 8.5, y: 29.5, art: 1 },
+        { kind: 'sign', x: 11.6, y: 23.4, text: 'Verwitterte Tafel: HIER RUHT NIEMAND MEHR RICHTIG. Nachts wird es hier ungemuetlich.' }
       ],
       /* Startplätze für die vier Freunde vor dem Haus */
       friendSpots: [

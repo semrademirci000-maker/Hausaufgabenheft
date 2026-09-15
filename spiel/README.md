@@ -25,6 +25,8 @@ fährst du mit der ganzen Familie im Auto in die Stadt.
 |---|---|---|
 | Laufen | WASD oder Pfeiltasten | **Daumen-Stick** unten links ziehen |
 | Schlagen | Leertaste (oder X / J) | großer roter Knopf ⚔ |
+| **Wirbelschlag** | Schlagtaste **halten**, dann loslassen | Knopf ⚔ **halten** |
+| **Ausweichrolle** | Shift, C oder Q | Knopf 💨 **Rolle** |
 | Reden / Weiter | E oder Enter | Knopf **E**, oder kurz aufs Bild tippen |
 | Antwort wählen | ↑ ↓ + Enter | Antwort antippen |
 | Karte | **M** | Knopf 🗺 **Karte** |
@@ -108,6 +110,65 @@ acht. Lässt du los, springt der Stick zurück in seine Ecke.
 - Im Haus wohnt Wuffel. Streicheln, Bauch kraulen, Stöckchen werfen.
 - Nach fünfmal Streicheln gibt es **ein Herz dazu**. (Hunde sind wichtig.)
 
+**Sechs Zombiesorten – jede kämpft anders**
+- **Zombie** (grün) – der normale. 3 Treffer, läuft stur auf dich zu.
+- **Renner** (gelbgrün) – nur 2 Treffer, aber er **sprintet** in Schüben los.
+- **Panzer** (grau, groß) – **8 Treffer**, nimmt dir ein ganzes Herz, und der
+  Rückstoß bringt ihn kaum aus dem Tritt. Dafür viele Münzen.
+- **Spucker** (lila) – bleibt auf Abstand und **spuckt grüne Säure** nach dir.
+- **Kriecher** (braun, klein) – kommt immer **zu dritt**, stirbt in einem Treffer.
+- **Nachtschatten** (dunkelblau) – nur **nachts**, verschwindet und **taucht
+  direkt hinter dir wieder auf**.
+- Über jeder Sondersorte steht ihr Name, und jede hat einen eigenen
+  Lebensbalken.
+
+**Kombos, Volltreffer, Wirbelschlag**
+- Jeder Treffer zählt hoch: **x2, x3, x4 …** oben in der Mitte. Ab drei Treffern
+  macht jeder weitere Schlag **mehr Schaden**, und beim Töten gibt es
+  **Extramünzen**. Wirst du getroffen, ist die Kombo weg.
+- Serien werden ausgerufen: **3er SERIE**, **FÜNF AM STÜCK!**, **UNAUFHALTSAM!**,
+  **LEGENDE!**
+- **Volltreffer** (zufällig, öfter mit besserem Schwert): doppelter Schaden,
+  das Bild blitzt weiß und steht kurz still.
+- **Wirbelschlag**: Schlagknopf gedrückt halten, bis der Ritter golden glüht,
+  dann loslassen – das Schwert dreht sich zweimal komplett herum und trifft
+  **alles rundherum** mit fast doppeltem Schaden.
+- **Ausweichrolle**: kurz unverwundbar durch alles hindurch. Danach eine
+  Dreiviertelsekunde Pause (der Balken unten links zeigt sie an).
+
+**Zombie-Wellen**
+- Alle paar Minuten wird es draußen richtig voll: **WELLE 1, 2, 3 …**
+  Fünf bis sechzehn Zombies erscheinen **im Ring um dich herum**, der
+  Bildschirmrand pocht rot, die Musik wechselt.
+- Oben steht, wie viele noch übrig sind. Erst wenn alle weg sind, ist die
+  Welle vorbei – dafür gibt es einen Haufen Münzen, und **jede dritte Welle
+  ein Herz dazu**.
+- Ab Welle 2 ist immer ein Panzer dabei, ab Welle 3 auch ein Spucker.
+
+**Beute, die Zombies fallen lassen**
+- **Herz** (rot, fliegt dir entgegen) – füllt ein Herz auf. Fällt nur, wenn
+  du wirklich verletzt bist.
+- **Wutkristall** (pink) – **11 Sekunden doppelter Schaden**, der Ritter
+  funkelt pink, unten läuft ein Balken ab.
+
+**Die Freunde können jetzt was**
+- **Lisbeth** schießt **Pfeile** auf Zombies in der Nähe.
+- **Momo** wirft **Feuerbälle** (2 Schaden, mit Funkenregen).
+- **Tarik** und **Griswold** hauen von Hand drauf.
+
+**Alles wackelt und spritzt**
+- Bei jedem Treffer fliegen **Pixelfetzen in der Farbe des Zombies**, springt
+  eine **Schockwelle** auf und die **Schadenszahl** nach oben.
+- Das Bild **steht bei jedem Treffer kurz still** (hit stop) und wackelt.
+- Staubwölkchen beim Laufen, Glutfunken in der Nacht, Blütenblätter am Tag.
+- Bei zwei Herzen oder weniger **pocht der ganze Bildschirmrand rot**.
+
+**Der alte Friedhof und das Lagerfeuer**
+- Unten links im Wald liegt ein **Friedhof** mit acht Grabsteinen und einer
+  verwitterten Tafel. Ein Trampelpfad führt vom Hauptweg dorthin.
+- Vor dem Haus brennt ein **Lagerfeuer** – die Flamme flackert, der Boden
+  leuchtet warm. Dazu Fässer und ein Zaun.
+
 **Zombies**
 - Laufen im Wald herum und kommen auf dich zu, wenn sie dich sehen.
 - Du hältst das Schwert **immer in der Hand**. Beim Schlagen holt der Ritter
@@ -165,6 +226,8 @@ acht. Lässt du los, springt der Stick zurück in seine Ecke.
 |---|---|
 | `index.html` | Grundgerüst, Textbox, Touch-Knöpfe |
 | `style.css` | Textbox im Undertale-Stil, Steuerkreuz, Skalierung |
+| `effekte.js` | Pixelfetzen, Schadenszahlen, Schockwellen, Trefferpause |
+| `gegner.js` | die sechs Zombiesorten und die Wellen |
 | `sprites.js` | Alle Pixel-Grafiken: Ritter, Schwert, Leute, Zombies, Kacheln, Auto |
 | `maps.js` | Die drei Welten: Wald, Haus, Stadt |
 | `game.js` | Spielablauf: Laufen, Kämpfen, Begleiter, Türen, Autofahrt |
