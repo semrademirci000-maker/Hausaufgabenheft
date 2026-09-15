@@ -2730,7 +2730,7 @@ html, body {
   'use strict';
 
   var TILE = 16, VW = 320, VH = 240;
-  var FASSUNG = 15;                    /* steht unten auf dem Titelbild */
+  var FASSUNG = 16;                    /* steht unten auf dem Titelbild */
   var cv = document.getElementById('game');
   var ctx = cv.getContext('2d');
   ctx.imageSmoothingEnabled = false;
@@ -2750,7 +2750,7 @@ html, body {
     coins: 0, swordLevel: 0, armorLevel: 0,
     pilze: 0, beeren: 0, spared: 0, pets: 0, hundBonus: false,
     zeit: 0.28, quest: null, sammelT: 6,
-    drive: null, overT: 0, lastSave: 0
+    drive: null, overT: 0, lastSave: 0, maxhpGesichert: 10
   };
   global.GAME = G;
 
@@ -2906,8 +2906,9 @@ html, body {
 
     /* Spieler */
     if (!G.player) {
+      var mh = Math.max(10, Math.min(20, G.maxhpGesichert || 10));
       G.player = { type: 'player', x: 0, y: 0, dir: 'down', anim: 0, moving: false,
-                   hp: 10, maxhp: 10, atk: null, atkCd: 0, swingId: 0, invuln: 0, kx: 0, ky: 0 };
+                   hp: mh, maxhp: mh, atk: null, atkCd: 0, swingId: 0, invuln: 0, kx: 0, ky: 0 };
     }
     G.player.x = tx * TILE; G.player.y = ty * TILE;
     G.player.atk = null; G.player.kx = 0; G.player.ky = 0;
@@ -4480,7 +4481,7 @@ html, body {
     ctx.fillText('und viel zu vielen Zombies', VW / 2, 88);
     ctx.fillStyle = '#ffd24a';
     ctx.font = 'bold 12px "Courier New", monospace';
-    ctx.fillText('FASSUNG ' + FASSUNG + ' - BOSSKAMPF', VW / 2, 106);
+    ctx.fillText('FASSUNG ' + FASSUNG + ' - SPEICHERT JETZT', VW / 2, 106);
 
     ctx.fillStyle = (Math.floor(G.time * 1.6) % 2) ? '#fff' : '#7a748f';
     ctx.font = '10px "Courier New", monospace';
@@ -4508,37 +4509,96 @@ html, body {
     ctx.textAlign = 'left';
   }
 
-  /* ================= Speichern ================= */
+  /* ================= Speichern =================
+     Zwei Wege, damit der Stand nicht mehr verloren geht:
+     1. localStorage - klappt im Browser, wird aber auf dem iPhone
+        in der Vorschau (iframe) gerne geloescht.
+     2. die Wolke der Vorschau (claude.use('db')) - die bleibt,
+        auch wenn man die Vorschau schliesst oder das Geraet wechselt.  */
+  var WOLKE = null;          /* Dokument in der Wolke, wenn vorhanden */
+  var wolkeBereit = false;   /* erst nach dem ersten Lesen darf geschrieben werden */
+  var wolkeOffen = false;    /* gerade laeuft ein Schreibvorgang */
+  var wolkeWartet = null;    /* letzter Stand, der noch hoch muss */
+
+  function standDaten() {
+    return {
+      kills: G.kills, coins: G.coins,
+      schwert: G.swordLevel, ruestung: G.armorLevel,
+      maxhp: G.player ? G.player.maxhp : (G.maxhpGesichert || 10),
+      pilze: G.pilze, beeren: G.beeren, spared: G.spared,
+      pets: G.pets, hundBonus: G.hundBonus,
+      bosse: G.bossesBeaten,
+      gespeichert: Date.now()
+    };
+  }
+
+  function standAnwenden(d) {
+    if (!d) return;
+    G.kills = d.kills || 0;
+    G.coins = d.coins || 0;
+    G.swordLevel = d.schwert || 0;
+    G.armorLevel = d.ruestung || 0;
+    G.pilze = d.pilze || 0;
+    G.beeren = d.beeren || 0;
+    G.spared = d.spared || 0;
+    G.pets = d.pets || 0;
+    G.hundBonus = !!d.hundBonus;
+    if (typeof d.bosse === 'number') G.bossesBeaten = d.bosse;
+    var mh = Math.max(10, Math.min(20, d.maxhp || 10));
+    G.maxhpGesichert = mh;          /* wird beim Erschaffen des Ritters gesetzt */
+    if (G.player) {
+      G.player.maxhp = mh;
+      G.player.hp = mh;
+    }
+  }
+
   function save() {
-    try {
-      localStorage.setItem('oakblade_stand', JSON.stringify({
-        kills: G.kills, coins: G.coins,
-        schwert: G.swordLevel, ruestung: G.armorLevel,
-        maxhp: G.player ? G.player.maxhp : 10,
-        pilze: G.pilze, beeren: G.beeren, spared: G.spared,
-        pets: G.pets, hundBonus: G.hundBonus
-      }));
-    } catch (e) { }
+    var d = standDaten();
+    try { localStorage.setItem('oakblade_stand', JSON.stringify(d)); } catch (e) { }
+    wolkeSchreiben(d);
+  }
+
+  /* schreibt hoechstens alle 1.2 Sekunden, sammelt alles dazwischen ein */
+  function wolkeSchreiben(d) {
+    if (!WOLKE || !wolkeBereit) return;
+    wolkeWartet = d;
+    if (wolkeOffen) return;
+    wolkeOffen = true;
+    setTimeout(function () {
+      var w = wolkeWartet; wolkeWartet = null;
+      var fertig = function () {
+        wolkeOffen = false;
+        if (wolkeWartet) wolkeSchreiben(wolkeWartet);
+      };
+      try { WOLKE.set(w).then(fertig, fertig); } catch (e) { fertig(); }
+    }, 1200);
   }
 
   function load() {
+    var lokal = null;
     try {
       var roh = localStorage.getItem('oakblade_stand');
-      if (!roh) return;
-      var d = JSON.parse(roh);
-      G.kills = d.kills || 0;
-      G.coins = d.coins || 0;
-      G.swordLevel = d.schwert || 0;
-      G.armorLevel = d.ruestung || 0;
-      G.pilze = d.pilze || 0;
-      G.beeren = d.beeren || 0;
-      G.spared = d.spared || 0;
-      G.pets = d.pets || 0;
-      G.hundBonus = !!d.hundBonus;
-      if (d.maxhp && G.player) {
-        G.player.maxhp = Math.max(10, Math.min(20, d.maxhp));
-        G.player.hp = G.player.maxhp;
-      }
+      if (roh) lokal = JSON.parse(roh);
+    } catch (e) { lokal = null; }
+    if (lokal) standAnwenden(lokal);
+
+    /* und jetzt noch in der Wolke nachschauen */
+    var lokalZeit = (lokal && lokal.gespeichert) || 0;
+    if (!global.claude || typeof global.claude.use !== 'function') return;
+    try {
+      global.claude.use('db').then(function (db) {
+        if (!db) return;
+        WOLKE = db.doc('spielstand/ritter');
+        return WOLKE.get().then(function (snap) {
+          if (snap && snap.exists) {
+            var d = snap.data();
+            /* der neuere Stand gewinnt */
+            if (d && (d.gespeichert || 1) >= lokalZeit) standAnwenden(d);
+          }
+          wolkeBereit = true;
+          save();                     /* gleich einmal hochladen */
+        });
+      }).then(null, function () { });
     } catch (e) { }
   }
 
@@ -4757,6 +4817,11 @@ html, body {
     }
     load();
     resize();
+    /* wenn man die Seite verlaesst oder wegwischt: schnell noch sichern */
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) save();
+    });
+    global.addEventListener('pagehide', function () { save(); });
     global.addEventListener('resize', resize);
     global.addEventListener('orientationchange', resize);
 

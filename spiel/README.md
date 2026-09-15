@@ -127,7 +127,11 @@ acht. Lässt du los, springt der Stick zurück in seine Ecke.
   - **Rüstung**: Lederwams (30) → Kettenhemd (70) → Goldene Rüstung (140).
     Jede Stufe gibt **ein Herz dazu** – und der Ritter glänzt anders.
   - **Eintopf** für 10 Münzen macht alle Herzen wieder voll.
-- Dein Stand (Münzen, Stufen, Herzen) wird auf dem Gerät gespeichert.
+- Dein Stand (Münzen, Stufen, Herzen, Bosse) wird doppelt gespeichert:
+  im `localStorage` des Geräts **und**, wenn die Seite als Vorschau läuft,
+  in der Wolke der Vorschau (`claude.use('db')`, Dokument `spielstand/ritter`).
+  Beim Start gewinnt der neuere der beiden Stände. Das ist nötig, weil iPhones
+  den `localStorage` in einem eingebetteten Fenster gerne wieder löschen.
 
 **Das Auto und die Stadt**
 - Auf dem Waldweg steht ein Auto. Mit **E** ansprechen → „mit der ganzen
