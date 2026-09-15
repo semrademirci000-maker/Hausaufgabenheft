@@ -229,6 +229,7 @@ acht. Lässt du los, springt der Stick zurück in seine Ecke.
 - **18 Leute** laufen herum und lassen sich ansprechen.
 
 **Die Auftragstafel am Brunnen**
+- Die Tafel am Brunnen trägt ein Schild **AUFTRÄGE** – antippen genügt.
 - Hier hängen **drei Zettel** zur Auswahl. Du nimmst einen mit:
   - *n Zombies erledigen* (Stadtwache)
   - *n Pilze sammeln* / *n Beeren sammeln* (Bäckerin Rosa)
@@ -239,15 +240,32 @@ acht. Lässt du los, springt der Stick zurück in seine Ecke.
   Sterne, desto **besser bezahlen** die nächsten Aufträge (+12 % pro Stern).
 - Du kannst einen Auftrag auch wieder zurückgeben.
 
-**Sechs Läden**
-- **Händler Bosko** (Waffenschmied) – Schwerter, kauft Pilze (4) und Beeren (3).
-- **Schmiedin Halda** – Rüstungen und Beulen ausklopfen.
-- **Alchemist Vex** – Heiltränke, größerer Gürtel, Wutkristalle.
-- **Waffenmeister Orin** – Kampfkunst, die **für immer** bleibt: schnellere
+**Sechs Läden – als richtiger Ladenbildschirm**
+- Über jedem Händler hängt ein **Schild**, auf dem steht, was er verkauft:
+  *SCHWERTER*, *RÜSTUNG*, *TRÄNKE*, *KAMPFKUNST*, *BÄCKEREI*, *SCHMUCK*.
+  Kommst du näher, blinkt darüber **„antippen"**.
+- **Tippst du den Händler an** (oder drückst E), geht der Laden als
+  **ganzer Bildschirm** auf: oben wer verkauft und wie viele Münzen du hast,
+  darunter alle Waren untereinander mit **Bild, Name, einem Satz dazu und
+  dem Preis**.
+- Eine Ware antippen = anschauen, **nochmal tippen = kaufen**. Auf der
+  gewählten Zeile steht ein goldener Knopf **KAUFEN** (oder *VERKAUFEN* /
+  *ZU TEUER*). Mit Tastatur: ↑ ↓ und Enter.
+- Was du schon hast oder gerade nicht brauchst, ist **grau mit einem Haken**.
+  Was du dir nicht leisten kannst, steht in Rot.
+- Sind es mehr Waren, als reinpassen, blättert man unten weiter.
+- Das **X** oben rechts (oder ein Tipp neben den Laden) schließt wieder.
+- Solange der Laden offen ist, **steht die Welt still**.
+
+Die sechs Läden:
+- **Händler Bosko** (Schwerter) – Klingen, kauft Pilze (4) und Beeren (3).
+- **Schmiedin Halda** (Rüstung) – Rüstungen und Beulen ausklopfen.
+- **Alchemist Vex** (Tränke) – Heiltränke, größerer Gürtel, Wutkristalle.
+- **Waffenmeister Orin** (Kampfkunst) – bleibt **für immer**: schnellere
   Rolle, größerer Wirbelschlag, schnellerer Ritterzorn.
-- **Bäckerin Rosa** – warmes Brot, Proviant, und sie zahlt für Pilze (7) und
-  Beeren (6) **deutlich mehr als Bosko**.
-- **Juwelier Perla** – **Schmuck, der dauerhaft wirkt**:
+- **Bäckerin Rosa** (Bäckerei) – warmes Brot, Proviant, und sie zahlt für
+  Pilze (7) und Beeren (6) **deutlich mehr als Bosko**.
+- **Juwelier Perla** (Schmuck) – wirkt dauerhaft:
   - **Glücksring** (120) – die Hälfte mehr Münzen von jedem Zombie
   - **Herzamulett** (150) – ein Herz mehr, für immer
   - **Schnellstiefel** (130) – ein Fünftel schneller unterwegs
@@ -274,6 +292,7 @@ acht. Lässt du los, springt der Stick zurück in seine Ecke.
 | `style.css` | Textbox im Undertale-Stil, Steuerkreuz, Skalierung |
 | `effekte.js` | Pixelfetzen, Schadenszahlen, Schockwellen, Trefferpause |
 | `gegner.js` | die sechs Zombiesorten und die Wellen |
+| `laden.js` | der Ladenbildschirm: Waren, Bilder, Kaufen |
 | `sprites.js` | Alle Pixel-Grafiken: Ritter, Schwert, Leute, Zombies, Kacheln, Auto |
 | `maps.js` | Die drei Welten: Wald, Haus, Stadt |
 | `game.js` | Spielablauf: Laufen, Kämpfen, Begleiter, Türen, Autofahrt |

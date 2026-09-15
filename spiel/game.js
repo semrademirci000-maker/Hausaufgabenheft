@@ -5,7 +5,7 @@
   'use strict';
 
   var TILE = 16, VW = 320, VH = 240;
-  var FASSUNG = 20;                    /* steht unten auf dem Titelbild */
+  var FASSUNG = 21;                    /* steht unten auf dem Titelbild */
   var cv = document.getElementById('game');
   var ctx = cv.getContext('2d');
   ctx.imageSmoothingEnabled = false;
@@ -44,7 +44,7 @@
     W: 'up', S: 'down', A: 'left', D: 'right',
     ' ': 'attack', Enter: 'talk', e: 'talk', E: 'talk',
     z: 'talk', Z: 'talk', x: 'attack', X: 'attack', j: 'attack', J: 'attack',
-    m: 'karte', M: 'karte',
+    m: 'karte', M: 'karte', Escape: 'karte',
     Shift: 'rolle', c: 'rolle', C: 'rolle', q: 'rolle', Q: 'rolle',
     h: 'heil', H: 'heil', f: 'zorn', F: 'zorn'
   };
@@ -77,6 +77,7 @@
 
       /* Gelaufen (und im Kampf ausgewichen) wird, sobald das Spiel laeuft. */
       canStart: function () {
+        if (global.Laden && Laden.offen()) return false;
         return G.state === 'play' || G.state === 'over';
       },
 
@@ -89,9 +90,17 @@
       /* Kurz getippt statt gezogen: Spiel starten oder weiterlesen. */
       onTap: function (x, y) {
         if (A) A.resume();
+        /* Bildschirmpunkt in Spielpunkte umrechnen */
+        var r = cv.getBoundingClientRect();
+        var gx = (x - r.left) / r.width * VW;
+        var gy = (y - r.top) / r.height * VH;
+
         if (G.state === 'title') { startGame(); return; }
+        if (global.Laden && Laden.offen()) { Laden.tippen(gx, gy); return; }
         if (G.karteOffen) { G.karteOffen = false; return; }
         if (D.isOpen()) { D.press(); return; }
+        /* Auf einen Haendler getippt? Dann geht sein Laden auf. */
+        if (G.state === 'play' && ladenAntippen(gx, gy)) return;
         if (G.state === 'drive') { tapped.talk = true; }
       }
     });
@@ -161,7 +170,8 @@
   function updateControls() {
     if (!touchEl) touchEl = document.getElementById('touch');
     knoepfeNachziehen();
-    var spielt = (G.state === 'play' || G.state === 'over');
+    var ladenAuf = !!(global.Laden && Laden.offen());
+    var spielt = (G.state === 'play' || G.state === 'over') && !ladenAuf;
     if (stick) stick.setVisible(spielt);
     var show = spielt && !D.isOpen();
     if (show === controlsOn) return;
@@ -189,6 +199,7 @@
     G.mapH = m.rows.length; G.mapW = m.rows[0].length;
     karteBild = S.karteBauen(m.rows);      /* kleines Bild der ganzen Karte */
     G.karteOffen = false;
+    if (global.Laden) Laden.zu();
     G.kombo = 0; G.komboT = 0; G.serie = 0;
     if (Fx) Fx.leeren();
     G.ents = []; G.party = []; G.trail = [];
@@ -1962,221 +1973,220 @@
   function hatSchmuck(k) { return !!(G.schmuck && G.schmuck[k]); }
   function preisMit(p2) { return hatSchmuck('siegel') ? Math.ceil(p2 * 0.8) : p2; }
 
+  /* Auf welchen Haendler (oder Marktstand) wurde getippt? */
+  function ladenAntippen(gx, gy) {
+    var wx = gx + G.camX, wy = gy + G.camY;
+    var bester = null, beste = 1e9;
+    for (var i = 0; i < G.ents.length; i++) {
+      var e = G.ents[i];
+      var welcher = null;
+      if (e.type === 'npc' && e.shop) welcher = e.shop;
+      else if (e.type === 'prop' && e.kind === 'stall') welcher = 'stand';
+      else if (e.type === 'prop' && e.kind === 'tafel') welcher = 'tafel';
+      if (!welcher) continue;
+      var dx = e.x - wx, dy = (e.y - 10) - wy;
+      var dd = dx * dx + dy * dy;
+      if (dd < 22 * 22 && dd < beste) { beste = dd; bester = { e: e, was: welcher }; }
+    }
+    if (!bester) return false;
+    if (bester.was === 'tafel') { tafelOeffnen(); return true; }
+    if (bester.was === 'stand') {
+      /* Der Stand selbst: nimm den Haendler, der davor steht */
+      var nah = null, nd = 1e9;
+      for (var j = 0; j < G.ents.length; j++) {
+        var n = G.ents[j];
+        if (n.type !== 'npc' || !n.shop) continue;
+        var q = (n.x - bester.e.x) * (n.x - bester.e.x) + (n.y - bester.e.y) * (n.y - bester.e.y);
+        if (q < nd) { nd = q; nah = n; }
+      }
+      if (nah && nd < 40 * 40) { ladenOeffnen(true, nah.shop); return true; }
+      return false;
+    }
+    ladenOeffnen(true, bester.was);
+    return true;
+  }
+
+  /* Der Laden geht als ganzer Bildschirm auf (laden.js). Hier stehen
+     nur die Waren und was beim Kauf passiert. */
   function ladenOeffnen(ersterBesuch, art) {
     art = art || 'waffen';
-    var h = ladenWer(art);
-    var opts = [];
-    var text;
+    if (global.Laden) {
+      Laden.oeffnen(art);
+      if (ersterBesuch && !G.ladenGesehen) {
+        G.ladenGesehen = true;
+        Laden.melden('Ware antippen, nochmal tippen = kaufen', '#ffd24a');
+      }
+      return;
+    }
+  }
+
+  /* Alles, was ein Laden im Regal hat */
+  function ladenWaren(art) {
+    var w = [];
+    var p = G.player;
 
     if (art === 'waffen') {
       var sw = SCHWERT_STUFEN[G.swordLevel];
       if (sw) {
-        opts.push({ t: 'Schwert: ' + sw.name + ' - ' + preisMit(sw.preis) + ' Muenzen',
-                    go: function () { kaufen('schwert', { name: sw.name, preis: preisMit(sw.preis) }, art); } });
+        w.push({ id: 'schwert', name: sw.name, preis: preisMit(sw.preis),
+                 info: 'Ein Schaden mehr bei jedem Schlag', icon: 'schwert',
+                 stufe: G.swordLevel + 1 });
       } else {
-        opts.push({ t: '(Du hast schon die beste Klinge)', r: 'Besser wird es nicht. Pass gut drauf auf!' });
+        w.push({ id: 'nix', name: 'Goldene Klinge', info: 'Besser wird es nicht.',
+                 icon: 'schwert', stufe: 3, fertig: true });
       }
       if (G.pilze > 0) {
-        opts.push({ t: G.pilze + ' Pilze verkaufen (je 4)',
-                    go: function () {
-                      var lohn = G.pilze * 4; G.coins += lohn; G.pilze = 0;
-                      if (A) A.coin(); hint('+' + lohn + ' Muenzen');
-                      D.push(h.name, h.color, 'Schoene Pilze! Die kommen heute Abend in die Pfanne.');
-                      save(); ladenOeffnen(false, art);
-                    } });
+        w.push({ id: 'pilzeVerkauf', name: G.pilze + ' Pilze verkaufen',
+                 info: 'Je 4 Muenzen - bei Rosa gibt es mehr', icon: 'pilz',
+                 preis: -(G.pilze * 4) });
       }
       if (G.beeren > 0) {
-        opts.push({ t: G.beeren + ' Beeren verkaufen (je 3)',
-                    go: function () {
-                      var lohn = G.beeren * 3; G.coins += lohn; G.beeren = 0;
-                      if (A) A.coin(); hint('+' + lohn + ' Muenzen');
-                      D.push(h.name, h.color, 'Beeren! Meine Frau macht Marmelade draus.');
-                      save(); ladenOeffnen(false, art);
-                    } });
+        w.push({ id: 'beerenVerkauf', name: G.beeren + ' Beeren verkaufen',
+                 info: 'Je 3 Muenzen - bei Rosa gibt es mehr', icon: 'beere',
+                 preis: -(G.beeren * 3) });
       }
-      text = ersterBesuch
-        ? Chat.shopLines[(Math.random() * Chat.shopLines.length) | 0]
-        : 'Sonst noch was?';
     }
     else if (art === 'schmied') {
       var ru = RUESTUNG_STUFEN[G.armorLevel];
       if (ru) {
-        opts.push({ t: 'Ruestung: ' + ru.name + ' - ' + preisMit(ru.preis) + ' Muenzen',
-                    go: function () { kaufen('ruestung', { name: ru.name, preis: preisMit(ru.preis) }, art); } });
+        w.push({ id: 'ruestung', name: ru.name, preis: preisMit(ru.preis),
+                 info: 'Ein Herz mehr - und alle wieder voll', icon: 'ruestung',
+                 stufe: G.armorLevel + 1 });
       } else {
-        opts.push({ t: '(Beste Ruestung schon an)', r: 'Da geht nichts mehr drueber. Bleib trotzdem beweglich!' });
+        w.push({ id: 'nix', name: 'Goldene Ruestung', info: 'Da geht nichts drueber.',
+                 icon: 'ruestung', stufe: 3, fertig: true });
       }
-      if (G.player.hp < G.player.maxhp) {
-        opts.push({ t: 'Beulen ausklopfen, alle Herzen voll - ' + preisMit(12) + ' Muenzen',
-                    go: function () { kaufen('eintopf', { name: 'Reparatur', preis: preisMit(12) }, art); } });
-      }
-      text = ersterBesuch
-        ? 'Rein in die Esse, drauf mit dem Hammer. Was brauchst du, Ritter?'
-        : 'Noch was?';
+      w.push({ id: 'reparatur', name: 'Beulen ausklopfen', preis: preisMit(12),
+               info: p.hp >= p.maxhp ? 'Du bist heil - wird nicht gebraucht' : 'Alle Herzen wieder voll',
+               icon: 'herz', fertig: p.hp >= p.maxhp });
     }
     else if (art === 'alchi') {
-      var preis = preisMit(18 + G.traenke * 6);
-      if (G.traenke < G.traenkeMax) {
-        opts.push({ t: 'Heiltrank kaufen (' + G.traenke + '/' + G.traenkeMax + ') - ' + preis + ' Muenzen',
-                    go: function () { kaufen('trank', { name: 'Heiltrank', preis: preis }, art); } });
-      } else {
-        opts.push({ t: '(Guertel voll)', r: 'Mehr passt nicht an den Guertel. Trink erst mal einen leer!' });
-      }
-      if (G.traenkeMax < 5) {
-        opts.push({ t: 'Groesserer Guertel: Platz fuer einen Trank mehr - ' + preisMit(90) + ' Muenzen',
-                    go: function () { kaufen('guertel', { name: 'Guertel', preis: preisMit(90) }, art); } });
-      }
-      opts.push({ t: 'Wutkristall - ' + preisMit(55) + ' Muenzen',
-                  go: function () { kaufen('kristall', { name: 'Wutkristall', preis: preisMit(55) }, art); } });
-      text = ersterBesuch
-        ? 'Pssst. Rot macht heil, pink macht wuetend. Frag nicht, woraus.'
-        : 'Noch ein Schlueckchen?';
+      w.push({ id: 'trank', name: 'Heiltrank', preis: preisMit(18 + G.traenke * 6),
+               info: G.traenke >= G.traenkeMax
+                 ? 'Guertel voll (' + G.traenke + '/' + G.traenkeMax + ')'
+                 : 'Zwei Herzen unterwegs (' + G.traenke + '/' + G.traenkeMax + ')',
+               icon: 'trank', fertig: G.traenke >= G.traenkeMax });
+      w.push({ id: 'guertel', name: 'Groesserer Guertel', preis: preisMit(90),
+               info: G.traenkeMax >= 5 ? 'Groesser geht nicht' : 'Platz fuer einen Trank mehr',
+               icon: 'guertel', fertig: G.traenkeMax >= 5 });
+      w.push({ id: 'kristall', name: 'Wutkristall', preis: preisMit(55),
+               info: '11 Sekunden doppelter Schaden', icon: 'kristall' });
     }
     else if (art === 'baecker') {
-      opts.push({ t: 'Warmes Brot, alle Herzen voll - ' + preisMit(9) + ' Muenzen',
-                  go: function () { kaufen('eintopf', { name: 'Brot', preis: preisMit(9) }, art); } });
-      if (G.pilze > 0) {
-        opts.push({ t: G.pilze + ' Pilze verkaufen (je 7 - mehr als bei Bosko!)',
-                    go: function () {
-                      var lohn = G.pilze * 7; G.coins += lohn; G.pilze = 0;
-                      if (A) A.coin(); hint('+' + lohn + ' Muenzen');
-                      D.push(h.name, h.color, 'Pilzbrot! Das kauft mir die halbe Strasse ab.');
-                      save(); ladenOeffnen(false, art);
-                    } });
-      }
-      if (G.beeren > 0) {
-        opts.push({ t: G.beeren + ' Beeren verkaufen (je 6 - mehr als bei Bosko!)',
-                    go: function () {
-                      var lohn = G.beeren * 6; G.coins += lohn; G.beeren = 0;
-                      if (A) A.coin(); hint('+' + lohn + ' Muenzen');
-                      D.push(h.name, h.color, 'Beerenkuchen. Komm morgen wieder, dann kriegst du ein Stueck.');
-                      save(); ladenOeffnen(false, art);
-                    } });
-      }
-      if (G.traenke < G.traenkeMax) {
-        opts.push({ t: 'Proviant fuer unterwegs (1 Trank) - ' + preisMit(22) + ' Muenzen',
-                    go: function () { kaufen('trank', { name: 'Proviant', preis: preisMit(22) }, art); } });
-      }
-      text = ersterBesuch
-        ? 'Frisch aus dem Ofen! Und wenn du Pilze hast - ich zahl besser als Bosko.'
-        : 'Noch ein Stueck?';
+      w.push({ id: 'brot', name: 'Warmes Brot', preis: preisMit(9),
+               info: p.hp >= p.maxhp ? 'Du bist schon satt und heil' : 'Alle Herzen wieder voll',
+               icon: 'brot', fertig: p.hp >= p.maxhp });
+      w.push({ id: 'proviant', name: 'Proviant (1 Trank)', preis: preisMit(22),
+               info: G.traenke >= G.traenkeMax ? 'Guertel ist voll' : 'Einer fuer den Guertel',
+               icon: 'trank', fertig: G.traenke >= G.traenkeMax });
+      w.push({ id: 'pilzeRosa', name: G.pilze + ' Pilze verkaufen',
+               info: G.pilze ? 'Je 7 Muenzen - mehr als bei Bosko!' : 'Du hast keine Pilze dabei',
+               icon: 'pilz', preis: -(G.pilze * 7), fertig: !G.pilze });
+      w.push({ id: 'beerenRosa', name: G.beeren + ' Beeren verkaufen',
+               info: G.beeren ? 'Je 6 Muenzen - mehr als bei Bosko!' : 'Du hast keine Beeren dabei',
+               icon: 'beere', preis: -(G.beeren * 6), fertig: !G.beeren });
     }
     else if (art === 'juwel') {
       var keys = ['ring', 'amulett', 'stiefel', 'siegel'];
-      for (var si = 0; si < keys.length; si++) {
-        (function (k) {
-          var sm = SCHMUCK[k];
-          if (hatSchmuck(k)) {
-            opts.push({ t: '\u2713 ' + sm.name + ' (haengt schon an dir)',
-                        r: sm.text });
-          } else {
-            opts.push({ t: sm.name + ' - ' + preisMit(sm.preis) + ' Muenzen',
-                        go: function () { kaufen('schmuck:' + k, { name: sm.name, preis: preisMit(sm.preis) }, art); } });
-          }
-        })(keys[si]);
+      for (var i = 0; i < keys.length; i++) {
+        var sm = SCHMUCK[keys[i]];
+        w.push({ id: 'schmuck:' + keys[i], name: sm.name, preis: preisMit(sm.preis),
+                 info: sm.text, icon: keys[i], fertig: hatSchmuck(keys[i]) });
       }
-      text = ersterBesuch
-        ? 'Schmuck? Kann man nicht essen. Aber er bringt Glueck - und Glueck bringt Muenzen.'
-        : 'Noch ein Stueck fuer den Guertel?';
     }
     else {
-      /* Waffenmeister: dauerhafte Kampfkunst */
       if (!G.koennen) G.koennen = {};
-      if (!G.koennen.rolle) {
-        opts.push({ t: 'Schnellere Rolle - ' + preisMit(70) + ' Muenzen',
-                    go: function () { kaufen('rolle', { name: 'Schnellere Rolle', preis: preisMit(70) }, art); } });
-      }
-      if (!G.koennen.wirbel) {
-        opts.push({ t: 'Grosser Wirbelschlag - ' + preisMit(110) + ' Muenzen',
-                    go: function () { kaufen('wirbel', { name: 'Grosser Wirbel', preis: preisMit(110) }, art); } });
-      }
-      if (!G.koennen.zorn) {
-        opts.push({ t: 'Zorn laedt schneller - ' + preisMit(130) + ' Muenzen',
-                    go: function () { kaufen('zornkunst', { name: 'Schneller Zorn', preis: preisMit(130) }, art); } });
-      }
-      if (!opts.length) {
-        opts.push({ t: '(Du kannst schon alles)', r: 'Mehr kann ich dir nicht beibringen. Jetzt geh und raeum auf.' });
-      }
-      text = ersterBesuch
-        ? 'Du haust drauf wie ein Holzfaeller. Ich zeig dir was Besseres.'
-        : 'Noch eine Lektion?';
+      w.push({ id: 'rolle', name: 'Schnellere Rolle', preis: preisMit(70),
+               info: 'Die Rolle geht fast doppelt so oft', icon: 'rolle',
+               fertig: !!G.koennen.rolle });
+      w.push({ id: 'wirbel', name: 'Grosser Wirbelschlag', preis: preisMit(110),
+               info: 'Der Wirbel trifft viel weiter', icon: 'wirbel',
+               fertig: !!G.koennen.wirbel });
+      w.push({ id: 'zornkunst', name: 'Schneller Zorn', preis: preisMit(130),
+               info: 'Der Ritterzorn laedt fast doppelt so schnell', icon: 'zorn',
+               fertig: !!G.koennen.zorn });
     }
-
-    opts.push({ t: 'Nur schauen, danke.', r: 'Kein Problem. Komm wieder, wenn die Tasche klimpert!' });
-    text += '  (Du hast ' + G.coins + ' Muenzen)';
-
-    D.push(h.name + ' (' + h.rolle + ')', h.color, text, opts);
-    D.begin();
+    return w;
   }
 
-  function kaufen(was, stufe, art) {
-    var h = ladenWer(art);
-    if (G.coins < stufe.preis) {
-      D.push(h.name, h.color,
-             'Dafuer fehlen dir ' + (stufe.preis - G.coins) +
-             ' Muenzen. Im Wald liegen genug herum - in Zombies!');
-      ladenOeffnen(false, art);
-      return;
+  /* Was beim Kauf passiert. Gibt den Satz zurueck, der im Laden steht. */
+  function ladenKaufen(art, id) {
+    var p = G.player;
+    var w = null, liste = ladenWaren(art);
+    for (var i = 0; i < liste.length; i++) if (liste[i].id === id) w = liste[i];
+    if (!w) return { text: 'Das gibt es nicht mehr.', farbe: '#8a8798' };
+
+    /* Verkaufen bringt Geld */
+    if (w.preis < 0) {
+      var lohn = -w.preis;
+      G.coins += lohn;
+      if (id === 'pilzeVerkauf' || id === 'pilzeRosa') G.pilze = 0;
+      else G.beeren = 0;
+      if (A) A.coin();
+      save();
+      return { text: '+' + lohn + ' Muenzen. Danke!', farbe: '#8fd36a' };
     }
-    G.coins -= stufe.preis;
+
+    G.coins -= w.preis;
     if (!G.koennen) G.koennen = {};
 
-    if (was === 'schwert') {
+    if (id === 'schwert') {
       G.swordLevel++;
-      D.push(h.name, h.color, 'Die ' + stufe.name + ' gehoert dir. Damit haust du haerter zu!');
-      hint('Schwert aufgewertet!');
       if (A) A.select();
-    } else if (was === 'ruestung') {
+      save();
+      return { text: w.name + ' - jetzt haust du haerter zu!', farbe: '#ffd24a' };
+    }
+    if (id === 'ruestung') {
       G.armorLevel++;
-      G.player.maxhp = Math.min(20, G.player.maxhp + 2);
-      G.player.hp = G.player.maxhp;
-      D.push(h.name, h.color, stufe.name + ' sitzt wie angegossen. Ein Herz mehr - und alle voll!');
-      hint('Ruestung aufgewertet!');
+      p.maxhp = Math.min(20, p.maxhp + 2);
+      p.hp = p.maxhp;
       if (A) A.heal();
-    } else if (was === 'trank') {
+      save();
+      return { text: w.name + ' sitzt. Ein Herz mehr!', farbe: '#ff9ab0' };
+    }
+    if (id === 'reparatur' || id === 'brot') {
+      p.hp = p.maxhp;
+      if (A) A.heal();
+      save();
+      return { text: 'Herzen wieder voll.', farbe: '#ff9ab0' };
+    }
+    if (id === 'trank' || id === 'proviant') {
       G.traenke = Math.min(G.traenkeMax, G.traenke + 1);
-      D.push(h.name, h.color, 'Einer noch fuer den Guertel. Nicht alles auf einmal!');
-      hint('Heiltrank gekauft (' + G.traenke + ')');
       if (A) A.heal();
-    } else if (was === 'guertel') {
+      save();
+      return { text: 'Trank am Guertel (' + G.traenke + '/' + G.traenkeMax + ')', farbe: '#ff9ab0' };
+    }
+    if (id === 'guertel') {
       G.traenkeMax = Math.min(5, G.traenkeMax + 1);
       G.traenke = Math.min(G.traenkeMax, G.traenke + 1);
-      D.push(h.name, h.color, 'Mehr Schlaufen, mehr Traenke. Logisch, oder?');
-      hint('Platz fuer ' + G.traenkeMax + ' Traenke');
-    } else if (was === 'kristall') {
+      save();
+      return { text: 'Platz fuer ' + G.traenkeMax + ' Traenke.', farbe: '#ff9ab0' };
+    }
+    if (id === 'kristall') {
       G.wut = 11;
-      D.push(h.name, h.color, 'Trink. Und dann RENN auf sie zu.');
-      hint('WUT! Doppelter Schaden!');
-    } else if (was === 'rolle') {
-      G.koennen.rolle = true;
-      D.push(h.name, h.color, 'Nicht wegspringen - abrollen. So kommst du schneller wieder hoch.');
-      hint('Die Rolle geht jetzt oefter!');
-    } else if (was === 'wirbel') {
-      G.koennen.wirbel = true;
-      D.push(h.name, h.color, 'Das Schwert schwingt sich fast von selbst. Nutz den Schwung.');
-      hint('Der Wirbelschlag trifft weiter!');
-    } else if (was.indexOf('schmuck:') === 0) {
-      var sk = was.split(':')[1];
+      save();
+      return { text: 'WUT! Doppelter Schaden - lauf!', farbe: '#ff7ad0' };
+    }
+    if (id.indexOf('schmuck:') === 0) {
+      var sk = id.split(':')[1];
       if (!G.schmuck) G.schmuck = {};
       G.schmuck[sk] = true;
       if (sk === 'amulett') {
-        G.player.maxhp = Math.min(20, G.player.maxhp + 2);
-        G.player.hp = G.player.maxhp;
+        p.maxhp = Math.min(20, p.maxhp + 2);
+        p.hp = p.maxhp;
       }
-      D.push(h.name, h.color, SCHMUCK[sk].name + ': ' + SCHMUCK[sk].text);
-      hint(SCHMUCK[sk].name + ' angelegt!');
       if (A) A.select();
-    } else if (was === 'zornkunst') {
-      G.koennen.zorn = true;
-      D.push(h.name, h.color, 'Zorn ist ein Werkzeug. Halt ihn scharf.');
-      hint('Der Ritterzorn laedt schneller!');
-    } else {
-      G.player.hp = G.player.maxhp;
-      D.push(h.name, h.color, 'Fertig. Herzen voll, Beulen weg.');
-      if (A) A.heal();
+      save();
+      return { text: SCHMUCK[sk].name + ' angelegt!', farbe: '#9ad8e0' };
+    }
+    if (id === 'rolle' || id === 'wirbel' || id === 'zornkunst') {
+      G.koennen[id === 'zornkunst' ? 'zorn' : id] = true;
+      if (A) A.select();
+      save();
+      return { text: w.name + ' gelernt!', farbe: '#ffb06a' };
     }
     save();
-    ladenOeffnen(false, art);
+    return { text: 'Gekauft!', farbe: '#8fd36a' };
   }
 
   /* ================= Reden ================= */
@@ -2545,6 +2555,12 @@
     return c;
   }
 
+  /* Was ueber den Haendlern steht */
+  var LADEN_SCHILD = {
+    waffen: 'SCHWERTER', schmied: 'RUESTUNG', alchi: 'TRAENKE',
+    meister: 'KAMPFKUNST', baecker: 'BAECKEREI', juwel: 'SCHMUCK'
+  };
+
   function frameOf(e) { return (Math.floor(e.anim) % 2) === 0 ? 0 : 1; }
 
   function actorFor(key, isZombie) {
@@ -2570,6 +2586,26 @@
     if (sx < -50 || sx > VW + 50 || sy < -60 || sy > VH + 60) return;
 
     if (e.type === 'prop') {
+      if (e.kind === 'tafel') {
+        ctx.drawImage(e.spr, sx - (e.spr.width >> 1), sy - e.spr.height);
+        ctx.font = '7px "Courier New", monospace';
+        ctx.textAlign = 'center';
+        var tw = ctx.measureText('AUFTRAEGE').width + 8;
+        ctx.fillStyle = '#1a1420';
+        ctx.fillRect(sx - tw / 2, sy - 32, tw, 10);
+        ctx.fillStyle = '#ffd24a';
+        ctx.fillRect(sx - tw / 2, sy - 32, tw, 1);
+        ctx.fillRect(sx - tw / 2, sy - 23, tw, 1);
+        ctx.fillText('AUFTRAEGE', sx, sy - 24);
+        if (dist(e, G.player) < 70) {
+          ctx.globalAlpha = 0.6 + 0.4 * Math.abs(Math.sin(G.time * 3));
+          ctx.fillStyle = '#cfc9e6';
+          ctx.fillText('antippen', sx, sy - 35);
+          ctx.globalAlpha = 1;
+        }
+        ctx.textAlign = 'left';
+        return;
+      }
       if (e.kind === 'fire') {
         var ff = S.fire[Math.floor(G.time * 7) % 2];
         /* warmer Schein auf dem Boden */
@@ -2756,10 +2792,24 @@
       var s2 = actorFor(e.key, false);
       ctx.drawImage(s2[e.dir][frameOf(e)], sx - 8, sy - 16);
       if (e.shop) {
-        ctx.fillStyle = '#ffd24a';
-        ctx.font = '8px "Courier New", monospace';
+        var schild = LADEN_SCHILD[e.shop] || 'LADEN';
+        ctx.font = '7px "Courier New", monospace';
         ctx.textAlign = 'center';
-        ctx.fillText('LADEN', sx, sy - 26);
+        var bw2 = ctx.measureText(schild).width + 8;
+        /* kleines Ladenschild ueber dem Kopf */
+        ctx.fillStyle = '#1a1420';
+        ctx.fillRect(sx - bw2 / 2, sy - 33, bw2, 10);
+        ctx.fillStyle = '#ffd24a';
+        ctx.fillRect(sx - bw2 / 2, sy - 33, bw2, 1);
+        ctx.fillRect(sx - bw2 / 2, sy - 24, bw2, 1);
+        ctx.fillText(schild, sx, sy - 25);
+        /* Hinweis, dass man tippen kann */
+        if (dist(e, G.player) < 70) {
+          ctx.globalAlpha = 0.6 + 0.4 * Math.abs(Math.sin(G.time * 3));
+          ctx.fillStyle = '#cfc9e6';
+          ctx.fillText('antippen', sx, sy - 36);
+          ctx.globalAlpha = 1;
+        }
         ctx.textAlign = 'left';
       }
       if (e.type === 'friend' && e.idle) {
@@ -3503,7 +3553,7 @@
     ctx.fillText('und viel zu vielen Zombies', VW / 2, 88);
     ctx.fillStyle = '#ffd24a';
     ctx.font = 'bold 12px "Courier New", monospace';
-    ctx.fillText('FASSUNG ' + FASSUNG + ' - EICHENSTADT', VW / 2, 106);
+    ctx.fillText('FASSUNG ' + FASSUNG + ' - RICHTIGE LAEDEN', VW / 2, 106);
 
     ctx.fillStyle = (Math.floor(G.time * 1.6) % 2) ? '#fff' : '#7a748f';
     ctx.font = '10px "Courier New", monospace';
@@ -3687,6 +3737,16 @@
       G.fade = Math.max(0, G.fade - dt * 3.2);
     }
 
+    /* Offener Laden: die Welt wartet */
+    if (global.Laden && Laden.offen()) {
+      Laden.update(dt);
+      if (took('up')) Laden.taste('up');
+      if (took('down')) Laden.taste('down');
+      if (took('talk') || took('attack')) Laden.taste('ok');
+      if (took('karte') || took('rolle') || took('auto')) Laden.zu();
+      return;
+    }
+
     /* --- Heiltrank --- */
     G.heilCd = Math.max(0, G.heilCd - dt);
     if (took('heil') && !D.isOpen()) trankTrinken();
@@ -3861,6 +3921,7 @@
     Fx.drawBlitz(ctx, VW, VH);
     drawHUD();
     if (G.karteOffen) karteBildschirm();
+    if (global.Laden && Laden.offen()) Laden.draw();
 
     if (G.fade > 0) {
       ctx.fillStyle = 'rgba(0,0,0,' + Math.min(1, G.fade) + ')';
@@ -3895,6 +3956,16 @@
     bindTouch();
     bindStick();
 
+    if (global.Laden) {
+      Laden.init({
+        ctx: ctx, S: S, G: G, A: A, VW: VW, VH: VH,
+        api: {
+          waren: ladenWaren,
+          kaufen: ladenKaufen,
+          person: ladenWer
+        }
+      });
+    }
     load();
     resize();
     /* wenn man die Seite verlaesst oder wegwischt: schnell noch sichern */
