@@ -539,7 +539,7 @@ let subTimer = 0;
 function say(text, dur = 4, who = '') {
   hud.sub.innerHTML = who ? `<b style="color:${who === 'POPPY' ? '#ff9ec8' : '#ffcc33'}">${who}:</b> ${text}` : text;
   hud.sub.style.opacity = 1; subTimer = dur;
-  if (who === 'POPPY') audio.radio();
+  if (who === 'POPPY') { audio.radio(); audio.speak(text); }
 }
 function objective(t) { hud.obj.textContent = t; }
 function updateBatteryHud() { [...hud.bats.children].forEach((el, i) => el.classList.toggle('on', i < G.placed)); }
@@ -571,6 +571,8 @@ function resetGame() {
 
 function startGame() {
   audio.init();
+  audio.primeSpeech();
+  audio.stopSpeech();
   audio.setVolume(settings.vol);
   audio.setAmbience(true);
   resetGame();
@@ -665,6 +667,7 @@ function openNote(n) {
 function closeNote() { $('note').classList.add('hidden'); G.mode = 'playing'; }
 
 function die() {
+  audio.stopSpeech();
   G.mode = 'jumpscare'; G.jsT = 0;
   if (P.hidden) { P.hidden = null; lockerView.classList.add('hidden'); }
   audio.jumpscare(); audio.alarm = false;
@@ -674,6 +677,7 @@ function die() {
 }
 
 function win() {
+  audio.stopSpeech();
   G.mode = 'win'; audio.alarm = false; audio.setAmbience(false);
   const m = Math.floor(G.time / 60), s = Math.floor(G.time % 60);
   $('winTime').textContent = `Zeit: ${m}:${String(s).padStart(2, '0')}`;
@@ -1224,13 +1228,13 @@ function showScreen(id) { screens.forEach(s => $(s).classList.toggle('hidden', s
 function pause() {
   if (G.mode !== 'playing') return;
   G.mode = 'paused'; unlock(); showScreen('pause');
-  audio.ctx?.suspend();
+  audio.ctx?.suspend(); audio.pauseSpeech(true);
 }
 function resume() {
-  showScreen(null); G.mode = 'playing'; lockPointer(); audio.ctx?.resume();
+  showScreen(null); G.mode = 'playing'; lockPointer(); audio.unlock(); audio.pauseSpeech(false);
 }
 function toMenu() {
-  unlock(); audio.alarm = false; audio.setAmbience(false); audio.ctx?.resume();
+  unlock(); audio.alarm = false; audio.setAmbience(false); audio.ctx?.resume(); audio.stopSpeech();
   resetGame(); G.mode = 'menu';
   $('hud').classList.add('hidden'); $('touch').classList.add('hidden');
   showScreen('menu');
@@ -1363,8 +1367,13 @@ G.mode = 'menu';
 showScreen('menu');
 frame();
 // Menü-Musik erst nach der ersten Berührung (Browser-Regel)
-const firstTouch = () => { audio.init(); audio.setVolume(settings.vol); removeEventListener('pointerdown', firstTouch); };
-addEventListener('pointerdown', firstTouch);
+// iOS gibt Ton nur bei touchend/click frei (nicht bei pointerdown) – deshalb bei jeder Geste entsperren
+const unlockAudio = () => {
+  if (G.mode === 'paused') return;
+  if (!audio.ctx) { audio.init(); audio.setVolume(settings.vol); } else audio.unlock();
+  audio.primeSpeech();
+};
+for (const ev of ['touchend', 'click', 'keydown']) addEventListener(ev, unlockAudio, { capture: true });
 
 // Für Tests / Debug
-window.__pp6 = { G, P, M, W: () => W, hands, camera, fire, interact, aim, simulate: (sec) => { for (let t = 0; t < sec; t += 1 / 60) { scene.updateMatrixWorld(); tick(1 / 60); } } };
+window.__pp6 = { G, P, M, audio, W: () => W, hands, camera, fire, interact, aim, simulate: (sec) => { for (let t = 0; t < sec; t += 1 / 60) { scene.updateMatrixWorld(); tick(1 / 60); } } };

@@ -12,10 +12,13 @@ export class AudioEngine {
   }
 
   init() {
-    if (this.ctx) { this.ctx.resume(); return; }
+    // iPad/iPhone: Ton auch bei Lautlos-Modus (Safari 17+)
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* älteres iOS */ }
+    if (this.ctx) { this.unlock(); return; }
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
     const ctx = this.ctx = new AC();
+    this.unlock();
 
     const comp = ctx.createDynamicsCompressor();
     comp.threshold.value = -14; comp.ratio.value = 6;
@@ -51,6 +54,63 @@ export class AudioEngine {
     this._startAmbience();
     this._startChaseBed();
   }
+
+  // Muss bei jedem echten Tippen/Klicken aufgerufen werden: iOS gibt Ton nur nach einer Geste frei.
+  unlock() {
+    const c = this.ctx;
+    if (!c) return;
+    if (c.state !== 'running') c.resume().catch(() => {});
+    if (this._unlocked) return;
+    this._unlocked = true;
+    // winziger stiller Puffer – "weckt" die Audio-Ausgabe auf iOS
+    const b = c.createBuffer(1, 1, 22050), s = c.createBufferSource();
+    s.buffer = b; s.connect(c.destination); s.start(0);
+    // Eine stille, laufende <audio>-Spur schaltet iOS auf "Wiedergabe" – dann stört der Lautlos-Schalter nicht mehr
+    try {
+      const rate = 8000, n = rate / 2, buf = new ArrayBuffer(44 + n), d = new DataView(buf);
+      const str = (o, t) => [...t].forEach((ch, i) => d.setUint8(o + i, ch.charCodeAt(0)));
+      str(0, 'RIFF'); d.setUint32(4, 36 + n, true); str(8, 'WAVEfmt '); d.setUint32(16, 16, true);
+      d.setUint16(20, 1, true); d.setUint16(22, 1, true); d.setUint32(24, rate, true); d.setUint32(28, rate, true);
+      d.setUint16(32, 1, true); d.setUint16(34, 8, true); str(36, 'data'); d.setUint32(40, n, true);
+      for (let i = 0; i < n; i++) d.setUint8(44 + i, 128);
+      const el = this._silent = new Audio(URL.createObjectURL(new Blob([buf], { type: 'audio/wav' })));
+      el.loop = true; el.setAttribute('playsinline', ''); el.volume = 0.01;
+      el.play().catch(() => {});
+    } catch (e) { /* egal */ }
+  }
+
+  // ---------- Poppys Stimme (Sprachausgabe des Geräts) ----------
+  _pickVoice() {
+    const S = window.speechSynthesis;
+    if (!S) return null;
+    if (this._voice) return this._voice;
+    const de = S.getVoices().filter(v => (v.lang || '').toLowerCase().startsWith('de'));
+    const liked = ['Anna', 'Petra', 'Helena', 'Marlene', 'Vicki', 'Katja', 'Hedda', 'Google Deutsch'];
+    this._voice = de.find(v => liked.some(n => v.name.includes(n))) || de[0] || null;
+    return this._voice;
+  }
+  primeSpeech() {
+    // iOS spricht erst, wenn das erste speak() direkt in einem Tippen passiert
+    const S = window.speechSynthesis;
+    if (!S || this._speechPrimed) return;
+    this._speechPrimed = true;
+    const u = new SpeechSynthesisUtterance(' ');
+    u.volume = 0; u.lang = 'de-DE';
+    S.speak(u);
+  }
+  speak(html, { pitch = 1.35, rate = 0.97 } = {}) {
+    const S = window.speechSynthesis;
+    if (!S || this.volume <= 0) return;
+    const text = html.replace(/<[^>]+>/g, '').replace(/…/g, '...').trim();
+    if (!text) return;
+    S.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'de-DE'; u.pitch = pitch; u.rate = rate; u.volume = Math.min(1, this.volume * 1.15);
+    const v = this._pickVoice(); if (v) u.voice = v;
+    S.speak(u);
+  }
+  stopSpeech() { try { window.speechSynthesis?.cancel(); } catch (e) { /* egal */ } }
+  pauseSpeech(on) { try { on ? window.speechSynthesis?.pause() : window.speechSynthesis?.resume(); } catch (e) { /* egal */ } }
 
   setVolume(v) { this.volume = v; if (this.master) this.master.gain.setTargetAtTime(v, this.ctx.currentTime, 0.05); }
   get t() { return this.ctx.currentTime; }
