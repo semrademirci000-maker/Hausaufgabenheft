@@ -6,7 +6,8 @@ Die App gibt es zweimal:
   „Zum Home-Bildschirm“ wie eine App aufs iPad legen.
 * **Native SwiftUI-App** in [`ios/`](ios/README.md) – zum Öffnen in Xcode auf einem Mac.
 
-Außerdem: [`poppy6/`](poppy6/README.md) – ein 3D-Fan-Horrorspiel *Poppy Playtime Kapitel 6* im Browser.
+Außerdem: [`poppy6/`](poppy6/README.md) – ein 3D-Fan-Horrorspiel *Poppy Playtime Kapitel 6* im Browser,
+und als SwiftUI-App in [`ios/PoppyPlaytime6/`](ios/PoppyPlaytime6/README.md).
 
 Eine App fürs iPad: Erst wählst du **Stundenplan** oder **Hausaufgabenheft**.
 Das Heft öffnet sich wie ein echtes Buch mit weißen Seiten und schwarzen Linien –
