@@ -1619,7 +1619,7 @@ $('voiceTest').onclick = () => {
   const n = S ? S.getVoices().filter(v => (v.lang || '').toLowerCase().startsWith('de')).length : 0;
   $('bgHint').textContent = !S ? 'Dieser Browser kann leider nicht sprechen.'
     : n ? `Mila spricht jetzt (${n} deutsche Stimmen gefunden). Nichts gehört? Lautlos-Modus aus und lauter drehen.`
-      : 'Keine deutsche Stimme gefunden. Am iPad: Einstellungen → Bedienungshilfen → Gesprochene Inhalte → Stimmen → Deutsch → eine Stimme laden.';
+      : 'Keine deutsche Stimme gefunden. Am iPad: Einstellungen > Bedienungshilfen > Gesprochene Inhalte > Stimmen > Deutsch > eine Stimme laden.';
 };
 $('bgReset').onclick = async () => {
   applyMenuBg(null);

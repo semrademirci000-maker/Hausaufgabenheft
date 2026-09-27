@@ -249,8 +249,7 @@ html, body {
 #menuBg::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(0,0,0,.6), rgba(0,0,0,.15) 55%, transparent); }
 #settings .bgRow label.pick { display: inline-block; width: auto; }
 
-/* gezeichnete Symbole statt Emojis */
-.tbtn svg { display: block; margin: auto; }
+/* Beschriftung statt Symbolen */
+.tbtn.green, .tbtn.orange { font-size: 13px; letter-spacing: .5px; padding: 0; }
 #tFlash { font-size: 13px; letter-spacing: 1px; }
-#flashTag svg { display: block; }
-#flashTag { color: #f2ede4; }
+#flashTag { font: 600 13px "Oswald", sans-serif; letter-spacing: 2px; color: #f2ede4; }
