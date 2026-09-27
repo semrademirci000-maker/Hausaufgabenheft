@@ -362,6 +362,12 @@ export class AudioEngine {
     }
     this.menuGain.gain.setTargetAtTime(on ? 0.9 : 0, this.t, on ? 1.5 : 0.6);
   }
+  // Servo-Surren und Knacken, wenn die Klauenhand zuckt
+  servo() {
+    this.tone({ type: 'sawtooth', freq: 220, freqEnd: 520, dur: 0.35, gain: 0.05, attack: 0.03, wet: 0.8 });
+    this.noise({ dur: 0.12, type: 'bandpass', freq: 2500, q: 6, gain: 0.12, delay: 0.3, wet: 1 });
+    this.tone({ type: 'square', freq: 80, dur: 0.06, gain: 0.08, delay: 0.32 });
+  }
   // Tiefer Schlag, wenn das Logo erscheint
   boom() {
     this.tone({ type: 'sine', freq: 70, freqEnd: 24, dur: 2.2, gain: 0.9, wet: 0.8 });

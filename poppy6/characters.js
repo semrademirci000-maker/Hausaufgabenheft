@@ -220,3 +220,118 @@ export function makeMiniHuggy() {
   g.traverse(m => { if (m.isMesh) m.castShadow = true; });
   return g;
 }
+
+// ---------------------------------------------------------------------
+//  Die Klauenhand des Prototyps (groß, für das Titelbild im Menü)
+//  Aufbau: Unterarm zeigt nach unten (-y), Finger nach oben (+y), Handfläche nach vorn (+z)
+// ---------------------------------------------------------------------
+const boneOld = new THREE.MeshStandardMaterial({ color: 0xb9ab8e, roughness: 0.6, metalness: 0.05 });
+const steelWorn = new THREE.MeshStandardMaterial({ color: 0x55585c, roughness: 0.45, metalness: 0.85 });
+
+function up(r1, r2, len, mat) {
+  // Segment, das von y=0 nach oben wächst
+  const g = new THREE.Group();
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(r2, r1, len, 14), mat);
+  m.position.y = len / 2; m.castShadow = true; g.add(m);
+  const end = new THREE.Group(); end.position.y = len; g.add(end);
+  g.userData.end = end;
+  return g;
+}
+
+export class PrototypeHand {
+  constructor() {
+    const root = this.root = new THREE.Group();
+
+    // ---- Unterarm: Stahlrohr mit Kolben, Knochenstreben und Kabeln ----
+    const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.2, 1.9, 20), steel);
+    arm.position.y = -1.15; arm.castShadow = true; root.add(arm);
+    for (const y of [-0.45, -0.95, -1.5]) {
+      const band = new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.03, 8, 24), rust);
+      band.rotation.x = Math.PI / 2; band.position.y = y; root.add(band);
+      for (let i = 0; i < 6; i++) {
+        const bolt = new THREE.Mesh(new THREE.SphereGeometry(0.022, 8, 6), steelWorn);
+        const a = i / 6 * Math.PI * 2; bolt.position.set(Math.cos(a) * 0.205, y, Math.sin(a) * 0.205); root.add(bolt);
+      }
+    }
+    for (const s of [-1, 1]) {
+      const piston = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 1.3, 10), steelWorn);
+      piston.position.set(0.22 * s, -1.0, 0.06); piston.rotation.z = 0.05 * s; root.add(piston);
+      const sleeve = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.6, 10), rust);
+      sleeve.position.set(0.23 * s, -1.45, 0.06); root.add(sleeve);
+      const strut = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.04, 1.6, 8), boneOld);
+      strut.position.set(0.12 * s, -1.1, -0.17); strut.rotation.z = -0.06 * s; root.add(strut);
+    }
+    // herabhängende Kabel
+    this.cables = [];
+    for (let i = 0; i < 5; i++) {
+      const x0 = -0.15 + i * 0.075;
+      const pts = [new THREE.Vector3(x0, -0.3, -0.12), new THREE.Vector3(x0 * 1.6, -0.9, -0.3 - i * 0.03), new THREE.Vector3(x0 * 2.2, -1.6, -0.15), new THREE.Vector3(x0 * 2.5, -2.3, -0.35)];
+      const c = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 24, 0.012 + (i % 2) * 0.006, 6), i === 2 ? new THREE.MeshStandardMaterial({ color: 0x8a1a1a, roughness: 0.5 }) : cable);
+      root.add(c); this.cables.push(c);
+    }
+
+    // ---- Handgelenk ----
+    this.wrist = new THREE.Group(); this.wrist.position.y = -0.1; root.add(this.wrist);
+    const wj = new THREE.Mesh(new THREE.SphereGeometry(0.2, 20, 14), rust); wj.castShadow = true; this.wrist.add(wj);
+    const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.1, 20), steelWorn); collar.position.y = -0.12; this.wrist.add(collar);
+
+    // ---- Handfläche: Metallplatte + Mittelhandknochen ----
+    const palm = new THREE.Group(); palm.position.y = 0.12; this.wrist.add(palm);
+    const plate = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.5, 0.1), steel); plate.position.set(0, 0.24, -0.05); plate.castShadow = true; palm.add(plate);
+    for (let i = 0; i < 8; i++) {
+      const b = new THREE.Mesh(new THREE.SphereGeometry(0.018, 6, 4), steelWorn);
+      b.position.set(-0.21 + (i % 4) * 0.14, i < 4 ? 0.06 : 0.42, 0.0); palm.add(b);
+    }
+    this.fingers = [];
+    const spread = [-0.2, -0.07, 0.07, 0.2];
+    const lens = [[0.38, 0.3, 0.24], [0.46, 0.36, 0.28], [0.44, 0.34, 0.27], [0.36, 0.28, 0.22]];
+    spread.forEach((x, i) => {
+      // Mittelhandknochen
+      const mc = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.035, 0.46, 10), boneOld);
+      mc.position.set(x * 0.8, 0.23, 0.03); mc.rotation.z = -x * 0.3; mc.castShadow = true; palm.add(mc);
+      const base = new THREE.Group(); base.position.set(x * 1.1, 0.47, 0.03); base.rotation.z = -x * 1.7; palm.add(base);
+      const segs = []; let p = base;
+      lens[i].forEach((len, k) => {
+        const joint = new THREE.Mesh(new THREE.SphereGeometry(0.062 - k * 0.01, 14, 10), k === 0 ? rust : steelWorn);
+        joint.castShadow = true; p.add(joint);
+        const sg = up(0.05 - k * 0.01, 0.042 - k * 0.009, len, k === 2 ? boneOld : steel);
+        p.add(sg); segs.push(sg);
+        // kleine Hydraulik auf dem Fingerrücken
+        if (k < 2) { const h = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, len * 0.8, 6), rust); h.position.set(0, len / 2, -0.04); sg.add(h); }
+        p = sg.userData.end;
+      });
+      const tip = new THREE.Mesh(new THREE.ConeGeometry(0.032, 0.22, 10), boneOld);
+      tip.position.y = 0.1; tip.castShadow = true; p.add(tip);
+      this.fingers.push({ base, segs, phase: i * 1.3 });
+    });
+    // Daumen
+    const tb = new THREE.Group(); tb.position.set(-0.27, 0.12, 0.06); tb.rotation.set(0.4, 0, 0.9); palm.add(tb);
+    const tsegs = []; let tp = tb;
+    [0.3, 0.24, 0.2].forEach((len, k) => {
+      const j = new THREE.Mesh(new THREE.SphereGeometry(0.045 - k * 0.008, 10, 8), rust); tp.add(j);
+      const sg = up(0.034 - k * 0.006, 0.028 - k * 0.006, len, k === 2 ? boneOld : steel); tp.add(sg); tsegs.push(sg); tp = sg.userData.end;
+    });
+    const tt = new THREE.Mesh(new THREE.ConeGeometry(0.022, 0.18, 8), boneOld); tt.position.y = 0.09; tp.add(tt);
+    this.thumb = tsegs;
+
+    this.t = 0; this.twitch = 0; this.jolt = 0;
+  }
+
+  // curl: 0 = offen, 1 = greift zu
+  animate(dt, curlBias = 0) {
+    this.t += dt;
+    this.twitch -= dt;
+    if (this.twitch <= 0) { this.twitch = 2.5 + Math.random() * 4; this.jolt = 1; this.onTwitch?.(); }
+    this.jolt = Math.max(0, this.jolt - dt * 3);
+    const j = this.jolt * this.jolt;
+    this.fingers.forEach((f, i) => {
+      const curl = 0.28 + Math.sin(this.t * 0.55 + f.phase) * 0.2 + curlBias + j * 0.5 + Math.sin(this.t * 23 + i) * 0.01;
+      f.segs.forEach((sg, k) => { sg.rotation.x = curl * (0.8 + k * 0.35); });
+    });
+    this.thumb.forEach((sg, k) => { sg.rotation.x = 0.2 + Math.sin(this.t * 0.5) * 0.12 + j * 0.3 + k * 0.1; });
+    this.wrist.rotation.x = -0.15 + Math.sin(this.t * 0.35) * 0.08 - j * 0.12;
+    this.wrist.rotation.z = Math.sin(this.t * 0.27) * 0.06;
+    this.root.position.x = this.baseX + Math.sin(this.t * 0.3) * 0.05 + (Math.random() - 0.5) * j * 0.04;
+    this.root.position.y = this.baseY + Math.sin(this.t * 0.45) * 0.04;
+  }
+}

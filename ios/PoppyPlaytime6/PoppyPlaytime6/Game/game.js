@@ -3,7 +3,7 @@ import { MAP } from './map.js';
 import { AudioEngine } from './audio.js';
 import * as TX from './textures.js';
 import { MonsterModel } from './monster.js';
-import { PrototypeModel, makePoppyDoll, makeMiniHuggy } from './characters.js';
+import { PrototypeModel, PrototypeHand, makePoppyDoll, makeMiniHuggy } from './characters.js';
 import { EffectComposer } from './vendor/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from './vendor/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from './vendor/jsm/postprocessing/UnrealBloomPass.js';
@@ -1484,7 +1484,60 @@ function updateLights(dt) {
 //  Menü-Kamera: Blick auf den schlafenden Huggy
 // ======================================================================
 const menuCam = { t: 0 };
+// ----- Titelbild: die Klauenhand des Prototyps greift aus der Dunkelheit -----
+const stage = new THREE.Scene();
+stage.background = new THREE.Color(0x030202);
+stage.fog = new THREE.FogExp2(0x0a0504, 0.06);
+stage.environment = envMap;
+const stageCam = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.1, 60);
+const protoHand = new PrototypeHand();
+protoHand.root.scale.setScalar(2.0);
+protoHand.baseX = 2.55; protoHand.baseY = -1.2;
+protoHand.root.position.set(protoHand.baseX, protoHand.baseY, 0);
+protoHand.root.rotation.set(-0.05, -0.1, 0.38); // kommt von rechts unten, greift nach links oben zum Betrachter
+stage.add(protoHand.root);
+tuneEnv(protoHand.root, 0.15);
+protoHand.root.traverse(o => { if (o.isMesh) o.castShadow = true; });
+protoHand.onTwitch = () => { if (G.mode === 'menu' && !G.intro) audio.servo(); };
+// Rückwand und Boden der Bühne
+const stageWall = new THREE.Mesh(new THREE.PlaneGeometry(22, 12), MAT.walls[1]);
+stageWall.position.set(0, 1, -5); stage.add(stageWall);
+const stageFloor = new THREE.Mesh(new THREE.PlaneGeometry(22, 14), MAT.floor);
+stageFloor.rotation.x = -Math.PI / 2; stageFloor.position.y = -3.2; stageFloor.receiveShadow = true; stage.add(stageFloor);
+// Licht: rot von unten links, warmes Gegenlicht von oben, kaltes Fülllicht
+const stageKey = new THREE.SpotLight(0xff2a18, 130, 20, 0.55, 0.7, 1.4);
+stageKey.position.set(-2.0, -2.8, 3.4); stageKey.target.position.set(1.6, 0.3, 0); stageKey.castShadow = true;
+stageKey.shadow.mapSize.set(1024, 1024);
+stage.add(stageKey, stageKey.target);
+const stageRim = new THREE.SpotLight(0xffa860, 90, 20, 0.5, 0.8, 1.5);
+stageRim.position.set(3.2, 4.5, -3); stageRim.target.position.set(1.6, 0.5, 0); stage.add(stageRim, stageRim.target);
+const stageFill = new THREE.PointLight(0x3a50ff, 3, 12, 2); stageFill.position.set(-3, 2, 3); stage.add(stageFill);
+stage.add(new THREE.HemisphereLight(0x302020, 0x050202, 0.3));
+// schwebender Staub im Licht
+const stageDustGeo = new THREE.BufferGeometry();
+const sdp = new Float32Array(500 * 3);
+for (let i = 0; i < 500; i++) { sdp[i * 3] = (Math.random() - 0.5) * 9; sdp[i * 3 + 1] = (Math.random() - 0.5) * 6; sdp[i * 3 + 2] = (Math.random() - 0.5) * 5; }
+stageDustGeo.setAttribute('position', new THREE.BufferAttribute(sdp, 3));
+const stageDust = new THREE.Points(stageDustGeo, new THREE.PointsMaterial({ color: 0xffc0a0, size: 0.018, transparent: true, opacity: 0.6, depthWrite: false }));
+stage.add(stageDust);
+// Leuchtende Lampe hinten im Nebel
+const stageLamp = new THREE.Sprite(new THREE.SpriteMaterial({ map: GLOW, color: 0xff5a30, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, opacity: 0.8 }));
+stageLamp.position.set(-2.8, 2.6, -4); stageLamp.scale.setScalar(2.2); stage.add(stageLamp);
+
+function updateStage(dt) {
+  protoHand.animate(dt);
+  const t = performance.now() / 1000;
+  stageCam.position.set(-0.3 + Math.sin(t * 0.1) * 0.15, 0.3 + Math.sin(t * 0.17) * 0.06, 8.6);
+  stageCam.lookAt(0.2, 0.35, 0);
+  // rotes Licht flackert leicht
+  stageKey.intensity = 130 * (0.85 + Math.sin(t * 7) * 0.04 + (Math.random() < 0.02 ? -0.5 : 0));
+  stageLamp.material.opacity = 0.6 + Math.sin(t * 3) * 0.1;
+  for (let i = 0; i < 500; i++) { sdp[i * 3 + 1] += dt * 0.05; if (sdp[i * 3 + 1] > 3) sdp[i * 3 + 1] = -3; sdp[i * 3] += Math.sin(t + i) * dt * 0.02; }
+  stageDustGeo.attributes.position.needsUpdate = true;
+}
+
 function updateMenu(dt) {
+  updateStage(dt);
   menuCam.t += dt;
   const mp = W.monsterStart;
   camera.position.set(mp.x + Math.sin(menuCam.t * 0.12) * 0.6, 1.7 + Math.sin(menuCam.t * 0.5) * 0.03, mp.z + 11.5);
@@ -1548,12 +1601,13 @@ const FilmShader = {
       gl_FragColor = vec4(max(col, 0.0), 1.0);
     }`,
 };
-let composer = null, filmPass = null, bloomPass = null;
+let composer = null, filmPass = null, bloomPass = null, renderPass = null;
 function setupComposer(on) {
   if (!on) { composer?.dispose(); composer = null; $('grain').style.display = ''; $('vignette').style.display = ''; return; }
   if (composer) return;
   composer = new EffectComposer(renderer);
-  composer.addPass(new RenderPass(scene, camera));
+  renderPass = new RenderPass(scene, camera);
+  composer.addPass(renderPass);
   bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth / 2, innerHeight / 2), 0.42, 0.5, 0.97);
   composer.addPass(bloomPass);
   filmPass = new ShaderPass(FilmShader);
@@ -1581,7 +1635,8 @@ function resize() {
   const w = innerWidth, h = innerHeight;
   renderer.setSize(w, h);
   if (composer) { composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(w, h); }
-  camera.aspect = vmCam.aspect = w / h;
+  camera.aspect = vmCam.aspect = stageCam.aspect = w / h;
+  stageCam.fov = w / h < 1.2 ? 55 : 40; stageCam.updateProjectionMatrix();
   camera.updateProjectionMatrix(); vmCam.updateProjectionMatrix();
 }
 addEventListener('resize', resize);
@@ -1630,10 +1685,12 @@ function frame() {
   tick(Math.min(clock.getDelta(), 0.05));
   if (composer) {
     filmPass.uniforms.time.value = (performance.now() / 1000) % 100;
+    const onStage = G.mode === 'menu';
+    renderPass.scene = onStage ? stage : scene; renderPass.camera = onStage ? stageCam : camera;
     composer.render();
   } else {
     renderer.clear();
-    renderer.render(scene, camera);
+    if (G.mode === 'menu') renderer.render(stage, stageCam); else renderer.render(scene, camera);
   }
   if (G.mode === 'playing' || G.mode === 'note') {
     renderer.clearDepth();
