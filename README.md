@@ -6,8 +6,8 @@ Die App gibt es zweimal:
   „Zum Home-Bildschirm“ wie eine App aufs iPad legen.
 * **Native SwiftUI-App** in [`ios/`](ios/README.md) – zum Öffnen in Xcode auf einem Mac.
 
-Außerdem: [`naht/`](naht/README.md) – **NAHT**, das erste eigene 3D-Horrorspiel von Muaz (Kapitel 1: Das Tiefe Werk),
-auch als SwiftUI-App in [`ios/Naht/`](ios/Naht/README.md).
+Außerdem: [`stitched/`](stitched/README.md) – **STITCHED**, das erste eigene 3D-Horrorspiel von Muaz (Kapitel 1: Das Tiefe Werk),
+auch als SwiftUI-App in [`ios/Stitched/`](ios/Stitched/README.md).
 
 Eine App fürs iPad: Erst wählst du **Stundenplan** oder **Hausaufgabenheft**.
 Das Heft öffnet sich wie ein echtes Buch mit weißen Seiten und schwarzen Linien –
