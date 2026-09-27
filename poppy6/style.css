@@ -150,5 +150,6 @@ html, body {
   .cols { gap: 20px; font-size: 14px; }
 }
 @media (pointer: coarse) { #subtitle { width: min(58vw, 700px); bottom: 24%; } }
-.soundhint { font-size: 14px; color: var(--muted) !important; margin-top: -4px !important; }
+.soundhint { font-size: 14px; color: var(--muted) !important; margin: -4px 0 7vh !important; }
+#menu .buttons { margin-bottom: 10px; }
 @media (max-height: 560px) { .soundhint { display: none; } }

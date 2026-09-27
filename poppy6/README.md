@@ -15,17 +15,23 @@ python3 -m http.server 8000
 
 ## Worum geht's?
 
-Nach dem Absturz des Aufzugs steckst du tief unter der Playtime-Co.-Fabrik fest.
+Nach dem Absturz des Aufzugs steckst du auf Ebene 9 tief unter der Playtime-Co.-Fabrik fest.
 Poppy meldet sich über Funk: Das Ausgangstor braucht Strom. Finde **3 Batterien**, bring sie
-zum **Generator** – und pass auf **Langbein** auf, der hier unten schläft.
+zum **Generator** und pass auf **Huggy Wuggy** auf. Er hat den Sturz überlebt und schläft hier unten.
 
-- **GrabPack**: blaue und rote Hand schießen, Batterien greifen, Hebel ziehen
+- **Figuren (Fan-Nachbauten):** Huggy Wuggy (Experiment 1170) mit Zahnreihen im Maul, der
+  **Prototyp** (Experiment 1006) mit Metallklaue im Käfig und eine **Poppy-Puppe** in der Vitrine
+- **Stimmen:** Poppy (hoch, über Funk), Prototyp (tief), Huggy (geflüstert, „Umarm mich …“) und die
+  Fabrik-Durchsage. Sie kommen aus der Sprachausgabe des Geräts, deshalb klingen sie nicht wie im Original.
+- **GrabPack:** blaue und rote Hand schießen, Batterien greifen, Hebel ziehen
 - **Farbige Türen** öffnen sich mit dem Hebel der gleichen Farbe
-- **Langbein** wacht auf, sobald du die erste Batterie nimmst. Er hört Rennen, sieht Licht,
+- **Huggy** wacht auf, sobald du die erste Batterie nimmst. Er hört Rennen, sieht Licht,
   jagt dich und verliert dich, wenn du die Sichtlinie brichst oder dich in einem **Spind** versteckst
   (aber nicht, wenn er dich hineinklettern sieht!)
 - **Notizen** an den Wänden verraten Tipps
-- **Finale**: Wenn der Generator läuft, geht der Alarm los – renn zum Ausgang!
+- **Finale:** Wenn der Generator läuft, geht der Alarm los. Renn zum Ausgang!
+- **Grafik:** Oberflächen mit Relief, Spiegelungen, Bloom-Leuchten und Film-Look
+  (auf „Niedrig“ abgeschaltet, falls es ruckelt)
 
 ## Steuerung
 
@@ -39,10 +45,11 @@ zum **Generator** – und pass auf **Langbein** auf, der hier unten schläft.
 ## Dateien
 
 - `game.js` – Welt, Spieler, GrabPack, Monster-KI, Story, Menüs
-- `monster.js` – Langbein-Modell und Animation
+- `monster.js` – Huggy-Wuggy-Modell und Animation
+- `characters.js` – Prototyp, Poppy-Puppe, Huggy-Plüschtiere
 - `textures.js` – alle Texturen (auf Canvas gemalt)
 - `audio.js` – alle Geräusche und Musik (Web Audio)
 - `map.js` – die Karte als Textraster (leicht selbst umzubauen!)
-- `vendor/` – Three.js r160 (MIT-Lizenz)
+- `vendor/` – Three.js r160 und einige Three.js-Erweiterungen (MIT-Lizenz)
 
 Poppy Playtime © Mob Entertainment. Dies ist ein nicht-kommerzielles Fan-Projekt.

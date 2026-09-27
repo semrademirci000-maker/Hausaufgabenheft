@@ -3,6 +3,14 @@ import { MAP } from './map.js';
 import { AudioEngine } from './audio.js';
 import * as TX from './textures.js';
 import { MonsterModel } from './monster.js';
+import { PrototypeModel, makePoppyDoll, makeMiniHuggy } from './characters.js';
+import { EffectComposer } from './vendor/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from './vendor/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from './vendor/jsm/postprocessing/UnrealBloomPass.js';
+import { ShaderPass } from './vendor/jsm/postprocessing/ShaderPass.js';
+import { OutputPass } from './vendor/jsm/postprocessing/OutputPass.js';
+import { RoomEnvironment } from './vendor/jsm/environments/RoomEnvironment.js';
+import { RoundedBoxGeometry } from './vendor/jsm/geometries/RoundedBoxGeometry.js';
 
 window.__gameLoaded = true;
 
@@ -29,8 +37,8 @@ const DOOR_COLORS = { 1: 0xffc233, 2: 0x3fdc6a, 3: 0xb46bff };
 const LEVER_DOOR = { a: '1', b: '2', c: '3' };
 
 const NOTES = [
-  { title: 'Schichtbericht – Ebene 9', body: 'Die Nachtschicht meldet wieder Schritte über den Lüftungsschächten.\nLaut Direktion ist das „nur das alte Rohrsystem“.\n\nDas Rohrsystem lacht aber nicht.' },
-  { title: 'Experiment 1170 – „Langbein“', body: 'Ursprünglich ein Kuscheltier für Kleinkinder, 2,1 m.\nNach der Behandlung: 3,4 m. Arme über 2 m.\n\nReagiert auf Licht und schnelle Bewegungen.\nEr sieht schlecht im Dunkeln – Taschenlampe AUS, wenn er in der Nähe ist.' },
+  { title: 'Verlegungsbericht – Experiment 1006', body: 'Der Prototyp wurde in die Sicherheitszelle auf Ebene 9 verlegt.\nDie Gitter halten. Vorerst.\n\nEr spricht mit den anderen Experimenten. Er gibt ihnen BEFEHLE.\nNiemand geht allein an seinem Käfig vorbei.' },
+  { title: 'Experiment 1170 – Huggy Wuggy', body: 'Hat den Sturz aus der Fabrikhalle überlebt.\nWurde unten gefunden, notdürftig vernäht – und wütender als je zuvor.\n\nReagiert auf Licht und schnelle Bewegungen.\nEr sieht schlecht im Dunkeln – Taschenlampe AUS, wenn er in der Nähe ist.' },
   { title: 'Hastig gekritzelter Zettel', body: 'DIE SPINDE!\nEr macht sie nur auf, wenn er dich hineinklettern SIEHT.\nWarte, bis das Stampfen leiser wird.\n\nUnd renn niemals, wenn er dich noch nicht bemerkt hat. Er HÖRT dich.' },
 ];
 
@@ -45,11 +53,14 @@ renderer.shadowMap.enabled = settings.quality !== 'low';
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.autoClear = false;
 $('game').appendChild(renderer.domElement);
+const pmrem = new THREE.PMREMGenerator(renderer);
+const envMap = pmrem.fromScene(new RoomEnvironment(renderer), 0.04).texture;
 TX.setAniso(Math.min(8, renderer.capabilities.getMaxAnisotropy()));
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x030304);
-scene.fog = new THREE.FogExp2(0x050506, 0.052);
+scene.fog = new THREE.FogExp2(0x050506, 0.05);
+scene.environment = envMap;
 
 const camera = new THREE.PerspectiveCamera(72, innerWidth / innerHeight, 0.05, 120);
 camera.rotation.order = 'YXZ';
@@ -73,7 +84,8 @@ const vmCam = new THREE.PerspectiveCamera(62, innerWidth / innerHeight, 0.01, 10
 vmScene.add(vmCam);
 const vmHemi = new THREE.HemisphereLight(0xaab0c8, 0x201810, 0.5);
 vmScene.add(vmHemi);
-const vmKey = new THREE.PointLight(0xfff0d8, 1.2, 3, 2);
+vmScene.environment = envMap;
+const vmKey = new THREE.PointLight(0xfff0d8, 0.8, 3, 2);
 vmKey.position.set(0.2, 0.25, 0.1);
 vmCam.add(vmKey);
 
@@ -84,12 +96,18 @@ audio.volume = settings.vol;
 //  Materialien (einmal erzeugt, in allen Durchläufen wiederverwendet)
 // ======================================================================
 const MAT = {
-  walls: [0, 1, 2].map(v => { const t = TX.wallTexture(v); return new THREE.MeshStandardMaterial({ map: t, bumpMap: t, bumpScale: 0.6, roughness: 0.92 }); }),
-  floor: new THREE.MeshStandardMaterial({ map: TX.floorTexture(COLS, ROWS), roughness: 0.78, metalness: 0.05 }),
+  walls: [0, 1, 2].map(v => { const t = TX.wallTexture(v); return new THREE.MeshStandardMaterial({ map: t, normalMap: TX.normalFrom(t, 3), roughnessMap: TX.roughFrom(t, 0.85, 0.3), envMapIntensity: 0.25 }); }),
+  floor: (() => { const t = TX.floorTexture(COLS, ROWS); return new THREE.MeshStandardMaterial({ map: t, normalMap: TX.normalFrom(t, 4), roughnessMap: TX.roughFrom(t, 0.55, 0.9), metalness: 0.05, envMapIntensity: 0.6 }); })(),
   ceil: new THREE.MeshStandardMaterial({ map: TX.ceilingTexture(COLS, ROWS), roughness: 1 }),
   wood: new THREE.MeshStandardMaterial({ map: TX.woodTexture(), roughness: 0.9 }),
-  metal: new THREE.MeshStandardMaterial({ map: TX.metalTexture('#5d6266'), roughness: 0.55, metalness: 0.6 }),
-  door: new THREE.MeshStandardMaterial({ map: TX.metalTexture('#565b5f', true), roughness: 0.6, metalness: 0.5 }),
+  metal: (() => { const t = TX.metalTexture('#5d6266'); return new THREE.MeshStandardMaterial({ map: t, normalMap: TX.normalFrom(t, 2), roughness: 0.5, metalness: 0.7 }); })(),
+  door: (() => { const t = TX.metalTexture('#565b5f', true); return new THREE.MeshStandardMaterial({ map: t, normalMap: TX.normalFrom(t, 2), roughness: 0.55, metalness: 0.6 }); })(),
+  beam: new THREE.MeshStandardMaterial({ color: 0x3d4247, roughness: 0.45, metalness: 0.85 }),
+  hazard: new THREE.MeshStandardMaterial({ map: TX.metalTexture('#222', true), roughness: 0.6, metalness: 0.4 }),
+  vent: new THREE.MeshStandardMaterial({ map: TX.ventTexture(), roughness: 0.5, metalness: 0.7 }),
+  belt: new THREE.MeshStandardMaterial({ map: TX.beltTexture(), roughness: 0.8 }),
+  glass: new THREE.MeshPhysicalMaterial({ color: 0xcfe6ff, roughness: 0.05, metalness: 0, transparent: true, opacity: 0.1, envMapIntensity: 0.8, depthWrite: false }),
+  cageBar: new THREE.MeshStandardMaterial({ color: 0x2b2d30, roughness: 0.35, metalness: 0.9 }),
   shutter: new THREE.MeshStandardMaterial({ map: TX.shutterTexture(), roughness: 0.6, metalness: 0.4 }),
   gen: new THREE.MeshStandardMaterial({ map: TX.metalTexture('#4a5a50', true, 'GEN-06'), roughness: 0.5, metalness: 0.6 }),
   locker: new THREE.MeshStandardMaterial({ map: TX.lockerTexture(), roughness: 0.55, metalness: 0.5 }),
@@ -98,7 +116,7 @@ const MAT = {
   pipe: new THREE.MeshStandardMaterial({ color: 0x6b4a32, roughness: 0.5, metalness: 0.7 }),
   dark: new THREE.MeshStandardMaterial({ color: 0x151515, roughness: 0.7, metalness: 0.4 }),
   shade: new THREE.MeshStandardMaterial({ color: 0x2a2d2a, emissive: 0x3a2a14, roughness: 0.6, metalness: 0.5, side: THREE.DoubleSide }),
-  puddle: new THREE.MeshStandardMaterial({ color: 0x3a3630, roughness: 0.08, metalness: 0.2, transparent: true, opacity: 0.35, depthWrite: false }),
+  puddle: new THREE.MeshPhysicalMaterial({ color: 0x1a1816, roughness: 0.02, metalness: 0.1, clearcoat: 1, transparent: true, opacity: 0.55, depthWrite: false, envMapIntensity: 1.2 }),
   posters: [0, 1, 2].map(k => new THREE.MeshStandardMaterial({ map: TX.posterTexture(k), roughness: 0.95, transparent: true, alphaTest: 0.5 })),
   shaft: new THREE.MeshBasicMaterial({ color: 0xffd9a0, transparent: true, opacity: 0.045, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: true }),
   batteryBody: new THREE.MeshStandardMaterial({ color: 0x2a6cff, emissive: 0x1b4dff, emissiveIntensity: 1.2, roughness: 0.3, metalness: 0.3 }),
@@ -109,23 +127,32 @@ const SCRAWLS = ['LAUF', 'ES LÄCHELT', 'NICHT RENNEN'].map(t => new THREE.MeshB
 // ======================================================================
 //  Bausteine
 // ======================================================================
+// GrabPack-Hand: glänzendes Plastik, abgerundete Finger mit zwei Gliedern
+const handGeo = {
+  palm: new RoundedBoxGeometry(0.1, 0.038, 0.11, 3, 0.016),
+  seg1: new THREE.CapsuleGeometry(0.0115, 0.036, 4, 10),
+  seg2: new THREE.CapsuleGeometry(0.011, 0.028, 4, 10),
+};
 function makeHand(color) {
   const g = new THREE.Group();
-  const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.45, metalness: 0.05 });
-  const palm = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.035, 0.11), mat);
-  g.add(palm);
+  const mat = new THREE.MeshPhysicalMaterial({ color, roughness: 0.4, clearcoat: 0.35, clearcoatRoughness: 0.35, envMapIntensity: 0.15 });
+  g.add(new THREE.Mesh(handGeo.palm, mat));
+  const lens = [1, 1.1, 1.05, 0.88];
   for (let i = 0; i < 4; i++) {
-    const f = new THREE.Mesh(new THREE.BoxGeometry(0.021, 0.024, 0.075), mat);
-    f.position.set((i - 1.5) * 0.026, -0.004, -0.088);
-    f.rotation.x = 0.25; f.rotation.y = (i - 1.5) * -0.06;
+    const f = new THREE.Group();
+    f.position.set((i - 1.5) * 0.025, -0.002, -0.052); f.rotation.y = (i - 1.5) * -0.07; f.rotation.x = 0.12;
+    const a = new THREE.Mesh(handGeo.seg1, mat); a.rotation.x = Math.PI / 2; a.position.z = -0.024 * lens[i]; a.scale.y = lens[i]; f.add(a);
+    const k = new THREE.Group(); k.position.z = -0.05 * lens[i]; k.rotation.x = 0.25; f.add(k);
+    const b = new THREE.Mesh(handGeo.seg2, mat); b.rotation.x = Math.PI / 2; b.position.z = -0.02 * lens[i]; b.scale.y = lens[i]; k.add(b);
     g.add(f);
   }
-  const thumb = new THREE.Mesh(new THREE.BoxGeometry(0.022, 0.024, 0.06), mat);
-  thumb.position.set(0.062, -0.006, -0.02); thumb.rotation.y = -0.7;
-  g.add(thumb);
-  const wrist = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.035, 0.06, 10), MAT.batteryCap);
-  wrist.rotation.x = Math.PI / 2; wrist.position.z = 0.075;
-  g.add(wrist);
+  const t = new THREE.Group(); t.position.set(0.052, -0.004, 0.0); t.rotation.y = -0.85; t.rotation.z = 0.2;
+  const ta = new THREE.Mesh(handGeo.seg1, mat); ta.rotation.x = Math.PI / 2; ta.position.z = -0.028; t.add(ta);
+  g.add(t);
+  const cuff = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.04, 0.05, 16), MAT.batteryCap);
+  cuff.rotation.x = Math.PI / 2; cuff.position.z = 0.075; g.add(cuff);
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.039, 0.006, 8, 20), new THREE.MeshStandardMaterial({ color: 0x222226, roughness: 0.4, metalness: 0.8 }));
+  ring.position.z = 0.055; g.add(ring);
   return g;
 }
 
@@ -158,6 +185,18 @@ const yawFacing = (dx, dz) => Math.atan2(dx, dz); // Objekt schaut in Richtung (
 // ======================================================================
 let W = null;
 
+// Die Umgebungsreflexion (RoomEnvironment) ist hell – für den Horror stark abdunkeln
+const ENV_SCALE = 0.1;
+function tuneEnv(root, scale = ENV_SCALE) {
+  root.traverse(o => {
+    if (!o.material) return;
+    for (const m of [].concat(o.material)) {
+      if (m.userData.envTuned || !('envMapIntensity' in m)) continue;
+      m.userData.envTuned = true; m.envMapIntensity *= scale;
+    }
+  });
+}
+
 function buildWorld() {
   if (W) {
     scene.remove(W.group);
@@ -169,7 +208,7 @@ function buildWorld() {
   scene.add(group);
   const w = W = {
     group, doors: {}, levers: [], batteries: [], lockers: [], notes: [], lamps: [], boxes: [],
-    rayTargets: [], gen: null, gate: null, exitCell: null, start: null, startYaw: 0, monsterStart: null, lightPool: [],
+    rayTargets: [], gen: null, gate: null, exitCell: null, start: null, startYaw: 0, monsterStart: null, lightPool: [], beams: [], proto: null,
   };
   const addBox = (x0, x1, z0, z1) => { const b = { x0, x1, z0, z1, on: true }; w.boxes.push(b); return b; };
   const ref = (mesh, obj) => { mesh.userData.ref = obj; w.rayTargets.push(mesh); };
@@ -215,9 +254,19 @@ function buildWorld() {
     if (k === 'L' || k === 'X') {
       const lamp = { pos: new THREE.Vector3(cc.x, WALL_H - 0.75, cc.z), level: 1, flicker: k === 'L' && rng() < 0.35, base: k === 'X' ? 26 : 20, color: new THREE.Color(k === 'X' ? 0xbfd8ff : 0xffcf95), ft: 0 };
       if (k === 'L') {
-        const shade = new THREE.Mesh(new THREE.ConeGeometry(0.55, 0.4, 16, 1, true), MAT.shade);
+        // Industrielampe mit Schirm und Drahtkorb
+        const shade = new THREE.Mesh(new THREE.ConeGeometry(0.55, 0.4, 24, 1, true), MAT.shade);
         shade.position.set(cc.x, WALL_H - 0.55, cc.z); group.add(shade);
-        const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.35), MAT.dark);
+        const rim = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.02, 6, 24), MAT.beam);
+        rim.rotation.x = Math.PI / 2; rim.position.set(cc.x, WALL_H - 0.75, cc.z); group.add(rim);
+        const cageRing = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.008, 4, 16), MAT.beam);
+        cageRing.rotation.x = Math.PI / 2; cageRing.position.set(cc.x, WALL_H - 0.93, cc.z); group.add(cageRing);
+        for (let i = 0; i < 4; i++) {
+          const wire = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.26, 4), MAT.beam);
+          const a = i * Math.PI / 2; wire.position.set(cc.x + Math.cos(a) * 0.19, WALL_H - 0.82, cc.z + Math.sin(a) * 0.19);
+          group.add(wire);
+        }
+        const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.35), MAT.dark);
         cord.position.set(cc.x, WALL_H - 0.18, cc.z); group.add(cord);
       }
       lamp.bulbMat = new THREE.MeshBasicMaterial({ color: lamp.color.clone() });
@@ -284,6 +333,13 @@ function buildWorld() {
       const indMat = new THREE.MeshBasicMaterial({ color: k === 'E' ? 0xff2020 : DOOR_COLORS[k] });
       const ind = new THREE.Mesh(new THREE.BoxGeometry(alongX ? 0.5 : 0.4, 0.18, alongX ? 0.4 : 0.5), indMat);
       ind.position.set(cc.x, WALL_H - 0.3, cc.z); group.add(ind);
+      // Türrahmen mit Warnstreifen
+      for (const s2 of [-1, 1]) {
+        const post = new THREE.Mesh(alongX ? new THREE.BoxGeometry(0.3, WALL_H, 0.7) : new THREE.BoxGeometry(0.7, WALL_H, 0.3), MAT.hazard);
+        const px = alongX ? cc.x + s2 * 1.85 : cc.x, pz = alongX ? cc.z : cc.z + s2 * 1.85;
+        post.position.set(px, WALL_H / 2, pz); post.castShadow = post.receiveShadow = true; group.add(post);
+        alongX ? addBox(px - 0.15, px + 0.15, pz - 0.35, pz + 0.35) : addBox(px - 0.35, px + 0.35, pz - 0.15, pz + 0.15);
+      }
       const d = { kind: k === 'E' ? 'gate' : 'door', id: k, mesh, box, open: false, opening: false, t: 0, indMat };
       ref(mesh, d);
       if (k === 'E') w.gate = d; else w.doors[k] = d;
@@ -353,6 +409,9 @@ function buildWorld() {
         crate.position.set(px, s / 2, pz); crate.rotation.y = (rng() - 0.5) * 0.3;
         crate.castShadow = crate.receiveShadow = true; group.add(crate); w.rayTargets.push(crate);
         if (rng() < 0.4) { const c2 = crate.clone(); c2.scale.setScalar(0.75); c2.position.y = s + s * 0.375; c2.rotation.y += 0.5; group.add(c2); }
+        else if (rng() < 0.45) {
+          const toy = makeMiniHuggy(); toy.position.set(px, s, pz); toy.rotation.y = yawFacing(-dx, -dz) + (rng() - 0.5); toy.scale.setScalar(1.3); group.add(toy);
+        }
         addBox(px - s / 2, px + s / 2, pz - s / 2, pz + s / 2);
       }
       if (walls.length && rng() < 0.16) {
@@ -361,6 +420,31 @@ function buildWorld() {
         p.position.set(cc.x + dx * (CELL / 2 - 0.015), 2.1, cc.z + dz * (CELL / 2 - 0.015));
         p.rotation.y = yawFacing(-dx, -dz); p.rotation.z = (rng() - 0.5) * 0.12;
         group.add(p);
+      }
+      if (walls.length && rng() < 0.12) {
+        // Lüftungsgitter unten an der Wand
+        const [dx, dz] = walls[Math.floor(rng() * walls.length)];
+        const v = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 0.6), MAT.vent);
+        v.position.set(cc.x + dx * (CELL / 2 - 0.012), 0.45, cc.z + dz * (CELL / 2 - 0.012));
+        v.rotation.y = yawFacing(-dx, -dz); group.add(v);
+      }
+      if (walls.length === 2 && rng() < 0.18) {
+        // Förderband entlang der Wand (typisch für die Spielzeugfabrik)
+        const [dx, dz] = walls[0];
+        const along = dx !== 0 ? 'z' : 'x';
+        const bx = cc.x + dx * 1.45, bz = cc.z + dz * 1.45;
+        const frame = new THREE.Mesh(along === 'z' ? new THREE.BoxGeometry(0.9, 0.75, CELL) : new THREE.BoxGeometry(CELL, 0.75, 0.9), MAT.beam);
+        frame.position.set(bx, 0.375, bz); frame.castShadow = frame.receiveShadow = true; group.add(frame);
+        const belt = new THREE.Mesh(new THREE.PlaneGeometry(0.8, CELL), MAT.belt);
+        belt.rotation.x = -Math.PI / 2; if (along === 'x') belt.rotation.z = Math.PI / 2;
+        belt.position.set(bx, 0.76, bz); group.add(belt);
+        for (let i = 0; i < 2; i++) {
+          const toy = rng() < 0.5 ? makeMiniHuggy() : new THREE.Mesh(new RoundedBoxGeometry(0.3, 0.3, 0.3, 2, 0.04), new THREE.MeshStandardMaterial({ color: [0xd23a3a, 0x3a6ad2, 0xe8c040][Math.floor(rng() * 3)], roughness: 0.5 }));
+          const o = (i - 0.5) * 1.8 + (rng() - 0.5);
+          toy.position.set(bx + (along === 'x' ? o : 0), 0.76 + (toy.isMesh ? 0.15 : 0), bz + (along === 'z' ? o : 0));
+          toy.rotation.y = rng() * 6; group.add(toy);
+        }
+        along === 'z' ? addBox(bx - 0.45, bx + 0.45, cc.z - 2, cc.z + 2) : addBox(cc.x - 2, cc.x + 2, bz - 0.45, bz + 0.45);
       }
       if (walls.length && rng() < 0.05) {
         const [dx, dz] = walls[Math.floor(rng() * walls.length)];
@@ -384,6 +468,55 @@ function buildWorld() {
       }
     }
 
+    // ----- Käfig mit dem Prototyp -----
+    if (k === 'O') {
+      for (const [dx, dz] of DIRS) {
+        if (ch(c + dx, r + dz) === '#') continue;
+        for (let i = 0; i < 11; i++) {
+          const o = -1.8 + i * 0.36;
+          const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, WALL_H, 8), MAT.cageBar);
+          bar.position.set(cc.x + dx * 1.95 + (dz ? o : 0), WALL_H / 2, cc.z + dz * 1.95 + (dx ? o : 0));
+          bar.castShadow = true; group.add(bar);
+        }
+        for (const y of [0.1, 2.2, WALL_H - 0.1]) {
+          const rail = new THREE.Mesh(dx ? new THREE.BoxGeometry(0.12, 0.12, CELL) : new THREE.BoxGeometry(CELL, 0.12, 0.12), MAT.cageBar);
+          rail.position.set(cc.x + dx * 1.95, y, cc.z + dz * 1.95); group.add(rail);
+        }
+      }
+      const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.5), new THREE.MeshStandardMaterial({ map: TX.metalTexture('#8a1a1a', false, '1006'), roughness: 0.6 }));
+      const [ox, oz] = openDir(c, r);
+      sign.position.set(cc.x + ox * 2.05, 2.8, cc.z + oz * 2.05); sign.rotation.y = yawFacing(ox, oz); group.add(sign);
+      const proto = new PrototypeModel();
+      proto.root.position.set(cc.x - ox * 0.4, 0, cc.z - oz * 0.4); proto.root.rotation.y = yawFacing(ox, oz); proto.root.scale.setScalar(1.3);
+      group.add(proto.root);
+      w.proto = { model: proto, pos: proto.root.position.clone(), yaw: proto.root.rotation.y, seen: false, strike: 0, strikeT: 0 };
+      w.lamps.push({ pos: new THREE.Vector3(cc.x, WALL_H - 0.6, cc.z), level: 1, flicker: true, base: 14, color: new THREE.Color(0xff3322), ft: 0,
+        bulbMat: new THREE.MeshBasicMaterial({ color: 0xff3322 }), shaftMat: MAT.shaft.clone() });
+      addBox(c * CELL, (c + 1) * CELL, r * CELL, (r + 1) * CELL);
+    }
+
+    // ----- Vitrine mit Poppy -----
+    if (k === 'Y') {
+      const [dx, dz] = wallDir(c, r);
+      const px = cc.x + dx * 1.35, pz = cc.z + dz * 1.35;
+      const vg = new THREE.Group(); vg.position.set(px, 0, pz); vg.rotation.y = yawFacing(-dx, -dz); group.add(vg);
+      const ped = new THREE.Mesh(new RoundedBoxGeometry(1.0, 0.9, 1.0, 2, 0.04), MAT.wood); ped.position.y = 0.45; ped.castShadow = ped.receiveShadow = true; vg.add(ped);
+      const plaque = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.18), new THREE.MeshStandardMaterial({ map: TX.metalTexture('#b08a3a', false, 'POPPY'), metalness: 0.8, roughness: 0.3 }));
+      plaque.position.set(0, 0.7, 0.505); vg.add(plaque);
+      const glass = new THREE.Mesh(new THREE.BoxGeometry(0.95, 1.15, 0.95), MAT.glass); glass.position.y = 1.475; vg.add(glass);
+      const lid = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.06, 1.0), MAT.wood); lid.position.y = 2.08; vg.add(lid);
+      const doll = makePoppyDoll(); doll.position.y = 0.9; doll.scale.setScalar(1.35); vg.add(doll);
+      w.lamps.push({ pos: new THREE.Vector3(px, 2.6, pz), level: 1, flicker: false, base: 3, color: new THREE.Color(0xfff0d0), ft: 0,
+        bulbMat: new THREE.MeshBasicMaterial({ color: 0xfff0d0 }), shaftMat: MAT.shaft.clone() });
+      addBox(px - 0.5, px + 0.5, pz - 0.5, pz + 0.5);
+      w.rayTargets.push(ped);
+    }
+
+    // ----- Stahlträger unter der Decke -----
+    if (k !== '#' && k !== 'O') {
+      w.beams.push([cc.x, cc.z, ch(c, r - 1) === '#' && ch(c, r + 1) === '#']);
+    }
+
     // ----- Rohre an der Decke in Gängen -----
     const nsCorr = ch(c - 1, r) === '#' && ch(c + 1, r) === '#';
     const ewCorr = ch(c, r - 1) === '#' && ch(c, r + 1) === '#';
@@ -394,6 +527,18 @@ function buildWorld() {
       group.add(pipe);
     }
   }
+
+  // Stahlträger als Instanzen (ein Draw-Call)
+  const beamGeo = new THREE.BoxGeometry(CELL, 0.28, 0.16);
+  const beams = new THREE.InstancedMesh(beamGeo, MAT.beam, w.beams.length);
+  const q = new THREE.Quaternion(), one = new THREE.Vector3(1, 1, 1), up = new THREE.Vector3(0, 1, 0);
+  w.beams.forEach(([x, z, rot], i) => {
+    q.setFromAxisAngle(up, rot ? Math.PI / 2 : 0);
+    m4.compose(new THREE.Vector3(x, WALL_H - 0.14, z), q, one); beams.setMatrixAt(i, m4);
+  });
+  beams.castShadow = true; group.add(beams);
+
+  tuneEnv(group);
 
   // Lichtpool: nur die nächsten Lampen bekommen echte Lichtquellen (schnell auf dem iPad)
   const poolSize = settings.quality === 'low' ? 4 : settings.quality === 'mid' ? 6 : 8;
@@ -432,7 +577,7 @@ function collide(pos, rad) {
 
 function passable(c, r) {
   const k = ch(c, r);
-  if (k === '#' || k === 'G') return false;
+  if (k === '#' || k === 'G' || k === 'O') return false;
   if (k === '1' || k === '2' || k === '3') return W.doors[k].open;
   if (k === 'E') return W.gate.open;
   if (k === 'X') return W.gate.open;
@@ -480,7 +625,7 @@ function randomFloorNear(c0, r0, radius) {
 // ======================================================================
 const G = {
   mode: 'menu', time: 0, flash: true, placed: 0, powered: false, monsterAwake: false,
-  noise: null, chase: 0, blackout: 0, focus: null, events: [], leversPulled: 0, lastNoteT: 0,
+  noise: null, chase: 0, blackout: 0, focus: null, events: [], leversPulled: 0, lastNoteT: 0, shake: 0,
 };
 const P = {
   pos: new THREE.Vector3(), vel: new THREE.Vector3(), yaw: 0, pitch: 0, eye: EYE, crouch: false,
@@ -489,6 +634,7 @@ const P = {
 
 // ----- Monster -----
 const monster = new MonsterModel();
+tuneEnv(monster.root, 0.3);
 scene.add(monster.root);
 const M = {
   pos: new THREE.Vector3(), yaw: 0, state: 'dormant', path: null, pathT: 0, target: null, wait: 0,
@@ -502,15 +648,24 @@ const hands = [0, 1].map(side => {
   const vm = new THREE.Group();
   const launcher = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.05, 0.36, 12), MAT.metal);
   launcher.rotation.x = Math.PI / 2; launcher.position.z = 0.1; vm.add(launcher);
+  // Details am Werfer: Metallringe, Schlauch, Warnlämpchen
+  for (const z of [0.0, 0.14, 0.24]) {
+    const r2 = new THREE.Mesh(new THREE.TorusGeometry(0.05, 0.007, 8, 20), MAT.beam); r2.position.z = z; vm.add(r2);
+  }
+  const hose = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([
+    new THREE.Vector3(0, 0.04, -0.02), new THREE.Vector3(side ? -0.05 : 0.05, 0.08, 0.12), new THREE.Vector3(side ? -0.03 : 0.03, 0.03, 0.3)]), 16, 0.011, 8), MAT.dark);
+  vm.add(hose);
+  const led = new THREE.Mesh(new THREE.SphereGeometry(0.008, 8, 6), new THREE.MeshBasicMaterial({ color: new THREE.Color(color).multiplyScalar(3) }));
+  led.position.set(0, 0.05, 0.06); vm.add(led);
   const ring = new THREE.Mesh(new THREE.CylinderGeometry(0.056, 0.056, 0.05, 14), new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.3, roughness: 0.4 }));
   ring.rotation.x = Math.PI / 2; ring.position.z = -0.07; vm.add(ring);
   const hand = makeHand(color);
   // Wie im Original: Finger zeigen nach oben, Handfläche nach vorn, Daumen nach innen
   hand.position.set(0, 0.07, -0.2); hand.rotation.set(Math.PI / 2 - 0.12, 0, side ? 0.12 : -0.12);
-  hand.scale.set(side ? -1.25 : 1.25, 1.25, 1.25); vm.add(hand);
+  hand.scale.set(side ? -1.05 : 1.05, 1.05, 1.05); vm.add(hand);
   const carryBat = makeBattery(); carryBat.scale.setScalar(0.55); carryBat.rotation.x = Math.PI / 2;
   carryBat.position.set(0, 0.1, -0.26); carryBat.visible = false; vm.add(carryBat);
-  const rest = new THREE.Vector3(side ? 0.24 : -0.24, -0.27, -0.6);
+  const rest = new THREE.Vector3(side ? 0.28 : -0.28, -0.31, -0.6);
   vm.position.copy(rest); vm.rotation.set(0.05, side ? -0.08 : 0.08, side ? -0.1 : 0.1);
   vmCam.add(vm);
 
@@ -537,9 +692,13 @@ document.body.appendChild(lockerView);
 
 let subTimer = 0;
 function say(text, dur = 4, who = '') {
-  hud.sub.innerHTML = who ? `<b style="color:${who === 'POPPY' ? '#ff9ec8' : '#ffcc33'}">${who}:</b> ${text}` : text;
+  const colors = { POPPY: '#ff9ec8', PROTOTYP: '#ff4a3a', HUGGY: '#6f9bff', DURCHSAGE: '#cfd8dc' };
+  hud.sub.innerHTML = who ? `<b style="color:${colors[who] || '#ffcc33'}">${who}:</b> ${text}` : text;
   hud.sub.style.opacity = 1; subTimer = dur;
-  if (who === 'POPPY') { audio.radio(); audio.speak(text); }
+  if (who === 'POPPY') { audio.radio(); audio.speak(text, 'POPPY'); }
+  if (who === 'PROTOTYP') { audio.growl(0.5); audio.speak(text, 'PROTOTYP'); }
+  if (who === 'HUGGY') { audio.growl(0.9); audio.speak(text, 'HUGGY', { urgent: true }); }
+  if (who === 'DURCHSAGE') { audio.chime(); setTimeout(() => audio.speak(text, 'DURCHSAGE'), 900); }
 }
 function objective(t) { hud.obj.textContent = t; }
 function updateBatteryHud() { [...hud.bats.children].forEach((el, i) => el.classList.toggle('on', i < G.placed)); }
@@ -550,7 +709,7 @@ function schedule(delay, fn) { G.events.push({ t: G.time + delay, fn }); }
 // ======================================================================
 function resetGame() {
   buildWorld();
-  Object.assign(G, { time: 0, flash: true, placed: 0, powered: false, monsterAwake: false, noise: null, chase: 0, blackout: 0, focus: null, events: [], leversPulled: 0 });
+  Object.assign(G, { time: 0, flash: true, placed: 0, powered: false, monsterAwake: false, noise: null, chase: 0, blackout: 0, focus: null, events: [], leversPulled: 0, shake: 0 });
   audio.alarm = false;
   P.pos.copy(W.start); P.vel.set(0, 0, 0); P.yaw = W.startYaw; P.pitch = 0; P.eye = EYE; P.stamina = 100; P.hidden = null; P.exhausted = false;
   M.pos.copy(W.monsterStart); M.yaw = Math.PI; M.state = 'dormant'; M.path = null; M.aware = 0; M.lost = 0; M.sawHide = false; M.speed = 0; M.growlT = 8;
@@ -562,11 +721,12 @@ function resetGame() {
   objective('Finde einen Weg nach draußen.');
   hud.sub.style.opacity = 0;
   // Intro
-  schedule(1.0, () => say('Kannst du mich hören? Gut … du lebst noch.', 4, 'POPPY'));
-  schedule(5.2, () => say('Der Aufzug ist abgestürzt. So tief unten war noch nie ein Mitarbeiter.', 4.5, 'POPPY'));
-  schedule(10, () => { say('Das Ausgangstor braucht Strom. Finde drei Batterien und bring sie zum Generator.', 5, 'POPPY'); objective('Finde 3 Batterien für den Generator (0/3)'); });
-  schedule(15.5, () => say('Und … sei leise. Hier unten schläft etwas. Wir nannten es <b>Langbein</b>.', 5, 'POPPY'));
-  schedule(21, () => say(isTouch ? 'Tipp: Tippe auf ✋, um die GrabPack-Hand zu schießen.' : 'Tipp: Linke/rechte Maustaste schießt die GrabPack-Hände.', 4));
+  schedule(0.6, () => say('Willkommen bei Playtime Co., Ebene neun. Notbetrieb aktiv. Bitte bleiben Sie ruhig.', 5, 'DURCHSAGE'));
+  schedule(6.5, () => say('Kannst du mich hören? Gut … du lebst noch.', 4, 'POPPY'));
+  schedule(10.7, () => say('Der Aufzug ist abgestürzt. So tief unten war noch nie ein Mitarbeiter.', 4.5, 'POPPY'));
+  schedule(15.5, () => { say('Das Ausgangstor braucht Strom. Finde drei Batterien und bring sie zum Generator.', 5, 'POPPY'); objective('Finde 3 Batterien für den Generator (0/3)'); });
+  schedule(21, () => say('Und … sei leise. Hier unten schläft etwas. <b>Huggy Wuggy</b> hat den Sturz überlebt.', 5, 'POPPY'));
+  schedule(27, () => say(isTouch ? 'Tipp: Tippe auf ✋, um die GrabPack-Hand zu schießen.' : 'Tipp: Linke/rechte Maustaste schießt die GrabPack-Hände.', 4));
 }
 
 function startGame() {
@@ -608,6 +768,7 @@ function insertBattery(h) {
 
 function powerOn() {
   G.powered = true;
+  say('Achtung. Generator sechs läuft. Ausgangstor wird geöffnet.', 3, 'DURCHSAGE');
   audio.powerUp();
   objective('Der Generator läuft …');
   schedule(2.5, () => {
@@ -615,8 +776,9 @@ function powerOn() {
     W.gate.indMat.color.set(0x30ff60);
     for (const l of W.lamps) if (l.base < 26) { l.color.set(0xff2a18); l.bulbMat.color.set(0xff2a18); l.shaftMat.color.set(0xff3020); l.flicker = true; }
     say('Der Generator läuft! Das Tor ist offen – <b>LAUF!</b>', 5, 'POPPY');
+    schedule(5.5, () => say('Lauf nur. Du kannst mir nicht entkommen. Nicht für immer.', 5, 'PROTOTYP'));
     objective('FLIEH DURCH DAS AUSGANGSTOR!');
-    // Finale: Langbein weiß genau, wo du bist
+    // Finale: Huggy weiß genau, wo du bist
     if (M.pos.distanceTo(P.pos) > 26) {
       for (let i = 0; i < 30; i++) {
         const cc = center(...randomFloorNear(...toCell(P.pos.x, P.pos.z), 7));
@@ -628,8 +790,15 @@ function powerOn() {
   });
 }
 
+const HUGGY_LINES = ['Umarm mich …', 'Ich hab dich gefunden …', 'Komm her … ich will dich nur umarmen.', 'Huggy … Wuggy …', 'Wir spielen für immer.'];
 function startChase(silent) {
-  if (M.state !== 'chase' && !silent) { audio.setMonsterPos(M.pos); audio.roar(); }
+  if (M.state !== 'chase' && !silent) {
+    audio.setMonsterPos(M.pos); audio.roar();
+    if (G.time - (G.lastHuggy ?? -99) > 16) {
+      G.lastHuggy = G.time;
+      schedule(0.9, () => say(HUGGY_LINES[Math.floor(Math.random() * HUGGY_LINES.length)], 3, 'HUGGY'));
+    }
+  }
   M.state = 'chase'; M.lost = 0; M.aware = 1; M.path = null; M.pathT = 0;
   M.lastSeen.copy(P.pos);
   monster.setAngry(true);
@@ -966,7 +1135,7 @@ function updatePlayer(dt) {
     P.eye + Math.abs(Math.sin(P.bob)) * 0.06 * bobA,
     P.pos.z - Math.cos(P.bob) * 0.03 * bobA * Math.sin(P.yaw),
   );
-  const shake = G.chase > 0.5 ? Math.max(0, 1 - M.pos.distanceTo(P.pos) / 10) * 0.01 : 0;
+  const shake = (G.chase > 0.5 ? Math.max(0, 1 - M.pos.distanceTo(P.pos) / 10) * 0.01 : 0) + G.shake * 0.04;
   camera.rotation.set(P.pitch + (Math.random() - 0.5) * shake, P.yaw + (Math.random() - 0.5) * shake, Math.cos(P.bob) * 0.006 * bobA);
 
   // Geräusche, die das Monster hören kann
@@ -1136,7 +1305,7 @@ function updateJumpscare(dt) {
     $('damage').style.opacity = 0;
     const tips = [
       'Tipp: Brich die Sichtlinie ab und versteck dich in einem Spind – aber nicht, während es dich sieht.',
-      'Tipp: Mach die Taschenlampe (F) aus, wenn Langbein in der Nähe ist. Im Dunkeln sieht es schlecht.',
+      'Tipp: Mach die Taschenlampe (F) aus, wenn Huggy in der Nähe ist. Im Dunkeln sieht er schlecht.',
       'Tipp: Rennen ist laut. Geduckt (C) schleichst du fast lautlos.',
       'Tipp: Dein Atem reicht nicht ewig. Renn nur, wenn es dich jagt.',
     ];
@@ -1150,6 +1319,30 @@ function updateJumpscare(dt) {
 // ======================================================================
 //  Welt-Updates: Lampen, Türen, Batterien
 // ======================================================================
+// Der Prototyp im Käfig: folgt dir mit dem Kopf, schlägt gegen die Gitter und redet
+function updateProto(dt) {
+  const pr = W.proto;
+  if (!pr) return;
+  const dx = P.pos.x - pr.pos.x, dz = P.pos.z - pr.pos.z, d = Math.hypot(dx, dz);
+  const ang = clamp(((Math.atan2(dx, dz) - pr.yaw + Math.PI * 3) % (Math.PI * 2)) - Math.PI, -1.2, 1.2);
+  pr.strikeT -= dt;
+  if (d < 4.6 && pr.strikeT <= 0 && !P.hidden) {
+    pr.strikeT = 2.8 + Math.random() * 2; pr.strike = 1; G.shake = 0.6;
+    audio.cageHit();
+  }
+  pr.strike = Math.max(0, pr.strike - dt * 1.6);
+  const s = pr.strike > 0.7 ? (1 - pr.strike) / 0.3 : pr.strike / 0.7;
+  pr.model.animate(dt, d < 16 ? ang : 0, s);
+  if (!pr.seen && d < 11) {
+    camera.getWorldDirection(_fwd);
+    if ((_fwd.x * -dx + _fwd.z * -dz) / d > 0.6) {
+      pr.seen = true;
+      say('Endlich … Besuch.', 3.5, 'PROTOTYP');
+      schedule(4.2, () => say('Nimm dir ruhig die Batterie. Lauf nur. Huggy wartet schon auf dich.', 5.5, 'PROTOTYP'));
+    }
+  }
+}
+
 function updateWorld(dt) {
   for (const d of [...Object.values(W.doors), W.gate]) {
     if (d.opening && d.t < 1) {
@@ -1177,7 +1370,7 @@ function updateLights(dt) {
     }
     if (G.blackout > 0) lvl = G.blackout < 0.3 ? Math.random() : 0;
     l.level = lvl;
-    l.bulbMat.color.copy(l.color).multiplyScalar(0.25 + lvl * 0.9);
+    l.bulbMat.color.copy(l.color).multiplyScalar(0.3 + lvl * 3.5); // > 1 = leuchtet (Bloom)
     l.shaftMat.opacity = 0.045 * lvl;
   }
   const cp = camera.position;
@@ -1191,8 +1384,8 @@ function updateLights(dt) {
     pl.intensity = l.base * l.level;
   });
 
-  // Taschenlampe (flackert, wenn Langbein nah ist)
-  let fl = G.flash && (G.mode === 'playing' || G.mode === 'jumpscare') ? 55 : 0;
+  // Taschenlampe (flackert, wenn Huggy nah ist)
+  let fl = G.flash && (G.mode === 'playing' || G.mode === 'jumpscare') ? 36 : 0;
   if (G.mode === 'menu') fl = 30;
   const md = M.pos.distanceTo(P.pos);
   if (fl && G.monsterAwake && md < 9 && Math.random() < 0.12) fl *= Math.random() * 0.3;
@@ -1201,11 +1394,11 @@ function updateLights(dt) {
   // Viewmodel-Helligkeit an Umgebung anpassen
   const env = Math.min(1.2, lightAt(camera.position));
   vmHemi.intensity = 0.12 + env * 0.5;
-  vmKey.intensity = G.flash ? 1.3 : 0.15;
+  vmKey.intensity = G.flash ? 0.7 : 0.1;
 }
 
 // ======================================================================
-//  Menü-Kamera: Blick auf den schlafenden Langbein
+//  Menü-Kamera: Blick auf den schlafenden Huggy
 // ======================================================================
 const menuCam = { t: 0 };
 function updateMenu(dt) {
@@ -1256,6 +1449,35 @@ $('sens').oninput = e => { settings.sens = +e.target.value; saveSettings(); };
 $('vol').oninput = e => { settings.vol = +e.target.value; audio.setVolume(settings.vol); saveSettings(); };
 $('quality').onchange = e => { settings.quality = e.target.value; saveSettings(); applyQuality(true); };
 
+// ----- Nachbearbeitung: Bloom-Leuchten + Film-Look (Korn, Vignette, Farbsäume) -----
+const FilmShader = {
+  uniforms: { tDiffuse: { value: null }, time: { value: 0 }, grain: { value: 0.05 }, vignette: { value: 0.95 }, aberration: { value: 0.004 } },
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: `uniform sampler2D tDiffuse; uniform float time, grain, vignette, aberration; varying vec2 vUv;
+    float rand(vec2 c){ return fract(sin(dot(c, vec2(12.9898, 78.233))) * 43758.5453); }
+    void main(){
+      vec2 d = vUv - 0.5; float r = dot(d, d);
+      vec2 off = d * aberration * (1.0 + r * 6.0);
+      vec3 col = vec3(texture2D(tDiffuse, vUv + off).r, texture2D(tDiffuse, vUv).g, texture2D(tDiffuse, vUv - off).b);
+      col *= 1.0 - vignette * smoothstep(0.08, 0.7, r * 1.6);
+      col += (rand(vUv * 1000.0 + time) - 0.5) * grain * (0.3 + dot(col, vec3(0.3)));
+      gl_FragColor = vec4(max(col, 0.0), 1.0);
+    }`,
+};
+let composer = null, filmPass = null, bloomPass = null;
+function setupComposer(on) {
+  if (!on) { composer?.dispose(); composer = null; $('grain').style.display = ''; $('vignette').style.display = ''; return; }
+  if (composer) return;
+  composer = new EffectComposer(renderer);
+  composer.addPass(new RenderPass(scene, camera));
+  bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth / 2, innerHeight / 2), 0.5, 0.5, 0.97);
+  composer.addPass(bloomPass);
+  filmPass = new ShaderPass(FilmShader);
+  composer.addPass(filmPass);
+  composer.addPass(new OutputPass());
+  $('grain').style.display = 'none'; $('vignette').style.display = 'none';
+}
+
 function applyQuality(rebuild) {
   const q = settings.quality, dpr = devicePixelRatio || 1;
   renderer.setPixelRatio(q === 'low' ? Math.min(dpr, 1) * 0.75 : q === 'mid' ? Math.min(dpr, 1.35) : Math.min(dpr, 2));
@@ -1266,6 +1488,7 @@ function applyQuality(rebuild) {
   }
   flashlight.shadow.mapSize.set(q === 'high' ? 1024 : 512, q === 'high' ? 1024 : 512);
   flashlight.shadow.map?.dispose(); flashlight.shadow.map = null;
+  setupComposer(q !== 'low');
   if (rebuild && G.mode === 'menu') resetGame();
   resize();
 }
@@ -1273,6 +1496,7 @@ function applyQuality(rebuild) {
 function resize() {
   const w = innerWidth, h = innerHeight;
   renderer.setSize(w, h);
+  if (composer) { composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(w, h); }
   camera.aspect = vmCam.aspect = w / h;
   camera.updateProjectionMatrix(); vmCam.updateProjectionMatrix();
 }
@@ -1320,8 +1544,13 @@ const clock = new THREE.Clock();
 function frame() {
   requestAnimationFrame(frame);
   tick(Math.min(clock.getDelta(), 0.05));
-  renderer.clear();
-  renderer.render(scene, camera);
+  if (composer) {
+    filmPass.uniforms.time.value = (performance.now() / 1000) % 100;
+    composer.render();
+  } else {
+    renderer.clear();
+    renderer.render(scene, camera);
+  }
   if (G.mode === 'playing' || G.mode === 'note') {
     renderer.clearDepth();
     renderer.render(vmScene, vmCam);
@@ -1336,6 +1565,8 @@ function tick(dt) {
     if (G.mode === 'playing') updateHands(dt);
     if (G.mode === 'playing') updateMonster(dt);
     updateWorld(dt);
+    updateProto(dt);
+    G.shake = Math.max(0, (G.shake || 0) - dt * 1.5);
     if (G.mode === 'playing') updateFocus();
     if (G.noise) { G.noise.t -= dt; if (G.noise.t < 0) G.noise = null; }
     subTimer -= dt; if (subTimer <= 0) hud.sub.style.opacity = 0;
@@ -1376,4 +1607,4 @@ const unlockAudio = () => {
 for (const ev of ['touchend', 'click', 'keydown']) addEventListener(ev, unlockAudio, { capture: true });
 
 // Für Tests / Debug
-window.__pp6 = { G, P, M, audio, W: () => W, hands, camera, fire, interact, aim, simulate: (sec) => { for (let t = 0; t < sec; t += 1 / 60) { scene.updateMatrixWorld(); tick(1 / 60); } } };
+window.__pp6 = { G, P, M, audio, monster, W: () => W, hands, camera, fire, interact, aim, simulate: (sec) => { for (let t = 0; t < sec; t += 1 / 60) { scene.updateMatrixWorld(); tick(1 / 60); } } };

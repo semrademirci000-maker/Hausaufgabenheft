@@ -80,15 +80,32 @@ export class AudioEngine {
   }
 
   // ---------- Poppys Stimme (Sprachausgabe des Geräts) ----------
-  _pickVoice() {
+  // Stimmen des Geräts nach Geschlecht auswählen (Namen der deutschen iOS/macOS/Windows/Chrome-Stimmen)
+  _voices() {
     const S = window.speechSynthesis;
-    if (!S) return null;
-    if (this._voice) return this._voice;
-    const de = S.getVoices().filter(v => (v.lang || '').toLowerCase().startsWith('de'));
-    const liked = ['Anna', 'Petra', 'Helena', 'Marlene', 'Vicki', 'Katja', 'Hedda', 'Google Deutsch'];
-    this._voice = de.find(v => liked.some(n => v.name.includes(n))) || de[0] || null;
-    return this._voice;
+    if (!S) return [];
+    if (!this._vlist || !this._vlist.length) {
+      this._vlist = S.getVoices().filter(v => (v.lang || '').toLowerCase().startsWith('de'));
+      if (!this._vHooked) { this._vHooked = true; S.addEventListener?.('voiceschanged', () => { this._vlist = null; }); }
+    }
+    return this._vlist;
   }
+  _pickVoice(kind = 'female') {
+    const de = this._voices();
+    const names = kind === 'male'
+      ? ['Markus', 'Martin', 'Yannick', 'Viktor', 'Hans', 'Stefan', 'Conrad', 'Klaus', 'Male', 'männlich']
+      : ['Anna', 'Petra', 'Helena', 'Marlene', 'Vicki', 'Katja', 'Hedda', 'Female', 'weiblich', 'Google Deutsch'];
+    return de.find(v => names.some(n => v.name.includes(n))) || de[0] || null;
+  }
+
+  // Jede Figur hat ihr eigenes Stimmprofil
+  static VOICES = {
+    POPPY: { kind: 'female', pitch: 1.55, rate: 0.93 },          // helle, sanfte Puppenstimme
+    PROTOTYP: { kind: 'male', pitch: 0.05, rate: 0.72 },         // tief, langsam, bedrohlich
+    HUGGY: { kind: 'male', pitch: 0.35, rate: 0.62, vol: 0.8 },  // geflüstert, gedehnt
+    DURCHSAGE: { kind: 'female', pitch: 1.0, rate: 0.98 },       // Fabrik-Lautsprecher
+  };
+
   primeSpeech() {
     // iOS spricht erst, wenn das erste speak() direkt in einem Tippen passiert
     const S = window.speechSynthesis;
@@ -98,15 +115,18 @@ export class AudioEngine {
     u.volume = 0; u.lang = 'de-DE';
     S.speak(u);
   }
-  speak(html, { pitch = 1.35, rate = 0.97 } = {}) {
+  speak(html, who = 'POPPY', { urgent = false } = {}) {
     const S = window.speechSynthesis;
     if (!S || this.volume <= 0) return;
     const text = html.replace(/<[^>]+>/g, '').replace(/…/g, '...').trim();
     if (!text) return;
-    S.cancel();
+    const prof = AudioEngine.VOICES[who] || AudioEngine.VOICES.POPPY;
+    // nicht zu viel stauen: bei dringenden Sätzen oder langer Schlange vorher abbrechen
+    if (urgent || (S.pending && S.speaking)) S.cancel();
     const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'de-DE'; u.pitch = pitch; u.rate = rate; u.volume = Math.min(1, this.volume * 1.15);
-    const v = this._pickVoice(); if (v) u.voice = v;
+    u.lang = 'de-DE'; u.pitch = prof.pitch; u.rate = prof.rate;
+    u.volume = Math.min(1, this.volume * 1.15 * (prof.vol ?? 1));
+    const v = this._pickVoice(prof.kind); if (v) u.voice = v;
     S.speak(u);
   }
   stopSpeech() { try { window.speechSynthesis?.cancel(); } catch (e) { /* egal */ } }
@@ -312,6 +332,17 @@ export class AudioEngine {
   radio() {
     this.noise({ dur: 0.25, type: 'bandpass', freq: 2200, q: 1, gain: 0.08 });
     this.tone({ type: 'square', freq: 1250, dur: 0.08, gain: 0.03 });
+  }
+  // Lautsprecher-Gong vor einer Durchsage
+  chime() {
+    this.tone({ type: 'sine', freq: 784, dur: 0.6, gain: 0.12, wet: 1.2 });
+    this.tone({ type: 'sine', freq: 659, dur: 0.6, gain: 0.12, wet: 1.2, delay: 0.3 });
+    this.tone({ type: 'sine', freq: 523, dur: 0.9, gain: 0.12, wet: 1.2, delay: 0.6 });
+  }
+  cageHit() {
+    this.noise({ dur: 0.6, type: 'bandpass', freq: 1800, q: 4, gain: 0.5, wet: 1 });
+    for (const f of [410, 617, 893]) this.tone({ type: 'triangle', freq: f, freqEnd: f * 0.97, dur: 1.4, gain: 0.08, wet: 1.2 });
+    this.tone({ type: 'sine', freq: 70, freqEnd: 40, dur: 0.4, gain: 0.5 });
   }
   flashClick() { this.tone({ type: 'square', freq: 2400, dur: 0.02, gain: 0.05 }); }
   powerDown() { this.tone({ type: 'sawtooth', freq: 300, freqEnd: 30, dur: 1.2, gain: 0.15, wet: 1 }); }

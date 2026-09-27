@@ -226,43 +226,117 @@ export function grinTexture(open = 0) {
   }, { color: true });
 }
 
+// Playtime-Co.-Werbeplakate: Huggy Wuggy, Poppy, Kissy Missy
 export function posterTexture(kind = 0) {
   seed = 200 + kind * 31;
   return make(256, 360, (g, w, h) => {
-    const bgs = ['#e8d9b5', '#d9e3e8', '#f0cfcf'];
-    g.fillStyle = bgs[kind % 3]; g.fillRect(0, 0, w, h);
-    g.fillStyle = '#b02020'; g.fillRect(0, 0, w, 62);
-    g.fillStyle = '#fff'; g.font = 'bold 34px Oswald, Impact, sans-serif'; g.textAlign = 'center';
-    g.fillText('PLAYTIME CO.', w / 2, 44);
-    // Spielzeug-Figur
+    const k = kind % 3;
+    const bgs = ['#f3e2b0', '#f6d6dc', '#d8e6f2'];
+    g.fillStyle = bgs[k]; g.fillRect(0, 0, w, h);
+    // Sonnenstrahlen
+    g.save(); g.translate(w / 2, 175); g.fillStyle = 'rgba(255,255,255,.35)';
+    for (let i = 0; i < 12; i++) { g.rotate(Math.PI / 6); g.beginPath(); g.moveTo(0, 0); g.lineTo(-18, -260); g.lineTo(18, -260); g.fill(); }
+    g.restore();
+    g.fillStyle = '#c4161c'; g.fillRect(0, 0, w, 50);
+    g.fillStyle = '#fff'; g.font = 'bold 28px Oswald, Impact, sans-serif'; g.textAlign = 'center';
+    g.fillText('PLAYTIME CO.', w / 2, 36);
     g.save(); g.translate(w / 2, 180);
-    if (kind % 3 === 0) {
-      g.fillStyle = '#2f5fd0'; g.beginPath(); g.ellipse(0, 0, 55, 65, 0, 0, 7); g.fill();
-      g.fillStyle = '#fff'; g.beginPath(); g.arc(-20, -15, 12, 0, 7); g.arc(20, -15, 12, 0, 7); g.fill();
-      g.fillStyle = '#000'; g.beginPath(); g.arc(-20, -15, 5, 0, 7); g.arc(20, -15, 5, 0, 7); g.fill();
-      g.strokeStyle = '#c21d4a'; g.lineWidth = 7; g.beginPath(); g.arc(0, 8, 32, 0.15, Math.PI - 0.15); g.stroke();
-    } else if (kind % 3 === 1) {
-      g.fillStyle = '#e04a8a'; g.beginPath(); g.arc(0, 0, 50, 0, 7); g.fill();
-      g.fillStyle = '#ffd24a'; for (let i = 0; i < 5; i++) { g.beginPath(); g.arc(Math.cos(i * 1.25) * 60, Math.sin(i * 1.25) * 60, 18, 0, 7); g.fill(); }
-      g.fillStyle = '#000'; g.beginPath(); g.arc(-15, -8, 6, 0, 7); g.arc(15, -8, 6, 0, 7); g.fill();
+    if (k === 0) {
+      // Huggy Wuggy
+      g.fillStyle = '#1f4fd6'; g.beginPath(); g.ellipse(0, 0, 62, 70, 0, 0, 7); g.fill();
+      for (let i = 0; i < 70; i++) { g.strokeStyle = 'rgba(10,30,120,.5)'; const a = Math.random() * 7, r = 55 + Math.random() * 14; g.beginPath(); g.moveTo(Math.cos(a) * r, Math.sin(a) * r); g.lineTo(Math.cos(a) * (r + 7), Math.sin(a) * (r + 7)); g.stroke(); }
+      g.fillStyle = '#0a0a12'; g.beginPath(); g.arc(-22, -20, 15, 0, 7); g.arc(22, -20, 15, 0, 7); g.fill();
+      g.fillStyle = '#fff'; g.beginPath(); g.arc(-17, -25, 4, 0, 7); g.arc(27, -25, 4, 0, 7); g.fill();
+      g.fillStyle = '#d0142c'; g.beginPath(); g.moveTo(-44, 14); g.quadraticCurveTo(0, 30, 44, 14); g.quadraticCurveTo(0, 56, -44, 14); g.fill();
+      g.fillStyle = '#f2c62b'; g.beginPath(); g.ellipse(-78, 60, 16, 20, 0.3, 0, 7); g.ellipse(78, 60, 16, 20, -0.3, 0, 7); g.fill();
+    } else if (k === 1) {
+      // Poppy
+      g.fillStyle = '#b3121e';
+      for (let i = 0; i < 26; i++) { const a = Math.PI + (i / 25) * Math.PI, r = 58; g.beginPath(); g.arc(Math.cos(a) * r, Math.sin(a) * r * 0.9 + 6, 18, 0, 7); g.fill(); }
+      for (const s of [-1, 1]) for (let i = 0; i < 4; i++) { g.beginPath(); g.arc(s * (62 + i * 3), 10 + i * 18, 15, 0, 7); g.fill(); }
+      g.fillStyle = '#f4dcc8'; g.beginPath(); g.ellipse(0, 10, 50, 56, 0, 0, 7); g.fill();
+      g.fillStyle = '#2a5fc2'; g.beginPath(); g.arc(-18, 2, 9, 0, 7); g.arc(18, 2, 9, 0, 7); g.fill();
+      g.fillStyle = '#111'; g.beginPath(); g.arc(-18, 2, 4, 0, 7); g.arc(18, 2, 4, 0, 7); g.fill();
+      g.fillStyle = 'rgba(220,90,90,.45)'; g.beginPath(); g.arc(-30, 22, 8, 0, 7); g.arc(30, 22, 8, 0, 7); g.fill();
+      g.strokeStyle = '#b3121e'; g.lineWidth = 4; g.beginPath(); g.arc(0, 26, 12, 0.2, Math.PI - 0.2); g.stroke();
     } else {
-      g.fillStyle = '#6b4a2b'; g.fillRect(-45, -45, 90, 90);
-      g.fillStyle = '#ffcc33'; g.font = 'bold 60px sans-serif'; g.fillText('A', 0, 20);
+      // Kissy Missy
+      g.fillStyle = '#e8559b'; g.beginPath(); g.ellipse(0, 0, 60, 68, 0, 0, 7); g.fill();
+      g.fillStyle = '#0a0a12'; g.beginPath(); g.arc(-22, -18, 14, 0, 7); g.arc(22, -18, 14, 0, 7); g.fill();
+      g.fillStyle = '#fff'; g.beginPath(); g.arc(-18, -22, 4, 0, 7); g.arc(26, -22, 4, 0, 7); g.fill();
+      g.fillStyle = '#c3102a'; g.beginPath(); g.moveTo(-40, 14); g.quadraticCurveTo(0, 28, 40, 14); g.quadraticCurveTo(0, 50, -40, 14); g.fill();
+      g.fillStyle = '#ffd33a'; g.beginPath(); g.moveTo(40, -60); g.quadraticCurveTo(62, -80, 70, -56); g.quadraticCurveTo(58, -50, 40, -60); g.fill();
     }
     g.restore();
-    g.fillStyle = '#222'; g.font = '22px Oswald, sans-serif';
-    const lines = [['Wo Spielzeug', 'lebendig wird!'], ['Spielen ist', 'für immer!'], ['Lern mit', 'Freunden!']][kind % 3];
-    g.fillText(lines[0], w / 2, 290); g.fillText(lines[1], w / 2, 318);
-    // Kratzer über dem Poster
-    if (kind === 1) {
+    g.fillStyle = '#1d1a18'; g.font = 'bold 26px Oswald, Impact, sans-serif'; g.textAlign = 'center';
+    const names = ['HUGGY WUGGY', 'POPPY', 'KISSY MISSY'];
+    const lines = ['Umarm mich für immer!', 'Die Puppe, die mit dir spricht!', 'Ein Kuss für jeden Freund!'];
+    g.fillText(names[k], w / 2, 292);
+    g.font = '17px Oswald, sans-serif'; g.fillText(lines[k], w / 2, 318);
+    // Krallenspuren quer über das Huggy-Plakat
+    if (k === 0) {
       g.strokeStyle = 'rgba(40,0,0,.8)'; g.lineWidth = 5;
-      for (let i = 0; i < 4; i++) { g.beginPath(); g.moveTo(40 + i * 25, 90); g.lineTo(90 + i * 30, 300); g.stroke(); }
+      for (let i = 0; i < 4; i++) { g.beginPath(); g.moveTo(50 + i * 26, 70); g.lineTo(110 + i * 30, 330); g.stroke(); }
     }
     grime(g, w, h, 1.4);
-    // Ränder zerfleddert
     g.globalCompositeOperation = 'destination-out';
     for (let i = 0; i < 30; i++) { g.beginPath(); g.arc(rnd() > 0.5 ? rr(0, 8) : w - rr(0, 8), rr(0, h), rr(4, 12), 0, 7); g.fill(); }
   });
+}
+
+// Normalmap aus der Helligkeit einer Textur berechnen (dunkel = vertieft)
+export function normalFrom(tex, strength = 2) {
+  const src = tex.image, w = src.width, h = src.height;
+  const sd = src.getContext('2d').getImageData(0, 0, w, h).data;
+  const lum = new Float32Array(w * h);
+  for (let i = 0; i < w * h; i++) lum[i] = (sd[i * 4] * 0.3 + sd[i * 4 + 1] * 0.59 + sd[i * 4 + 2] * 0.11) / 255;
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const g = c.getContext('2d'), out = g.createImageData(w, h), d = out.data;
+  const L = (x, y) => lum[((y + h) % h) * w + ((x + w) % w)];
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const dx = (L(x + 1, y) - L(x - 1, y)) * strength, dy = (L(x, y + 1) - L(x, y - 1)) * strength;
+    const len = Math.hypot(dx, dy, 1), i = (y * w + x) * 4;
+    d[i] = (-dx / len * 0.5 + 0.5) * 255; d[i + 1] = (dy / len * 0.5 + 0.5) * 255; d[i + 2] = (1 / len * 0.5 + 0.5) * 255; d[i + 3] = 255;
+  }
+  g.putImageData(out, 0, 0);
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.copy(tex.repeat); t.anisotropy = maxAniso;
+  return t;
+}
+
+// Rauheit: Schmutz ist matt, saubere Stellen glänzen etwas
+export function roughFrom(tex, base = 0.8, spread = 0.35) {
+  const src = tex.image, w = src.width, h = src.height;
+  const sd = src.getContext('2d').getImageData(0, 0, w, h).data;
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const g = c.getContext('2d'), out = g.createImageData(w, h), d = out.data;
+  for (let i = 0; i < w * h; i++) {
+    const l = (sd[i * 4] + sd[i * 4 + 1] + sd[i * 4 + 2]) / 765;
+    const v = clamp01(base + (0.5 - l) * spread) * 255;
+    d[i * 4] = d[i * 4 + 1] = d[i * 4 + 2] = v; d[i * 4 + 3] = 255;
+  }
+  g.putImageData(out, 0, 0);
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.copy(tex.repeat); t.anisotropy = maxAniso;
+  return t;
+}
+const clamp01 = v => Math.max(0, Math.min(1, v));
+
+export function ventTexture() {
+  return make(128, 128, (g, w, h) => {
+    g.fillStyle = '#5b5f62'; g.fillRect(0, 0, w, h);
+    for (let y = 12; y < h - 8; y += 12) { g.fillStyle = '#111'; g.fillRect(10, y, w - 20, 6); g.fillStyle = 'rgba(255,255,255,.15)'; g.fillRect(10, y + 6, w - 20, 2); }
+    g.strokeStyle = '#2a2a2a'; g.lineWidth = 6; g.strokeRect(3, 3, w - 6, h - 6);
+    grime(g, w, h, 1);
+  });
+}
+
+export function beltTexture() {
+  return make(64, 256, (g, w, h) => {
+    g.fillStyle = '#1c1c1e'; g.fillRect(0, 0, w, h);
+    for (let y = 0; y < h; y += 16) { g.fillStyle = '#2c2c30'; g.fillRect(0, y, w, 3); }
+    grime(g, w, h, 0.8);
+  }, { repeat: [1, 4] });
 }
 
 export function scrawlTexture(text) {
