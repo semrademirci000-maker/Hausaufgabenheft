@@ -1312,17 +1312,17 @@ function updateMonster(dt) {
         monsterGoTo(cell); M.wait = 1 + Math.random() * 2.5;
       }
     }
-    speed = 2.1;
+    speed = 1.8;
   } else if (M.state === 'investigate') {
-    speed = 3.2;
+    speed = 2.6;
     if (!M.path || !M.path.length) { M.state = 'search'; M.search = 6; M.path = null; }
   } else if (M.state === 'search') {
-    speed = 2.6;
+    speed = 2.2;
     M.search -= dt;
     if (!M.path || !M.path.length) { const [lc, lr] = toCell(M.lastSeen.x, M.lastSeen.z); monsterGoTo(randomFloorNear(lc, lr, 3)); }
     if (M.search <= 0) { M.state = 'patrol'; monster.setAngry(false); M.path = null; }
   } else if (M.state === 'chase') {
-    speed = G.powered ? 5.5 : 5.0;
+    speed = G.powered ? 4.4 : 3.9; // langsamer als der Spieler beim Rennen (6.4)
     if (M.sees) { M.lastSeen.copy(P.pos); M.lost = 0; }
     else M.lost += dt * (P.hidden && !M.sawHide ? 2.5 : 1);
     if (P.hidden && M.sawHide) {

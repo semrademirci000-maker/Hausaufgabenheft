@@ -429,27 +429,29 @@ export class AudioEngine {
     this.tone({ type: 'sawtooth', freq: 40, freqEnd: 400, dur: 2.5, gain: 0.15, wet: 1 });
     this.tone({ type: 'square', freq: 55, dur: 0.4, gain: 0.25, delay: 2.4, wet: 1 });
   }
+  // Kurzer Schrei beim Jumpscare: erschreckt kurz, ist aber nicht zu laut oder zu lang
   jumpscare() {
     if (!this.ctx) return;
-    const c = this.ctx, t0 = c.currentTime;
-    const shaper = c.createWaveShaper();
-    const curve = new Float32Array(1024);
-    for (let i = 0; i < 1024; i++) { const x = i / 512 - 1; curve[i] = Math.tanh(x * 6); }
-    shaper.curve = curve;
-    const out = c.createGain(); this._env(out, t0, 0.01, 0.9, 1.5);
-    shaper.connect(out).connect(this.master);
-    for (let i = 0; i < 5; i++) {
-      const o = c.createOscillator(); o.type = 'sawtooth';
-      const f = 250 + Math.random() * 700;
-      o.frequency.setValueAtTime(f, t0); o.frequency.exponentialRampToValueAtTime(f * 0.6, t0 + 1.4);
-      const v = c.createOscillator(); v.frequency.value = 30 + Math.random() * 20;
-      const vg = c.createGain(); vg.gain.value = f * 0.08; v.connect(vg).connect(o.frequency);
-      const g = c.createGain(); g.gain.value = 0.2;
-      o.connect(g).connect(shaper); o.start(t0); v.start(t0); o.stop(t0 + 1.6); v.stop(t0 + 1.6);
+    const c = this.ctx, t0 = c.currentTime, dur = 0.75;
+    const out = c.createGain(); this._env(out, t0, 0.02, 0.45, dur);
+    const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1400; bp.Q.value = 0.8;
+    bp.connect(out).connect(this.master);
+    const wet = c.createGain(); wet.gain.value = 0.3; out.connect(wet).connect(this.reverb);
+    // Stimme: zwei leicht verstimmte Töne, schnell hoch, dann abfallend, mit Zittern
+    for (const [f, d] of [[620, 0], [655, 12]]) {
+      const o = c.createOscillator(); o.type = 'sawtooth'; o.detune.value = d;
+      o.frequency.setValueAtTime(f * 0.7, t0);
+      o.frequency.exponentialRampToValueAtTime(f * 1.25, t0 + 0.12);
+      o.frequency.exponentialRampToValueAtTime(f * 0.8, t0 + dur);
+      const vib = c.createOscillator(); vib.frequency.value = 9;
+      const vg = c.createGain(); vg.gain.value = 18; vib.connect(vg).connect(o.frequency);
+      const g = c.createGain(); g.gain.value = 0.35;
+      o.connect(g).connect(bp); o.start(t0); vib.start(t0); o.stop(t0 + dur + 0.1); vib.stop(t0 + dur + 0.1);
     }
-    this.noise({ dur: 1.4, type: 'highpass', freq: 800, gain: 0.5, dest: shaper });
-    this.tone({ type: 'sine', freq: 80, freqEnd: 30, dur: 1.2, gain: 0.9 });
+    this.noise({ dur: 0.5, type: 'bandpass', freq: 2500, q: 1, gain: 0.08 });
+    this.tone({ type: 'sine', freq: 90, freqEnd: 45, dur: 0.4, gain: 0.35 });
   }
+
 
   setListener(pos, fwd) {
     if (!this.ctx) return;
