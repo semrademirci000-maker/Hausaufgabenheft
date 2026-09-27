@@ -812,6 +812,7 @@ function resetGame() {
 
 function startGame() {
   audio.init();
+  audio.setMenuMusic(false);
   audio.primeSpeech();
   audio.stopSpeech();
   audio.setVolume(settings.vol);
@@ -1497,7 +1498,7 @@ function updateMenu(dt) {
 // ======================================================================
 //  Bildschirme
 // ======================================================================
-const screens = ['menu', 'controls', 'settings', 'pause', 'dead', 'win', 'loading'];
+const screens = ['intro', 'menu', 'controls', 'settings', 'pause', 'dead', 'win', 'loading'];
 function showScreen(id) { screens.forEach(s => $(s).classList.toggle('hidden', s !== id)); }
 
 function pause() {
@@ -1509,6 +1510,7 @@ function resume() {
   showScreen(null); G.mode = 'playing'; lockPointer(); audio.unlock(); audio.pauseSpeech(false);
 }
 function toMenu() {
+  audio.setMenuMusic(true);
   unlock(); audio.alarm = false; audio.setAmbience(false); audio.ctx?.resume(); audio.stopSpeech();
   resetGame(); G.mode = 'menu';
   $('hud').classList.add('hidden'); $('touch').classList.add('hidden');
@@ -1666,7 +1668,7 @@ function tick(dt) {
   updateLights(dt);
   updateDust(dt);
   updateGrain(dt);
-  audio.update(dt, { chase: G.mode === 'playing' ? G.chase : 0, playing: G.mode === 'playing', menu: G.mode === 'menu' });
+  audio.update(dt, { chase: G.mode === 'playing' ? G.chase : 0, playing: G.mode === 'playing', menu: G.mode === 'menu' && !G.intro });
   camera.getWorldDirection(_fwd);
   audio.setListener(camera.position, _fwd);
 }
@@ -1677,7 +1679,44 @@ function tick(dt) {
 applyQuality(false);
 resetGame();
 G.mode = 'menu';
-showScreen('menu');
+// ======================================================================
+//  Intro: „by Muaz“ → Wischen → Hauptmenü
+// ======================================================================
+G.intro = true;
+showScreen('intro');
+let introStep = 0;
+const introTimers = [];
+function runIntro() {
+  if (introStep === 1) { finishIntro(); return; } // zweites Tippen überspringt
+  if (introStep !== 0) return;
+  introStep = 1;
+  audio.init(); audio.setVolume(settings.vol); audio.primeSpeech();
+  audio.setMenuMusic(true);
+  $('tapStart').classList.add('hidden');
+  $('studio').classList.remove('hidden');
+  audio.boom();
+  introTimers.push(setTimeout(() => audio.glitch(), 1300), setTimeout(() => audio.glitch(), 2400));
+  introTimers.push(setTimeout(() => {
+    audio.whoosh();
+    $('studio').classList.add('wiping');
+    $('wipebar').classList.add('go');
+  }, 3500));
+  introTimers.push(setTimeout(finishIntro, 4400));
+}
+function finishIntro() {
+  if (introStep === 2) return;
+  introStep = 2;
+  introTimers.forEach(clearTimeout);
+  G.intro = false;
+  const intro = $('intro');
+  intro.classList.add('fadeOut');
+  $('menu').classList.remove('hidden');
+  $('menu').classList.add('appear');
+  setTimeout(() => { intro.classList.add('hidden'); intro.classList.remove('fadeOut'); }, 900);
+}
+$('intro').addEventListener('click', runIntro);
+addEventListener('keydown', e => { if (G.intro && (e.code === 'Enter' || e.code === 'Space')) runIntro(); });
+
 frame();
 // Menü-Musik erst nach der ersten Berührung (Browser-Regel)
 // iOS gibt Ton nur bei touchend/click frei (nicht bei pointerdown) – deshalb bei jeder Geste entsperren

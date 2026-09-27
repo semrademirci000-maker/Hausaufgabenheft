@@ -333,6 +333,52 @@ export class AudioEngine {
     this.noise({ dur: 0.25, type: 'bandpass', freq: 2200, q: 1, gain: 0.08 });
     this.tone({ type: 'square', freq: 1250, dur: 0.08, gain: 0.03 });
   }
+  // ---------- Intro & Menümusik ----------
+  // Dunkle, schwebende Fläche mit langsam atmendem Filter – läuft im Hauptmenü
+  setMenuMusic(on) {
+    if (!this.ctx) return;
+    const c = this.ctx;
+    if (!this.menuGain) {
+      this.menuGain = c.createGain(); this.menuGain.gain.value = 0; this.menuGain.connect(this.master);
+      const wet = c.createGain(); wet.gain.value = 0.6; this.menuGain.connect(wet).connect(this.reverb);
+      const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 380; lp.Q.value = 4; lp.connect(this.menuGain);
+      const lfo = c.createOscillator(); lfo.frequency.value = 0.06;
+      const lg = c.createGain(); lg.gain.value = 260; lfo.connect(lg).connect(lp.frequency); lfo.start();
+      // Moll-Akkord mit einem schiefen Ton (Tritonus) – klingt unheimlich
+      for (const [f, g] of [[55, 0.1], [65.4, 0.08], [77.8, 0.07], [82.4, 0.05], [110.3, 0.04]]) {
+        const o = c.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f; o.detune.value = (Math.random() - 0.5) * 14;
+        const og = c.createGain(); og.gain.value = g; o.connect(og).connect(lp); o.start();
+      }
+      // leises, zitterndes Pfeifen weit oben
+      const hi = c.createOscillator(); hi.type = 'sine'; hi.frequency.value = 1244;
+      const trem = c.createOscillator(); trem.frequency.value = 5.5;
+      const tg = c.createGain(); tg.gain.value = 9; trem.connect(tg).connect(hi.frequency); trem.start();
+      const hg = c.createGain(); hg.gain.value = 0.006; hi.connect(hg).connect(this.menuGain); hi.start();
+      // tiefer Herzschlag-Puls
+      const sub = c.createOscillator(); sub.type = 'sine'; sub.frequency.value = 41;
+      const pulse = c.createOscillator(); pulse.frequency.value = 0.8;
+      const pg = c.createGain(); pg.gain.value = 0.12; pulse.connect(pg);
+      const sg = c.createGain(); sg.gain.value = 0.1; pg.connect(sg.gain); sub.connect(sg).connect(this.menuGain); sub.start(); pulse.start();
+    }
+    this.menuGain.gain.setTargetAtTime(on ? 0.9 : 0, this.t, on ? 1.5 : 0.6);
+  }
+  // Tiefer Schlag, wenn das Logo erscheint
+  boom() {
+    this.tone({ type: 'sine', freq: 70, freqEnd: 24, dur: 2.2, gain: 0.9, wet: 0.8 });
+    this.tone({ type: 'sawtooth', freq: 110, freqEnd: 40, dur: 1.2, gain: 0.15, wet: 1 });
+    this.noise({ dur: 1.4, type: 'lowpass', freq: 900, freqEnd: 80, gain: 0.35, wet: 1.2 });
+  }
+  // Wisch-Geräusch
+  whoosh() {
+    this.noise({ dur: 0.7, type: 'bandpass', freq: 300, freqEnd: 5000, q: 1.2, gain: 0.35, attack: 0.25, wet: 0.6 });
+    this.tone({ type: 'sawtooth', freq: 180, freqEnd: 900, dur: 0.6, gain: 0.05, attack: 0.2 });
+  }
+  // kurzes digitales Knacken (Glitch)
+  glitch() {
+    for (let i = 0; i < 4; i++) this.noise({ dur: 0.04, type: 'highpass', freq: 2000 + Math.random() * 4000, gain: 0.12, delay: i * 0.06 + Math.random() * 0.03 });
+    this.tone({ type: 'square', freq: 60, dur: 0.12, gain: 0.08 });
+  }
+
   // Lautsprecher-Gong vor einer Durchsage
   chime() {
     this.tone({ type: 'sine', freq: 784, dur: 0.6, gain: 0.12, wet: 1.2 });
