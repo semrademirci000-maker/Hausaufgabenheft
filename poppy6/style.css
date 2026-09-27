@@ -234,3 +234,17 @@ html, body {
   #menu .menuList button { font-size: 24px; }
 }
 @media (max-width: 700px) { #menu .desc { font-size: 13px; } }
+
+/* ---------- Eigenes Menübild ---------- */
+#menuBg { position: absolute; inset: 0; z-index: -1; background-size: cover; background-position: center; display: none; }
+#menu.customBg #menuBg { display: block; }
+.bgRow { display: flex; gap: 16px; align-items: center; justify-content: space-between; width: min(90vw, 420px); font-size: 18px; }
+.bgBtns { display: flex; gap: 8px; }
+.bgRow .pick, .bgRow button {
+  font: 600 14px "Oswald", sans-serif !important; letter-spacing: 1px !important; padding: 6px 12px !important; cursor: pointer;
+  color: var(--ink); background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.25);
+}
+.bgRow .pick:hover, .bgRow .pick:focus-within { border-color: var(--red); background: rgba(255,59,59,.18); }
+.bgHint { font-size: 13px; color: var(--muted) !important; max-width: 420px; }
+#menuBg::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(0,0,0,.6), rgba(0,0,0,.15) 55%, transparent); }
+#settings .bgRow label.pick { display: inline-block; width: auto; }

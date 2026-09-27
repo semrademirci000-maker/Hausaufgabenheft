@@ -65,6 +65,7 @@
 
 <!-- Titelbildschirm -->
 <div id="menu" class="screen hidden">
+  <div id="menuBg"></div>
   <header class="chapter">
     <div class="kicker">POPPY PLAYTIME · KAPITEL 6</div>
     <h1>DAS TIEFE WERK</h1>
@@ -127,6 +128,15 @@
   <label>Grafik
     <select id="quality"><option value="low">Niedrig</option><option value="mid" selected>Mittel</option><option value="high">Hoch</option></select>
   </label>
+  <div class="bgRow">
+    <span>Menübild</span>
+    <span class="bgBtns">
+      <label class="pick" for="bgFile">Bild wählen</label>
+      <input type="file" id="bgFile" accept="image/*" hidden>
+      <button type="button" id="bgReset">Standard</button>
+    </span>
+  </div>
+  <p class="bgHint" id="bgHint">Ein eigenes Bild aus deinen Fotos als Hintergrund im Hauptmenü. Es bleibt nur auf diesem Gerät.</p>
   <button class="back">ZURÜCK</button>
 </div>
 

@@ -1553,6 +1553,45 @@ $('sens').oninput = e => { settings.sens = +e.target.value; saveSettings(); };
 $('vol').oninput = e => { settings.vol = +e.target.value; audio.setVolume(settings.vol); saveSettings(); };
 $('quality').onchange = e => { settings.quality = e.target.value; saveSettings(); applyQuality(true); };
 
+// ----- Eigenes Menübild (bleibt nur im Browser dieses Geräts, in IndexedDB) -----
+const bgStore = {
+  db: null,
+  open() {
+    if (this.db) return Promise.resolve(this.db);
+    return new Promise((res, rej) => {
+      try {
+        const r = indexedDB.open('pp6', 1);
+        r.onupgradeneeded = () => r.result.createObjectStore('kv');
+        r.onsuccess = () => { this.db = r.result; res(this.db); };
+        r.onerror = () => rej(r.error);
+      } catch (e) { rej(e); }
+    });
+  },
+  async get() { const db = await this.open(); return new Promise(res => { const q = db.transaction('kv').objectStore('kv').get('menuBg'); q.onsuccess = () => res(q.result || null); q.onerror = () => res(null); }); },
+  async set(v) { const db = await this.open(); return new Promise(res => { const t = db.transaction('kv', 'readwrite'); v ? t.objectStore('kv').put(v, 'menuBg') : t.objectStore('kv').delete('menuBg'); t.oncomplete = t.onerror = () => res(); }); },
+};
+let bgUrl = null;
+function applyMenuBg(blob) {
+  if (bgUrl) URL.revokeObjectURL(bgUrl);
+  bgUrl = blob ? URL.createObjectURL(blob) : null;
+  $('menuBg').style.backgroundImage = bgUrl ? `url(${bgUrl})` : '';
+  $('menu').classList.toggle('customBg', !!bgUrl);
+}
+bgStore.get().then(applyMenuBg).catch(() => {});
+$('bgFile').onchange = async e => {
+  const f = e.target.files && e.target.files[0];
+  if (!f) return;
+  applyMenuBg(f);
+  $('bgHint').textContent = 'Menübild gesetzt. Geh zurück ins Menü, um es zu sehen.';
+  try { await bgStore.set(f); } catch (err) { $('bgHint').textContent = 'Menübild gesetzt, aber es konnte nicht gespeichert werden – nach dem Neuladen ist es wieder weg.'; }
+  e.target.value = '';
+};
+$('bgReset').onclick = async () => {
+  applyMenuBg(null);
+  $('bgHint').textContent = 'Standard-Menübild (Teeparty) ist wieder aktiv.';
+  try { await bgStore.set(null); } catch (err) { /* egal */ }
+};
+
 // ----- Nachbearbeitung: Bloom-Leuchten + Film-Look (Korn, Vignette, Farbsäume) -----
 const FilmShader = {
   uniforms: { tDiffuse: { value: null }, time: { value: 0 }, grain: { value: 0.05 }, vignette: { value: 0.95 }, aberration: { value: 0.004 } },
