@@ -12,7 +12,7 @@ export function buildMenuStage({ envMap, glow, tuneEnv, onTwitch }) {
   const camera = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.05, 60);
 
   const M = {
-    cloth: new THREE.MeshStandardMaterial({ color: 0x5a4e6a, roughness: 0.95, side: THREE.DoubleSide }),
+    cloth: new THREE.MeshStandardMaterial({ color: 0x463c56, roughness: 0.95, side: THREE.DoubleSide }),
     wood: new THREE.MeshStandardMaterial({ color: 0x3a2418, roughness: 0.7 }),
     china: new THREE.MeshPhysicalMaterial({ color: 0xd8d2e6, roughness: 0.25, clearcoat: 0.8 }),
     wax: new THREE.MeshStandardMaterial({ color: 0xf0e2b8, roughness: 0.6, emissive: 0x3a2a10 }),
@@ -58,7 +58,7 @@ export function buildMenuStage({ envMap, glow, tuneEnv, onTwitch }) {
   // ---- Obstschale mit Früchten ----
   const bowlPts = [];
   for (let i = 0; i <= 12; i++) { const t = i / 12; bowlPts.push(new THREE.Vector2(0.15 + Math.sin(t * Math.PI / 2) * 0.55, t * 0.45)); }
-  const bowl = add(new THREE.Mesh(new THREE.LatheGeometry(bowlPts, 32), new THREE.MeshPhysicalMaterial({ color: 0xb8b0d0, roughness: 0.2, clearcoat: 1, side: THREE.DoubleSide })), T.x + 0.2, T.h + 0.35, T.z - 0.2);
+  const bowl = add(new THREE.Mesh(new THREE.LatheGeometry(bowlPts.map(v => v.clone().multiplyScalar(1.25)), 32), new THREE.MeshPhysicalMaterial({ color: 0xb8b0d0, roughness: 0.2, clearcoat: 1, side: THREE.DoubleSide })), T.x + 0.2, T.h + 0.35, T.z - 0.2);
   add(new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.2, 0.3, 16), bowl.material), T.x + 0.2, T.h + 0.2, T.z - 0.2);
   const fruit = (color, r, x, y, z) => add(new THREE.Mesh(new THREE.SphereGeometry(r, 18, 14), new THREE.MeshPhysicalMaterial({ color, roughness: 0.35, clearcoat: 0.6 })), T.x + 0.2 + x, T.h + 0.8 + y, T.z - 0.2 + z);
   fruit(0xb3121c, 0.14, -0.25, 0, 0.2); fruit(0xc4161c, 0.13, 0.25, 0.02, 0.25); fruit(0xe07a1a, 0.15, 0.05, 0.06, -0.15);
@@ -126,6 +126,8 @@ export function buildMenuStage({ envMap, glow, tuneEnv, onTwitch }) {
   const pinkFur = new THREE.MeshPhysicalMaterial({ color: 0xe8559b, roughness: 0.95, sheen: 1, sheenColor: new THREE.Color(0xffa0d0) });
   kissy.traverse(o => { if (o.isMesh && o.material.color && o.material.color.getHex() === 0x1d49c9) o.material = pinkFur; });
   for (const gst of guests) gst.rotation.y = Math.PI; // Gäste schauen zum Tisch
+  // dunkler Stuhl ganz vorn links am Bildrand
+  chair(Math.PI * 1.02, M.velvet[3]);
 
   // ---- Lila Lametta-Girlanden von der Decke ----
   const garland = (pts, r) => {
@@ -133,13 +135,13 @@ export function buildMenuStage({ envMap, glow, tuneEnv, onTwitch }) {
     const tube = new THREE.Mesh(new THREE.TubeGeometry(curve, 80, r, 8), M.tinsel);
     scene.add(tube);
     // glitzernde Fransen
-    const n = 260, pos = new Float32Array(n * 3);
+    const n = 700, pos = new Float32Array(n * 3);
     for (let i = 0; i < n; i++) {
       const p = curve.getPoint(i / n);
       pos[i * 3] = p.x + (Math.random() - 0.5) * r * 5; pos[i * 3 + 1] = p.y + (Math.random() - 0.5) * r * 5; pos[i * 3 + 2] = p.z + (Math.random() - 0.5) * r * 5;
     }
     const gg = new THREE.BufferGeometry(); gg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    const pts2 = new THREE.Points(gg, new THREE.PointsMaterial({ color: 0xb070ff, size: 0.03, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false }));
+    const pts2 = new THREE.Points(gg, new THREE.PointsMaterial({ color: 0xb070ff, size: 0.022, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending, depthWrite: false }));
     scene.add(pts2);
     return pts2;
   };
@@ -147,6 +149,12 @@ export function buildMenuStage({ envMap, glow, tuneEnv, onTwitch }) {
     garland([new THREE.Vector3(-4, 4.2, -2), new THREE.Vector3(-1, 3.1, -1.5), new THREE.Vector3(1.5, 3.4, -2), new THREE.Vector3(4, 3.0, -1)], 0.09),
     garland([new THREE.Vector3(-2, 4.5, 1), new THREE.Vector3(0.5, 3.6, 0.2), new THREE.Vector3(3, 3.9, 0.5), new THREE.Vector3(5, 3.2, 1.5)], 0.08),
     garland([new THREE.Vector3(2.4, 0.9, 1.9), new THREE.Vector3(3.2, 1.2, 1.2), new THREE.Vector3(3.6, 0.8, 0.2)], 0.1),
+    // dichte Girlanden quer durchs obere Bild (wie auf dem Kapitel-Titelbild)
+    garland([new THREE.Vector3(-3, 4.3, 0.8), new THREE.Vector3(-0.5, 3.6, 0.2), new THREE.Vector3(1.8, 3.9, -0.3), new THREE.Vector3(4.5, 3.4, -0.4)], 0.13),
+    garland([new THREE.Vector3(-1.5, 3.8, -0.5), new THREE.Vector3(1, 3.0, -1.2), new THREE.Vector3(3, 3.3, -1.6), new THREE.Vector3(5, 2.8, -1.2)], 0.12),
+    garland([new THREE.Vector3(0.5, 4.4, 0.9), new THREE.Vector3(2.2, 3.7, 0.3), new THREE.Vector3(3.8, 4.0, -0.2)], 0.12),
+    // Lametta, das vorn rechts über die Tischkante hängt
+    garland([new THREE.Vector3(1.2, 1.12, 1.9), new THREE.Vector3(1.9, 1.08, 1.6), new THREE.Vector3(2.4, 0.95, 1.1), new THREE.Vector3(2.7, 0.7, 0.5)], 0.14),
   ];
 
   // ---- Fäden, die von oben auf den Tisch hängen (der Prototyp zieht die Fäden) ----
@@ -168,7 +176,7 @@ export function buildMenuStage({ envMap, glow, tuneEnv, onTwitch }) {
   scene.add(hand.root);
 
   // ---- Licht: lila Grundstimmung, Kerzen, kaltes Gegenlicht ----
-  scene.add(new THREE.HemisphereLight(0x4a2a7a, 0x0a0610, 0.55));
+  scene.add(new THREE.HemisphereLight(0x4a2a7a, 0x0a0610, 0.42));
   const rim = new THREE.SpotLight(0x8a5aff, 30, 20, 0.6, 0.8, 1.5);
   rim.position.set(3, 5, -4); rim.target.position.set(0.6, 1, 0); scene.add(rim, rim.target);
   const handLight = new THREE.SpotLight(0xff3020, 25, 10, 0.4, 0.8, 1.5);
@@ -197,8 +205,8 @@ export function buildMenuStage({ envMap, glow, tuneEnv, onTwitch }) {
     dg.attributes.position.needsUpdate = true;
     // Kamera wie auf dem Titelbild: seitlich, leicht erhöht, langsames Schweben
     const wide = camera.aspect < 1.2;
-    camera.position.set(-4.6 + Math.sin(t * 0.08) * 0.2, 2.05 + Math.sin(t * 0.13) * 0.05, wide ? 6.4 : 4.4);
-    camera.lookAt(0.2, 1.05, -0.9);
+    camera.position.set(-2.9 + Math.sin(t * 0.08) * 0.15, 2.75 + Math.sin(t * 0.13) * 0.04, wide ? 5.6 : 3.7);
+    camera.lookAt(0.55, 1.05, -0.7);
   }
   function resize(w, h) {
     camera.aspect = w / h;

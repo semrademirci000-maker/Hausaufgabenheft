@@ -203,18 +203,18 @@ html, body {
   background: linear-gradient(90deg, rgba(0,0,0,.72) 0%, rgba(0,0,0,.35) 38%, transparent 62%),
               linear-gradient(0deg, rgba(0,0,0,.55), transparent 30%);
 }
-#menu .chapter { max-width: min(780px, 86vw); }
+#menu .chapter { max-width: min(560px, 86vw); }
 #menu .kicker { font: 700 clamp(13px, 1.6vw, 18px) "Archivo Black", "Oswald", sans-serif; color: #fff; letter-spacing: .5px; }
 #menu .chapter h1 {
-  margin: 2px 0 0; font: 400 clamp(34px, 5vw, 64px)/1.05 "Archivo Black", "Oswald", sans-serif; color: #d01c2e;
+  margin: 2px 0 0; font: 400 clamp(30px, 4.2vw, 54px)/1.05 "Archivo Black", "Oswald", sans-serif; color: #d01c2e;
   letter-spacing: -.5px; padding-bottom: 8px; border-bottom: 2px solid rgba(208, 28, 46, .8);
   text-shadow: 0 2px 18px rgba(0,0,0,.8); animation: none; background: none; -webkit-background-clip: initial; background-clip: initial; filter: none;
 }
-#menu .desc { margin: 18px 0 0 !important; max-width: 470px; font: 400 clamp(13px, 1.35vw, 16px)/1.55 "Inter", system-ui, sans-serif; color: #e8e2ea !important; text-shadow: 0 1px 6px #000; }
-#menu .menuList { display: flex; flex-direction: column; gap: 0; margin-top: auto; margin-bottom: 7vh; padding-left: 2vw; }
+#menu .desc { margin: 16px 0 0 !important; max-width: 400px; font: 400 clamp(12px, 1.15vw, 14px)/1.5 "Inter", system-ui, sans-serif; color: #e8e2ea !important; text-shadow: 0 1px 6px #000; }
+#menu .menuList { display: flex; flex-direction: column; gap: 6px; margin-top: auto; margin-bottom: 13vh; padding-left: 3vw; }
 #menu .menuList button {
   background: none; border: 0; padding: 4px 0; text-align: left; cursor: pointer;
-  font: 400 clamp(24px, 2.8vw, 32px)/1.1 "VT323", "Courier New", monospace; letter-spacing: 1.5px; color: #cfc8d6;
+  font: 400 clamp(22px, 2.3vw, 28px)/1.25 "VT323", "Courier New", monospace; letter-spacing: 1.5px; color: #cfc8d6;
   text-shadow: 0 0 8px rgba(0,0,0,.9); transition: color .15s, transform .15s, text-shadow .15s;
 }
 #menu .menuList button:hover, #menu .menuList button:focus-visible { color: #fff; transform: translateX(8px); text-shadow: 0 0 12px rgba(208, 28, 46, .9); background: none; outline: none; }
