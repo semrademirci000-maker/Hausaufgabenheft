@@ -812,7 +812,7 @@ function resetGame() {
   schedule(10.7, () => say('Der Aufzug ist abgestürzt. So tief unten war noch nie ein Mitarbeiter.', 4.5, 'MILA'));
   schedule(15.5, () => { say('Das Ausgangstor braucht Strom. Finde drei Batterien und bring sie zum Generator.', 5, 'MILA'); objective('Finde 3 Batterien für den Generator (0/3)'); });
   schedule(21, () => say('Und … sei leise. Hier unten wohnt <b>Zipper</b>. Er hat noch nie jemanden gehen lassen.', 5, 'MILA'));
-  schedule(27, () => say(isTouch ? 'Tipp: Tippe auf ✋, um die Gripper-Hand zu schießen.' : 'Tipp: Linke/rechte Maustaste schießt die Gripper-Hände.', 4));
+  schedule(27, () => say(isTouch ? 'Tipp: Tippe auf die grüne oder orange Hand, um den Gripper zu schießen.' : 'Tipp: Linke/rechte Maustaste schießt die Gripper-Hände.', 4));
 }
 
 function startGame() {
@@ -828,7 +828,7 @@ function startGame() {
   if (isTouch) $('touch').classList.remove('hidden');
   G.mode = 'playing';
   lockPointer();
-  if (isTouch) { try { document.documentElement.requestFullscreen?.(); } catch (e) { /* iOS */ } }
+  if (isTouch) { try { document.documentElement.requestFullscreen?.()?.catch?.(() => {}); } catch (e) { /* iOS */ } }
 }
 
 // Zipper sieht dich direkt: kein Stromausfall, sondern sofort Gebrüll und Jagd
@@ -1071,8 +1071,8 @@ function updateFocus() {
   if (P.hidden) text = isTouch ? 'E: Spind verlassen' : '[E] Spind verlassen';
   else if (a && a.obj) {
     const o = a.obj, d = a.dist;
-    if (o.kind === 'battery' && !o.taken) { hot = true; text = d < 2.6 ? '[E] / ✋ Batterie nehmen' : '✋ Hand schießen: Batterie greifen'; }
-    else if (o.kind === 'lever' && !o.pulled) { hot = true; text = '✋ Hand schießen: Hebel ziehen'; }
+    if (o.kind === 'battery' && !o.taken) { hot = true; text = d < 2.6 ? '[E] / Hand: Batterie nehmen' : 'Hand schießen: Batterie greifen'; }
+    else if (o.kind === 'lever' && !o.pulled) { hot = true; text = 'Hand schießen: Hebel ziehen'; }
     else if (o.kind === 'generator' && d < 5) { hot = true; text = carrying && G.placed < 3 ? '[E] Batterie einsetzen' : `Generator · ${G.placed}/3 Batterien`; }
     else if (o.kind === 'locker' && d < 2.8) { hot = true; text = '[E] Im Spind verstecken'; }
     else if (o.kind === 'note' && d < 3) { hot = true; text = '[E] Lesen'; }
