@@ -91,7 +91,7 @@ export class AudioEngine {
     return this._vlist;
   }
   _pickVoice(kind = 'female') {
-    const de = this._voices();
+    const de = this._voices().filter(v => !(this._badVoices && this._badVoices.has(v.name)));
     const names = kind === 'male'
       ? ['Markus', 'Martin', 'Yannick', 'Viktor', 'Hans', 'Stefan', 'Conrad', 'Klaus', 'Male', 'männlich']
       : ['Anna', 'Petra', 'Helena', 'Marlene', 'Vicki', 'Katja', 'Hedda', 'Female', 'weiblich', 'Google Deutsch'];
@@ -111,8 +111,9 @@ export class AudioEngine {
     const S = window.speechSynthesis;
     if (!S || this._speechPrimed) return;
     this._speechPrimed = true;
-    const u = new SpeechSynthesisUtterance(' ');
-    u.volume = 0; u.lang = 'de-DE';
+    try { S.resume(); } catch (e) { /* egal */ }
+    const u = new SpeechSynthesisUtterance('.');
+    u.volume = 0.01; u.lang = 'de-DE';
     S.speak(u);
   }
   speak(html, who = 'POPPY', { urgent = false } = {}) {
@@ -121,15 +122,36 @@ export class AudioEngine {
     const text = html.replace(/<[^>]+>/g, '').replace(/…/g, '...').trim();
     if (!text) return;
     const prof = AudioEngine.VOICES[who] || AudioEngine.VOICES.POPPY;
+    // Eine pausierte Sprachausgabe (z. B. nach dem Pause-Menü) würde sonst für immer schweigen
+    if (S.paused) S.resume();
     // nicht zu viel stauen: bei dringenden Sätzen oder langer Schlange vorher abbrechen
     if (urgent || (S.pending && S.speaking)) S.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'de-DE'; u.pitch = prof.pitch; u.rate = prof.rate;
-    u.volume = Math.min(1, this.volume * 1.15 * (prof.vol ?? 1));
-    const v = this._pickVoice(prof.kind); if (v) u.voice = v;
+    const make = withVoice => {
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = 'de-DE'; u.pitch = prof.pitch; u.rate = prof.rate;
+      u.volume = Math.min(1, this.volume * 1.15 * (prof.vol ?? 1));
+      if (withVoice) { const v = this._pickVoice(prof.kind); if (v) u.voice = v; }
+      // Referenz behalten – Safari/Chrome räumen Sätze sonst vorzeitig weg
+      this._utt = (this._utt || []).filter(x => !x._done).concat(u).slice(-6);
+      u.onend = u.onerror = () => { u._done = true; };
+      return u;
+    };
+    const u = make(true);
+    let started = false;
+    u.onstart = () => { started = true; };
     S.speak(u);
+    // Fallback: manche gelisteten Stimmen sind nicht installiert und bleiben stumm.
+    // Wenn der Satz nicht anfängt, ohne feste Stimme noch einmal versuchen – und diese Stimme künftig meiden.
+    if (u.voice) setTimeout(() => {
+      if (started || u._done) return;
+      if (S.speaking && !S.paused) return;
+      this._badVoices = (this._badVoices || new Set()).add(u.voice.name);
+      this._vlist = null;
+      S.cancel();
+      S.speak(make(false));
+    }, 1500);
   }
-  stopSpeech() { try { window.speechSynthesis?.cancel(); } catch (e) { /* egal */ } }
+  stopSpeech() { try { const S = window.speechSynthesis; S?.cancel(); S?.resume(); } catch (e) { /* egal */ } }
   pauseSpeech(on) { try { on ? window.speechSynthesis?.pause() : window.speechSynthesis?.resume(); } catch (e) { /* egal */ } }
 
   setVolume(v) { this.volume = v; if (this.master) this.master.gain.setTargetAtTime(v, this.ctx.currentTime, 0.05); }

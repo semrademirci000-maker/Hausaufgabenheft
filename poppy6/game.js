@@ -1586,6 +1586,16 @@ $('bgFile').onchange = async e => {
   try { await bgStore.set(f); } catch (err) { $('bgHint').textContent = 'Menübild gesetzt, aber es konnte nicht gespeichert werden – nach dem Neuladen ist es wieder weg.'; }
   e.target.value = '';
 };
+// Stimmen testen – muss direkt im Tippen passieren, damit iOS die Sprachausgabe freigibt
+$('voiceTest').onclick = () => {
+  audio.init(); audio.primeSpeech();
+  audio.speak('Hallo! Ich bin Poppy. Kannst du mich hören?', 'POPPY', { urgent: true });
+  const S = window.speechSynthesis;
+  const n = S ? S.getVoices().filter(v => (v.lang || '').toLowerCase().startsWith('de')).length : 0;
+  $('bgHint').textContent = !S ? 'Dieser Browser kann leider nicht sprechen.'
+    : n ? `Poppy spricht jetzt (${n} deutsche Stimmen gefunden). Nichts gehört? Lautlos-Modus aus und lauter drehen.`
+      : 'Keine deutsche Stimme gefunden. Am iPad: Einstellungen → Bedienungshilfen → Gesprochene Inhalte → Stimmen → Deutsch → eine Stimme laden.';
+};
 $('bgReset').onclick = async () => {
   applyMenuBg(null);
   $('bgHint').textContent = 'Standard-Menübild (Teeparty) ist wieder aktiv.';
