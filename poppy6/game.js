@@ -182,7 +182,8 @@ function wallDir(c, r) {
   return [0, -1];
 }
 function openDir(c, r) {
-  for (const [dx, dz] of DIRS) { const k = ch(c + dx, r + dz); if (k !== '#' && k !== 'G') return [dx, dz]; }
+  // Süden zuerst: Generator, Start und Käfig schauen möglichst in den Raum „nach unten“
+  for (const [dx, dz] of [[0, 1], [1, 0], [-1, 0], [0, -1]]) { const k = ch(c + dx, r + dz); if (k !== '#' && k !== 'G') return [dx, dz]; }
   return [0, 1];
 }
 const yawFacing = (dx, dz) => Math.atan2(dx, dz); // Objekt schaut in Richtung (dx,dz)
@@ -407,7 +408,9 @@ function buildWorld() {
     if ('abc'.includes(k)) {
       const [dx, dz] = wallDir(c, r);
       const lg = new THREE.Group();
-      lg.position.set(cc.x + dx * (CELL / 2 - 0.06), 1.35, cc.z + dz * (CELL / 2 - 0.06));
+      // direkt neben die passende Tür rücken (wie im echten Spiel)
+      const nd = DIRS.find(([ex, ez]) => ch(c + ex, r + ez) === LEVER_DOOR[k]) || [0, 0];
+      lg.position.set(cc.x + dx * (CELL / 2 - 0.06) + nd[0] * 1.45, 1.35, cc.z + dz * (CELL / 2 - 0.06) + nd[1] * 1.45);
       lg.rotation.y = yawFacing(-dx, -dz); group.add(lg);
       const plate = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.7, 0.1), MAT.metal); lg.add(plate);
       const pivot = new THREE.Group(); pivot.position.z = 0.06; pivot.rotation.x = 0.5; lg.add(pivot);
@@ -794,7 +797,7 @@ function resetGame() {
   Object.assign(G, { time: 0, flash: true, placed: 0, powered: false, monsterAwake: false, noise: null, chase: 0, blackout: 0, focus: null, events: [], leversPulled: 0, shake: 0 });
   audio.alarm = false;
   P.pos.copy(W.start); P.vel.set(0, 0, 0); P.yaw = W.startYaw; P.pitch = 0; P.eye = EYE; P.stamina = 100; P.hidden = null; P.exhausted = false;
-  M.pos.copy(W.monsterStart); M.yaw = Math.PI; M.state = 'dormant'; M.path = null; M.aware = 0; M.lost = 0; M.sawHide = false; M.speed = 0; M.growlT = 8;
+  M.pos.copy(W.monsterStart); M.yaw = Math.atan2(W.start.x - W.monsterStart.x, W.start.z - W.monsterStart.z); M.state = 'dormant'; M.path = null; M.aware = 0; M.lost = 0; M.sawHide = false; M.speed = 0; M.growlT = 8;
   monster.root.visible = true; monster.setAngry(false); monster.setMouth(false);
   monster.root.position.copy(M.pos); monster.root.rotation.set(0, M.yaw, 0);
   for (const h of hands) { h.state = 'idle'; h.carrying = null; h.grabbing = null; h.carryBat.visible = false; h.world.visible = false; h.cable.visible = false; h.vm.visible = true; }
@@ -825,6 +828,17 @@ function startGame() {
   G.mode = 'playing';
   lockPointer();
   if (isTouch) { try { document.documentElement.requestFullscreen?.(); } catch (e) { /* iOS */ } }
+}
+
+// Huggy sieht dich direkt: kein Stromausfall, sondern sofort Gebrüll und Jagd
+function huggyAmbush() {
+  if (G.monsterAwake) return;
+  G.monsterAwake = true;
+  M.state = 'ambush'; M.ambushT = 1.1;
+  monster.setAngry(true);
+  audio.setMonsterPos(M.pos); audio.roar();
+  G.shake = 0.8;
+  schedule(0.3, () => say('Das ist Huggy Wuggy! <b>LAUF!</b> Versteck dich in einem Spind!', 4, 'POPPY'));
 }
 
 function wakeMonster() {
@@ -1260,7 +1274,7 @@ function updateMonster(dt) {
     if (M.state === 'chase') range = 32;
     if (dist < range && (da < 1.3 || dist < 4.5 || M.state === 'chase')) M.sees = true;
   }
-  if (M.state !== 'dormant' && M.state !== 'chase') {
+  if (M.state !== 'dormant' && M.state !== 'chase' && M.state !== 'ambush') {
     if (M.sees) {
       M.aware += dt * (1.3 + 10 / Math.max(dist, 1));
       M.lookYaw = 0;
@@ -1275,9 +1289,19 @@ function updateMonster(dt) {
   // ---- Zustände ----
   let speed = 0, dest = null;
   if (M.state === 'dormant') {
-    // steht still, der Kopf folgt dir …
-    const want = dist < 20 && los(M.pos, P.pos) ? clamp(((Math.atan2(toP.x, toP.z) - M.yaw + Math.PI * 3) % (Math.PI * 2)) - Math.PI, -1.2, 1.2) : 0;
+    // steht still, der Kopf folgt dir … bis du zu nah kommst
+    const seen = dist < 20 && !P.hidden && los(M.pos, P.pos);
+    const want = seen ? clamp(((Math.atan2(toP.x, toP.z) - M.yaw + Math.PI * 3) % (Math.PI * 2)) - Math.PI, -1.2, 1.2) : 0;
     M.lookYaw += (want - M.lookYaw) * Math.min(1, dt * 1.5);
+    if (seen && dist < 13) huggyAmbush();
+  } else if (M.state === 'ambush') {
+    // kurzer Schreckmoment: dreht sich zu dir, reißt das Maul auf – dann rennt er los
+    const want = Math.atan2(toP.x, toP.z);
+    const diff = ((want - M.yaw + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+    M.yaw += clamp(diff, -5 * dt, 5 * dt);
+    M.lookYaw *= 0.9;
+    M.ambushT -= dt;
+    if (M.ambushT <= 0) startChase(true);
   } else if (M.state === 'patrol') {
     if (!M.path || !M.path.length) {
       M.wait -= dt;
@@ -1348,7 +1372,7 @@ function updateMonster(dt) {
     if (M.lastPos.distanceTo(M.pos) < speed * dt * 0.2) { M.stuck += dt; if (M.stuck > 1.2) { M.path = null; M.stuck = 0; } } else M.stuck = 0;
   } else M.speed *= Math.pow(0.02, dt);
   M.lastPos.copy(M.pos);
-  if (M.state !== 'dormant' && M.state !== 'chase') M.lookYaw = Math.sin(G.time * 0.8) * 0.5;
+  if (M.state !== 'dormant' && M.state !== 'chase' && M.state !== 'ambush') M.lookYaw = Math.sin(G.time * 0.8) * 0.5;
   if (M.state === 'chase') M.lookYaw *= 0.9;
 
   // ---- Sound ----
@@ -1366,7 +1390,7 @@ function updateMonster(dt) {
   // ---- Modell ----
   monster.root.position.set(M.pos.x, 0, M.pos.z);
   monster.root.rotation.y = M.yaw;
-  monster.animate(dt, M.speed, M.state === 'chase', M.lookYaw, 0);
+  monster.animate(dt, M.speed, M.state === 'chase' || M.state === 'ambush', M.lookYaw, 0);
 }
 
 function updateJumpscare(dt) {
