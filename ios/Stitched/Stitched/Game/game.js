@@ -1494,7 +1494,7 @@ function updateLights(dt) {
   });
 
   // Taschenlampe (flackert, wenn Zipper nah ist)
-  let fl = G.flash && (G.mode === 'playing' || G.mode === 'jumpscare') ? 36 : 0;
+  let fl = G.flash && (G.mode === 'playing' || G.mode === 'jumpscare' || G.mode === 'photo') ? 36 : 0; // photo = Foto-Modus ohne Hände
   if (G.mode === 'menu') fl = 30;
   const md = M.pos.distanceTo(P.pos);
   if (fl && G.monsterAwake && md < 9 && Math.random() < 0.12) fl *= Math.random() * 0.3;
