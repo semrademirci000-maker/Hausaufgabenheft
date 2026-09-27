@@ -372,3 +372,98 @@ export function lockerTexture() {
     grime(g, w, h, 1);
   });
 }
+
+// ---------------------------------------------------------------------
+//  Look aus den echten Spielhallen: bemalte Holzwände, Beton, Müll am Boden
+// ---------------------------------------------------------------------
+
+// Bemalte Holzbretter mit großen bunten Formen und abblätternder Farbe
+export function plankWallTexture(variant = 0) {
+  seed = 500 + variant * 11;
+  const sets = [
+    ['#b8322b', '#2a9a9e', '#e0a92a'],
+    ['#2a9a9e', '#d9562e', '#e8c43a'],
+    ['#c43a5a', '#e0a92a', '#3a78b8'],
+  ][variant % 3];
+  return make(512, 512, (g, w, h) => {
+    // Grundholz
+    g.fillStyle = '#5a3a22'; g.fillRect(0, 0, w, h);
+    const bw = 42;
+    for (let x = 0; x < w; x += bw) {
+      g.fillStyle = `rgb(${rr(80, 105)},${rr(52, 66)},${rr(30, 40)})`; g.fillRect(x + 2, 0, bw - 4, h);
+    }
+    // große bunte Formen (wie riesige Zähne / Spielzeug-Bögen)
+    g.save();
+    g.fillStyle = sets[0]; g.beginPath(); g.moveTo(0, h * 0.2); g.quadraticCurveTo(w * 0.25, h * 0.05, w * 0.5, h * 0.2); g.lineTo(w * 0.5, h * 0.62); g.quadraticCurveTo(w * 0.25, h * 0.72, 0, h * 0.62); g.fill();
+    g.fillStyle = sets[1]; g.beginPath(); g.moveTo(w * 0.5, h * 0.25); g.quadraticCurveTo(w * 0.75, h * 0.1, w, h * 0.25); g.lineTo(w, h * 0.7); g.quadraticCurveTo(w * 0.75, h * 0.8, w * 0.5, h * 0.7); g.fill();
+    g.fillStyle = sets[2]; g.fillRect(0, h * 0.78, w, h * 0.1);
+    g.restore();
+    // Farbe blättert ab: Holz schaut durch
+    for (let i = 0; i < 90; i++) {
+      g.fillStyle = `rgba(${rr(70, 100)},${rr(45, 60)},${rr(25, 35)},${rr(0.6, 1)})`;
+      g.beginPath(); const x = rr(0, w), y = rr(0, h);
+      g.moveTo(x, y); for (let k = 0; k < 6; k++) g.lineTo(x + rr(-22, 22), y + rr(-14, 14)); g.fill();
+    }
+    // Bretterfugen und Nägel
+    for (let x = 0; x < w; x += bw) {
+      g.fillStyle = 'rgba(0,0,0,.55)'; g.fillRect(x, 0, 3, h);
+      g.fillStyle = 'rgba(255,255,255,.06)'; g.fillRect(x + 3, 0, 1, h);
+      for (const y of [30, h / 2, h - 30]) { g.fillStyle = '#222'; g.beginPath(); g.arc(x + bw / 2, y, 2.5, 0, 7); g.fill(); }
+    }
+    for (let x = 0; x < w; x += 8) { g.fillStyle = `rgba(0,0,0,${rr(0, 0.08)})`; g.fillRect(x, 0, 2, h); }
+    drips(g, w, h, 0, 35);
+    grime(g, w, h, 1.4);
+    const sh = g.createLinearGradient(0, h * 0.7, 0, h); sh.addColorStop(0, 'rgba(0,0,0,0)'); sh.addColorStop(1, 'rgba(0,0,0,.55)');
+    g.fillStyle = sh; g.fillRect(0, 0, w, h);
+  });
+}
+
+export function concreteTexture() {
+  seed = 777;
+  return make(512, 512, (g, w, h) => {
+    g.fillStyle = '#6e6a64'; g.fillRect(0, 0, w, h);
+    for (let i = 0; i < 4000; i++) { g.fillStyle = `rgba(${rnd() > 0.5 ? '255,255,255' : '0,0,0'},${rr(0.02, 0.08)})`; g.fillRect(rr(0, w), rr(0, h), rr(1, 4), rr(1, 4)); }
+    // Schalungsfugen
+    for (const y of [h / 3, h * 2 / 3]) { g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(0, y, w, 3); }
+    for (let i = 0; i < 12; i++) { g.fillStyle = 'rgba(0,0,0,.4)'; g.beginPath(); g.arc(rr(0, w), rr(0, h), 3, 0, 7); g.fill(); }
+    // Risse
+    g.strokeStyle = 'rgba(20,18,15,.6)'; g.lineWidth = 1.5;
+    for (let i = 0; i < 7; i++) { g.beginPath(); let x = rr(0, w), y = rr(0, h); g.moveTo(x, y); for (let k = 0; k < 8; k++) { x += rr(-30, 30); y += rr(-5, 30); g.lineTo(x, y); } g.stroke(); }
+    drips(g, w, h, 0, 50, 'rgba(40,30,20,');
+    grime(g, w, h, 1.8);
+  });
+}
+
+// Verstreutes Papier
+export function paperTexture() {
+  seed = 91;
+  return make(128, 128, (g, w, h) => {
+    g.fillStyle = '#d9cfb6'; g.fillRect(0, 0, w, h);
+    g.strokeStyle = 'rgba(60,60,80,.35)';
+    for (let y = 18; y < h - 10; y += 9) { g.beginPath(); g.moveTo(10, y); g.lineTo(rr(50, w - 10), y); g.stroke(); }
+    grime(g, w, h, 1.5);
+  });
+}
+
+// Weiche Spielmatte (Türkis mit gelbem Rand wie in der Spielhalle)
+export function matTexture() {
+  seed = 33;
+  return make(256, 256, (g, w, h) => {
+    g.fillStyle = '#e0b22a'; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#2aa3a8'; g.fillRect(18, 18, w - 36, h - 36);
+    for (let i = 0; i < 40; i++) { g.fillStyle = `rgba(255,255,255,${rr(0.02, 0.1)})`; g.beginPath(); g.arc(rr(20, w - 20), rr(20, h - 20), rr(2, 10), 0, 7); g.fill(); }
+    grime(g, w, h, 1.3);
+  });
+}
+
+// Weicher Lichthof für Lampen (Sprite)
+export function glowTexture() {
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const g = c.getContext('2d');
+  const grd = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  grd.addColorStop(0, 'rgba(255,255,255,1)'); grd.addColorStop(0.15, 'rgba(255,255,255,.55)');
+  grd.addColorStop(0.45, 'rgba(255,255,255,.12)'); grd.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = grd; g.fillRect(0, 0, 128, 128);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}

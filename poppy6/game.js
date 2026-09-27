@@ -59,13 +59,13 @@ TX.setAniso(Math.min(8, renderer.capabilities.getMaxAnisotropy()));
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x030304);
-scene.fog = new THREE.FogExp2(0x050506, 0.05);
+scene.fog = new THREE.FogExp2(0x100a07, 0.046); // warmer, staubiger Dunst
 scene.environment = envMap;
 
 const camera = new THREE.PerspectiveCamera(72, innerWidth / innerHeight, 0.05, 120);
 camera.rotation.order = 'YXZ';
 scene.add(camera);
-const hemi = new THREE.HemisphereLight(0x8a90a8, 0x1a1410, 0.25);
+const hemi = new THREE.HemisphereLight(0x9a8a78, 0x1a1008, 0.2);
 scene.add(hemi);
 
 const flashlight = new THREE.SpotLight(0xfff1dd, 0, 34, 0.48, 0.6, 1.3);
@@ -96,7 +96,12 @@ audio.volume = settings.vol;
 //  Materialien (einmal erzeugt, in allen Durchläufen wiederverwendet)
 // ======================================================================
 const MAT = {
-  walls: [0, 1, 2].map(v => { const t = TX.wallTexture(v); return new THREE.MeshStandardMaterial({ map: t, normalMap: TX.normalFrom(t, 3), roughnessMap: TX.roughFrom(t, 0.85, 0.3), envMapIntensity: 0.25 }); }),
+  // Wandtypen: Tapete, bemalte Holzbretter (Spielhalle), Beton
+  walls: [TX.wallTexture(0), TX.plankWallTexture(0), TX.concreteTexture(), TX.plankWallTexture(1), TX.wallTexture(1), TX.plankWallTexture(2)]
+    .map(t => new THREE.MeshStandardMaterial({ map: t, normalMap: TX.normalFrom(t, 3.5), roughnessMap: TX.roughFrom(t, 0.85, 0.3), envMapIntensity: 0.25 })),
+  paper: new THREE.MeshStandardMaterial({ map: TX.paperTexture(), roughness: 0.95, side: THREE.DoubleSide, emissive: 0x14100a }),
+  mat: (() => { const t = TX.matTexture(); return new THREE.MeshStandardMaterial({ map: t, normalMap: TX.normalFrom(t, 2), roughness: 0.75 }); })(),
+  rigFrame: new THREE.MeshStandardMaterial({ color: 0x2a2826, roughness: 0.5, metalness: 0.8 }),
   floor: (() => { const t = TX.floorTexture(COLS, ROWS); return new THREE.MeshStandardMaterial({ map: t, normalMap: TX.normalFrom(t, 4), roughnessMap: TX.roughFrom(t, 0.55, 0.9), metalness: 0.05, envMapIntensity: 0.6 }); })(),
   ceil: new THREE.MeshStandardMaterial({ map: TX.ceilingTexture(COLS, ROWS), roughness: 1 }),
   wood: new THREE.MeshStandardMaterial({ map: TX.woodTexture(), roughness: 0.9 }),
@@ -122,6 +127,7 @@ const MAT = {
   batteryBody: new THREE.MeshStandardMaterial({ color: 0x2a6cff, emissive: 0x1b4dff, emissiveIntensity: 1.2, roughness: 0.3, metalness: 0.3 }),
   batteryCap: new THREE.MeshStandardMaterial({ color: 0xc8ccd0, roughness: 0.3, metalness: 0.9 }),
 };
+const GLOW = TX.glowTexture();
 const SCRAWLS = ['LAUF', 'ES LÄCHELT', 'NICHT RENNEN'].map(t => new THREE.MeshBasicMaterial({ map: TX.scrawlTexture(t), transparent: true, depthWrite: false, fog: true }));
 
 // ======================================================================
@@ -130,12 +136,12 @@ const SCRAWLS = ['LAUF', 'ES LÄCHELT', 'NICHT RENNEN'].map(t => new THREE.MeshB
 // GrabPack-Hand: glänzendes Plastik, abgerundete Finger mit zwei Gliedern
 const handGeo = {
   palm: new RoundedBoxGeometry(0.1, 0.038, 0.11, 3, 0.016),
-  seg1: new THREE.CapsuleGeometry(0.0115, 0.036, 4, 10),
-  seg2: new THREE.CapsuleGeometry(0.011, 0.028, 4, 10),
+  seg1: new THREE.CapsuleGeometry(0.0125, 0.034, 6, 12),
+  seg2: new THREE.CapsuleGeometry(0.012, 0.03, 6, 12),
 };
 function makeHand(color) {
   const g = new THREE.Group();
-  const mat = new THREE.MeshPhysicalMaterial({ color, roughness: 0.4, clearcoat: 0.35, clearcoatRoughness: 0.35, envMapIntensity: 0.15 });
+  const mat = new THREE.MeshPhysicalMaterial({ color, roughness: 0.55, clearcoat: 0.25, clearcoatRoughness: 0.5, envMapIntensity: 0.12, sheen: 0.3, sheenColor: new THREE.Color(color) });
   g.add(new THREE.Mesh(handGeo.palm, mat));
   const lens = [1, 1.1, 1.05, 0.88];
   for (let i = 0; i < 4; i++) {
@@ -208,19 +214,19 @@ function buildWorld() {
   scene.add(group);
   const w = W = {
     group, doors: {}, levers: [], batteries: [], lockers: [], notes: [], lamps: [], boxes: [],
-    rayTargets: [], gen: null, gate: null, exitCell: null, start: null, startYaw: 0, monsterStart: null, lightPool: [], beams: [], proto: null,
+    rayTargets: [], gen: null, gate: null, exitCell: null, start: null, startYaw: 0, monsterStart: null, lightPool: [], beams: [], proto: null, papers: [], planks: [],
   };
   const addBox = (x0, x1, z0, z1) => { const b = { x0, x1, z0, z1, on: true }; w.boxes.push(b); return b; };
   const ref = (mesh, obj) => { mesh.userData.ref = obj; w.rayTargets.push(mesh); };
 
   // --- Wände (instanziert, drei Tapeten-Varianten nach Bereich) ---
-  const wallCells = [[], [], []];
+  const wallCells = MAT.walls.map(() => []);
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
     if (ch(c, r) !== '#') continue;
     let near = false;
     for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) { const k = MAP[r + dz]?.[c + dx]; if (k && k !== '#') near = true; }
     if (!near) continue;
-    wallCells[(Math.floor(c / 8) + Math.floor(r / 7)) % 3].push([c, r]);
+    wallCells[(Math.floor(c / 6) + Math.floor(r / 5) * 2) % MAT.walls.length].push([c, r]);
   }
   const wallGeo = new THREE.BoxGeometry(CELL, WALL_H, CELL);
   const m4 = new THREE.Matrix4();
@@ -252,8 +258,33 @@ function buildWorld() {
 
     // ----- Lampen -----
     if (k === 'L' || k === 'X') {
-      const lamp = { pos: new THREE.Vector3(cc.x, WALL_H - 0.75, cc.z), level: 1, flicker: k === 'L' && rng() < 0.35, base: k === 'X' ? 26 : 20, color: new THREE.Color(k === 'X' ? 0xbfd8ff : 0xffcf95), ft: 0 };
-      if (k === 'L') {
+      const warm = rng() < 0.25 ? 0xff4a30 : 0xffa860; // meist orange, manchmal rot – wie in den Spielhallen
+      const lamp = { pos: new THREE.Vector3(cc.x, WALL_H - 0.75, cc.z), level: 1, flicker: k === 'L' && rng() < 0.35, base: k === 'X' ? 26 : 22, color: new THREE.Color(k === 'X' ? 0xbfd8ff : warm), ft: 0, glows: [] };
+      const corridor = (ch(c - 1, r) === '#' && ch(c + 1, r) === '#') || (ch(c, r - 1) === '#' && ch(c, r + 1) === '#');
+      const rig = k === 'L' && !corridor;
+      lamp.bulbMat = new THREE.MeshBasicMaterial({ color: lamp.color.clone() });
+      const addGlow = (x, y, z, size) => {
+        const m = new THREE.SpriteMaterial({ map: GLOW, color: lamp.color.clone(), blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, opacity: 0.7 });
+        const sp = new THREE.Sprite(m); sp.position.set(x, y, z); sp.scale.setScalar(size); group.add(sp); lamp.glows.push(m);
+      };
+      if (rig) {
+        // Flutlicht-Gestell mit vier runden Scheinwerfern (wie in den Hallen von Playtime Co.)
+        const frame = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.08, 0.08), MAT.rigFrame); frame.position.set(cc.x, WALL_H - 0.45, cc.z); group.add(frame);
+        const frame2 = frame.clone(); frame2.position.y = WALL_H - 0.95; group.add(frame2);
+        for (const sx of [-1, 1]) {
+          const post = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.6, 0.08), MAT.rigFrame); post.position.set(cc.x + sx * 0.62, WALL_H - 0.7, cc.z); group.add(post);
+          const hang = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.45), MAT.dark); hang.position.set(cc.x + sx * 0.5, WALL_H - 0.22, cc.z); group.add(hang);
+        }
+        for (const [sx, sy] of [[-1, 1], [1, 1], [-1, -1], [1, -1]]) {
+          const lg = new THREE.Group(); lg.position.set(cc.x + sx * 0.3, WALL_H - 0.7 + sy * 0.2, cc.z); lg.rotation.x = 0.9; group.add(lg);
+          const can = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.14, 0.16, 20, 1, true), MAT.rigFrame); can.material.side = THREE.DoubleSide; lg.add(can);
+          const lens = new THREE.Mesh(new THREE.CircleGeometry(0.15, 20), lamp.bulbMat); lens.rotation.x = Math.PI / 2; lens.position.y = -0.07; lg.add(lens);
+          const lens2 = lens.clone(); lens2.rotation.x = -Math.PI / 2; lg.add(lens2);
+          addGlow(cc.x + sx * 0.3, WALL_H - 0.78 + sy * 0.2, cc.z, 1.3);
+        }
+        lamp.pos.y = WALL_H - 1.0; lamp.base = 16;
+      }
+      if (k === 'L' && !rig) {
         // Industrielampe mit Schirm und Drahtkorb
         const shade = new THREE.Mesh(new THREE.ConeGeometry(0.55, 0.4, 24, 1, true), MAT.shade);
         shade.position.set(cc.x, WALL_H - 0.55, cc.z); group.add(shade);
@@ -269,13 +300,38 @@ function buildWorld() {
         const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.35), MAT.dark);
         cord.position.set(cc.x, WALL_H - 0.18, cc.z); group.add(cord);
       }
-      lamp.bulbMat = new THREE.MeshBasicMaterial({ color: lamp.color.clone() });
-      const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.13, 12, 8), lamp.bulbMat);
-      bulb.position.copy(lamp.pos).y += 0.05; group.add(bulb);
+      if (!rig) {
+        const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.13, 12, 8), lamp.bulbMat);
+        bulb.position.copy(lamp.pos).y += 0.05; group.add(bulb);
+        addGlow(lamp.pos.x, lamp.pos.y, lamp.pos.z, 2.2);
+      }
       lamp.shaftMat = MAT.shaft.clone();
-      const shaft = new THREE.Mesh(new THREE.ConeGeometry(1.7, WALL_H - 0.8, 20, 1, true), lamp.shaftMat);
-      shaft.position.set(cc.x, (WALL_H - 0.8) / 2, cc.z); group.add(shaft);
+      if (!rig) {
+        const shaft = new THREE.Mesh(new THREE.ConeGeometry(1.5, WALL_H - 0.8, 20, 1, true), lamp.shaftMat);
+        shaft.position.set(cc.x, (WALL_H - 0.8) / 2, cc.z); group.add(shaft);
+      }
       w.lamps.push(lamp);
+    }
+
+    // ----- Müll und Trümmer am Boden (verlassene Spielhalle) -----
+    if (k !== '#' && k !== 'O' && k !== 'G' && !'123E'.includes(k)) {
+      const n = Math.floor(rng() * 7);
+      for (let i = 0; i < n; i++) w.papers.push([cc.x + (rng() - 0.5) * 3.6, cc.z + (rng() - 0.5) * 3.6, rng() * 6.28, rng()]);
+      if (rng() < 0.35) for (let i = 0; i < 1 + rng() * 2; i++) w.planks.push([cc.x + (rng() - 0.5) * 3, cc.z + (rng() - 0.5) * 3, rng() * 6.28, rng()]);
+      if (k === '.' && rng() < 0.07) {
+        // Holzpalette
+        const pg = new THREE.Group(); pg.position.set(cc.x + (rng() - 0.5) * 2, 0, cc.z + (rng() - 0.5) * 2); pg.rotation.y = rng() * 3;
+        for (let i = 0; i < 5; i++) { const sl = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.03, 0.16), MAT.wood); sl.position.set(0, 0.14, (i - 2) * 0.25); sl.castShadow = sl.receiveShadow = true; pg.add(sl); }
+        for (let i = 0; i < 3; i++) { const bl = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.12, 0.1), MAT.wood); bl.position.set(0, 0.06, (i - 1) * 0.5); pg.add(bl); }
+        group.add(pg);
+      }
+      if (k === '.' && rng() < 0.08) {
+        // umgekippte Spielmatte
+        const m = new THREE.Mesh(new RoundedBoxGeometry(1.1, 0.25, 1.6, 3, 0.1), MAT.mat);
+        m.position.set(cc.x + (rng() - 0.5) * 2, 0.13, cc.z + (rng() - 0.5) * 2);
+        m.rotation.set(0, rng() * 3, (rng() - 0.5) * 0.08);
+        m.castShadow = m.receiveShadow = true; group.add(m);
+      }
     }
 
     // ----- Batterie auf einer Kiste -----
@@ -538,6 +594,21 @@ function buildWorld() {
   });
   beams.castShadow = true; group.add(beams);
 
+  // Papier und Bretter als Instanzen (hunderte Stück, trotzdem schnell)
+  const paperIM = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.32, 0.42), MAT.paper, w.papers.length);
+  const e = new THREE.Euler(), sc = new THREE.Vector3();
+  w.papers.forEach(([x, z, rot, t], i) => {
+    e.set(-Math.PI / 2 + (t - 0.5) * 0.15, 0, rot); q.setFromEuler(e);
+    m4.compose(new THREE.Vector3(x, 0.012 + t * 0.01, z), q, one); paperIM.setMatrixAt(i, m4);
+  });
+  paperIM.receiveShadow = true; group.add(paperIM);
+  const plankIM = new THREE.InstancedMesh(new THREE.BoxGeometry(1.5, 0.05, 0.16), MAT.wood, w.planks.length);
+  w.planks.forEach(([x, z, rot, t], i) => {
+    e.set(0, rot, (t - 0.5) * 0.35); q.setFromEuler(e); sc.set(0.6 + t * 0.8, 1, 1);
+    m4.compose(new THREE.Vector3(x, 0.03 + t * 0.2, z), q, sc); plankIM.setMatrixAt(i, m4);
+  });
+  plankIM.castShadow = plankIM.receiveShadow = true; group.add(plankIM);
+
   tuneEnv(group);
 
   // Lichtpool: nur die nächsten Lampen bekommen echte Lichtquellen (schnell auf dem iPad)
@@ -643,29 +714,39 @@ const M = {
 };
 
 // ----- GrabPack-Hände -----
+const GP = {
+  blue: new THREE.MeshStandardMaterial({ color: 0x2c5f86, roughness: 0.35, metalness: 0.8, envMapIntensity: 0.4 }),
+  yellow: new THREE.MeshStandardMaterial({ color: 0xd9a52a, roughness: 0.3, metalness: 0.85, envMapIntensity: 0.4 }),
+  hose: new THREE.MeshStandardMaterial({ color: 0x141416, roughness: 0.55 }),
+};
 const hands = [0, 1].map(side => {
   const color = side ? 0xe23434 : 0x2f6cf0;
   const vm = new THREE.Group();
-  const launcher = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.05, 0.36, 12), MAT.metal);
-  launcher.rotation.x = Math.PI / 2; launcher.position.z = 0.1; vm.add(launcher);
-  // Details am Werfer: Metallringe, Schlauch, Warnlämpchen
-  for (const z of [0.0, 0.14, 0.24]) {
-    const r2 = new THREE.Mesh(new THREE.TorusGeometry(0.05, 0.007, 8, 20), MAT.beam); r2.position.z = z; vm.add(r2);
+  // Werfer im Stil des echten GrabPacks: blauer Stahl, gelbe Metallbänder, schwarzer Schlauch
+  const launcher = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.058, 0.42, 16), GP.blue);
+  launcher.rotation.x = Math.PI / 2; launcher.position.z = 0.12; vm.add(launcher);
+  const muzzle = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.055, 0.07, 16), GP.yellow);
+  muzzle.rotation.x = Math.PI / 2; muzzle.position.z = -0.08; vm.add(muzzle);
+  for (const z of [0.02, 0.16, 0.28]) {
+    const band = new THREE.Mesh(new THREE.CylinderGeometry(0.061, 0.061, 0.03, 16), GP.yellow);
+    band.rotation.x = Math.PI / 2; band.position.z = z; vm.add(band);
   }
+  const plate = new THREE.Mesh(new RoundedBoxGeometry(0.05, 0.03, 0.16, 2, 0.008), GP.yellow);
+  plate.position.set(0, 0.058, 0.1); vm.add(plate);
+  const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.03, 0.02), new THREE.MeshBasicMaterial({ color: new THREE.Color(0x40ff90).multiplyScalar(2) }));
+  screen.rotation.x = -Math.PI / 2; screen.position.set(0, 0.0735, 0.08); vm.add(screen);
   const hose = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([
-    new THREE.Vector3(0, 0.04, -0.02), new THREE.Vector3(side ? -0.05 : 0.05, 0.08, 0.12), new THREE.Vector3(side ? -0.03 : 0.03, 0.03, 0.3)]), 16, 0.011, 8), MAT.dark);
+    new THREE.Vector3(side ? -0.05 : 0.05, 0.02, 0.0), new THREE.Vector3(side ? -0.09 : 0.09, 0.07, 0.16), new THREE.Vector3(side ? -0.06 : 0.06, 0.02, 0.36)]), 16, 0.014, 8), GP.hose);
   vm.add(hose);
   const led = new THREE.Mesh(new THREE.SphereGeometry(0.008, 8, 6), new THREE.MeshBasicMaterial({ color: new THREE.Color(color).multiplyScalar(3) }));
-  led.position.set(0, 0.05, 0.06); vm.add(led);
-  const ring = new THREE.Mesh(new THREE.CylinderGeometry(0.056, 0.056, 0.05, 14), new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.3, roughness: 0.4 }));
-  ring.rotation.x = Math.PI / 2; ring.position.z = -0.07; vm.add(ring);
+  led.position.set(side ? -0.045 : 0.045, 0.04, -0.02); vm.add(led);
   const hand = makeHand(color);
   // Wie im Original: Finger zeigen nach oben, Handfläche nach vorn, Daumen nach innen
-  hand.position.set(0, 0.07, -0.2); hand.rotation.set(Math.PI / 2 - 0.12, 0, side ? 0.12 : -0.12);
-  hand.scale.set(side ? -1.05 : 1.05, 1.05, 1.05); vm.add(hand);
+  hand.position.set(0, 0.085, -0.19); hand.rotation.set(Math.PI / 2 - 0.1, 0, side ? 0.14 : -0.14);
+  hand.scale.set(side ? -1.15 : 1.15, 1.15, 1.15); vm.add(hand);
   const carryBat = makeBattery(); carryBat.scale.setScalar(0.55); carryBat.rotation.x = Math.PI / 2;
   carryBat.position.set(0, 0.1, -0.26); carryBat.visible = false; vm.add(carryBat);
-  const rest = new THREE.Vector3(side ? 0.28 : -0.28, -0.31, -0.6);
+  const rest = new THREE.Vector3(side ? 0.3 : -0.3, -0.34, -0.58);
   vm.position.copy(rest); vm.rotation.set(0.05, side ? -0.08 : 0.08, side ? -0.1 : 0.1);
   vmCam.add(vm);
 
@@ -1371,7 +1452,8 @@ function updateLights(dt) {
     if (G.blackout > 0) lvl = G.blackout < 0.3 ? Math.random() : 0;
     l.level = lvl;
     l.bulbMat.color.copy(l.color).multiplyScalar(0.3 + lvl * 3.5); // > 1 = leuchtet (Bloom)
-    l.shaftMat.opacity = 0.045 * lvl;
+    if (l.glows) for (const gm of l.glows) { gm.opacity = 0.08 + lvl * 0.6; gm.color.copy(l.color); }
+    l.shaftMat.opacity = 0.03 * lvl;
   }
   const cp = camera.position;
   _lampSort.length = 0;
@@ -1470,7 +1552,7 @@ function setupComposer(on) {
   if (composer) return;
   composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
-  bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth / 2, innerHeight / 2), 0.5, 0.5, 0.97);
+  bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth / 2, innerHeight / 2), 0.42, 0.5, 0.97);
   composer.addPass(bloomPass);
   filmPass = new ShaderPass(FilmShader);
   composer.addPass(filmPass);
