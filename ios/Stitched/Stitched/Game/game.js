@@ -1826,4 +1826,4 @@ const unlockAudio = () => {
 for (const ev of ['touchend', 'click', 'keydown']) addEventListener(ev, unlockAudio, { capture: true });
 
 // Für Tests / Debug
-window.__pp6 = { G, P, M, audio, monster, W: () => W, hands, camera, fire, interact, aim, simulate: (sec) => { for (let t = 0; t < sec; t += 1 / 60) { scene.updateMatrixWorld(); tick(1 / 60); } } };
+window.__pp6 = { THREE, G, P, M, audio, monster, W: () => W, hands, camera, fire, interact, aim, simulate: (sec) => { for (let t = 0; t < sec; t += 1 / 60) { scene.updateMatrixWorld(); tick(1 / 60); } } };

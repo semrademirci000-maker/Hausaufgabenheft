@@ -37,8 +37,8 @@ export class MonsterModel {
     const lipMat = new THREE.MeshStandardMaterial({ color: 0x2a1030, roughness: 0.9 });
     const mouthMat = new THREE.MeshStandardMaterial({ color: 0x14040a, roughness: 0.9 });
     const threadMat = new THREE.MeshStandardMaterial({ color: 0xe6dcc4, roughness: 0.8 });
-    this.eyeMat = new THREE.MeshPhysicalMaterial({ color: 0xe8e0cc, roughness: 0.25, clearcoat: 1, emissive: 0x000000 });
-    this.eyeMat2 = new THREE.MeshPhysicalMaterial({ color: 0xb3121c, roughness: 0.25, clearcoat: 1, emissive: 0x000000 });
+    this.eyeMat = new THREE.MeshPhysicalMaterial({ color: 0xe8e0cc, roughness: 0.4, clearcoat: 0.5, clearcoatRoughness: 0.35, emissive: 0x000000 });
+    this.eyeMat2 = new THREE.MeshPhysicalMaterial({ color: 0xb3121c, roughness: 0.4, clearcoat: 0.5, clearcoatRoughness: 0.35, emissive: 0x000000 });
     const holeMat = new THREE.MeshBasicMaterial({ color: 0x0a0508 });
 
     const root = this.root = new THREE.Group();
