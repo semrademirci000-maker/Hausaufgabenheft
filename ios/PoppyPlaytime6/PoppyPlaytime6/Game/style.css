@@ -195,3 +195,42 @@ html, body {
 @keyframes menuIn { from { opacity: 0 } to { opacity: 1 } }
 @keyframes logoIn { 0% { opacity: 0; letter-spacing: .4em; filter: blur(12px) } 60% { opacity: .9 } 100% { opacity: 1; letter-spacing: normal; filter: none } }
 @media (prefers-reduced-motion: reduce) { #studio, #studio .name, #studio .name::before, #studio .name::after, #wipebar.go { animation-duration: .01s !important; } }
+
+/* ---------- Hauptmenü im Stil der Kapitel-Menüs ---------- */
+#menu {
+  align-items: flex-start; justify-content: flex-start; text-align: left; gap: 0;
+  padding: max(7vh, 28px) 16px 16px max(9vw, 24px);
+  background: linear-gradient(90deg, rgba(0,0,0,.72) 0%, rgba(0,0,0,.35) 38%, transparent 62%),
+              linear-gradient(0deg, rgba(0,0,0,.55), transparent 30%);
+}
+#menu .chapter { max-width: min(780px, 86vw); }
+#menu .kicker { font: 700 clamp(13px, 1.6vw, 18px) "Archivo Black", "Oswald", sans-serif; color: #fff; letter-spacing: .5px; }
+#menu .chapter h1 {
+  margin: 2px 0 0; font: 400 clamp(34px, 5vw, 64px)/1.05 "Archivo Black", "Oswald", sans-serif; color: #d01c2e;
+  letter-spacing: -.5px; padding-bottom: 8px; border-bottom: 2px solid rgba(208, 28, 46, .8);
+  text-shadow: 0 2px 18px rgba(0,0,0,.8); animation: none; background: none; -webkit-background-clip: initial; background-clip: initial; filter: none;
+}
+#menu .desc { margin: 18px 0 0 !important; max-width: 470px; font: 400 clamp(13px, 1.35vw, 16px)/1.55 "Inter", system-ui, sans-serif; color: #e8e2ea !important; text-shadow: 0 1px 6px #000; }
+#menu .menuList { display: flex; flex-direction: column; gap: 0; margin-top: auto; margin-bottom: 7vh; padding-left: 2vw; }
+#menu .menuList button {
+  background: none; border: 0; padding: 4px 0; text-align: left; cursor: pointer;
+  font: 400 clamp(24px, 2.8vw, 32px)/1.1 "VT323", "Courier New", monospace; letter-spacing: 1.5px; color: #cfc8d6;
+  text-shadow: 0 0 8px rgba(0,0,0,.9); transition: color .15s, transform .15s, text-shadow .15s;
+}
+#menu .menuList button:hover, #menu .menuList button:focus-visible { color: #fff; transform: translateX(8px); text-shadow: 0 0 12px rgba(208, 28, 46, .9); background: none; outline: none; }
+#menu .menuList button:hover::before, #menu .menuList button:focus-visible::before { content: "▸ "; color: #d01c2e; }
+#menu .build { position: absolute; right: 18px; bottom: 14px; font: 12px "Inter", sans-serif; color: rgba(255,255,255,.35); }
+#menu .soundhint { position: absolute; left: max(9vw, 24px); bottom: 14px; margin: 0 !important; font-size: 12px; }
+#menu.appear .chapter { animation: logoIn 1.8s .2s ease-out both; }
+#credits .creditList { display: grid; gap: 14px; }
+#credits .creditList p { display: flex; flex-direction: column; gap: 2px; }
+#credits .creditList span { font-size: 13px; letter-spacing: 3px; color: var(--muted); text-transform: uppercase; }
+#credits .creditList b { font: 400 clamp(22px, 3vw, 30px) "VT323", monospace; color: #fff; letter-spacing: 1px; }
+.disclaimer2 { max-width: 560px; font-size: 12px; color: var(--muted) !important; }
+@media (max-height: 560px) {
+  #menu { padding-top: 14px; }
+  #menu .desc { display: none; }
+  #menu .menuList { margin-bottom: 30px; }
+  #menu .menuList button { font-size: 24px; }
+}
+@media (max-width: 700px) { #menu .desc { font-size: 13px; } }

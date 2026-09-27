@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <title>Kapitel 6 – Fan-Edition</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Creepster&family=Oswald:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Creepster&family=Inter:wght@400;500&family=Oswald:wght@400;600&family=VT323&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <script type="importmap">
 { "imports": { "three": "./vendor/three.module.min.js" } }
@@ -65,18 +65,34 @@
 
 <!-- Titelbildschirm -->
 <div id="menu" class="screen hidden">
-  <div class="logo">
-    <div class="small">EIN FAN-SPIEL ZU</div>
-    <h1>POPPY PLAYTIME</h1>
-    <h2>KAPITEL 6 · <span>DAS TIEFE WERK</span></h2>
-  </div>
-  <div class="buttons">
-    <button id="btnPlay">▶ SPIELEN</button>
+  <header class="chapter">
+    <div class="kicker">POPPY PLAYTIME · KAPITEL 6</div>
+    <h1>DAS TIEFE WERK</h1>
+    <p class="desc">Verschüttet und allein, tiefer unter der Fabrik als je ein Mitarbeiter war: Ebene 9 von Playtime Co.
+      Hier unten hat Huggy Wuggy den Sturz überlebt, und hinter rostigen Gittern wartet der, der alle Fäden zieht: der Prototyp.
+      Finde drei Batterien, bring den Generator zum Laufen und entkomme, bevor sie dich finden.</p>
+  </header>
+  <nav class="menuList">
+    <button id="btnPlay">NEUES SPIEL</button>
     <button id="btnControls">STEUERUNG</button>
     <button id="btnSettings">EINSTELLUNGEN</button>
+    <button id="btnCredits">CREDITS</button>
+    <button id="btnQuitGame">BEENDEN</button>
+  </nav>
+  <p class="soundhint">🔊 Mit Ton spielen – am iPad den Lautlos-Modus ausschalten.</p>
+  <div class="build">RC-060927 · by Muaz</div>
+</div>
+
+<div id="credits" class="screen hidden">
+  <h2>CREDITS</h2>
+  <div class="creditList">
+    <p><span>Idee &amp; Spieldesign</span><b>Muaz</b></p>
+    <p><span>Programmierung, Grafik &amp; Sound</span><b>Claude (KI) mit Muaz</b></p>
+    <p><span>Figuren nach</span><b>Poppy Playtime von Mob Entertainment</b></p>
+    <p><span>3D-Technik</span><b>Three.js</b></p>
   </div>
-  <p class="soundhint">🔊 Mit Ton spielen! Am iPad/iPhone den Lautlos-Modus ausschalten und lauter drehen.</p>
-  <p class="disclaimer">Inoffizielles Fan-Projekt. Poppy Playtime © Mob Entertainment. Alle Grafiken und Töne in diesem Spiel werden live im Browser erzeugt.</p>
+  <p class="disclaimer2">Inoffizielles, nicht-kommerzielles Fan-Projekt. Poppy Playtime, Huggy Wuggy, Poppy, Kissy Missy und der Prototyp gehören Mob Entertainment. Alle Grafiken und Töne in diesem Spiel werden live im Browser erzeugt.</p>
+  <button class="back">ZURÜCK</button>
 </div>
 
 <div id="controls" class="screen hidden">
