@@ -44,6 +44,15 @@ und du blätterst mit einem Wisch in 3-D zum nächsten Tag.
 
 Alles wird automatisch auf dem Gerät gespeichert (localStorage) – auch ohne Internet.
 
+## Spieler-Statistik (nur für dich)
+
+Wenn die App über GitHub Pages läuft, zählt sie anonym mit, wie viele Leute sie
+benutzen – nur „+1“, keine Namen und keine Hausaufgaben (Zähldienst: abacus).
+Die Zahlen siehst du auf `statistik.html`, z. B.
+`https://semrademirci000-maker.github.io/Hausaufgabenheft/statistik.html`.
+Die Seite ist nirgends in der App verlinkt. Mit **Mein Gerät nicht mitzählen**
+zählen deine eigenen Starts nicht mit.
+
 ## Auf dem iPad benutzen
 
 Die App ist eine Web-App (HTML/CSS/JavaScript), **keine native SwiftUI-App**.
@@ -70,4 +79,5 @@ Zum schnellen Ausprobieren am Rechner reicht es, `index.html` im Browser zu öff
 | `styles.css` | Gestaltung: Papier, Buch, 3-D-Blättern, Stundenplan |
 | `app.js` | Daten, Stundenplan, Hausaufgaben, Blätter-Animation |
 | `music.js` | Lo-Fi-Musik, im Browser erzeugt |
+| `statistik.html` | Deine private Spieler-Statistik |
 | `sw.js`, `manifest.webmanifest`, `icons/` | Offline-Betrieb, App-Icon, Home-Bildschirm |

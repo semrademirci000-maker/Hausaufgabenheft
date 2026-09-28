@@ -1,5 +1,5 @@
 /* Kleiner Service Worker: App funktioniert auch ohne Internet. */
-const CACHE = 'schulplaner-v1';
+const CACHE = 'schulplaner-v2';
 const FILES = [
   './', './index.html', './styles.css', './app.js', './music.js',
   './manifest.webmanifest', './icons/icon.svg',
@@ -18,6 +18,7 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
+  if (new URL(e.request.url).origin !== location.origin) return;   // Zähler nie aus dem Cache
   e.respondWith(
     caches.match(e.request).then(hit => hit || fetch(e.request).then(res => {
       const copy = res.clone();

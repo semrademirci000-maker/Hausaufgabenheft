@@ -589,6 +589,35 @@ function esc(s){
    --------------------------------------------------------- */
 renderStart();
 renderBook();
+countPlayer();
+
+/* ---------------------------------------------------------
+   Anonymer Zähler: wie viele Leute die App benutzen.
+   Es wird nur +1 gezählt – keine Namen, keine Hausaufgaben.
+   Zahlen ansehen: statistik.html
+   --------------------------------------------------------- */
+function countPlayer(){
+  if (!location.hostname.endsWith('github.io')) return;   // lokal nicht mitzählen
+  const COUNTER = 'https://abacus.jasoncameron.dev/hit/semrademirci000-hausaufgabenheft/';
+  const KEY = 'schulplaner.zaehler';
+  let seen = {};
+  try { seen = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) {}
+  if (seen.owner) return;                                  // eigenes Gerät zählt nicht
+
+  const d = new Date();
+  const today = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  const hits = ['starts'];
+  if (!seen.first) hits.push('spieler');
+  if (seen.day !== today) hits.push('tag-' + today);
+
+  Promise.all(hits.map(k => fetch(COUNTER + k, { cache:'no-store' })))
+    .then(() => {
+      seen.first = seen.first || today;
+      seen.day = today;
+      try { localStorage.setItem(KEY, JSON.stringify(seen)); } catch (e) {}
+    })
+    .catch(() => {});
+}
 
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')){
   window.addEventListener('load', () =>

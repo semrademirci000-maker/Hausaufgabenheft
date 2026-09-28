@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Meine Spieler-Statistik</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<style>
+  :root{
+    --paper:#fffdf8; --desk:#f1e8d9; --ink:#1c1a17; --ink-soft:#6a6254;
+    --rule:#d9ccb6; --blue:#2f6fed; --green:#2aa66b;
+    --font-hand:"Bradley Hand","Chalkboard SE","Segoe Print","Comic Sans MS","Marker Felt",cursive;
+    --font-ui:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,system-ui,sans-serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --paper:#23211d; --desk:#171613; --ink:#f3eee4; --ink-soft:#b3aa99; --rule:#3d3930; --blue:#6f9bff; --green:#4cc98c; color-scheme:dark; }
+  }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:var(--desk); color:var(--ink); font-family:var(--font-ui);
+        padding:max(24px, env(safe-area-inset-top)) 16px 40px; }
+  main{ max-width:760px; margin:0 auto; display:grid; gap:20px; }
+  h1{ font-family:var(--font-hand); font-size:clamp(30px, 6vw, 44px); margin:0; text-wrap:balance; }
+  .sub{ color:var(--ink-soft); margin:4px 0 0; }
+  .tiles{ display:grid; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr)); gap:14px; }
+  .tile, .panel{ background:var(--paper); border:1px solid var(--rule); border-radius:16px; padding:18px 20px; }
+  .tile__num{ font-size:44px; font-weight:700; font-variant-numeric:tabular-nums; line-height:1.1; }
+  .tile__label{ font-weight:600; margin-top:4px; }
+  .tile__hint{ color:var(--ink-soft); font-size:13px; margin-top:4px; }
+  .tile--main .tile__num{ color:var(--blue); }
+  h2{ font-size:17px; margin:0 0 14px; }
+  .chart{ display:grid; grid-template-columns:repeat(14, 1fr); gap:6px; align-items:end; height:170px; }
+  .bar{ display:flex; flex-direction:column; justify-content:flex-end; align-items:center; height:100%; gap:4px; }
+  .bar i{ display:block; width:100%; background:var(--green); border-radius:5px 5px 2px 2px; min-height:2px; }
+  .bar b{ font-size:12px; font-variant-numeric:tabular-nums; }
+  .days{ display:grid; grid-template-columns:repeat(14, 1fr); gap:6px; margin-top:6px;
+         font-size:11px; color:var(--ink-soft); text-align:center; }
+  .row{ display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between; }
+  button{ font:inherit; font-weight:600; border:0; border-radius:999px; padding:10px 18px;
+          background:var(--blue); color:#fff; cursor:pointer; }
+  button:focus-visible{ outline:3px solid var(--ink); outline-offset:2px; }
+  button.ghost{ background:transparent; color:var(--blue); border:1.5px solid var(--blue); }
+  .msg{ color:var(--ink-soft); font-size:14px; margin:0; }
+  .err{ color:#d8452f; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Wie viele haben meine App gezockt?</h1>
+    <p class="sub" id="updated">Zahlen werden geladen …</p>
+  </header>
+
+  <section class="tiles" aria-label="Übersicht">
+    <div class="tile tile--main">
+      <div class="tile__num" id="n-spieler">–</div>
+      <div class="tile__label">Spieler</div>
+      <div class="tile__hint">verschiedene Geräte, die die App geöffnet haben</div>
+    </div>
+    <div class="tile">
+      <div class="tile__num" id="n-starts">–</div>
+      <div class="tile__label">App-Starts</div>
+      <div class="tile__hint">wie oft die App insgesamt geöffnet wurde</div>
+    </div>
+    <div class="tile">
+      <div class="tile__num" id="n-heute">–</div>
+      <div class="tile__label">Heute gespielt</div>
+      <div class="tile__hint">verschiedene Geräte an diesem Tag</div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Spieler pro Tag (letzte 14 Tage)</h2>
+    <div class="chart" id="chart"></div>
+    <div class="days" id="days"></div>
+  </section>
+
+  <section class="panel">
+    <div class="row">
+      <p class="msg" id="owner-msg">Dein Gerät wird gerade mitgezählt.</p>
+      <button id="owner-btn" class="ghost">Mein Gerät nicht mitzählen</button>
+    </div>
+  </section>
+
+  <div class="row">
+    <p class="msg">Gezählt wird nur „+1“ – keine Namen und keine Hausaufgaben.</p>
+    <button id="reload">Neu laden</button>
+  </div>
+</main>
+
+<script>
+(() => {
+  const API = 'https://abacus.jasoncameron.dev/get/semrademirci000-hausaufgabenheft/';
+  const KEY = 'schulplaner.zaehler';
+  const $ = id => document.getElementById(id);
+  const fmt = n => n.toLocaleString('de-DE');
+  const iso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+
+  // 404 = Zähler gibt es noch nicht = 0
+  async function get(key){
+    const res = await fetch(API + key, { cache:'no-store' });
+    if (res.status === 404) return 0;
+    if (!res.ok) throw new Error(res.status);
+    return (await res.json()).value || 0;
+  }
+
+  async function load(){
+    $('updated').textContent = 'Zahlen werden geladen …';
+    $('updated').classList.remove('err');
+    const days = [];
+    for (let i = 13; i >= 0; i--){ const d = new Date(); d.setDate(d.getDate() - i); days.push(d); }
+    try {
+      const [spieler, starts, ...perDay] = await Promise.all(
+        ['spieler', 'starts', ...days.map(d => 'tag-' + iso(d))].map(get));
+      $('n-spieler').textContent = fmt(spieler);
+      $('n-starts').textContent = fmt(starts);
+      $('n-heute').textContent = fmt(perDay[perDay.length - 1]);
+
+      const max = Math.max(1, ...perDay);
+      $('chart').innerHTML = perDay.map(v =>
+        `<div class="bar" title="${v} Spieler"><b>${v || ''}</b><i style="height:${Math.round(v / max * 130)}px"></i></div>`).join('');
+      $('days').innerHTML = days.map(d =>
+        `<span>${['So','Mo','Di','Mi','Do','Fr','Sa'][d.getDay()]}<br>${d.getDate()}.</span>`).join('');
+      $('updated').textContent = 'Stand: ' + new Date().toLocaleString('de-DE', { dateStyle:'medium', timeStyle:'short' });
+    } catch (e) {
+      $('updated').textContent = 'Zahlen konnten nicht geladen werden. Bist du online? Tippe auf „Neu laden“.';
+      $('updated').classList.add('err');
+    }
+  }
+
+  function readSeen(){ try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } }
+  function renderOwner(){
+    const owner = !!readSeen().owner;
+    $('owner-msg').textContent = owner ? 'Dein Gerät wird nicht mitgezählt.' : 'Dein Gerät wird gerade mitgezählt.';
+    $('owner-btn').textContent = owner ? 'Mein Gerät wieder mitzählen' : 'Mein Gerät nicht mitzählen';
+  }
+  $('owner-btn').addEventListener('click', () => {
+    const seen = readSeen();
+    seen.owner = !seen.owner;
+    try { localStorage.setItem(KEY, JSON.stringify(seen)); } catch (e) {}
+    renderOwner();
+  });
+  $('reload').addEventListener('click', load);
+
+  renderOwner();
+  load();
+})();
+</script>
+</body>
+</html>
