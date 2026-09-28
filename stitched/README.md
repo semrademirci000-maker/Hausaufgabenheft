@@ -29,11 +29,12 @@ bring sie zum **Generator** – und nimm dich vor **Zipper** in Acht.
 
 ## So spielt es sich
 
-- Startraum → Flur → große Halle mit dem Generator. Von dort gehen **zwei Wege** ab:
-  links 2 Batterien, rechts 1 Batterie und die Zelle von The Tailor.
+- Startraum → Flur → große Halle mit dem Generator. Die Batterien liegen schnell erreichbar:
+  im Startraum, im Flur und direkt hinter der linken Tür. Links und rechts geht je ein Weg ab.
 - **Gripper**: grüne und orange Hand schießen, Batterien greifen, Hebel ziehen.
   Jede Tür hat ihren Hebel direkt daneben.
 - **Zipper** wartet in der Halle und greift an, sobald er dich sieht. Er hört Rennen und sieht Licht.
+  **Geduckt** (C) schleichst du fast so schnell wie beim Gehen und er bemerkt dich nur ganz aus der Nähe.
   Brich die Sichtlinie ab oder versteck dich in einem **Spind** (nicht, wenn er dich hineinklettern sieht!).
 - **Finale**: Wenn der Generator läuft, geht der Alarm los – renn zum Ausgang!
 - **Stimmen**: Mila, The Tailor, Zipper und die Fabrik-Durchsage sprechen über die Sprachausgabe

@@ -1209,10 +1209,10 @@ function updatePlayer(dt) {
 
   P.crouch = !!(keys.KeyC || touch.crouch);
   let sprint = !!(keys.ShiftLeft || keys.ShiftRight || touch.run) && moving && !P.crouch && !P.exhausted;
-  if (sprint) { P.stamina -= 24 * dt; P.staminaDelay = 0.9; if (P.stamina <= 0) { P.stamina = 0; P.exhausted = true; sprint = false; } }
-  else { P.staminaDelay -= dt; if (P.staminaDelay <= 0) P.stamina = Math.min(100, P.stamina + 17 * dt); if (P.stamina > 35) P.exhausted = false; }
+  if (sprint) { P.stamina -= 16 * dt; P.staminaDelay = 0.9; if (P.stamina <= 0) { P.stamina = 0; P.exhausted = true; sprint = false; } }
+  else { P.staminaDelay -= dt; if (P.staminaDelay <= 0) P.stamina = Math.min(100, P.stamina + 24 * dt); if (P.stamina > 30) P.exhausted = false; }
 
-  let speed = P.crouch ? 1.9 : sprint ? 6.4 : 3.6;
+  let speed = P.crouch ? 3.0 : sprint ? 6.4 : 4.0; // geduckt fast so schnell wie gehen
   const fx = -Math.sin(P.yaw), fz = -Math.cos(P.yaw), rx = Math.cos(P.yaw), rz = -Math.sin(P.yaw);
   const tx = (fx * -iz + rx * ix) * speed, tz = (fz * -iz + rz * ix) * speed;
   const k = 1 - Math.exp(-11 * dt);
@@ -1237,7 +1237,7 @@ function updatePlayer(dt) {
   camera.rotation.set(P.pitch + (Math.random() - 0.5) * shake, P.yaw + (Math.random() - 0.5) * shake, Math.cos(P.bob) * 0.006 * bobA);
 
   // Geräusche, die das Monster hören kann
-  if (moving && sprint) G.noise = { pos: P.pos.clone(), radius: 17, t: 0 };
+  if (moving && sprint) G.noise = { pos: P.pos.clone(), radius: 12, t: 0 };
   else if (moving && !P.crouch && v > 2) { if (!G.noise || G.noise.radius < 6) G.noise = { pos: P.pos.clone(), radius: 5, t: 0 }; }
 
   // Ausgang erreicht?
@@ -1270,17 +1270,17 @@ function updateMonster(dt) {
     const fwdAng = Math.atan2(toP.x, toP.z);
     let da = Math.abs(((fwdAng - M.yaw + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
     const lit = (G.flash ? 1 : 0) + lightAt(P.pos);
-    let range = lit > 0.6 ? 24 : 11;
-    if (P.crouch) range *= 0.6;
+    let range = lit > 0.6 ? 20 : 10;
+    if (P.crouch) range = G.flash ? 6 : 4; // geduckt sieht er dich nur ganz aus der Nähe
     if (M.state === 'chase') range = 32;
-    if (dist < range && (da < 1.3 || dist < 4.5 || M.state === 'chase')) M.sees = true;
+    if (dist < range && (da < 1.1 || dist < (P.crouch ? 2.5 : 4) || M.state === 'chase')) M.sees = true;
   }
   if (M.state !== 'dormant' && M.state !== 'chase' && M.state !== 'ambush') {
     if (M.sees) {
-      M.aware += dt * (1.3 + 10 / Math.max(dist, 1));
+      M.aware += dt * (0.6 + 4 / Math.max(dist, 1)); // er braucht etwas, bis er sicher ist
       M.lookYaw = 0;
       if (M.aware >= 1) startChase();
-    } else M.aware = Math.max(0, M.aware - dt * 0.25);
+    } else M.aware = Math.max(0, M.aware - dt * 0.5);
     if (G.noise && M.state !== 'chase') {
       const nd = G.noise.pos.distanceTo(M.pos);
       if (nd < G.noise.radius) { M.state = 'investigate'; monsterGoTo(toCell(G.noise.pos.x, G.noise.pos.z)); M.aware = Math.max(M.aware, 0.35); }
@@ -1294,7 +1294,7 @@ function updateMonster(dt) {
     const seen = dist < 20 && !P.hidden && los(M.pos, P.pos);
     const want = seen ? clamp(((Math.atan2(toP.x, toP.z) - M.yaw + Math.PI * 3) % (Math.PI * 2)) - Math.PI, -1.2, 1.2) : 0;
     M.lookYaw += (want - M.lookYaw) * Math.min(1, dt * 1.5);
-    if (seen && dist < 13) grinselAmbush();
+    if (seen && dist < (P.crouch ? 5 : 11)) grinselAmbush(); // geduckt kann man sich an ihm vorbeischleichen
   } else if (M.state === 'ambush') {
     // kurzer Schreckmoment: dreht sich zu dir, reißt das Maul auf – dann rennt er los
     const want = Math.atan2(toP.x, toP.z);
@@ -1331,7 +1331,7 @@ function updateMonster(dt) {
       if (M.pos.distanceTo(fr) < 3) dest = fr;
       else { M.pathT -= dt; if (M.pathT <= 0 || !M.path) { M.pathT = 0.3; monsterGoTo(toCell(fr.x, fr.z)); } }
       if (M.pos.distanceTo(fr) < 1.3) { die(); return; }
-    } else if (M.lost > (G.powered ? 8 : 4)) {
+    } else if (M.lost > (G.powered ? 5 : 3)) {
       M.state = 'search'; M.search = 8; M.path = null;
       monsterGoTo(toCell(M.lastSeen.x, M.lastSeen.z));
       if (!G.powered) say('Es hat dich verloren … vorerst.', 3);
