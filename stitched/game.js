@@ -37,6 +37,11 @@ const saveSettings = () => { try { localStorage.setItem('pp6-settings', JSON.str
 const DOOR_COLORS = { 1: 0xffc233, 2: 0x3fdc6a, 3: 0xb46bff };
 const LEVER_DOOR = { a: '1', b: '2', c: '3' };
 
+const NOTES_PART2 = [
+  { title: 'Aushang Nähstube', body: 'Hier werden die Neuen zusammengenäht.\nNur mit Schlüsselkarte in den Aufzug!\n\nKarte NIEMALS aus dem Kartenraum nehmen,\nsolange die Lüftung offen ist.' },
+  { title: 'Tagebuch einer Näherin', body: 'Heute hat Zipper durch das Lüftungsgitter geschaut.\nEr hat gelächelt. Mit dem Reißverschluss.\n\nThe Tailor sagt, er passt überall durch.\nEr ist ja nur aus Stoff.' },
+  { title: 'Zettel am Aufzug', body: 'Wenn du das liest: Du bist fast draußen.\nKarte an die gelbe Tür halten, dann rein in den Aufzug.\n\nUnd dreh dich nicht um. – M.' },
+];
 const NOTES = [
   { title: 'Verlegungsbericht – Zelle 0', body: 'The Tailor wurde in die Sicherheitszelle auf Ebene 9 verlegt.\nDie Gitter halten. Vorerst.\n\nEr hat die Spielzeuge hier unten zusammengenäht. Er zieht ihre Fäden.\nNiemand geht allein an seinem Käfig vorbei.' },
   { title: 'Versuchsreihe G-7 – Zipper', body: 'Ursprünglich ein Kuscheltier mit Reißverschluss-Mund, 60 cm.\nNach der Behandlung: 3,2 m. Finger aus Nähnadeln.\n\nReagiert auf Licht und schnelle Bewegungen.\nEr sieht schlecht im Dunkeln – Taschenlampe AUS, wenn er in der Nähe ist.' },
@@ -107,6 +112,7 @@ const MAT = {
   ceil: new THREE.MeshStandardMaterial({ map: TX.ceilingTexture(COLS, ROWS), roughness: 1 }),
   wood: new THREE.MeshStandardMaterial({ map: TX.woodTexture(), roughness: 0.9 }),
   metal: (() => { const t = TX.metalTexture('#5d6266'); return new THREE.MeshStandardMaterial({ map: t, normalMap: TX.normalFrom(t, 2), roughness: 0.5, metalness: 0.7 }); })(),
+  keyDoor: (() => { const t = TX.metalTexture('#8a7a1c', true, 'KARTE'); return new THREE.MeshStandardMaterial({ map: t, normalMap: TX.normalFrom(t, 2), roughness: 0.5, metalness: 0.6 }); })(),
   door: (() => { const t = TX.metalTexture('#565b5f', true); return new THREE.MeshStandardMaterial({ map: t, normalMap: TX.normalFrom(t, 2), roughness: 0.55, metalness: 0.6 }); })(),
   beam: new THREE.MeshStandardMaterial({ color: 0x3d4247, roughness: 0.45, metalness: 0.85 }),
   hazard: new THREE.MeshStandardMaterial({ map: TX.metalTexture('#222', true), roughness: 0.6, metalness: 0.4 }),
@@ -216,7 +222,7 @@ function buildWorld() {
   scene.add(group);
   const w = W = {
     group, doors: {}, levers: [], batteries: [], lockers: [], notes: [], lamps: [], boxes: [],
-    rayTargets: [], gen: null, gate: null, exitCell: null, start: null, startYaw: 0, monsterStart: null, lightPool: [], beams: [], proto: null, papers: [], planks: [],
+    rayTargets: [], gen: null, gate: null, exitCell: null, part2Cell: null, key: null, vent: null, start: null, startYaw: 0, monsterStart: null, lightPool: [], beams: [], proto: null, papers: [], planks: [],
   };
   const addBox = (x0, x1, z0, z1) => { const b = { x0, x1, z0, z1, on: true }; w.boxes.push(b); return b; };
   const ref = (mesh, obj) => { mesh.userData.ref = obj; w.rayTargets.push(mesh); };
@@ -259,9 +265,9 @@ function buildWorld() {
     if (k === 'M') w.monsterStart = cc.clone();
 
     // ----- Lampen -----
-    if (k === 'L' || k === 'X') {
+    if (k === 'L' || k === 'F') {
       const warm = rng() < 0.25 ? 0xff4a30 : 0xffa860; // meist orange, manchmal rot – wie in den Spielhallen
-      const lamp = { pos: new THREE.Vector3(cc.x, WALL_H - 0.75, cc.z), level: 1, flicker: k === 'L' && rng() < 0.35, base: k === 'X' ? 26 : 22, color: new THREE.Color(k === 'X' ? 0xbfd8ff : warm), ft: 0, glows: [] };
+      const lamp = { pos: new THREE.Vector3(cc.x, WALL_H - 0.75, cc.z), level: 1, flicker: k === 'L' && rng() < 0.35, base: k === 'F' ? 26 : 22, color: new THREE.Color(k === 'F' ? 0xbfffd8 : warm), ft: 0, glows: [] };
       const corridor = (ch(c - 1, r) === '#' && ch(c + 1, r) === '#') || (ch(c, r - 1) === '#' && ch(c, r + 1) === '#');
       const rig = k === 'L' && !corridor;
       lamp.bulbMat = new THREE.MeshBasicMaterial({ color: lamp.color.clone() });
@@ -316,7 +322,7 @@ function buildWorld() {
     }
 
     // ----- Müll und Trümmer am Boden (verlassene Spielhalle) -----
-    if (k !== '#' && k !== 'O' && k !== 'G' && !'123E'.includes(k)) {
+    if (k !== '#' && k !== 'O' && k !== 'G' && !'123EZF'.includes(k)) {
       const n = Math.floor(rng() * 7);
       for (let i = 0; i < n; i++) w.papers.push([cc.x + (rng() - 0.5) * 3.6, cc.z + (rng() - 0.5) * 3.6, rng() * 6.28, rng()]);
       if (rng() < 0.35) for (let i = 0; i < 1 + rng() * 2; i++) w.planks.push([cc.x + (rng() - 0.5) * 3, cc.z + (rng() - 0.5) * 3, rng() * 6.28, rng()]);
@@ -381,14 +387,14 @@ function buildWorld() {
     }
 
     // ----- Türen & Ausgangstor -----
-    if ('123E'.includes(k)) {
+    if ('123EZ'.includes(k)) {
       const alongX = ch(c - 1, r) === '#' && ch(c + 1, r) === '#';
       const geo = alongX ? new THREE.BoxGeometry(CELL, WALL_H, 0.35) : new THREE.BoxGeometry(0.35, WALL_H, CELL);
-      const mesh = new THREE.Mesh(geo, k === 'E' ? MAT.shutter : MAT.door);
+      const mesh = new THREE.Mesh(geo, k === 'E' ? MAT.shutter : k === 'Z' ? MAT.keyDoor : MAT.door);
       mesh.position.set(cc.x, WALL_H / 2, cc.z); mesh.castShadow = mesh.receiveShadow = true;
       group.add(mesh);
       const box = alongX ? addBox(cc.x - 2, cc.x + 2, cc.z - 0.2, cc.z + 0.2) : addBox(cc.x - 0.2, cc.x + 0.2, cc.z - 2, cc.z + 2);
-      const indMat = new THREE.MeshBasicMaterial({ color: k === 'E' ? 0xff2020 : DOOR_COLORS[k] });
+      const indMat = new THREE.MeshBasicMaterial({ color: k === 'E' ? 0xff2020 : k === 'Z' ? 0xffd21a : DOOR_COLORS[k] });
       const ind = new THREE.Mesh(new THREE.BoxGeometry(alongX ? 0.5 : 0.4, 0.18, alongX ? 0.4 : 0.5), indMat);
       ind.position.set(cc.x, WALL_H - 0.3, cc.z); group.add(ind);
       // Türrahmen mit Warnstreifen
@@ -398,11 +404,44 @@ function buildWorld() {
         post.position.set(px, WALL_H / 2, pz); post.castShadow = post.receiveShadow = true; group.add(post);
         alongX ? addBox(px - 0.15, px + 0.15, pz - 0.35, pz + 0.35) : addBox(px - 0.35, px + 0.35, pz - 0.15, pz + 0.15);
       }
-      const d = { kind: k === 'E' ? 'gate' : 'door', id: k, mesh, box, open: false, opening: false, t: 0, indMat };
+      const d = { kind: k === 'E' ? 'gate' : k === 'Z' ? 'keydoor' : 'door', id: k, mesh, box, open: false, opening: false, t: 0, indMat };
       ref(mesh, d);
       if (k === 'E') w.gate = d; else w.doors[k] = d;
     }
-    if (k === 'X') w.exitCell = [c, r];
+    if (k === 'X') w.part2Cell = [c, r];
+    if (k === 'F') {
+      // Aufzug: Metallkabine mit offener Schiebetür, das Ziel von Kapitel 1
+      w.exitCell = [c, r];
+      const lift = new THREE.Group(); lift.position.copy(cc); group.add(lift);
+      for (const sx of [-1, 1]) {
+        const side = new THREE.Mesh(new THREE.BoxGeometry(0.15, WALL_H - 0.4, 3.4), MAT.metal); side.position.set(sx * 1.7, (WALL_H - 0.4) / 2, 0); lift.add(side);
+      }
+      const back = new THREE.Mesh(new THREE.BoxGeometry(3.4, WALL_H - 0.4, 0.15), MAT.metal); back.position.set(0, (WALL_H - 0.4) / 2, 1.7); lift.add(back);
+      const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.4), new THREE.MeshBasicMaterial({ map: TX.metalTexture('#1c5a2e', false, 'AUFZUG'), color: 0xbfffcf }));
+      sign.position.set(0, WALL_H - 0.7, -1.7); sign.rotation.y = Math.PI; lift.add(sign);
+      const arrow = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.3, 3), new THREE.MeshBasicMaterial({ color: new THREE.Color(0x40ff90).multiplyScalar(2) }));
+      arrow.position.set(0, WALL_H - 1.2, -1.65); lift.add(arrow);
+    }
+    // ----- Schlüsselkarte -----
+    if (k === 'Q') {
+      const [dx, dz] = wallDir(c, r);
+      const px = cc.x + dx * 1.1, pz = cc.z + dz * 1.1;
+      const table = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.9, 1.0), MAT.wood);
+      table.position.set(px, 0.45, pz); table.castShadow = table.receiveShadow = true; group.add(table);
+      addBox(px - 0.5, px + 0.5, pz - 0.5, pz + 0.5); w.rayTargets.push(table);
+      const card = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.02, 0.22), new THREE.MeshStandardMaterial({ color: 0xffd21a, emissive: 0xffb000, emissiveIntensity: 0.9, roughness: 0.4 }));
+      card.position.set(px, 1.0, pz); card.rotation.y = 0.4; group.add(card);
+      const glow = new THREE.PointLight(0xffc830, 2.5, 3.5, 2); glow.position.set(px, 1.4, pz); group.add(glow);
+      const key = { kind: 'key', mesh: card, glow, taken: false };
+      ref(card, key); w.key = key;
+    }
+    // ----- Lüftungsschacht, aus dem Zipper kommt -----
+    if (k === 'V') {
+      const [dx, dz] = wallDir(c, r);
+      const v = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.2), MAT.vent);
+      v.position.set(cc.x + dx * (CELL / 2 - 0.02), 0.8, cc.z + dz * (CELL / 2 - 0.02)); v.rotation.y = yawFacing(-dx, -dz);
+      group.add(v); w.vent = { pos: cc.clone(), mesh: v, dir: [dx, dz] };
+    }
 
     // ----- Hebel -----
     if ('abc'.includes(k)) {
@@ -452,7 +491,7 @@ function buildWorld() {
       m.position.set(cc.x + dx * (CELL / 2 - 0.02), 1.55, cc.z + dz * (CELL / 2 - 0.02));
       m.rotation.y = yawFacing(-dx, -dz); m.rotation.z = (rng() - 0.5) * 0.2;
       group.add(m);
-      const n = { kind: 'note', idx: noteIdx++ % NOTES.length, mesh: m, read: false };
+      const n = { kind: 'note', idx: noteIdx++, mesh: m, read: false };
       ref(m, n); w.notes.push(n);
     }
 
@@ -580,7 +619,7 @@ function buildWorld() {
     // ----- Rohre an der Decke in Gängen -----
     const nsCorr = ch(c - 1, r) === '#' && ch(c + 1, r) === '#';
     const ewCorr = ch(c, r - 1) === '#' && ch(c, r + 1) === '#';
-    if ((nsCorr || ewCorr) && !'123E'.includes(k)) {
+    if ((nsCorr || ewCorr) && !'123EZ'.includes(k)) {
       const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, CELL, 8), MAT.pipe);
       if (nsCorr) { pipe.rotation.x = Math.PI / 2; pipe.position.set(cc.x + 1.55, WALL_H - 0.3, cc.z); }
       else { pipe.rotation.z = Math.PI / 2; pipe.position.set(cc.x, WALL_H - 0.3, cc.z + 1.55); }
@@ -653,9 +692,8 @@ function collide(pos, rad) {
 function passable(c, r) {
   const k = ch(c, r);
   if (k === '#' || k === 'G' || k === 'O') return false;
-  if (k === '1' || k === '2' || k === '3') return W.doors[k].open;
+  if (k === '1' || k === '2' || k === '3' || k === 'Z') return W.doors[k].open;
   if (k === 'E') return W.gate.open;
-  if (k === 'X') return W.gate.open;
   return true;
 }
 function los(a, b) {
@@ -795,7 +833,7 @@ function schedule(delay, fn) { G.events.push({ t: G.time + delay, fn }); }
 // ======================================================================
 function resetGame() {
   buildWorld();
-  Object.assign(G, { time: 0, flash: true, placed: 0, powered: false, monsterAwake: false, noise: null, chase: 0, blackout: 0, focus: null, events: [], leversPulled: 0, shake: 0 });
+  Object.assign(G, { time: 0, flash: true, placed: 0, powered: false, monsterAwake: false, noise: null, chase: 0, blackout: 0, focus: null, events: [], leversPulled: 0, shake: 0, part2: false, hasKey: false });
   audio.alarm = false;
   P.pos.copy(W.start); P.vel.set(0, 0, 0); P.yaw = W.startYaw; P.pitch = 0; P.eye = EYE; P.stamina = 100; P.hidden = null; P.exhausted = false;
   M.pos.copy(W.monsterStart); M.yaw = Math.atan2(W.start.x - W.monsterStart.x, W.start.z - W.monsterStart.z); M.state = 'dormant'; M.path = null; M.aware = 0; M.lost = 0; M.sawHide = false; M.speed = 0; M.growlT = 8;
@@ -829,7 +867,7 @@ function checkpoint() {
     taken: W.batteries.map((b, i) => (b.taken ? i : -1)).filter(i => i >= 0),
     carrying: hands.map(h => { const b = h.carrying || h.grabbing; return b ? W.batteries.indexOf(b) : -1; }),
     levers: W.levers.filter(l => l.pulled).map(l => l.id),
-    awake: G.monsterAwake,
+    awake: G.monsterAwake, part2: !!G.part2, key: !!G.hasKey, keyDoor: !!W.doors['Z']?.open,
     pos: [P.pos.x, P.pos.z], yaw: P.yaw, time: G.time,
   };
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); } catch (e) { return; }
@@ -858,23 +896,32 @@ function applySave(d) {
     door.mesh.position.y = WALL_H / 2 + (WALL_H - 0.35); door.indMat.color.set(0x30ff60);
   }
   G.leversPulled = d.levers.length;
+  if (d.part2) {
+    G.part2 = true; G.powered = true;
+    if (d.key) { const k = W.key; k.taken = true; k.mesh.visible = false; k.glow.visible = false; G.hasKey = true; W.rayTargets = W.rayTargets.filter(m => m.userData.ref !== k); }
+    if (d.keyDoor) { const z = W.doors['Z']; z.open = true; z.opening = true; z.t = 1; z.box.on = false; z.mesh.position.y = WALL_H / 2 + (WALL_H - 0.35); z.indMat.color.set(0x30ff60); }
+    if (!d.key) { monster.root.visible = false; M.state = 'patrol'; M.pos.copy(W.monsterStart); }
+  }
   P.pos.set(d.pos[0], 0, d.pos[1]); P.yaw = d.yaw; collide(P.pos, PR);
   // Zipper weit weg und ruhig starten lassen, damit man nicht sofort wieder erwischt wird
-  if (G.monsterAwake) {
+  if (G.monsterAwake && (!d.part2 || d.key)) {
     let best = null, bestD = 0;
     for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
       if (!passable(c, r) || '.KNL'.indexOf(ch(c, r)) < 0) continue;
       const cc = center(c, r), dd = cc.distanceTo(P.pos);
-      if (dd > bestD && !los(cc, P.pos)) { bestD = dd; best = cc; }
+      if (dd > bestD && !los(cc, P.pos) && (!d.part2 || r >= 14) && findPath([c, r], toCell(P.pos.x, P.pos.z))) { bestD = dd; best = cc; }
     }
     if (best) M.pos.copy(best);
+    else if (d.part2 && W.vent) M.pos.set(W.vent.pos.x, 0, W.vent.pos.z); // Notfall: an der Lüftung warten
+    if (d.part2) monster.root.visible = true;
     M.state = 'patrol'; M.wait = 5; M.path = null; M.aware = 0; monster.setAngry(false);
   }
   monster.root.position.set(M.pos.x, 0, M.pos.z);
   const carrying = hands.some(h => h.carrying);
   objective(carrying ? 'Bring die Batterie zum Generator.' : `Finde 3 Batterien für den Generator (${G.placed}/3)`);
   say('Letzter Speicherpunkt geladen.', 2.5);
-  if (G.placed >= 3) powerOn();
+  if (d.part2) objective(d.keyDoor ? 'Schnell in den Aufzug!' : d.key ? 'Öffne die gelbe Sicherheitstür mit der Karte!' : 'Finde die Schlüsselkarte in der Nähstube.');
+  else if (G.placed >= 3) powerOn();
 }
 
 function startGame(fromSave) {
@@ -954,6 +1001,59 @@ function powerOn() {
   });
 }
 
+// Teil 2 „Die Nähstube“: Tor kracht hinter dir zu, Zipper ist ausgesperrt
+function enterPart2() {
+  if (G.part2) return;
+  G.part2 = true;
+  const g = W.gate; g.opening = false; g.closing = true; g.open = false; g.box.on = true;
+  g.indMat.color.set(0xff2020);
+  audio.alarm = false; audio.door();
+  for (const l of W.lamps) if (l.base < 26) { l.color.set(0xffa860); l.bulbMat.color.set(0xffa860); l.shaftMat.color.set(0xffd9a0); l.flicker = Math.random() < 0.3; }
+  // Zipper bleibt hinter dem Tor zurück
+  M.pos.copy(W.monsterStart); M.state = 'patrol'; M.path = null; M.wait = 4; M.aware = 0; M.lost = 0; M.sawHide = false;
+  monster.setAngry(false); monster.root.visible = false;
+  objective('Finde die Schlüsselkarte in der Nähstube.');
+  say('Das Tor ist zu! Zipper kommt da nicht durch.', 4, 'MILA');
+  schedule(4.5, () => say('Du hast es fast geschafft. Der Aufzug nach oben braucht eine <b>Schlüsselkarte</b>.', 5, 'MILA'));
+  schedule(10, () => say('Sie liegt in der Nähstube, hinter der lila Tür. Zieh den Hebel daneben.', 5, 'MILA'));
+  schedule(16, () => say('Die Nähstube … Hier habe ich euch alle zusammengenäht. Willkommen zu Hause.', 5, 'TAILOR'));
+  schedule(0.8, checkpoint);
+}
+
+function takeKey() {
+  const k = W.key; if (!k || k.taken) return;
+  k.taken = true; k.mesh.visible = false; k.glow.visible = false; G.hasKey = true;
+  W.rayTargets = W.rayTargets.filter(m => m.userData.ref !== k);
+  audio.pickup();
+  objective('Öffne die gelbe Sicherheitstür mit der Karte!');
+  say('Du hast die Karte!', 2.5);
+  checkpoint();
+  zipperFromVent();
+}
+
+// Das Licht geht aus – und Zipper kriecht aus der Lüftung
+function zipperFromVent() {
+  G.blackout = 2.5; audio.powerDown();
+  schedule(1.3, () => {
+    const v = W.vent;
+    M.pos.set(v.pos.x + v.dir[0] * 1.2, 0, v.pos.z + v.dir[1] * 1.2);
+    M.yaw = Math.atan2(-v.dir[0], -v.dir[1]);
+    monster.root.visible = true; monster.root.position.set(M.pos.x, 0, M.pos.z);
+    audio.setMonsterPos(M.pos); audio.metalBang(); audio.zipper();
+    G.monsterAwake = true;
+  });
+  schedule(2.6, () => { say('Er ist in der Lüftung! <b>LAUF ZUM AUFZUG!</b>', 4, 'MILA'); startChase(true); audio.roar(); });
+  schedule(7, () => say('Ich näh dich fest … ganz fest …', 3, 'ZIPPER'));
+}
+
+function openKeyDoor() {
+  const d = W.doors['Z'];
+  if (!d || d.open || d.opening) return;
+  d.opening = true; audio.door(); d.indMat.color.set(0x30ff60);
+  objective('Schnell in den Aufzug!');
+  say('Die Tür geht auf – rein in den Aufzug!', 3, 'MILA');
+}
+
 const ZIPPER_LINES = ['Ich näh dich fest …', 'Zipper hat dich gefunden …', 'Bleib bei mir … für immer.', 'Komm her … lächle für mich.', 'Wir spielen für immer.'];
 function startChase(silent) {
   if (M.state !== 'chase' && !silent) {
@@ -994,8 +1094,9 @@ function toggleLocker(lk) {
 
 function openNote(n) {
   G.mode = 'note'; n.read = true; audio.paper();
-  $('noteTitle').textContent = NOTES[n.idx].title;
-  $('noteBody').textContent = NOTES[n.idx].body;
+  const all = [...NOTES, ...NOTES_PART2], note = all[n.idx % all.length];
+  $('noteTitle').textContent = note.title;
+  $('noteBody').textContent = note.body;
   $('note').classList.remove('hidden');
 }
 function closeNote() { $('note').classList.add('hidden'); G.mode = 'playing'; }
@@ -1145,6 +1246,8 @@ function updateFocus() {
     else if (o.kind === 'locker' && d < 2.8) { hot = true; text = '[E] Im Spind verstecken'; }
     else if (o.kind === 'note' && d < 3) { hot = true; text = '[E] Lesen'; }
     else if (o.kind === 'gate' && !o.open && d < 6) text = G.powered ? 'Das Tor öffnet sich …' : 'Kein Strom. Der Generator braucht 3 Batterien.';
+    else if (o.kind === 'key' && !o.taken) { hot = true; text = d < 2.6 ? '[E] / Hand: Schlüsselkarte nehmen' : 'Hand schießen: Schlüsselkarte greifen'; }
+    else if (o.kind === 'keydoor' && !o.open && !o.opening && d < 5) { hot = G.hasKey; text = G.hasKey ? '[E] Karte an die Tür halten' : 'Gesperrt. Hier brauchst du die Schlüsselkarte.'; }
     else if (o.kind === 'door' && !o.open && !o.opening && d < 6) text = 'Verschlossen. Irgendwo muss ein Hebel mit dieser Farbe sein.';
   }
   if (isTouch) text = text.replace('[E] / ', '').replace('[E]', 'E:');
@@ -1162,6 +1265,10 @@ function interact() {
   else if (o.kind === 'generator' && a.dist < 5) {
     const h = hands.find(x => x.carrying);
     if (h && G.placed < 3) insertBattery(h);
+  } else if (o.kind === 'key' && !o.taken && a.dist < 2.6) {
+    takeKey();
+  } else if (o.kind === 'keydoor' && G.hasKey && a.dist < 5) {
+    openKeyDoor();
   } else if (o.kind === 'battery' && !o.taken && a.dist < 2.6) {
     const h = hands.find(x => !x.carrying && x.state === 'idle');
     if (h) takeBattery(o, h, true);
@@ -1193,7 +1300,7 @@ function fire(side) {
   const a = aim(15);
   camera.getWorldDirection(_fwd);
   h.target.copy(a ? a.point : _v.copy(camera.position).addScaledVector(_fwd, 15));
-  h.hit = a && a.obj && ['battery', 'lever'].includes(a.obj.kind) ? a.obj : null;
+  h.hit = a && a.obj && ['battery', 'lever', 'key'].includes(a.obj.kind) ? a.obj : null;
   h.pos.copy(camera.localToWorld(_v2.copy(h.muzzleLocal)));
   h.state = 'out'; h.kick = 1;
   h.hand.visible = false;
@@ -1214,6 +1321,7 @@ function updateHands(dt) {
         h.pos.copy(h.target); h.state = 'back'; audio.grabHit();
         if (h.hit) {
           if (h.hit.kind === 'battery' && !h.hit.taken) takeBattery(h.hit, h, false);
+          if (h.hit.kind === 'key') takeKey();
           if (h.hit.kind === 'lever') pullLever(h.hit);
         }
         h.hit = null;
@@ -1312,7 +1420,8 @@ function updatePlayer(dt) {
 
   // Ausgang erreicht?
   const [c, r] = toCell(P.pos.x, P.pos.z);
-  if (W.exitCell && c === W.exitCell[0] && r === W.exitCell[1]) win();
+  if (W.part2Cell && !G.part2 && c === W.part2Cell[0] && r === W.part2Cell[1]) enterPart2();
+  if (W.exitCell && c === W.exitCell[0] && r === W.exitCell[1] && W.doors['Z']?.open) win();
 }
 
 function lightAt(pos) {
@@ -1523,6 +1632,11 @@ function updateProto(dt) {
 
 function updateWorld(dt) {
   for (const d of [...Object.values(W.doors), W.gate]) {
+    if (d.closing && d.t > 0) {
+      d.t = Math.max(0, d.t - dt / 0.8); // fällt schwer herunter
+      d.mesh.position.y = WALL_H / 2 + (WALL_H - 0.35) * d.t * d.t;
+      if (d.t === 0) { d.closing = false; audio.slam(); G.shake = 1; }
+    }
     if (d.opening && d.t < 1) {
       d.t = Math.min(1, d.t + dt / 2.2);
       d.mesh.position.y = WALL_H / 2 + (WALL_H - 0.35) * (1 - Math.pow(1 - d.t, 2));

@@ -412,6 +412,16 @@ export class AudioEngine {
     this.tone({ type: 'square', freq: 60, dur: 0.12, gain: 0.08 });
   }
 
+  // schweres Tor schlägt zu
+  slam() {
+    this.tone({ type: 'sine', freq: 60, freqEnd: 28, dur: 0.9, gain: 0.9, wet: 1 });
+    this.noise({ dur: 0.7, type: 'lowpass', freq: 700, freqEnd: 90, gain: 0.6, wet: 1.4 });
+  }
+  // Lüftungsgitter fliegt heraus
+  metalBang() {
+    this.noise({ dur: 0.5, type: 'bandpass', freq: 1500, q: 3, gain: 0.5, wet: 1.2, dest: this.monsterPan });
+    for (const f of [520, 760, 1130]) this.tone({ type: 'triangle', freq: f, freqEnd: f * 0.9, dur: 1, gain: 0.07, wet: 1.2 });
+  }
   // Lautsprecher-Gong vor einer Durchsage
   chime() {
     this.tone({ type: 'sine', freq: 784, dur: 0.6, gain: 0.12, wet: 1.2 });
