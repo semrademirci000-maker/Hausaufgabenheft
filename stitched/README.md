@@ -39,7 +39,7 @@ bring sie zum **Generator** – und nimm dich vor **Zipper** in Acht.
 - **Speicherpunkte**: Das Spiel speichert automatisch (am Start, bei jeder Batterie, jedem Hebel).
   Erwischt dich Zipper, geht es mit „Nochmal“ am letzten Speicherpunkt weiter. Im Menü gibt es „Fortsetzen“.
 - **Flucht**: Wenn der Generator läuft, geht der Alarm los – renn durch das Ausgangstor!
-- **Die Nähstube** (zweiter Teil): Das Tor kracht hinter dir zu. Zieh den lila Hebel, hol die
+- **Die Nähstube** (zweiter Bereich von Kapitel 1): Das Tor kracht hinter dir zu. Zieh den lila Hebel, hol die
   **Schlüsselkarte** – dann kriecht Zipper aus der Lüftung. Öffne mit der Karte die gelbe
   Sicherheitstür und fahr mit dem **Aufzug** nach oben: Kapitel 1 geschafft.
 - **Stimmen**: Mila, The Tailor, Zipper und die Fabrik-Durchsage sprechen über die Sprachausgabe

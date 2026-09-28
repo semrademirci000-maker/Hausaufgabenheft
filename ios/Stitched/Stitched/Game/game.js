@@ -1001,7 +1001,7 @@ function powerOn() {
   });
 }
 
-// Teil 2 „Die Nähstube“: Tor kracht hinter dir zu, Zipper ist ausgesperrt
+// Bereich „Die Nähstube“ (Kapitel 1): Tor kracht hinter dir zu, Zipper ist ausgesperrt
 function enterPart2() {
   if (G.part2) return;
   G.part2 = true;
