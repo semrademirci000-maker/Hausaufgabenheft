@@ -815,7 +815,70 @@ function resetGame() {
   schedule(27, () => say(isTouch ? 'Tipp: Tippe auf die grüne oder orange Hand, um den Gripper zu schießen.' : 'Tipp: Linke/rechte Maustaste schießt die Gripper-Hände.', 4));
 }
 
-function startGame() {
+// ======================================================================
+//  Speicherpunkte: automatisch an wichtigen Stellen, „Fortsetzen“ im Menü
+// ======================================================================
+const SAVE_KEY = 'stitched-save-v1';
+function readSave() { try { return JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); } catch (e) { return null; } }
+function clearSave() { try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* egal */ } updateContinueBtn(); }
+let saveTagT = 0;
+function checkpoint() {
+  if (!W || G.mode !== 'playing') return;
+  const data = {
+    placed: G.placed,
+    taken: W.batteries.map((b, i) => (b.taken ? i : -1)).filter(i => i >= 0),
+    carrying: hands.map(h => { const b = h.carrying || h.grabbing; return b ? W.batteries.indexOf(b) : -1; }),
+    levers: W.levers.filter(l => l.pulled).map(l => l.id),
+    awake: G.monsterAwake,
+    pos: [P.pos.x, P.pos.z], yaw: P.yaw, time: G.time,
+  };
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); } catch (e) { return; }
+  $('saveTag').classList.add('on'); saveTagT = 2.2;
+  updateContinueBtn();
+}
+function updateContinueBtn() { $('btnContinue').classList.toggle('hidden', !readSave()); }
+
+// Spielstand in die frisch gebaute Welt übernehmen (unsichtbarer Respawn)
+function applySave(d) {
+  G.events = []; hud.sub.style.opacity = 0; audio.stopSpeech();
+  G.time = d.time || 0; G.monsterAwake = !!d.awake;
+  for (const i of d.taken) {
+    const b = W.batteries[i]; if (!b) continue;
+    b.taken = true; b.glow.visible = false; b.mesh.visible = false;
+    W.rayTargets = W.rayTargets.filter(m => m.userData.ref !== b);
+  }
+  for (let k = 0; k < d.placed; k++) { W.gen.slots[k].bat.visible = true; W.gen.slots[k].ind.color.set(0x30ff60); }
+  G.placed = d.placed; updateBatteryHud();
+  d.carrying.forEach((i, side) => { if (i >= 0 && W.batteries[i]) { hands[side].carrying = W.batteries[i]; hands[side].carryBat.visible = true; } });
+  for (const id of d.levers) {
+    const lv = W.levers.find(l => l.id === id); if (!lv) continue;
+    lv.pulled = true; lv.t = 1; lv.pivot.rotation.x = 0.5 + 2.1;
+    const door = W.doors[LEVER_DOOR[id]];
+    door.open = true; door.opening = true; door.t = 1; door.box.on = false;
+    door.mesh.position.y = WALL_H / 2 + (WALL_H - 0.35); door.indMat.color.set(0x30ff60);
+  }
+  G.leversPulled = d.levers.length;
+  P.pos.set(d.pos[0], 0, d.pos[1]); P.yaw = d.yaw; collide(P.pos, PR);
+  // Zipper weit weg und ruhig starten lassen, damit man nicht sofort wieder erwischt wird
+  if (G.monsterAwake) {
+    let best = null, bestD = 0;
+    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+      if (!passable(c, r) || '.KNL'.indexOf(ch(c, r)) < 0) continue;
+      const cc = center(c, r), dd = cc.distanceTo(P.pos);
+      if (dd > bestD && !los(cc, P.pos)) { bestD = dd; best = cc; }
+    }
+    if (best) M.pos.copy(best);
+    M.state = 'patrol'; M.wait = 5; M.path = null; M.aware = 0; monster.setAngry(false);
+  }
+  monster.root.position.set(M.pos.x, 0, M.pos.z);
+  const carrying = hands.some(h => h.carrying);
+  objective(carrying ? 'Bring die Batterie zum Generator.' : `Finde 3 Batterien für den Generator (${G.placed}/3)`);
+  say('Letzter Speicherpunkt geladen.', 2.5);
+  if (G.placed >= 3) powerOn();
+}
+
+function startGame(fromSave) {
+  const save = fromSave ? readSave() : null;
   audio.init();
   audio.setMenuMusic(false);
   audio.primeSpeech();
@@ -823,10 +886,12 @@ function startGame() {
   audio.setVolume(settings.vol);
   audio.setAmbience(true);
   resetGame();
+  if (save) applySave(save);
   showScreen(null);
   $('hud').classList.remove('hidden');
   if (isTouch) $('touch').classList.remove('hidden');
   G.mode = 'playing';
+  if (!save) { clearSave(); checkpoint(); } // neues Spiel: erster Speicherpunkt am Start
   lockPointer();
   if (isTouch) { try { document.documentElement.requestFullscreen?.()?.catch?.(() => {}); } catch (e) { /* iOS */ } }
 }
@@ -857,6 +922,7 @@ function insertBattery(h) {
   slot.bat.visible = true; slot.ind.color.set(0x30ff60);
   h.carrying = null; h.carryBat.visible = false;
   G.placed++; updateBatteryHud(); audio.insertBattery();
+  checkpoint();
   if (G.placed < 3) {
     objective(`Finde 3 Batterien für den Generator (${G.placed}/3)`);
     if (G.placed === 2) say('Noch eine. Es ist nicht schlau – brich den Sichtkontakt ab, dann verliert es dich.', 5, 'MILA');
@@ -908,6 +974,7 @@ function pullLever(lv) {
   const d = W.doors[LEVER_DOOR[lv.id]];
   schedule(0.4, () => { d.opening = true; audio.door(); d.indMat.color.set(0x30ff60); });
   G.leversPulled++;
+  schedule(0.5, checkpoint);
   say(G.leversPulled === 1 ? 'Irgendwo hat sich eine schwere Tür geöffnet. Achte auf die Farbe über der Tür.' : 'Eine weitere Tür öffnet sich.', 4);
   G.noise = { pos: P.pos.clone(), radius: 18, t: 0.2 };
 }
@@ -945,6 +1012,7 @@ function die() {
 
 function win() {
   audio.stopSpeech();
+  clearSave(); // geschafft – nächstes Mal wieder von vorn
   G.mode = 'win'; audio.alarm = false; audio.setAmbience(false);
   const m = Math.floor(G.time / 60), s = Math.floor(G.time % 60);
   $('winTime').textContent = `Zeit: ${m}:${String(s).padStart(2, '0')}`;
@@ -1105,6 +1173,7 @@ function takeBattery(b, h, direct) {
   W.rayTargets = W.rayTargets.filter(m => m.userData.ref !== b);
   if (direct) {
     b.mesh.visible = false; h.carrying = b; h.carryBat.visible = true; audio.pickup();
+    schedule(0.1, checkpoint);
     say(G.placed === 0 && !G.monsterAwake ? 'Eine Batterie! Bring sie zum Generator.' : 'Batterie eingesammelt. Zum Generator!', 3);
     objective('Bring die Batterie zum Generator.');
   } else h.grabbing = b;
@@ -1157,6 +1226,7 @@ function updateHands(dt) {
         h.state = 'idle'; h.world.visible = false; h.cable.visible = false; h.hand.visible = true;
         if (h.grabbing) {
           const b = h.grabbing; h.grabbing = null; b.mesh.visible = false; h.carrying = b; h.carryBat.visible = true;
+          schedule(0.1, checkpoint);
           audio.pickup();
           say(G.placed === 0 && G.time < 200 ? 'Eine Batterie! Bring sie zum Generator.' : 'Batterie eingesammelt. Zum Generator!', 3);
           objective('Bring die Batterie zum Generator.');
@@ -1545,6 +1615,7 @@ function resume() {
   showScreen(null); G.mode = 'playing'; lockPointer(); audio.unlock(); audio.pauseSpeech(false);
 }
 function toMenu() {
+  updateContinueBtn();
   audio.setMenuMusic(true);
   unlock(); audio.alarm = false; audio.setAmbience(false); audio.ctx?.resume(); audio.stopSpeech();
   resetGame(); G.mode = 'menu';
@@ -1553,7 +1624,8 @@ function toMenu() {
 }
 
 let lastScreen = 'menu';
-$('btnPlay').onclick = () => startGame();
+$('btnPlay').onclick = () => startGame(false);
+$('btnContinue').onclick = () => startGame(true);
 $('btnControls').onclick = () => { lastScreen = 'menu'; showScreen('controls'); };
 $('btnSettings').onclick = () => { lastScreen = 'menu'; showScreen('settings'); };
 $('btnCredits').onclick = () => { lastScreen = 'menu'; showScreen('credits'); };
@@ -1568,9 +1640,9 @@ $('btnQuitGame').onclick = () => {
 };
 document.querySelectorAll('.back').forEach(b => b.onclick = () => showScreen(lastScreen));
 $('btnResume').onclick = resume;
-$('btnRestart').onclick = () => { audio.ctx?.resume(); startGame(); };
+$('btnRestart').onclick = () => { audio.ctx?.resume(); startGame(true); };
 $('btnQuit').onclick = toMenu;
-$('btnRetry').onclick = () => startGame();
+$('btnRetry').onclick = () => startGame(true); // unsichtbarer Respawn am letzten Speicherpunkt
 document.querySelectorAll('.toMenu').forEach(b => b.onclick = toMenu);
 
 $('sens').value = settings.sens; $('vol').value = settings.vol; $('quality').value = settings.quality;
@@ -1752,6 +1824,7 @@ function tick(dt) {
     if (G.mode === 'playing') updateFocus();
     if (G.noise) { G.noise.t -= dt; if (G.noise.t < 0) G.noise = null; }
     subTimer -= dt; if (subTimer <= 0) hud.sub.style.opacity = 0;
+    if (saveTagT > 0) { saveTagT -= dt; if (saveTagT <= 0) $('saveTag').classList.remove('on'); }
     hud.stamina.style.width = P.stamina + '%';
     hud.staminaWrap.style.opacity = P.stamina < 99 ? 1 : 0;
     hud.stamina.style.background = P.exhausted ? '#c0392b' : '#e8e2d6';
@@ -1782,6 +1855,7 @@ G.mode = 'menu';
 // ======================================================================
 G.intro = true;
 showScreen('intro');
+updateContinueBtn();
 let introStep = 0;
 const introTimers = [];
 function runIntro() {

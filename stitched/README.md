@@ -36,6 +36,8 @@ bring sie zum **Generator** – und nimm dich vor **Zipper** in Acht.
 - **Zipper** wartet in der Halle und greift an, sobald er dich sieht. Er hört Rennen und sieht Licht.
   **Geduckt** (C) schleichst du fast so schnell wie beim Gehen und er bemerkt dich nur ganz aus der Nähe.
   Brich die Sichtlinie ab oder versteck dich in einem **Spind** (nicht, wenn er dich hineinklettern sieht!).
+- **Speicherpunkte**: Das Spiel speichert automatisch (am Start, bei jeder Batterie, jedem Hebel).
+  Erwischt dich Zipper, geht es mit „Nochmal“ am letzten Speicherpunkt weiter. Im Menü gibt es „Fortsetzen“.
 - **Finale**: Wenn der Generator läuft, geht der Alarm los – renn zum Ausgang!
 - **Stimmen**: Mila, The Tailor, Zipper und die Fabrik-Durchsage sprechen über die Sprachausgabe
   des Geräts. In den Einstellungen gibt es „Stimmen testen“ und ein eigenes Menübild.

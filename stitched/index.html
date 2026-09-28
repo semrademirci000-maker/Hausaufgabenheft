@@ -33,6 +33,7 @@
   <div id="staminaWrap"><div id="stamina"></div></div>
   <div id="hiddenTag">VERSTECKT</div>
   <div id="flashTag">LICHT</div>
+  <div id="saveTag">SPEICHERN …</div>
 </div>
 
 <!-- Touch-Steuerung (iPad / iPhone) -->
@@ -76,6 +77,7 @@
       Finde drei Batterien, bring den Generator zum Laufen und entkomme, bevor sie dich finden.</p>
   </header>
   <nav class="menuList">
+    <button id="btnContinue" class="hidden">FORTSETZEN</button>
     <button id="btnPlay">NEUES SPIEL</button>
     <button id="btnControls">STEUERUNG</button>
     <button id="btnSettings">EINSTELLUNGEN</button>
@@ -148,7 +150,7 @@
   <h2>PAUSE</h2>
   <div class="buttons">
     <button id="btnResume">WEITER</button>
-    <button id="btnRestart">NEU STARTEN</button>
+    <button id="btnRestart">LETZTER SPEICHERPUNKT</button>
     <button id="btnQuit">HAUPTMENÜ</button>
   </div>
 </div>
@@ -156,7 +158,7 @@
 <div id="dead" class="screen hidden">
   <h2 class="red">ES HAT DICH ERWISCHT</h2>
   <p id="deadTip"></p>
-  <div class="buttons"><button id="btnRetry">NOCHMAL</button><button class="toMenu">HAUPTMENÜ</button></div>
+  <div class="buttons"><button id="btnRetry">NOCHMAL (SPEICHERPUNKT)</button><button class="toMenu">HAUPTMENÜ</button></div>
 </div>
 
 <div id="win" class="screen hidden">

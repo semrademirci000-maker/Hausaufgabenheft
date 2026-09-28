@@ -253,3 +253,13 @@ html, body {
 .tbtn.green, .tbtn.orange { font-size: 13px; letter-spacing: .5px; padding: 0; }
 #tFlash { font-size: 13px; letter-spacing: 1px; }
 #flashTag { font: 600 13px "Oswald", sans-serif; letter-spacing: 2px; color: #f2ede4; }
+
+/* Speicher-Anzeige unten rechts */
+#saveTag {
+  position: absolute; right: 18px; bottom: max(16px, env(safe-area-inset-bottom)); opacity: 0; transition: opacity .4s;
+  font: 600 14px "Oswald", sans-serif; letter-spacing: 3px; color: #f2ede4; text-shadow: 0 1px 4px #000;
+  animation: savePulse 1s ease-in-out infinite;
+}
+#saveTag.on { opacity: .9; }
+@keyframes savePulse { 50% { color: #9aa0a8; } }
+@media (pointer: coarse) { #saveTag { bottom: auto; top: max(80px, calc(env(safe-area-inset-top) + 64px)); } }
