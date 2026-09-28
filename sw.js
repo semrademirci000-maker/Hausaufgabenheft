@@ -19,6 +19,7 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   if (new URL(e.request.url).origin !== location.origin) return;   // Zähler nie aus dem Cache
+  if (new URL(e.request.url).pathname.includes('/stitched/')) return; // STITCHED ist ein eigenes Spiel
   e.respondWith(
     caches.match(e.request).then(hit => hit || fetch(e.request).then(res => {
       const copy = res.clone();

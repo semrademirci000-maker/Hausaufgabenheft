@@ -80,4 +80,6 @@ Zum schnellen Ausprobieren am Rechner reicht es, `index.html` im Browser zu öff
 | `app.js` | Daten, Stundenplan, Hausaufgaben, Blätter-Animation |
 | `music.js` | Lo-Fi-Musik, im Browser erzeugt |
 | `statistik.html` | Deine private Spieler-Statistik |
+| `stitched/` | Das Spiel STITCHED von Muaz, mit anonymem Zähler |
+| `stitched/board.html` | Privates Board: wer STITCHED gespielt hat |
 | `sw.js`, `manifest.webmanifest`, `icons/` | Offline-Betrieb, App-Icon, Home-Bildschirm |
