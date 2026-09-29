@@ -4,17 +4,18 @@
 // L  Deckenlampe     K  Spind          N  Notiz / Tonband
 // a/b/c  Hebel       1/2/3  Tür, die vom passenden Hebel geöffnet wird (Hebel steht direkt daneben)
 // O  Käfig mit The Tailor  Y  Vitrine mit der Puppe Mila
+// D  Batterie auf einer Kommode mit Puppe (neben dem Käfig)
 // Bereich „Die Nähstube“ (gehört zu Kapitel 1): X = Übergang (Tor schließt sich), Q = Schlüsselkarte,
 // Z = Sicherheitstür (braucht die Karte), V = Lüftung (Zipper kommt heraus), F = Aufzug (Ziel)
 export const MAP = [
   "###################",
   "######L.PB#########",
-  "######KY..#########",
-  "########B##########",
+  "######KY.B#########",
+  "########.##########",
   "#######K.N#########",
   "#..K####.######K.O#",
-  "#.L.###..LGK###.L.#",
-  "#...B1a.....b2...K#",
+  "#.L.###..LGK###.LD#",
+  "#....1a.....b2...K#",
   "#N..###K..KM###...#",
   "##.######.#####N..#",
   "##.######E#########",

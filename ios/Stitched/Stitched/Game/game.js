@@ -111,6 +111,7 @@ const MAT = {
   floor: (() => { const t = TX.floorTexture(COLS, ROWS); return new THREE.MeshStandardMaterial({ map: t, normalMap: TX.normalFrom(t, 4), roughnessMap: TX.roughFrom(t, 0.55, 0.9), metalness: 0.05, envMapIntensity: 0.6 }); })(),
   ceil: new THREE.MeshStandardMaterial({ map: TX.ceilingTexture(COLS, ROWS), roughness: 1 }),
   wood: new THREE.MeshStandardMaterial({ map: TX.woodTexture(), roughness: 0.9 }),
+  dresser: new THREE.MeshStandardMaterial({ color: 0x5a3a24, roughness: 0.6 }),
   metal: (() => { const t = TX.metalTexture('#5d6266'); return new THREE.MeshStandardMaterial({ map: t, normalMap: TX.normalFrom(t, 2), roughness: 0.5, metalness: 0.7 }); })(),
   keyDoor: (() => { const t = TX.metalTexture('#8a7a1c', true, 'KARTE'); return new THREE.MeshStandardMaterial({ map: t, normalMap: TX.normalFrom(t, 2), roughness: 0.5, metalness: 0.6 }); })(),
   door: (() => { const t = TX.metalTexture('#565b5f', true); return new THREE.MeshStandardMaterial({ map: t, normalMap: TX.normalFrom(t, 2), roughness: 0.55, metalness: 0.6 }); })(),
@@ -343,18 +344,41 @@ function buildWorld() {
     }
 
     // ----- Batterie auf einer Kiste -----
-    if (k === 'B') {
+    // D = Batterie auf einer Kommode mit Mila-Puppe (neben dem Käfig von The Tailor)
+    if (k === 'B' || k === 'D') {
       const [dx, dz] = wallDir(c, r);
       const px = cc.x + dx * 1.1, pz = cc.z + dz * 1.1;
-      const crate = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.95, 0.95), MAT.wood);
-      crate.position.set(px, 0.475, pz); crate.castShadow = crate.receiveShadow = true; group.add(crate);
-      addBox(px - 0.48, px + 0.48, pz - 0.48, pz + 0.48);
-      w.rayTargets.push(crate);
+      let topY = 0.95, batX = px, batZ = pz;
+      if (k === 'D') {
+        const kg = new THREE.Group(); kg.position.set(px, 0, pz); kg.rotation.y = yawFacing(-dx, -dz); group.add(kg);
+        const body = new THREE.Mesh(new RoundedBoxGeometry(1.5, 1.0, 0.8, 2, 0.04), MAT.dresser);
+        body.position.y = 0.55; body.castShadow = body.receiveShadow = true; kg.add(body); w.rayTargets.push(body);
+        for (const y of [0.3, 0.62]) for (const x of [-0.37, 0.37]) {
+          const drawer = new THREE.Mesh(new THREE.BoxGeometry(0.66, 0.26, 0.04), MAT.wood); drawer.position.set(x, y, 0.41); kg.add(drawer);
+          const knob = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), MAT.batteryCap); knob.position.set(x, y, 0.45); kg.add(knob);
+        }
+        for (const x of [-0.65, 0.65]) for (const z of [-0.32, 0.32]) {
+          const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.03, 0.12, 8), MAT.wood); leg.position.set(x, 0.03, z); kg.add(leg);
+        }
+        const doll = makeMilaDoll(); doll.scale.setScalar(0.9); doll.position.set(0.45, 1.05, 0); doll.rotation.y = -0.4; kg.add(doll);
+        topY = 1.05;
+        // Batterie links auf der Kommode (in Weltkoordinaten)
+        const off = new THREE.Vector3(-0.3, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), kg.rotation.y);
+        batX = px + off.x; batZ = pz + off.z;
+        const hw = dx !== 0 ? 0.42 : 0.77, hd = dx !== 0 ? 0.77 : 0.42;
+        addBox(px - hw, px + hw, pz - hd, pz + hd);
+      } else {
+        const crate = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.95, 0.95), MAT.wood);
+        crate.position.set(px, 0.475, pz); crate.castShadow = crate.receiveShadow = true; group.add(crate);
+        addBox(px - 0.48, px + 0.48, pz - 0.48, pz + 0.48);
+        w.rayTargets.push(crate);
+      }
+      const px2 = batX, pz2 = batZ;
       const bat = makeBattery();
-      bat.position.set(px, 1.2, pz); bat.rotation.z = 0.1;
+      bat.position.set(px2, topY + 0.25, pz2); bat.rotation.z = 0.1;
       group.add(bat);
       const glow = new THREE.PointLight(0x3a6cff, 3, 3.5, 2);
-      glow.position.set(px, 1.4, pz); group.add(glow);
+      glow.position.set(px2, topY + 0.45, pz2); group.add(glow);
       const b = { kind: 'battery', mesh: bat, glow, taken: false, home: bat.position.clone() };
       bat.traverse(m => { if (m.isMesh) ref(m, b); });
       w.batteries.push(b);
@@ -856,7 +880,7 @@ function resetGame() {
 // ======================================================================
 //  Speicherpunkte: automatisch an wichtigen Stellen, „Fortsetzen“ im Menü
 // ======================================================================
-const SAVE_KEY = 'stitched-save-v1';
+const SAVE_KEY = 'stitched-save-v2'; // v2: neue Batterie-Plätze
 function readSave() { try { return JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); } catch (e) { return null; } }
 function clearSave() { try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* egal */ } updateContinueBtn(); }
 let saveTagT = 0;
@@ -972,7 +996,7 @@ function insertBattery(h) {
   checkpoint();
   if (G.placed < 3) {
     objective(`Finde 3 Batterien für den Generator (${G.placed}/3)`);
-    if (G.placed === 2) say('Noch eine. Es ist nicht schlau – brich den Sichtkontakt ab, dann verliert es dich.', 5, 'MILA');
+    if (G.placed === 2) { say('Noch eine! Die letzte liegt bei The Tailor – auf der Kommode neben seinem Käfig.', 5, 'MILA'); objective('Hol die letzte Batterie von der Kommode bei The Tailor (2/3)'); }
     else say(`Batterie eingesetzt (${G.placed}/3).`, 3);
   } else powerOn();
 }

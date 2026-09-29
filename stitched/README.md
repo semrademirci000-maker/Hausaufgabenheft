@@ -29,8 +29,8 @@ bring sie zum **Generator** – und nimm dich vor **Zipper** in Acht.
 
 ## So spielt es sich
 
-- Startraum → Flur → große Halle mit dem Generator. Die Batterien liegen schnell erreichbar:
-  im Startraum, im Flur und direkt hinter der linken Tür. Links und rechts geht je ein Weg ab.
+- Startraum → Flur → große Halle mit dem Generator. Zwei Batterien liegen nebeneinander im Startraum,
+  die dritte auf einer Kommode mit Puppe neben dem Käfig von The Tailor (rechter Raum).
 - **Gripper**: grüne und orange Hand schießen, Batterien greifen, Hebel ziehen.
   Jede Tür hat ihren Hebel direkt daneben.
 - **Zipper** wartet in der Halle und greift an, sobald er dich sieht. Er hört Rennen und sieht Licht.
