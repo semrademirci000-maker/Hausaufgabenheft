@@ -7,6 +7,7 @@
 // D  Batterie auf einer Kommode mit Puppe (neben dem Käfig)
 // Bereich „Die Nähstube“ (gehört zu Kapitel 1): X = Übergang (Tor schließt sich), Q = Schlüsselkarte,
 // Z = Sicherheitstür (braucht die Karte), V = Lüftung (Zipper kommt heraus), F = Aufzug (Ziel)
+// Bereich „Die Montagehalle“: W = Grube, S = Sicherung, U = Sicherungskasten, J = zweite Lüftung, d/4 = Hebel/Tür
 export const MAP = [
   "###################",
   "######L.PB#########",
@@ -29,8 +30,17 @@ export const MAP = [
   "#N.K##...........N#",
   "#..L##..L....##.K.#",
   "#########Z#########",
-  "#######..L..#######",
+  "#########.#########",
+  "#####K.......N##.K#",
+  "#.WWL.........##.S#",
+  "#SWW.....L....d4..#",
+  "#.WW..........##..#",
+  "#LWW........J.##K.#",
+  "#####.L......K#####",
+  "#########.#########",
+  "#######U...L#######",
   "#######.....#######",
   "#######..F..#######",
+  "###################",
   "###################",
 ];

@@ -34,13 +34,14 @@ const settings = { sens: 1, vol: 0.8, quality: 'mid' };
 try { Object.assign(settings, JSON.parse(localStorage.getItem('pp6-settings') || '{}')); } catch (e) { /* kein Speicher */ }
 const saveSettings = () => { try { localStorage.setItem('pp6-settings', JSON.stringify(settings)); } catch (e) { /* egal */ } };
 
-const DOOR_COLORS = { 1: 0xffc233, 2: 0x3fdc6a, 3: 0xb46bff };
-const LEVER_DOOR = { a: '1', b: '2', c: '3' };
+const DOOR_COLORS = { 1: 0xffc233, 2: 0x3fdc6a, 3: 0xb46bff, 4: 0x2ad4d4 };
+const LEVER_DOOR = { a: '1', b: '2', c: '3', d: '4' };
 
 const NOTES_PART2 = [
   { title: 'Aushang Nähstube', body: 'Hier werden die Neuen zusammengenäht.\nNur mit Schlüsselkarte in den Aufzug!\n\nKarte NIEMALS aus dem Kartenraum nehmen,\nsolange die Lüftung offen ist.' },
   { title: 'Tagebuch einer Näherin', body: 'Heute hat Zipper durch das Lüftungsgitter geschaut.\nEr hat gelächelt. Mit dem Reißverschluss.\n\nThe Tailor sagt, er passt überall durch.\nEr ist ja nur aus Stoff.' },
-  { title: 'Zettel am Aufzug', body: 'Wenn du das liest: Du bist fast draußen.\nKarte an die gelbe Tür halten, dann rein in den Aufzug.\n\nUnd dreh dich nicht um. – M.' },
+  { title: 'Zettel an der Wand', body: 'Wenn du das liest: Du bist fast draußen.\nKarte an die gelbe Tür halten. Dahinter liegt die Montagehalle.\n\nUnd dreh dich nicht um. – M.' },
+  { title: 'Wartungsplan Aufzug', body: 'Aufzug ohne Strom! Zwei Sicherungen fehlen.\nEine ist hinter die Grube gefallen – nur mit dem Greifer erreichbar.\nDie andere liegt im Lagerraum (türkiser Hebel).\n\nNach dem Einsetzen braucht der Aufzug 20 Sekunden.\nSo lange durchhalten.' },
 ];
 const NOTES = [
   { title: 'Verlegungsbericht – Zelle 0', body: 'The Tailor wurde in die Sicherheitszelle auf Ebene 9 verlegt.\nDie Gitter halten. Vorerst.\n\nEr hat die Spielzeuge hier unten zusammengenäht. Er zieht ihre Fäden.\nNiemand geht allein an seinem Käfig vorbei.' },
@@ -129,6 +130,7 @@ const MAT = {
   pipe: new THREE.MeshStandardMaterial({ color: 0x6b4a32, roughness: 0.5, metalness: 0.7 }),
   dark: new THREE.MeshStandardMaterial({ color: 0x151515, roughness: 0.7, metalness: 0.4 }),
   shade: new THREE.MeshStandardMaterial({ color: 0x2a2d2a, emissive: 0x3a2a14, roughness: 0.6, metalness: 0.5, side: THREE.DoubleSide }),
+  pit: new THREE.MeshBasicMaterial({ color: 0x000000 }),
   puddle: new THREE.MeshPhysicalMaterial({ color: 0x1a1816, roughness: 0.02, metalness: 0.1, clearcoat: 1, transparent: true, opacity: 0.55, depthWrite: false, envMapIntensity: 1.2 }),
   posters: [0, 1, 2].map(k => new THREE.MeshStandardMaterial({ map: TX.posterTexture(k), roughness: 0.95, transparent: true, alphaTest: 0.5 })),
   shaft: new THREE.MeshBasicMaterial({ color: 0xffd9a0, transparent: true, opacity: 0.045, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: true }),
@@ -223,7 +225,7 @@ function buildWorld() {
   scene.add(group);
   const w = W = {
     group, doors: {}, levers: [], batteries: [], lockers: [], notes: [], lamps: [], boxes: [],
-    rayTargets: [], gen: null, gate: null, exitCell: null, part2Cell: null, key: null, vent: null, start: null, startYaw: 0, monsterStart: null, lightPool: [], beams: [], proto: null, papers: [], planks: [],
+    rayTargets: [], gen: null, gate: null, exitCell: null, part2Cell: null, key: null, vent: null, vent2: null, fuses: [], fusebox: null, start: null, startYaw: 0, monsterStart: null, lightPool: [], beams: [], proto: null, papers: [], planks: [],
   };
   const addBox = (x0, x1, z0, z1) => { const b = { x0, x1, z0, z1, on: true }; w.boxes.push(b); return b; };
   const ref = (mesh, obj) => { mesh.userData.ref = obj; w.rayTargets.push(mesh); };
@@ -323,7 +325,7 @@ function buildWorld() {
     }
 
     // ----- Müll und Trümmer am Boden (verlassene Spielhalle) -----
-    if (k !== '#' && k !== 'O' && k !== 'G' && !'123EZF'.includes(k)) {
+    if (k !== '#' && k !== 'O' && k !== 'G' && !'1234EZFW'.includes(k)) {
       const n = Math.floor(rng() * 7);
       for (let i = 0; i < n; i++) w.papers.push([cc.x + (rng() - 0.5) * 3.6, cc.z + (rng() - 0.5) * 3.6, rng() * 6.28, rng()]);
       if (rng() < 0.35) for (let i = 0; i < 1 + rng() * 2; i++) w.planks.push([cc.x + (rng() - 0.5) * 3, cc.z + (rng() - 0.5) * 3, rng() * 6.28, rng()]);
@@ -411,7 +413,7 @@ function buildWorld() {
     }
 
     // ----- Türen & Ausgangstor -----
-    if ('123EZ'.includes(k)) {
+    if ('1234EZ'.includes(k)) {
       const alongX = ch(c - 1, r) === '#' && ch(c + 1, r) === '#';
       const geo = alongX ? new THREE.BoxGeometry(CELL, WALL_H, 0.35) : new THREE.BoxGeometry(0.35, WALL_H, CELL);
       const mesh = new THREE.Mesh(geo, k === 'E' ? MAT.shutter : k === 'Z' ? MAT.keyDoor : MAT.door);
@@ -459,16 +461,69 @@ function buildWorld() {
       const key = { kind: 'key', mesh: card, glow, taken: false };
       ref(card, key); w.key = key;
     }
-    // ----- Lüftungsschacht, aus dem Zipper kommt -----
-    if (k === 'V') {
+    // ----- Lüftungsschächte, aus denen Zipper kommt -----
+    if (k === 'V' || k === 'J') {
       const [dx, dz] = wallDir(c, r);
       const v = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.2), MAT.vent);
       v.position.set(cc.x + dx * (CELL / 2 - 0.02), 0.8, cc.z + dz * (CELL / 2 - 0.02)); v.rotation.y = yawFacing(-dx, -dz);
-      group.add(v); w.vent = { pos: cc.clone(), mesh: v, dir: [dx, dz] };
+      group.add(v); w[k === 'V' ? 'vent' : 'vent2'] = { pos: cc.clone(), mesh: v, dir: [dx, dz] };
+    }
+    // ----- Grube: schwarzes Loch im Boden mit Geländer -----
+    if (k === 'W') {
+      const hole = new THREE.Mesh(new THREE.PlaneGeometry(CELL, CELL), MAT.pit);
+      hole.rotation.x = -Math.PI / 2; hole.position.set(cc.x, 0.02, cc.z); group.add(hole);
+      for (const [dx, dz] of DIRS) {
+        const nk = ch(c + dx, r + dz);
+        if (nk === 'W' || nk === '#') continue;
+        // Geländer an der Kante zum Boden
+        const alongZ = dx !== 0;
+        const rail = new THREE.Mesh(alongZ ? new THREE.BoxGeometry(0.06, 0.06, CELL) : new THREE.BoxGeometry(CELL, 0.06, 0.06), MAT.hazard);
+        rail.position.set(cc.x + dx * (CELL / 2 - 0.05), 1.0, cc.z + dz * (CELL / 2 - 0.05)); group.add(rail);
+        for (let i = 0; i < 3; i++) {
+          const o = -1.6 + i * 1.6;
+          const post = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.0, 6), MAT.beam);
+          post.position.set(cc.x + dx * (CELL / 2 - 0.05) + (alongZ ? 0 : o), 0.5, cc.z + dz * (CELL / 2 - 0.05) + (alongZ ? o : 0)); group.add(post);
+        }
+      }
+    }
+    // ----- Sicherung (auf einer Kiste) -----
+    if (k === 'S') {
+      const [dx, dz] = wallDir(c, r);
+      const px = cc.x + dx * 1.1, pz = cc.z + dz * 1.1;
+      const crate = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.95, 0.95), MAT.wood);
+      crate.position.set(px, 0.475, pz); crate.castShadow = crate.receiveShadow = true; group.add(crate);
+      addBox(px - 0.48, px + 0.48, pz - 0.48, pz + 0.48); w.rayTargets.push(crate);
+      const fg = new THREE.Group(); fg.position.set(px, 1.12, pz); fg.rotation.z = Math.PI / 2; group.add(fg);
+      const body = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.3, 14), new THREE.MeshStandardMaterial({ color: 0xe8e2d0, emissive: 0x302a20, roughness: 0.4 }));
+      fg.add(body);
+      for (const y of [-0.17, 0.17]) { const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.06, 14), MAT.batteryCap); cap.position.y = y; fg.add(cap); }
+      const band = new THREE.Mesh(new THREE.CylinderGeometry(0.093, 0.093, 0.08, 14), new THREE.MeshStandardMaterial({ color: 0xff3020, emissive: 0xff2010, emissiveIntensity: 1.2 }));
+      fg.add(band);
+      const glow = new THREE.PointLight(0xff5030, 2.5, 3.5, 2); glow.position.set(px, 1.5, pz); group.add(glow);
+      const f = { kind: 'fuse', mesh: fg, glow, taken: false };
+      fg.traverse(m => { if (m.isMesh) ref(m, f); });
+      w.fuses.push(f);
+    }
+    // ----- Sicherungskasten neben dem Aufzug -----
+    if (k === 'U') {
+      const [dx, dz] = wallDir(c, r);
+      const bg = new THREE.Group(); bg.position.set(cc.x + dx * (CELL / 2 - 0.25), 1.3, cc.z + dz * (CELL / 2 - 0.25)); bg.rotation.y = yawFacing(-dx, -dz); group.add(bg);
+      const box = new THREE.Mesh(new THREE.BoxGeometry(1.1, 1.3, 0.4), MAT.hazard); box.castShadow = true; bg.add(box);
+      const fb = { kind: 'fusebox', group: bg, slots: [] };
+      for (let i = 0; i < 2; i++) {
+        const x = (i - 0.5) * 0.45;
+        const sock = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.08, 14), MAT.dark); sock.rotation.x = Math.PI / 2; sock.position.set(x, -0.1, 0.22); bg.add(sock);
+        const ind = new THREE.MeshBasicMaterial({ color: 0xff2020 });
+        const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), ind); lamp.position.set(x, 0.4, 0.21); bg.add(lamp);
+        const fuse = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.3, 12), new THREE.MeshStandardMaterial({ color: 0xe8e2d0 })); fuse.position.set(x, -0.1, 0.3); fuse.visible = false; bg.add(fuse);
+        fb.slots.push({ ind, fuse });
+      }
+      bg.traverse(m => { if (m.isMesh) ref(m, fb); });
+      w.fusebox = fb;
     }
 
     // ----- Hebel -----
-    if ('abc'.includes(k)) {
+    if ('abcd'.includes(k)) {
       const [dx, dz] = wallDir(c, r);
       const lg = new THREE.Group();
       // direkt neben die passende Tür rücken (wie im echten Spiel)
@@ -643,7 +698,7 @@ function buildWorld() {
     // ----- Rohre an der Decke in Gängen -----
     const nsCorr = ch(c - 1, r) === '#' && ch(c + 1, r) === '#';
     const ewCorr = ch(c, r - 1) === '#' && ch(c, r + 1) === '#';
-    if ((nsCorr || ewCorr) && !'123EZ'.includes(k)) {
+    if ((nsCorr || ewCorr) && !'1234EZW'.includes(k)) {
       const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, CELL, 8), MAT.pipe);
       if (nsCorr) { pipe.rotation.x = Math.PI / 2; pipe.position.set(cc.x + 1.55, WALL_H - 0.3, cc.z); }
       else { pipe.rotation.z = Math.PI / 2; pipe.position.set(cc.x, WALL_H - 0.3, cc.z + 1.55); }
@@ -706,7 +761,8 @@ const _cb = { x0: 0, x1: 0, z0: 0, z1: 0 };
 function collide(pos, rad) {
   const [cx, cz] = toCell(pos.x, pos.z);
   for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
-    if (ch(cx + dx, cz + dz) !== '#') continue;
+    const ck = ch(cx + dx, cz + dz);
+    if (ck !== '#' && ck !== 'W') continue; // Grube = nicht begehbar
     _cb.x0 = (cx + dx) * CELL; _cb.x1 = _cb.x0 + CELL; _cb.z0 = (cz + dz) * CELL; _cb.z1 = _cb.z0 + CELL;
     pushOut(pos, rad, _cb);
   }
@@ -715,8 +771,8 @@ function collide(pos, rad) {
 
 function passable(c, r) {
   const k = ch(c, r);
-  if (k === '#' || k === 'G' || k === 'O') return false;
-  if (k === '1' || k === '2' || k === '3' || k === 'Z') return W.doors[k].open;
+  if (k === '#' || k === 'G' || k === 'O' || k === 'W') return false;
+  if (k === '1' || k === '2' || k === '3' || k === '4' || k === 'Z') return W.doors[k].open;
   if (k === 'E') return W.gate.open;
   return true;
 }
@@ -724,6 +780,7 @@ function los(a, b) {
   const dx = b.x - a.x, dz = b.z - a.z, d = Math.hypot(dx, dz), n = Math.ceil(d / 0.35);
   for (let i = 1; i < n; i++) {
     const [c, r] = toCell(a.x + dx * i / n, a.z + dz * i / n);
+    if (ch(c, r) === 'W') continue; // über die Grube kann man hinwegsehen
     if (!passable(c, r)) return false;
   }
   return true;
@@ -857,7 +914,7 @@ function schedule(delay, fn) { G.events.push({ t: G.time + delay, fn }); }
 // ======================================================================
 function resetGame() {
   buildWorld();
-  Object.assign(G, { time: 0, flash: true, placed: 0, powered: false, monsterAwake: false, noise: null, chase: 0, blackout: 0, focus: null, events: [], leversPulled: 0, shake: 0, part2: false, hasKey: false });
+  Object.assign(G, { time: 0, flash: true, placed: 0, powered: false, monsterAwake: false, noise: null, chase: 0, blackout: 0, focus: null, events: [], leversPulled: 0, shake: 0, part2: false, hasKey: false, zone3: false, fusesTaken: 0, fusesIn: 0, liftT: 0, liftReady: false });
   audio.alarm = false;
   P.pos.copy(W.start); P.vel.set(0, 0, 0); P.yaw = W.startYaw; P.pitch = 0; P.eye = EYE; P.stamina = 100; P.hidden = null; P.exhausted = false;
   M.pos.copy(W.monsterStart); M.yaw = Math.atan2(W.start.x - W.monsterStart.x, W.start.z - W.monsterStart.z); M.state = 'dormant'; M.path = null; M.aware = 0; M.lost = 0; M.sawHide = false; M.speed = 0; M.growlT = 8;
@@ -892,6 +949,7 @@ function checkpoint() {
     carrying: hands.map(h => { const b = h.carrying || h.grabbing; return b ? W.batteries.indexOf(b) : -1; }),
     levers: W.levers.filter(l => l.pulled).map(l => l.id),
     awake: G.monsterAwake, part2: !!G.part2, key: !!G.hasKey, keyDoor: !!W.doors['Z']?.open,
+    zone3: !!G.zone3, fuses: W.fuses.map((f, i) => (f.taken ? i : -1)).filter(i => i >= 0), fusesIn: G.fusesIn, lift: G.liftT > 0 || G.liftReady,
     pos: [P.pos.x, P.pos.z], yaw: P.yaw, time: G.time,
   };
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); } catch (e) { return; }
@@ -944,7 +1002,16 @@ function applySave(d) {
   const carrying = hands.some(h => h.carrying);
   objective(carrying ? 'Bring die Batterie zum Generator.' : `Finde 3 Batterien für den Generator (${G.placed}/3)`);
   say('Letzter Speicherpunkt geladen.', 2.5);
-  if (d.part2) objective(d.keyDoor ? 'Schnell in den Aufzug!' : d.key ? 'Öffne die gelbe Sicherheitstür mit der Karte!' : 'Finde die Schlüsselkarte in der Nähstube.');
+  if (d.zone3) {
+    G.zone3 = true;
+    const z = W.doors['Z']; z.open = false; z.opening = false; z.t = 0; z.box.on = true; z.mesh.position.y = WALL_H / 2; z.indMat.color.set(0xff2020);
+    for (const i of d.fuses || []) { const f = W.fuses[i]; if (!f) continue; f.taken = true; f.mesh.visible = false; f.glow.visible = false; W.rayTargets = W.rayTargets.filter(m => m.userData.ref !== f); }
+    G.fusesTaken = (d.fuses || []).length; G.fusesIn = d.fusesIn || 0;
+    for (let k = 0; k < G.fusesIn; k++) { W.fusebox.slots[k].fuse.visible = true; W.fusebox.slots[k].ind.color.set(0x30ff60); }
+    monster.root.visible = false; M.state = 'patrol'; M.pos.set(W.vent.pos.x, 0, W.vent.pos.z); M.aware = 0;
+    fuseObjective();
+    if (d.lift) callLift(); // Finale neu starten: 20 Sekunden durchhalten
+  } else if (d.part2) objective(d.keyDoor ? 'Schnell in den Aufzug!' : d.key ? 'Öffne die gelbe Sicherheitstür mit der Karte!' : 'Finde die Schlüsselkarte in der Nähstube.');
   else if (G.placed >= 3) powerOn();
 }
 
@@ -1056,17 +1123,17 @@ function takeKey() {
 }
 
 // Das Licht geht aus – und Zipper kriecht aus der Lüftung
-function zipperFromVent() {
+function zipperFromVent(vent, line) {
   G.blackout = 2.5; audio.powerDown();
   schedule(1.3, () => {
-    const v = W.vent;
+    const v = vent || W.vent;
     M.pos.set(v.pos.x + v.dir[0] * 1.2, 0, v.pos.z + v.dir[1] * 1.2);
     M.yaw = Math.atan2(-v.dir[0], -v.dir[1]);
     monster.root.visible = true; monster.root.position.set(M.pos.x, 0, M.pos.z);
     audio.setMonsterPos(M.pos); audio.metalBang(); audio.zipper();
     G.monsterAwake = true;
   });
-  schedule(2.6, () => { say('Er ist in der Lüftung! <b>LAUF ZUM AUFZUG!</b>', 4, 'MILA'); startChase(true); audio.roar(); });
+  schedule(2.6, () => { say(line || 'Er ist in der Lüftung! <b>LAUF ZUR GELBEN TÜR!</b>', 4, 'MILA'); startChase(true); audio.roar(); });
   schedule(7, () => say('Ich näh dich fest … ganz fest …', 3, 'ZIPPER'));
 }
 
@@ -1074,8 +1141,64 @@ function openKeyDoor() {
   const d = W.doors['Z'];
   if (!d || d.open || d.opening) return;
   d.opening = true; audio.door(); d.indMat.color.set(0x30ff60);
-  objective('Schnell in den Aufzug!');
-  say('Die Tür geht auf – rein in den Aufzug!', 3, 'MILA');
+  objective('Lauf durch die gelbe Tür!');
+  say('Die Tür geht auf – schnell durch!', 3, 'MILA');
+}
+
+// Bereich „Die Montagehalle“: Sicherheitstür knallt zu, 2 Sicherungen, Aufzug rufen
+function fuseObjective() {
+  if (G.liftReady) return objective('Der Aufzug ist da – REIN!');
+  if (G.liftT > 0) return objective(`Halte durch! Aufzug kommt in ${Math.ceil(G.liftT)} s`);
+  const have = G.fusesTaken - G.fusesIn;
+  objective(have > 0 ? `Setz die Sicherungen in den Kasten am Aufzug (${G.fusesTaken}/2)` : `Finde 2 Sicherungen für den Aufzug (${G.fusesTaken}/2)`);
+}
+function enterAssembly() {
+  if (G.zone3) return;
+  G.zone3 = true;
+  const z = W.doors['Z']; z.opening = false; z.closing = true; z.open = false; z.box.on = true; z.indMat.color.set(0xff2020);
+  audio.door();
+  M.pos.set(W.vent.pos.x, 0, W.vent.pos.z); M.state = 'patrol'; M.path = null; M.wait = 4; M.aware = 0; M.lost = 0; M.sawHide = false;
+  monster.setAngry(false); monster.root.visible = false;
+  fuseObjective();
+  say('Geschafft! Die Tür hält ihn auf.', 3.5, 'MILA');
+  schedule(4, () => say('Das ist die Montagehalle. Der Aufzug hat aber keinen Strom – wir brauchen <b>zwei Sicherungen</b>.', 5.5, 'MILA'));
+  schedule(10, () => say('Eine ist hinter die Grube gefallen. Da kommst du nur mit dem Greifer ran!', 5, 'MILA'));
+  schedule(17, () => say('Du glaubst, du bist entkommen? Ich halte alle Fäden. Auch die in dieser Halle.', 5, 'TAILOR'));
+  schedule(0.8, checkpoint);
+}
+function takeFuse(f) {
+  if (!f || f.taken) return;
+  f.taken = true; f.mesh.visible = false; f.glow.visible = false;
+  W.rayTargets = W.rayTargets.filter(m => m.userData.ref !== f);
+  G.fusesTaken++; audio.pickup();
+  say(G.fusesTaken === 1 ? 'Eine Sicherung! Noch eine.' : 'Beide Sicherungen! Ab zum Kasten am Aufzug.', 3);
+  fuseObjective();
+  checkpoint();
+}
+function insertFuses() {
+  const fb = W.fusebox; let have = G.fusesTaken - G.fusesIn;
+  if (!fb || have <= 0) return;
+  while (have-- > 0 && G.fusesIn < 2) { const sl = fb.slots[G.fusesIn]; sl.fuse.visible = true; sl.ind.color.set(0x30ff60); G.fusesIn++; }
+  audio.insertBattery();
+  if (G.fusesIn >= 2) callLift(); else { say('Eine Sicherung sitzt. Noch eine.', 3); fuseObjective(); checkpoint(); }
+}
+// Aufzug rufen: 20 Sekunden durchhalten, während Zipper aus der zweiten Lüftung bricht
+function callLift() {
+  if (G.liftT > 0 || G.liftReady) return;
+  G.liftT = 20;
+  say('Achtung. Aufzug wird gerufen. Ankunft in zwanzig Sekunden.', 4, 'DURCHSAGE');
+  checkpoint();
+  monster.root.visible = true;
+  zipperFromVent(W.vent2, 'Er ist in der Halle! <b>Halte durch, bis der Aufzug da ist!</b>');
+}
+function updateLift(dt) {
+  if (!(G.liftT > 0)) return;
+  G.liftT -= dt;
+  if (G.liftT <= 0) {
+    G.liftT = 0; G.liftReady = true; audio.chime();
+    say('Der Aufzug ist da! <b>REIN!</b>', 4, 'MILA');
+  }
+  fuseObjective();
 }
 
 const ZIPPER_LINES = ['Ich näh dich fest …', 'Zipper hat dich gefunden …', 'Bleib bei mir … für immer.', 'Komm her … lächle für mich.', 'Wir spielen für immer.'];
@@ -1271,6 +1394,8 @@ function updateFocus() {
     else if (o.kind === 'note' && d < 3) { hot = true; text = '[E] Lesen'; }
     else if (o.kind === 'gate' && !o.open && d < 6) text = G.powered ? 'Das Tor öffnet sich …' : 'Kein Strom. Der Generator braucht 3 Batterien.';
     else if (o.kind === 'key' && !o.taken) { hot = true; text = d < 2.6 ? '[E] / Hand: Schlüsselkarte nehmen' : 'Hand schießen: Schlüsselkarte greifen'; }
+    else if (o.kind === 'fuse' && !o.taken) { hot = true; text = d < 2.6 ? '[E] / Hand: Sicherung nehmen' : 'Hand schießen: Sicherung greifen'; }
+    else if (o.kind === 'fusebox' && d < 4) { const have = G.fusesTaken - G.fusesIn; hot = have > 0; text = have > 0 ? '[E] Sicherung einsetzen' : `Sicherungskasten · ${G.fusesIn}/2`; }
     else if (o.kind === 'keydoor' && !o.open && !o.opening && d < 5) { hot = G.hasKey; text = G.hasKey ? '[E] Karte an die Tür halten' : 'Gesperrt. Hier brauchst du die Schlüsselkarte.'; }
     else if (o.kind === 'door' && !o.open && !o.opening && d < 6) text = 'Verschlossen. Irgendwo muss ein Hebel mit dieser Farbe sein.';
   }
@@ -1291,6 +1416,10 @@ function interact() {
     if (h && G.placed < 3) insertBattery(h);
   } else if (o.kind === 'key' && !o.taken && a.dist < 2.6) {
     takeKey();
+  } else if (o.kind === 'fuse' && !o.taken && a.dist < 2.6) {
+    takeFuse(o);
+  } else if (o.kind === 'fusebox' && a.dist < 4) {
+    insertFuses();
   } else if (o.kind === 'keydoor' && G.hasKey && a.dist < 5) {
     openKeyDoor();
   } else if (o.kind === 'battery' && !o.taken && a.dist < 2.6) {
@@ -1324,7 +1453,7 @@ function fire(side) {
   const a = aim(15);
   camera.getWorldDirection(_fwd);
   h.target.copy(a ? a.point : _v.copy(camera.position).addScaledVector(_fwd, 15));
-  h.hit = a && a.obj && ['battery', 'lever', 'key'].includes(a.obj.kind) ? a.obj : null;
+  h.hit = a && a.obj && ['battery', 'lever', 'key', 'fuse'].includes(a.obj.kind) ? a.obj : null;
   h.pos.copy(camera.localToWorld(_v2.copy(h.muzzleLocal)));
   h.state = 'out'; h.kick = 1;
   h.hand.visible = false;
@@ -1346,6 +1475,7 @@ function updateHands(dt) {
         if (h.hit) {
           if (h.hit.kind === 'battery' && !h.hit.taken) takeBattery(h.hit, h, false);
           if (h.hit.kind === 'key') takeKey();
+          if (h.hit.kind === 'fuse') takeFuse(h.hit);
           if (h.hit.kind === 'lever') pullLever(h.hit);
         }
         h.hit = null;
@@ -1445,7 +1575,8 @@ function updatePlayer(dt) {
   // Ausgang erreicht?
   const [c, r] = toCell(P.pos.x, P.pos.z);
   if (W.part2Cell && !G.part2 && c === W.part2Cell[0] && r === W.part2Cell[1]) enterPart2();
-  if (W.exitCell && c === W.exitCell[0] && r === W.exitCell[1] && W.doors['Z']?.open) win();
+  if (G.part2 && !G.zone3 && W.doors['Z']?.open && r >= 22) enterAssembly();
+  if (W.exitCell && c === W.exitCell[0] && r === W.exitCell[1] && G.liftReady) win();
 }
 
 function lightAt(pos) {
@@ -1958,6 +2089,7 @@ function tick(dt) {
     if (G.mode === 'playing') updateMonster(dt);
     updateWorld(dt);
     updateProto(dt);
+    updateLift(dt);
     G.shake = Math.max(0, (G.shake || 0) - dt * 1.5);
     if (G.mode === 'playing') updateFocus();
     if (G.noise) { G.noise.t -= dt; if (G.noise.t < 0) G.noise = null; }

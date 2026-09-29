@@ -41,7 +41,11 @@ bring sie zum **Generator** – und nimm dich vor **Zipper** in Acht.
 - **Flucht**: Wenn der Generator läuft, geht der Alarm los – renn durch das Ausgangstor!
 - **Die Nähstube** (zweiter Bereich von Kapitel 1): Das Tor kracht hinter dir zu. Zieh den lila Hebel, hol die
   **Schlüsselkarte** – dann kriecht Zipper aus der Lüftung. Öffne mit der Karte die gelbe
-  Sicherheitstür und fahr mit dem **Aufzug** nach oben: Kapitel 1 geschafft.
+  Sicherheitstür.
+- **Die Montagehalle** (letzter Bereich): Die Tür knallt zu. Der Aufzug braucht **2 Sicherungen** –
+  eine liegt hinter einer **Grube** (nur mit dem Greifer erreichbar), die andere hinter der türkisen Tür.
+  Stecke beide in den Sicherungskasten: Der Aufzug kommt in **20 Sekunden** – und Zipper bricht aus der
+  zweiten Lüftung. Durchhalten, dann rein in den Aufzug: Kapitel 1 geschafft.
 - **Stimmen**: Mila, The Tailor, Zipper und die Fabrik-Durchsage sprechen über die Sprachausgabe
   des Geräts. In den Einstellungen gibt es „Stimmen testen“ und ein eigenes Menübild.
 
