@@ -2487,9 +2487,20 @@ async function toggleRecord(key) {
     if (k === key) return;
   }
   if (!Recorder.supported()) { studioMsg('Hier geht das Mikrofon leider nicht. Nimm den Satz mit der Sprachmemos-App auf und lade ihn mit DATEI.'); return; }
+  const t0 = performance.now();
   try { audio.stopVoice(); await recorder.start(); recKey = key; studioMsg('Aufnahme läuft … sprich den Satz und tippe dann auf STOPP.'); }
-  catch (e) { studioMsg('Kein Zugriff aufs Mikrofon. Erlaube das Mikrofon – oder nimm mit der Sprachmemos-App auf und lade die Datei mit DATEI.'); }
+  catch (e) {
+    // Sofort abgelehnt, ohne Nachfrage = die Seite darf das Mikrofon gar nicht benutzen (z. B. eingebettet auf claude.ai)
+    const blocked = performance.now() - t0 < 400 || (document.featurePolicy && !document.featurePolicy.allowsFeature('microphone'));
+    if (blocked && !location.hostname.endsWith('github.io')) showMicHelp();
+    else studioMsg('Kein Zugriff aufs Mikrofon. Tippe oben in Safari auf „aA“ → Website-Einstellungen → Mikrofon → Erlauben, dann nochmal AUFNEHMEN.');
+  }
   renderStudio();
+}
+const MIC_URL = 'https://semrademirci000-maker.github.io/Hausaufgabenheft/stitched/';
+function showMicHelp() {
+  $('studioMsg').innerHTML = 'Auf dieser Seite ist das Mikrofon gesperrt. Öffne das Spiel hier – dort geht das Mikrofon: '
+    + `<a href="${MIC_URL}" target="_blank" rel="noopener" style="color:#ffcc33">${MIC_URL}</a>`;
 }
 $('studioFile').onchange = async e => {
   const f = e.target.files && e.target.files[0]; e.target.value = '';
