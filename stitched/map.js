@@ -7,7 +7,11 @@
 // D  Batterie auf einer Kommode mit Puppe (neben dem Käfig)
 // Bereich „Die Nähstube“ (gehört zu Kapitel 1): X = Übergang (Tor schließt sich), Q = Schlüsselkarte,
 // Z = Sicherheitstür (braucht die Karte), V = Lüftung (Zipper kommt heraus), F = Aufzug (Ziel)
-// Bereich „Die Montagehalle“: W = Grube, S = Sicherung, U = Sicherungskasten, J = zweite Lüftung, d/4 = Hebel/Tür
+// Bereich „Die Montagehalle“: W = Grube, S = Sicherung, U = Sicherungskasten, J = zweite Lüftung, d/4 = Hebel/Tür,
+//   f = kaputter Aufzug, H = Lagertor (öffnet nach dem Sicherungskasten), h = Übergang ins Lager (Tor schließt sich)
+// Bereich „Das Spielzeuglager“: R = Regal, C = Zahlenwürfel (Code), T = Zahlenschloss, 5 = Code-Tür, v = Lüftung
+// Bereich „Das Spielzimmer“: k = Übergang, A = Stromspule, I = Empfänger, 6 = Strom-Tür, u = Lüftung
+// Bereich „Der Förderband-Tunnel“: e = Start der letzten Verfolgungsjagd, F = Lastenaufzug (Ziel)
 export const MAP = [
   "###################",
   "######L.PB#########",
@@ -40,7 +44,37 @@ export const MAP = [
   "#########.#########",
   "#######U...L#######",
   "#######.....#######",
-  "#######..F..#######",
-  "###################",
+  "#######f....#######",
+  "#########H#########",
+  "#########h#########",
+  "#K...L.......v..K.#",
+  "#.RRRR.RRRRR.RRRR.#",
+  "#C...........L...N#",
+  "#.RRRRR.RRRR.RRR..#",
+  "#...L.......C.....#",
+  "#.RRR.RRRRRR.RRRR.#",
+  "#K.......L.......C#",
+  "#.RRRR.RRRR.RRRR..#",
+  "#N..L...C.T.....LK#",
+  "#########5#########",
+  "#########k#########",
+  "#I...L....#N...LK.#",
+  "#.##.###..#..###..#",
+  "#.#.......#.......#",
+  "#.#..L..A.....L.#.#",
+  "#.#.......#.....#.#",
+  "#....###..#..##.#.#",
+  "#K.....L..#.....#I#",
+  "#N........#..u...K#",
+  "#########6#########",
+  "#########e#########",
+  "#########...L.....#",
+  "#################.#",
+  "#.....L.........L.#",
+  "#.#################",
+  "#...L.......L.....#",
+  "#################.#",
+  "#########...L.....#",
+  "#########F#########",
   "###################",
 ];

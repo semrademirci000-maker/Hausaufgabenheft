@@ -151,7 +151,59 @@ export class AudioEngine {
       S.speak(make(false));
     }, 1500);
   }
-  stopSpeech() { try { const S = window.speechSynthesis; S?.cancel(); S?.resume(); } catch (e) { /* egal */ } }
+  stopSpeech() {
+    try { const S = window.speechSynthesis; S?.cancel(); S?.resume(); } catch (e) { /* egal */ }
+    this.stopVoice();
+  }
+
+  // ---------- Echte Sprecher: Aufnahme abspielen, mit Effekt je nach Figur ----------
+  stopVoice() { try { this._voiceSrc?.forEach(s => s.stop()); } catch (e) { /* egal */ } this._voiceSrc = null; }
+  playVoice(buf, who, fx = true) {
+    const c = this.ctx;
+    if (!c || !buf) return;
+    this.stopVoice();
+    const out = c.createGain(); out.gain.value = 1.25;
+    out.connect(this.master);
+    const srcs = [];
+    const mk = (rate, gain, dest) => {
+      const s = c.createBufferSource(); s.buffer = buf; s.playbackRate.value = rate;
+      const g = c.createGain(); g.gain.value = gain; s.connect(g).connect(dest); srcs.push(s); return s;
+    };
+    if (!fx) { mk(1, 1, out); }
+    else if (who === 'MILA') {
+      // Funkgerät: dünn, leicht verzerrt
+      const hp = c.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 380;
+      const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 3600;
+      const sh = c.createWaveShaper(); const curve = new Float32Array(256);
+      for (let i = 0; i < 256; i++) { const x = i / 128 - 1; curve[i] = Math.tanh(x * 2.2) / Math.tanh(2.2); }
+      sh.curve = curve;
+      hp.connect(lp).connect(sh).connect(out);
+      const wet = c.createGain(); wet.gain.value = 0.12; sh.connect(wet).connect(this.reverb);
+      mk(1.03, 1, hp);
+    } else if (who === 'TAILOR') {
+      // tief und groß, mit Hall
+      const ls = c.createBiquadFilter(); ls.type = 'lowshelf'; ls.frequency.value = 220; ls.gain.value = 7;
+      ls.connect(out);
+      const wet = c.createGain(); wet.gain.value = 0.55; ls.connect(wet).connect(this.reverb);
+      mk(0.86, 1, ls);
+    } else if (who === 'ZIPPER') {
+      // doppelt und verzogen – klingt nicht mehr ganz menschlich
+      const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 5000;
+      lp.connect(out);
+      const wet = c.createGain(); wet.gain.value = 0.4; lp.connect(wet).connect(this.reverb);
+      mk(0.9, 0.9, lp); mk(0.78, 0.45, lp);
+    } else {
+      // Durchsage: Lautsprecher in einer riesigen Halle
+      const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1500; bp.Q.value = 0.6;
+      bp.connect(out);
+      const wet = c.createGain(); wet.gain.value = 0.9; bp.connect(wet).connect(this.reverb);
+      mk(1, 1, bp);
+    }
+    const t = c.currentTime + 0.02;
+    srcs.forEach(s => s.start(t));
+    this._voiceSrc = srcs;
+    srcs[0].onended = () => { if (this._voiceSrc === srcs) this._voiceSrc = null; };
+  }
   pauseSpeech(on) { try { on ? window.speechSynthesis?.pause() : window.speechSynthesis?.resume(); } catch (e) { /* egal */ } }
 
   setVolume(v) { this.volume = v; if (this.master) this.master.gain.setTargetAtTime(v, this.ctx.currentTime, 0.05); }
@@ -434,6 +486,15 @@ export class AudioEngine {
     this.tone({ type: 'sine', freq: 70, freqEnd: 40, dur: 0.4, gain: 0.5 });
   }
   flashClick() { this.tone({ type: 'square', freq: 2400, dur: 0.02, gain: 0.05 }); }
+  beep(ok) {
+    if (ok) { this.tone({ type: 'square', freq: 880, dur: 0.12, gain: 0.07 }); this.tone({ type: 'square', freq: 1320, dur: 0.2, gain: 0.07, delay: 0.13 }); }
+    else { this.tone({ type: 'square', freq: 220, dur: 0.18, gain: 0.09 }); this.tone({ type: 'square', freq: 180, dur: 0.3, gain: 0.09, delay: 0.2 }); }
+  }
+  zap() {
+    this.noise({ dur: 0.35, type: 'highpass', freq: 3000, q: 1, gain: 0.35, wet: 0.6 });
+    this.tone({ type: 'sawtooth', freq: 120, freqEnd: 900, dur: 0.3, gain: 0.12 });
+  }
+  spark() { this.noise({ dur: 0.06, type: 'highpass', freq: 5000, q: 1, gain: 0.12 }); }
   powerDown() { this.tone({ type: 'sawtooth', freq: 300, freqEnd: 30, dur: 1.2, gain: 0.15, wet: 1 }); }
   powerUp() {
     this.tone({ type: 'sawtooth', freq: 40, freqEnd: 400, dur: 2.5, gain: 0.15, wet: 1 });

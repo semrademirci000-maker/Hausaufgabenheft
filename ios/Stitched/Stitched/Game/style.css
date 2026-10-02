@@ -263,3 +263,43 @@ html, body {
 #saveTag.on { opacity: .9; }
 @keyframes savePulse { 50% { color: #9aa0a8; } }
 @media (pointer: coarse) { #saveTag { bottom: auto; top: max(80px, calc(env(safe-area-inset-top) + 64px)); } }
+
+/* Code-Anzeige im Spielzeuglager */
+#codeHud { position: absolute; top: max(84px, calc(env(safe-area-inset-top) + 68px)); left: 16px; display: flex; gap: 6px; align-items: center; font-family: "Oswald", sans-serif; }
+#codeHud .label { color: var(--accent); font-weight: 600; font-size: 12px; letter-spacing: 2px; margin-right: 4px; }
+#codeHud i { font-style: normal; width: 26px; height: 30px; display: grid; place-items: center; border: 2px solid; border-radius: 4px; background: rgba(0,0,0,.45); font-size: 18px; font-weight: 600; }
+
+/* Zahlenschloss */
+#keypad { position: fixed; inset: 0; z-index: 8; display: grid; place-items: center; background: rgba(0,0,0,.55); }
+#keypad .pad { background: #2a2c30; border: 3px solid #111; border-radius: 10px; padding: 16px; width: min(300px, 86vw); box-shadow: 0 10px 40px rgba(0,0,0,.7); }
+#kpDisplay { background: #0d2a18; color: #4dff8a; font: 600 34px "VT323", monospace; text-align: center; letter-spacing: 6px; padding: 6px 0; border-radius: 4px; margin-bottom: 12px; }
+#kpDisplay.wrong { background: #3a0d0d; color: #ff5a4a; }
+#keypad .keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+#keypad .keys button { font: 600 24px "Oswald", sans-serif; padding: 12px 0; border: 0; border-radius: 6px; background: #c9ccd2; color: #222; cursor: pointer; touch-action: manipulation; }
+#keypad .keys button:active { background: #fff; }
+#keypad .keys button.ok { background: #3a9a5a; color: #fff; }
+#keypad .close { display: block; margin: 12px auto 0; background: none; border: 1px solid #666; color: #ccc; font: 500 14px "Inter", sans-serif; padding: 6px 14px; border-radius: 4px; cursor: pointer; }
+
+/* Sprecher-Studio */
+#voiceStudio { justify-content: flex-start; overflow-y: auto; padding-top: max(24px, env(safe-area-inset-top)); padding-bottom: 24px; }
+#voiceStudio .studioInfo { font-size: 14px; color: var(--muted); max-width: 720px; }
+.studioBar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: center; width: min(94vw, 760px); }
+.studioBar #studioCount { font: 600 15px "Oswald"; color: var(--accent); letter-spacing: 1px; }
+.studioBar select { font: 15px "Oswald"; background: #111; color: #fff; border: 1px solid #444; padding: 4px 8px; }
+.studioBar .chk { display: flex; gap: 6px; align-items: center; font-size: 15px; }
+.studioBar button, .studioBar .pick, .sLine button {
+  font: 600 14px "Oswald", sans-serif !important; letter-spacing: 1px !important; padding: 6px 12px !important; cursor: pointer;
+  color: var(--ink); background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.25);
+}
+.studioMsg { font-size: 13px; color: var(--accent) !important; min-height: 16px; }
+#studioList { width: min(94vw, 760px); display: flex; flex-direction: column; gap: 6px; text-align: left; }
+.sLine { display: flex; gap: 10px; align-items: center; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.1); padding: 8px 10px; }
+.sLine.has { border-color: rgba(80,220,120,.5); }
+.sLine .who { font: 600 13px "Oswald"; letter-spacing: 1px; min-width: 76px; }
+.sLine .txt { flex: 1; font-size: 14px; color: #e8e2d6; }
+.sLine .btns { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.sLine button.rec { border-color: #ff5050; }
+.sLine button.rec.on { background: #c0392b; color: #fff; animation: flicker 1s infinite; }
+.sLine .dot { width: 10px; height: 10px; border-radius: 50%; background: #444; flex: none; }
+.sLine.has .dot { background: #3ddc6a; box-shadow: 0 0 6px #3ddc6a; }
+@media (max-width: 640px) { .sLine { flex-wrap: wrap; } .sLine .btns { width: 100%; } }

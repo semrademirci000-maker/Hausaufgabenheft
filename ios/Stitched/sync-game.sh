@@ -10,4 +10,5 @@ mkdir -p "$DST/vendor"
 cp "$SRC"/index.html "$SRC"/style.css "$SRC"/*.js "$SRC"/icon.png "$DST"/
 cp "$SRC"/vendor/three.module.min.js "$DST"/vendor/
 cp -R "$SRC"/vendor/jsm "$DST"/vendor/
+cp -R "$SRC"/voices "$DST"/   # Stimmen-Paket (echte Sprecher)
 echo "Spiel nach $DST kopiert."

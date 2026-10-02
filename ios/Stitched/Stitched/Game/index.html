@@ -34,6 +34,7 @@
   <div id="hiddenTag">VERSTECKT</div>
   <div id="flashTag">LICHT</div>
   <div id="saveTag">SPEICHERN …</div>
+  <div id="codeHud" class="hidden"></div>
 </div>
 
 <!-- Touch-Steuerung (iPad / iPhone) -->
@@ -52,6 +53,20 @@
 <!-- Notiz lesen -->
 <div id="note" class="hidden">
   <div class="paper"><h3 id="noteTitle"></h3><p id="noteBody"></p><small>Tippen / E zum Schließen</small></div>
+</div>
+
+<!-- Zahlenschloss -->
+<div id="keypad" class="hidden">
+  <div class="pad">
+    <div id="kpDisplay">_ _ _ _</div>
+    <div class="keys">
+      <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button>
+      <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
+      <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button>
+      <button data-k="C">C</button><button data-k="0">0</button><button data-k="OK" class="ok">OK</button>
+    </div>
+    <button class="close" id="kpClose">Schließen</button>
+  </div>
 </div>
 
 <!-- Intro: „by Muaz“ -->
@@ -74,7 +89,8 @@
     <h1>DAS TIEFE WERK</h1>
     <p class="desc">Verschüttet und allein, tiefer unter der Fabrik als je ein Mitarbeiter war: Ebene 9 der Spielzeugfabrik Joyworks.
       Hier unten wohnt Zipper, das Kuscheltier mit dem Reißverschluss-Grinsen, und hinter rostigen Gittern wartet der, der alle Fäden zieht: The Tailor.
-      Finde drei Batterien, bring den Generator zum Laufen, hol die Schlüsselkarte aus der Nähstube, bring den Aufzug in der Montagehalle zum Laufen und entkomme, bevor sie dich finden.</p>
+      Finde drei Batterien, bring den Generator zum Laufen, hol die Schlüsselkarte aus der Nähstube, knack das Zahlenschloss im Spielzeuglager,
+      bring Strom ins Spielzimmer und renn durch den Förderband-Tunnel zum Lastenaufzug, bevor sie dich finden.</p>
   </header>
   <nav class="menuList">
     <button id="btnContinue" class="hidden">FORTSETZEN</button>
@@ -119,20 +135,24 @@
       <p><b>E</b> benutzen / verstecken</p>
     </div>
   </div>
-  <p class="tip">Schieß die Hände auf Batterien und Hebel. Bring 3 Batterien zum Generator.<br>Wenn es dich jagt: Brich die Sichtlinie ab und versteck dich in einem Spind.</p>
+  <p class="tip">Schieß die Hände auf Batterien, Hebel und Sicherungen. Schieß eine Hand auf die Stromspule, um sie aufzuladen.<br>Wenn es dich jagt: Brich die Sichtlinie ab und versteck dich in einem Spind.</p>
   <button class="back">ZURÜCK</button>
 </div>
 
 <div id="settings" class="screen hidden">
   <h2>EINSTELLUNGEN</h2>
   <label>Maus-Empfindlichkeit <input type="range" id="sens" min="0.3" max="3" step="0.1" value="1"></label>
+  <label>Helligkeit <input type="range" id="bright" min="0" max="1" step="0.05" value="0.5"></label>
   <label>Lautstärke <input type="range" id="vol" min="0" max="1" step="0.05" value="0.8"></label>
   <label>Grafik
     <select id="quality"><option value="low">Niedrig</option><option value="mid" selected>Mittel</option><option value="high">Hoch</option></select>
   </label>
+  <label>Stimmen
+    <select id="voiceMode"><option value="rec">Echte Sprecher (Aufnahmen)</option><option value="both">Aufnahmen + Computerstimme</option><option value="off">Aus (nur Untertitel)</option></select>
+  </label>
   <div class="bgRow">
-    <span>Stimmen</span>
-    <span class="bgBtns"><button type="button" id="voiceTest">Stimmen testen</button></span>
+    <span>Sprecher</span>
+    <span class="bgBtns"><button type="button" id="btnStudio">Sprecher-Studio</button><button type="button" id="voiceTest">Testen</button></span>
   </div>
   <div class="bgRow">
     <span>Menübild</span>
@@ -143,6 +163,23 @@
     </span>
   </div>
   <p class="bgHint" id="bgHint">Ein eigenes Bild aus deinen Fotos als Hintergrund im Hauptmenü. Es bleibt nur auf diesem Gerät.</p>
+  <button class="back">ZURÜCK</button>
+</div>
+
+<div id="voiceStudio" class="screen hidden">
+  <h2>SPRECHER-STUDIO</h2>
+  <p class="studioInfo">Nimm jeden Satz mit deiner eigenen Stimme auf – oder lass Freunde die Figuren sprechen. Im Spiel hört man dann eure Aufnahmen mit Effekt (Mila über Funk, The Tailor tief, Zipper verzerrt). Die Aufnahmen bleiben auf diesem Gerät.</p>
+  <div class="studioBar">
+    <span id="studioCount"></span>
+    <label class="chk"><input type="checkbox" id="voiceFx" checked> Effekte</label>
+    <select id="studioFilter"><option value="">Alle Figuren</option><option value="MILA">Mila</option><option value="TAILOR">The Tailor</option><option value="ZIPPER">Zipper</option><option value="DURCHSAGE">Durchsage</option></select>
+    <button type="button" id="studioExport">Alle sichern</button>
+    <label class="pick" for="studioImport">Paket laden</label>
+    <input type="file" id="studioImport" accept=".json,application/json" hidden>
+  </div>
+  <p class="studioMsg" id="studioMsg"></p>
+  <div id="studioList"></div>
+  <input type="file" id="studioFile" accept="audio/*" hidden>
   <button class="back">ZURÜCK</button>
 </div>
 

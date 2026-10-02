@@ -1,7 +1,7 @@
 # STITCHED – Kapitel 1: Das Tiefe Werk
 
 Das erste Spiel von **Muaz**: ein 3D-Horrorspiel im Browser (Three.js).
-Alle Grafiken, Figuren und Töne werden live im Code erzeugt – es gibt keine Bild- oder Audiodateien.
+Alle Grafiken, Figuren und Töne werden live im Code erzeugt – nur die Stimmen kann man selbst aufnehmen.
 
 ## Starten
 
@@ -42,21 +42,35 @@ bring sie zum **Generator** – und nimm dich vor **Zipper** in Acht.
 - **Die Nähstube** (zweiter Bereich von Kapitel 1): Das Tor kracht hinter dir zu. Zieh den lila Hebel, hol die
   **Schlüsselkarte** – dann kriecht Zipper aus der Lüftung. Öffne mit der Karte die gelbe
   Sicherheitstür.
-- **Die Montagehalle** (letzter Bereich): Die Tür knallt zu. Der Aufzug braucht **2 Sicherungen** –
+- **Die Montagehalle**: Die Tür knallt zu. Der Aufzug braucht **2 Sicherungen** –
   eine liegt hinter einer **Grube** (nur mit dem Greifer erreichbar), die andere hinter der türkisen Tür.
-  Stecke beide in den Sicherungskasten: Der Aufzug kommt in **20 Sekunden** – und Zipper bricht aus der
-  zweiten Lüftung. Durchhalten, dann rein in den Aufzug: Kapitel 1 geschafft.
-- **Stimmen**: Mila, The Tailor, Zipper und die Fabrik-Durchsage sprechen über die Sprachausgabe
-  des Geräts. In den Einstellungen gibt es „Stimmen testen“ und ein eigenes Menübild.
+  Doch das Aufzugseil ist gerissen! Die Sicherungen öffnen das **Lagertor** in **20 Sekunden** – und Zipper
+  bricht aus der zweiten Lüftung. Durchhalten, dann rein ins Lager.
+- **Das Spielzeuglager**: ein Labyrinth aus hohen Regalen. Finde die **4 Zahlenwürfel** (rot, gelb, grün, blau)
+  und gib den Code am **Zahlenschloss** ein. Nach einer Weile kriecht Zipper durch die Lüftung herein –
+  duck dich zwischen den Regalen. Ein falscher Code piept laut!
+- **Das Spielzimmer**: Schieß eine Hand auf die **Stromspule** – die Hand ist dann ein paar Sekunden geladen.
+  Schieß sie schnell auf einen **Empfänger**. Zwei Empfänger öffnen die Strom-Tür. Nach dem ersten kommt Zipper.
+- **Der Förderband-Tunnel** (Finale): Zipper bricht direkt hinter dir durch. **Renn** durch den langen Tunnel
+  (hier geht dir die Puste nicht aus) bis in den **Lastenaufzug**: Kapitel 1 geschafft.
+- **Stimmen – echte Sprecher**: Im **Sprecher-Studio** (Einstellungen) kann man jeden Satz selbst aufnehmen
+  (Mikrofon oder Audiodatei, z. B. aus Sprachmemos). Im Spiel hört man dann die Aufnahmen mit Effekt:
+  Mila über Funk, The Tailor tief und hallend, Zipper verzerrt. Ohne Aufnahme gibt es Untertitel
+  (die Computerstimme lässt sich in den Einstellungen wieder einschalten). „Alle sichern“ speichert alle
+  Aufnahmen in eine Datei. Legt man diese Datei als `voices/pack.json` in den Spielordner, hören alle
+  Spieler die Stimmen.
+- **Helligkeit** lässt sich in den Einstellungen leicht anpassen.
+- **Flüssig auf dem iPad**: Unbewegliche Teile werden zu wenigen großen Objekten zusammengefasst, und wenn das
+  Gerät nicht hinterherkommt, senkt das Spiel automatisch ein wenig die Auflösung.
 
 ## Steuerung
 
 | Tastatur/Maus | iPad/Touch |
 |---|---|
 | WASD laufen, Maus umsehen | linker Stick, rechts wischen |
-| Linke / rechte Maustaste: grüne / orange Hand | ✋ grün / ✋ orange |
+| Linke / rechte Maustaste: grüne / orange Hand | LINKS / RECHTS |
 | Shift rennen, C ducken | RENNEN / DUCKEN |
-| E benutzen / verstecken, F Taschenlampe | E, 🔦 |
+| E benutzen / verstecken, F Taschenlampe | E, LICHT |
 
 ## Dateien
 
@@ -65,6 +79,8 @@ bring sie zum **Generator** – und nimm dich vor **Zipper** in Acht.
 - `characters.js` – The Tailor, Mila, Zipper-Plüschtiere, Klauenhand
 - `menuStage.js` – das 3D-Bild im Hauptmenü (Teeparty)
 - `textures.js` – alle Texturen (auf Canvas gemalt)
-- `audio.js` – alle Geräusche, Musik und Stimmen
+- `audio.js` – alle Geräusche, Musik und Stimm-Effekte
+- `voices.js`, `voicelines.js` – Sprecher-Studio: Aufnahmen und Liste aller gesprochenen Sätze
+- `merge.js` – fasst viele kleine Teile zusammen (für flüssiges Spielen)
 - `map.js` – die Karte als Textraster (leicht selbst umzubauen!)
 - `vendor/` – Three.js r160 und einige Three.js-Erweiterungen (MIT-Lizenz)

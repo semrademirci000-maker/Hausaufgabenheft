@@ -5,6 +5,8 @@ import * as TX from './textures.js';
 import { MonsterModel } from './monster.js';
 import { TailorModel, makeMilaDoll, makeMiniZipper } from './characters.js';
 import { buildMenuStage } from './menuStage.js';
+import { mergeGeos, mergeable, mergeSiblings, animatedParts } from './merge.js';
+import { VoiceBank, Recorder, LINES, lineKey, WHO_LABEL } from './voices.js';
 import { EffectComposer } from './vendor/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from './vendor/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from './vendor/jsm/postprocessing/UnrealBloomPass.js';
@@ -30,19 +32,31 @@ const isTouch = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoi
 let rngSeed = 424242;
 const rng = () => { rngSeed = (rngSeed * 16807) % 2147483647; return (rngSeed - 1) / 2147483646; };
 
-const settings = { sens: 1, vol: 0.8, quality: 'mid' };
+const settings = { sens: 1, vol: 0.8, quality: 'mid', bright: 0.5, voices: 'rec' };
 try { Object.assign(settings, JSON.parse(localStorage.getItem('pp6-settings') || '{}')); } catch (e) { /* kein Speicher */ }
 const saveSettings = () => { try { localStorage.setItem('pp6-settings', JSON.stringify(settings)); } catch (e) { /* egal */ } };
 
-const DOOR_COLORS = { 1: 0xffc233, 2: 0x3fdc6a, 3: 0xb46bff, 4: 0x2ad4d4 };
+const DOOR_COLORS = { 1: 0xffc233, 2: 0x3fdc6a, 3: 0xb46bff, 4: 0x2ad4d4, 5: 0xff6fd0, 6: 0x4fa3ff };
 const LEVER_DOOR = { a: '1', b: '2', c: '3', d: '4' };
 
 const NOTES_PART2 = [
   { title: 'Aushang Nähstube', body: 'Hier werden die Neuen zusammengenäht.\nNur mit Schlüsselkarte in den Aufzug!\n\nKarte NIEMALS aus dem Kartenraum nehmen,\nsolange die Lüftung offen ist.' },
   { title: 'Tagebuch einer Näherin', body: 'Heute hat Zipper durch das Lüftungsgitter geschaut.\nEr hat gelächelt. Mit dem Reißverschluss.\n\nThe Tailor sagt, er passt überall durch.\nEr ist ja nur aus Stoff.' },
   { title: 'Zettel an der Wand', body: 'Wenn du das liest: Du bist fast draußen.\nKarte an die gelbe Tür halten. Dahinter liegt die Montagehalle.\n\nUnd dreh dich nicht um. – M.' },
-  { title: 'Wartungsplan Aufzug', body: 'Aufzug ohne Strom! Zwei Sicherungen fehlen.\nEine ist hinter die Grube gefallen – nur mit dem Greifer erreichbar.\nDie andere liegt im Lagerraum (türkiser Hebel).\n\nNach dem Einsetzen braucht der Aufzug 20 Sekunden.\nSo lange durchhalten.' },
+  { title: 'Wartungsplan Aufzug', body: 'Aufzug DEFEKT – Seil gerissen!\nAusweichen auf den Lastenaufzug hinter dem Spielzeuglager.\n\nDas Lagertor braucht zwei Sicherungen.\nEine ist hinter die Grube gefallen – nur mit dem Greifer erreichbar.\nDie andere liegt im Lagerraum (türkiser Hebel).\nDas Tor braucht 20 Sekunden. So lange durchhalten.' },
 ];
+// Spielzeuglager, Spielzimmer und Tunnel (gehören auch zu Kapitel 1)
+const NOTES_PART3 = [
+  { title: 'Lagerliste', body: 'Die Tür zum Spielzimmer hat ein Zahlenschloss.\nDie Zahlen stehen auf den großen Spielwürfeln hier im Lager.\n\nReihenfolge wie immer:\nROT – GELB – GRÜN – BLAU' },
+  { title: 'Notiz eines Lageristen', body: 'Zipper kommt nachts durch die Lüftung ins Lager.\nEr riecht nach Staub und Nähmaschinenöl.\n\nZwischen den Regalen sieht er dich nicht, wenn du dich duckst.\nAber er hört jeden Schritt.' },
+  { title: 'Bedienung der Stromspule', body: 'Gripper-Hand auf die Spule schießen = Hand geladen.\nDie Ladung hält nur ein paar Sekunden!\n\nDann die geladene Hand auf einen Empfänger schießen.\nZwei Empfänger = Tür zum Förderband-Tunnel offen.' },
+  { title: 'Kinderzeichnung', body: 'Ein Bild mit Wachsmalstiften:\nEin Mädchen mit Zöpfen, daneben ein großer Mann mit einer Nadel.\n\nDarunter steht in krakeliger Schrift:\n„Mila und Papa Tailor. Für immer zusammengenäht.“' },
+];
+const CUBE_CODE = { red: 4, yellow: 2, green: 9, blue: 7 };
+const CUBE_ORDER = ['red', 'yellow', 'green', 'blue'];
+const CUBE_COLORS = { red: '#d8352e', yellow: '#e8b81c', green: '#2fa84a', blue: '#2f6fd8' };
+const CUBE_IN_MAP = ['blue', 'red', 'green', 'yellow']; // Farben der Würfel in Kartenreihenfolge
+const DOOR_CODE = CUBE_ORDER.map(c => CUBE_CODE[c]).join('');
 const NOTES = [
   { title: 'Verlegungsbericht – Zelle 0', body: 'The Tailor wurde in die Sicherheitszelle auf Ebene 9 verlegt.\nDie Gitter halten. Vorerst.\n\nEr hat die Spielzeuge hier unten zusammengenäht. Er zieht ihre Fäden.\nNiemand geht allein an seinem Käfig vorbei.' },
   { title: 'Versuchsreihe G-7 – Zipper', body: 'Ursprünglich ein Kuscheltier mit Reißverschluss-Mund, 60 cm.\nNach der Behandlung: 3,2 m. Finger aus Nähnadeln.\n\nReagiert auf Licht und schnelle Bewegungen.\nEr sieht schlecht im Dunkeln – Taschenlampe AUS, wenn er in der Nähe ist.' },
@@ -69,11 +83,18 @@ scene.background = new THREE.Color(0x030304);
 scene.fog = new THREE.FogExp2(0x100a07, 0.046); // warmer, staubiger Dunst
 scene.environment = envMap;
 
-const camera = new THREE.PerspectiveCamera(72, innerWidth / innerHeight, 0.05, 120);
+const camera = new THREE.PerspectiveCamera(72, innerWidth / innerHeight, 0.05, 55); // dahinter ist eh alles im Nebel
 camera.rotation.order = 'YXZ';
 scene.add(camera);
 const hemi = new THREE.HemisphereLight(0x9a8a78, 0x1a1008, 0.2);
 scene.add(hemi);
+// Helligkeit (Einstellungen): nur leicht heller oder dunkler, damit es gruselig bleibt
+function applyBrightness() {
+  const b = clamp(+settings.bright || 0, 0, 1);
+  renderer.toneMappingExposure = 1.2 * (0.85 + b * 0.6);
+  hemi.intensity = 0.2 * (0.7 + b);
+}
+applyBrightness();
 
 const flashlight = new THREE.SpotLight(0xfff1dd, 0, 34, 0.48, 0.6, 1.3);
 flashlight.position.set(0.2, -0.15, 0.1);
@@ -98,6 +119,17 @@ vmCam.add(vmKey);
 
 const audio = new AudioEngine();
 audio.volume = settings.vol;
+const voiceBank = new VoiceBank();
+// Satz sprechen: echte Aufnahme, wenn es eine gibt – sonst (nur wenn erlaubt) die Computerstimme
+function voice(text, who, opts = {}) {
+  if (settings.voices === 'off') return;
+  const key = lineKey(who, text);
+  if (voiceBank.has(key)) {
+    voiceBank.buffer(audio.ctx, key).then(b => { if (b) audio.playVoice(b, who, settings.voiceFx !== false); });
+    return;
+  }
+  if (settings.voices === 'both') audio.speak(text, who, opts);
+}
 
 // ======================================================================
 //  Materialien (einmal erzeugt, in allen Durchläufen wiederverwendet)
@@ -136,8 +168,52 @@ const MAT = {
   shaft: new THREE.MeshBasicMaterial({ color: 0xffd9a0, transparent: true, opacity: 0.045, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: true }),
   batteryBody: new THREE.MeshStandardMaterial({ color: 0x2a6cff, emissive: 0x1b4dff, emissiveIntensity: 1.2, roughness: 0.3, metalness: 0.3 }),
   batteryCap: new THREE.MeshStandardMaterial({ color: 0xc8ccd0, roughness: 0.3, metalness: 0.9 }),
+  rackPost: new THREE.MeshStandardMaterial({ color: 0x2f4f86, roughness: 0.45, metalness: 0.7 }),
+  rackBeam: new THREE.MeshStandardMaterial({ color: 0xd0631e, roughness: 0.5, metalness: 0.6 }),
+  rackBoard: new THREE.MeshStandardMaterial({ color: 0x6b5a44, roughness: 0.9 }),
+  cardboard: (() => { const t = TX.woodTexture(); return new THREE.MeshStandardMaterial({ map: t, color: 0xc89a66, roughness: 0.95 }); })(),
+  codeDoor: (() => { const t = TX.metalTexture('#7a2a5e', true, 'CODE'); return new THREE.MeshStandardMaterial({ map: t, normalMap: TX.normalFrom(t, 2), roughness: 0.5, metalness: 0.6 }); })(),
+  powerDoor: (() => { const t = TX.metalTexture('#24467a', true, 'STROM'); return new THREE.MeshStandardMaterial({ map: t, normalMap: TX.normalFrom(t, 2), roughness: 0.5, metalness: 0.6 }); })(),
+  copper: new THREE.MeshStandardMaterial({ color: 0xb06a32, roughness: 0.35, metalness: 0.9 }),
+  spark: new THREE.MeshBasicMaterial({ color: new THREE.Color(0x66b8ff).multiplyScalar(2.5) }),
 };
+// Einmal erzeugen, dann bei jedem Neuaufbau der Welt wiederverwenden (schneller Respawn, kein Speicherleck)
+const ONCE = {};
+const once = (key, fn) => ONCE[key] || (ONCE[key] = fn());
+// Großer Spielwürfel mit Zahl (für das Zahlenschloss im Lager)
+function cubeTexture(color, digit) {
+  const cv = document.createElement('canvas'); cv.width = cv.height = 256;
+  const g = cv.getContext('2d');
+  g.fillStyle = color; g.fillRect(0, 0, 256, 256);
+  g.fillStyle = 'rgba(0,0,0,.18)'; for (let i = 0; i < 60; i++) g.fillRect(Math.random() * 256, Math.random() * 256, 3, 3);
+  g.strokeStyle = 'rgba(255,255,255,.85)'; g.lineWidth = 14; g.strokeRect(14, 14, 228, 228);
+  g.fillStyle = '#fff'; g.font = 'bold 170px Arial, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.shadowColor = 'rgba(0,0,0,.5)'; g.shadowBlur = 8; g.fillText(String(digit), 128, 140);
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
+}
+function keypadTexture() {
+  const cv = document.createElement('canvas'); cv.width = 192; cv.height = 256;
+  const g = cv.getContext('2d');
+  g.fillStyle = '#2a2c30'; g.fillRect(0, 0, 192, 256);
+  g.fillStyle = '#0d2a18'; g.fillRect(20, 16, 152, 44);
+  g.fillStyle = '#4dff8a'; g.font = 'bold 30px monospace'; g.textAlign = 'center'; g.fillText('_ _ _ _', 96, 48);
+  const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', 'OK'];
+  keys.forEach((k, i) => {
+    const x = 22 + (i % 3) * 52, y = 74 + Math.floor(i / 3) * 44;
+    g.fillStyle = '#c9ccd2'; g.fillRect(x, y, 44, 36);
+    g.fillStyle = '#222'; g.font = 'bold 20px Arial'; g.fillText(k, x + 22, y + 25);
+  });
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
 const GLOW = TX.glowTexture();
+// Spielzeugfarben: ein Material pro Farbe (geteilt, damit es verschmelzen kann)
+const TOYMAT = {};
+const toyMat = c => TOYMAT[c] || (TOYMAT[c] = new THREE.MeshStandardMaterial({ color: c, roughness: 0.55 }));
+// Leuchten um Gegenstände: nur ein Sprite statt echter Lichtquelle (viel schneller)
+function glowSprite(color, x, y, z, size = 1.6) {
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: GLOW, color, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, opacity: 0.8 }));
+  sp.position.set(x, y, z); sp.scale.setScalar(size); return sp;
+}
 const SCRAWLS = ['LAUF', 'ES LÄCHELT', 'NICHT RENNEN'].map(t => new THREE.MeshBasicMaterial({ map: TX.scrawlTexture(t), transparent: true, depthWrite: false, fog: true }));
 
 // ======================================================================
@@ -225,7 +301,7 @@ function buildWorld() {
   scene.add(group);
   const w = W = {
     group, doors: {}, levers: [], batteries: [], lockers: [], notes: [], lamps: [], boxes: [],
-    rayTargets: [], gen: null, gate: null, exitCell: null, part2Cell: null, key: null, vent: null, vent2: null, fuses: [], fusebox: null, start: null, startYaw: 0, monsterStart: null, lightPool: [], beams: [], proto: null, papers: [], planks: [],
+    rayTargets: [], gen: null, gate: null, exitCell: null, part2Cell: null, key: null, vent: null, vent2: null, fuses: [], fusebox: null, cubes: [], keypad: null, coil: null, receivers: [], ventL: null, ventK: null, storeCell: null, playCell: null, finalCell: null, start: null, startYaw: 0, monsterStart: null, lightPool: [], beams: [], proto: null, papers: [], planks: [],
   };
   const addBox = (x0, x1, z0, z1) => { const b = { x0, x1, z0, z1, on: true }; w.boxes.push(b); return b; };
   const ref = (mesh, obj) => { mesh.userData.ref = obj; w.rayTargets.push(mesh); };
@@ -268,9 +344,9 @@ function buildWorld() {
     if (k === 'M') w.monsterStart = cc.clone();
 
     // ----- Lampen -----
-    if (k === 'L' || k === 'F') {
+    if (k === 'L' || k === 'F' || k === 'f') {
       const warm = rng() < 0.25 ? 0xff4a30 : 0xffa860; // meist orange, manchmal rot – wie in den Spielhallen
-      const lamp = { pos: new THREE.Vector3(cc.x, WALL_H - 0.75, cc.z), level: 1, flicker: k === 'L' && rng() < 0.35, base: k === 'F' ? 26 : 22, color: new THREE.Color(k === 'F' ? 0xbfffd8 : warm), ft: 0, glows: [] };
+      const lamp = { pos: new THREE.Vector3(cc.x, WALL_H - 0.75, cc.z), level: 1, flicker: (k === 'L' && rng() < 0.35) || k === 'f', base: k === 'F' ? 26 : k === 'f' ? 16 : 22, color: new THREE.Color(k === 'F' ? 0xbfffd8 : k === 'f' ? 0xff3020 : warm), ft: 0, glows: [], fixed: k === 'f' };
       const corridor = (ch(c - 1, r) === '#' && ch(c + 1, r) === '#') || (ch(c, r - 1) === '#' && ch(c, r + 1) === '#');
       const rig = k === 'L' && !corridor;
       lamp.bulbMat = new THREE.MeshBasicMaterial({ color: lamp.color.clone() });
@@ -325,7 +401,7 @@ function buildWorld() {
     }
 
     // ----- Müll und Trümmer am Boden (verlassene Spielhalle) -----
-    if (k !== '#' && k !== 'O' && k !== 'G' && !'1234EZFW'.includes(k)) {
+    if (k !== '#' && k !== 'O' && k !== 'G' && !'123456EZHFfWRA'.includes(k)) {
       const n = Math.floor(rng() * 7);
       for (let i = 0; i < n; i++) w.papers.push([cc.x + (rng() - 0.5) * 3.6, cc.z + (rng() - 0.5) * 3.6, rng() * 6.28, rng()]);
       if (rng() < 0.35) for (let i = 0; i < 1 + rng() * 2; i++) w.planks.push([cc.x + (rng() - 0.5) * 3, cc.z + (rng() - 0.5) * 3, rng() * 6.28, rng()]);
@@ -379,8 +455,7 @@ function buildWorld() {
       const bat = makeBattery();
       bat.position.set(px2, topY + 0.25, pz2); bat.rotation.z = 0.1;
       group.add(bat);
-      const glow = new THREE.PointLight(0x3a6cff, 3, 3.5, 2);
-      glow.position.set(px2, topY + 0.45, pz2); group.add(glow);
+      const glow = glowSprite(0x3a6cff, px2, topY + 0.3, pz2, 1.5); group.add(glow);
       const b = { kind: 'battery', mesh: bat, glow, taken: false, home: bat.position.clone() };
       bat.traverse(m => { if (m.isMesh) ref(m, b); });
       w.batteries.push(b);
@@ -413,14 +488,14 @@ function buildWorld() {
     }
 
     // ----- Türen & Ausgangstor -----
-    if ('1234EZ'.includes(k)) {
+    if ('123456EZH'.includes(k)) {
       const alongX = ch(c - 1, r) === '#' && ch(c + 1, r) === '#';
       const geo = alongX ? new THREE.BoxGeometry(CELL, WALL_H, 0.35) : new THREE.BoxGeometry(0.35, WALL_H, CELL);
-      const mesh = new THREE.Mesh(geo, k === 'E' ? MAT.shutter : k === 'Z' ? MAT.keyDoor : MAT.door);
+      const mesh = new THREE.Mesh(geo, k === 'E' || k === 'H' ? MAT.shutter : k === 'Z' ? MAT.keyDoor : k === '5' ? MAT.codeDoor : k === '6' ? MAT.powerDoor : MAT.door);
       mesh.position.set(cc.x, WALL_H / 2, cc.z); mesh.castShadow = mesh.receiveShadow = true;
       group.add(mesh);
       const box = alongX ? addBox(cc.x - 2, cc.x + 2, cc.z - 0.2, cc.z + 0.2) : addBox(cc.x - 0.2, cc.x + 0.2, cc.z - 2, cc.z + 2);
-      const indMat = new THREE.MeshBasicMaterial({ color: k === 'E' ? 0xff2020 : k === 'Z' ? 0xffd21a : DOOR_COLORS[k] });
+      const indMat = new THREE.MeshBasicMaterial({ color: k === 'E' || k === 'H' || k === '6' ? 0xff2020 : k === 'Z' ? 0xffd21a : DOOR_COLORS[k] });
       const ind = new THREE.Mesh(new THREE.BoxGeometry(alongX ? 0.5 : 0.4, 0.18, alongX ? 0.4 : 0.5), indMat);
       ind.position.set(cc.x, WALL_H - 0.3, cc.z); group.add(ind);
       // Türrahmen mit Warnstreifen
@@ -430,11 +505,28 @@ function buildWorld() {
         post.position.set(px, WALL_H / 2, pz); post.castShadow = post.receiveShadow = true; group.add(post);
         alongX ? addBox(px - 0.15, px + 0.15, pz - 0.35, pz + 0.35) : addBox(px - 0.35, px + 0.35, pz - 0.15, pz + 0.15);
       }
-      const d = { kind: k === 'E' ? 'gate' : k === 'Z' ? 'keydoor' : 'door', id: k, mesh, box, open: false, opening: false, t: 0, indMat };
+      const d = { kind: { E: 'gate', Z: 'keydoor', H: 'shutter', 5: 'codedoor', 6: 'powerdoor' }[k] || 'door', id: k, mesh, box, open: false, opening: false, t: 0, indMat };
       ref(mesh, d);
       if (k === 'E') w.gate = d; else w.doors[k] = d;
     }
     if (k === 'X') w.part2Cell = [c, r];
+    if (k === 'h') w.storeCell = [c, r];
+    if (k === 'k') w.playCell = [c, r];
+    if (k === 'e') w.finalCell = [c, r];
+    if (k === 'f') {
+      // kaputter Aufzug: Seil gerissen, Kabine schief abgesackt
+      const lift = new THREE.Group(); lift.position.copy(cc); lift.position.y = -0.35; lift.rotation.z = 0.04; group.add(lift);
+      for (const sx of [-1, 1]) {
+        const side = new THREE.Mesh(new THREE.BoxGeometry(0.15, WALL_H - 0.4, 3.4), MAT.metal); side.position.set(sx * 1.7, (WALL_H - 0.4) / 2, 0); lift.add(side);
+      }
+      const back = new THREE.Mesh(new THREE.BoxGeometry(3.4, WALL_H - 0.4, 0.15), MAT.metal); back.position.set(0, (WALL_H - 0.4) / 2, 1.7); lift.add(back);
+      const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.4), new THREE.MeshBasicMaterial({ map: once('tex#6a1414DEFEKT', () => TX.metalTexture('#6a1414', false, 'DEFEKT')), color: 0xffb0a0 }));
+      sign.position.set(0, WALL_H - 0.7, -1.7); sign.rotation.y = Math.PI; lift.add(sign);
+      for (let i = 0; i < 3; i++) {
+        const cable = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.4 + i * 0.5, 6), MAT.dark);
+        cable.position.set(cc.x - 0.6 + i * 0.6, WALL_H - (1.4 + i * 0.5) / 2, cc.z + 0.3); cable.rotation.z = (i - 1) * 0.15; group.add(cable);
+      }
+    }
     if (k === 'F') {
       // Aufzug: Metallkabine mit offener Schiebetür, das Ziel von Kapitel 1
       w.exitCell = [c, r];
@@ -443,7 +535,7 @@ function buildWorld() {
         const side = new THREE.Mesh(new THREE.BoxGeometry(0.15, WALL_H - 0.4, 3.4), MAT.metal); side.position.set(sx * 1.7, (WALL_H - 0.4) / 2, 0); lift.add(side);
       }
       const back = new THREE.Mesh(new THREE.BoxGeometry(3.4, WALL_H - 0.4, 0.15), MAT.metal); back.position.set(0, (WALL_H - 0.4) / 2, 1.7); lift.add(back);
-      const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.4), new THREE.MeshBasicMaterial({ map: TX.metalTexture('#1c5a2e', false, 'AUFZUG'), color: 0xbfffcf }));
+      const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.4), new THREE.MeshBasicMaterial({ map: once('tex#1c5a2eAUFZUG', () => TX.metalTexture('#1c5a2e', false, 'AUFZUG')), color: 0xbfffcf }));
       sign.position.set(0, WALL_H - 0.7, -1.7); sign.rotation.y = Math.PI; lift.add(sign);
       const arrow = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.3, 3), new THREE.MeshBasicMaterial({ color: new THREE.Color(0x40ff90).multiplyScalar(2) }));
       arrow.position.set(0, WALL_H - 1.2, -1.65); lift.add(arrow);
@@ -457,16 +549,16 @@ function buildWorld() {
       addBox(px - 0.5, px + 0.5, pz - 0.5, pz + 0.5); w.rayTargets.push(table);
       const card = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.02, 0.22), new THREE.MeshStandardMaterial({ color: 0xffd21a, emissive: 0xffb000, emissiveIntensity: 0.9, roughness: 0.4 }));
       card.position.set(px, 1.0, pz); card.rotation.y = 0.4; group.add(card);
-      const glow = new THREE.PointLight(0xffc830, 2.5, 3.5, 2); glow.position.set(px, 1.4, pz); group.add(glow);
+      const glow = glowSprite(0xffc830, px, 1.05, pz, 1.2); group.add(glow);
       const key = { kind: 'key', mesh: card, glow, taken: false };
       ref(card, key); w.key = key;
     }
     // ----- Lüftungsschächte, aus denen Zipper kommt -----
-    if (k === 'V' || k === 'J') {
+    if (k === 'V' || k === 'J' || k === 'v' || k === 'u') {
       const [dx, dz] = wallDir(c, r);
       const v = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.2), MAT.vent);
       v.position.set(cc.x + dx * (CELL / 2 - 0.02), 0.8, cc.z + dz * (CELL / 2 - 0.02)); v.rotation.y = yawFacing(-dx, -dz);
-      group.add(v); w[k === 'V' ? 'vent' : 'vent2'] = { pos: cc.clone(), mesh: v, dir: [dx, dz] };
+      group.add(v); w[{ V: 'vent', J: 'vent2', v: 'ventL', u: 'ventK' }[k]] = { pos: cc.clone(), mesh: v, dir: [dx, dz] };
     }
     // ----- Grube: schwarzes Loch im Boden mit Geländer -----
     if (k === 'W') {
@@ -499,7 +591,7 @@ function buildWorld() {
       for (const y of [-0.17, 0.17]) { const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.06, 14), MAT.batteryCap); cap.position.y = y; fg.add(cap); }
       const band = new THREE.Mesh(new THREE.CylinderGeometry(0.093, 0.093, 0.08, 14), new THREE.MeshStandardMaterial({ color: 0xff3020, emissive: 0xff2010, emissiveIntensity: 1.2 }));
       fg.add(band);
-      const glow = new THREE.PointLight(0xff5030, 2.5, 3.5, 2); glow.position.set(px, 1.5, pz); group.add(glow);
+      const glow = glowSprite(0xff5030, px, 1.12, pz, 1.2); group.add(glow);
       const f = { kind: 'fuse', mesh: fg, glow, taken: false };
       fg.traverse(m => { if (m.isMesh) ref(m, f); });
       w.fuses.push(f);
@@ -520,6 +612,93 @@ function buildWorld() {
       }
       bg.traverse(m => { if (m.isMesh) ref(m, fb); });
       w.fusebox = fb;
+    }
+
+    // ----- Regale im Spielzeuglager (blockieren Weg und Sicht) -----
+    if (k === 'R') {
+      const alongX = ch(c - 1, r) === 'R' || ch(c + 1, r) === 'R' || !(ch(c, r - 1) === 'R' || ch(c, r + 1) === 'R');
+      const H = 3.1, levels = [0.12, 0.95, 1.8, 2.65];
+      for (const side of [-1, 1]) {
+        const off = side * 0.98;
+        const L = CELL, D = 1.8;
+        for (const y of levels) {
+          const board = new THREE.Mesh(alongX ? new THREE.BoxGeometry(L, 0.05, D) : new THREE.BoxGeometry(D, 0.05, L), MAT.rackBoard);
+          board.position.set(cc.x + (alongX ? 0 : off), y, cc.z + (alongX ? off : 0)); board.receiveShadow = true; group.add(board);
+          const beam = new THREE.Mesh(alongX ? new THREE.BoxGeometry(L, 0.1, 0.06) : new THREE.BoxGeometry(0.06, 0.1, L), MAT.rackBeam);
+          beam.position.set(cc.x + (alongX ? 0 : off + side * D / 2), y - 0.05, cc.z + (alongX ? off + side * D / 2 : 0)); group.add(beam);
+          // Kisten und Spielzeug auf den Brettern
+          if (y < 2.6 || rng() < 0.5) for (let i = 0; i < 3; i++) {
+            if (rng() < 0.3) continue;
+            const o = (i - 1) * 1.25 + (rng() - 0.5) * 0.3;
+            const bx = cc.x + (alongX ? o : off + (rng() - 0.5) * 0.4), bz = cc.z + (alongX ? off + (rng() - 0.5) * 0.4 : o);
+            if (rng() < 0.75) {
+              const sx = 0.6 + rng() * 0.45, sy = 0.4 + rng() * 0.35, sz = 0.6 + rng() * 0.5;
+              const box = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), MAT.cardboard);
+              box.position.set(bx, y + 0.025 + sy / 2, bz); box.rotation.y = (rng() - 0.5) * 0.3; box.castShadow = true; group.add(box);
+            } else {
+              const toy = makeMiniZipper(rng() < 0.5 ? 0x5a2a7a : 0x23706e); toy.scale.setScalar(1.4);
+              toy.position.set(bx, y + 0.03, bz); toy.rotation.y = alongX ? (side > 0 ? 0 : Math.PI) : (side > 0 ? Math.PI / 2 : -Math.PI / 2); group.add(toy);
+            }
+          }
+        }
+        for (const e2 of [-1, 1]) for (const f2 of [-1, 1]) {
+          const post = new THREE.Mesh(new THREE.BoxGeometry(0.09, H, 0.09), MAT.rackPost);
+          const px = alongX ? cc.x + e2 * 1.95 : cc.x + off + f2 * 0.88, pz = alongX ? cc.z + off + f2 * 0.88 : cc.z + e2 * 1.95;
+          post.position.set(px, H / 2, pz); post.castShadow = true; group.add(post);
+        }
+      }
+      const back = new THREE.Mesh(alongX ? new THREE.BoxGeometry(CELL, H, 0.06) : new THREE.BoxGeometry(0.06, H, CELL), MAT.rackPost);
+      back.position.set(cc.x, H / 2, cc.z); group.add(back); w.rayTargets.push(back);
+    }
+    // ----- Spielwürfel mit Zahl (Code für das Zahlenschloss) -----
+    if (k === 'C') {
+      const color = CUBE_IN_MAP[w.cubes.length % 4];
+      const mat = new THREE.MeshStandardMaterial({ map: once('cube' + color, () => cubeTexture(CUBE_COLORS[color], CUBE_CODE[color])), roughness: 0.55, emissive: 0xffffff, emissiveMap: null, emissiveIntensity: 0.0 });
+      const cube = new THREE.Mesh(new RoundedBoxGeometry(0.85, 0.85, 0.85, 3, 0.06), mat);
+      const [dx, dz] = DIRS.find(([ex, ez]) => ch(c + ex, r + ez) === '#') || [0, 0];
+      const px = cc.x + dx * 1.1, pz = cc.z + dz * 1.1;
+      cube.position.set(px, 0.43, pz); cube.rotation.y = 0.35; cube.castShadow = cube.receiveShadow = true; group.add(cube);
+      const glow = glowSprite(new THREE.Color(CUBE_COLORS[color]).getHex(), px, 0.9, pz, 1.4); glow.material.opacity = 0.35; group.add(glow);
+      addBox(px - 0.45, px + 0.45, pz - 0.45, pz + 0.45);
+      const cb = { kind: 'cube', color, digit: CUBE_CODE[color], found: false, mesh: cube, glow };
+      ref(cube, cb); w.cubes.push(cb);
+    }
+    // ----- Zahlenschloss an der Wand -----
+    if (k === 'T') {
+      const [dx, dz] = wallDir(c, r);
+      const kg = new THREE.Group(); kg.position.set(cc.x + dx * (CELL / 2 - 0.08) - 1.1, 1.45, cc.z + dz * (CELL / 2 - 0.08)); kg.rotation.y = yawFacing(-dx, -dz); group.add(kg);
+      const box = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.66, 0.12), MAT.hazard); kg.add(box);
+      const face = new THREE.Mesh(new THREE.PlaneGeometry(0.42, 0.56), new THREE.MeshBasicMaterial({ map: once('keypad', keypadTexture), color: 0xb0b0b0 })); face.position.z = 0.065; kg.add(face);
+      const kp = { kind: 'keypad', group: kg };
+      [box, face].forEach(m => ref(m, kp)); w.keypad = kp;
+    }
+    // ----- Stromspule im Spielzimmer -----
+    if (k === 'A') {
+      const cg = new THREE.Group(); cg.position.copy(cc); group.add(cg);
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.85, 0.35, 20), MAT.hazard); base.position.y = 0.17; cg.add(base);
+      const core = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 2.0, 16), MAT.copper); core.position.y = 1.3; cg.add(core);
+      for (let i = 0; i < 9; i++) { const ring = new THREE.Mesh(new THREE.TorusGeometry(0.36, 0.04, 8, 20), MAT.copper); ring.rotation.x = Math.PI / 2; ring.position.y = 0.5 + i * 0.2; cg.add(ring); }
+      const top = new THREE.Mesh(new THREE.TorusGeometry(0.45, 0.14, 12, 24), MAT.metal); top.rotation.x = Math.PI / 2; top.position.y = 2.4; cg.add(top);
+      const orb = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 12), MAT.spark); orb.position.y = 2.4; cg.add(orb);
+      const glow = glowSprite(0x66b8ff, cc.x, 2.4, cc.z, 3.2); group.add(glow);
+      addBox(cc.x - 0.8, cc.x + 0.8, cc.z - 0.8, cc.z + 0.8);
+      const co = { kind: 'coil', group: cg, glow };
+      cg.traverse(m => { if (m.isMesh) ref(m, co); });
+      w.coil = co;
+      w.lamps.push({ pos: new THREE.Vector3(cc.x, 2.6, cc.z), level: 1, flicker: true, base: 8, color: new THREE.Color(0x66b8ff), ft: 0, fixed: true,
+        bulbMat: new THREE.MeshBasicMaterial({ color: 0x66b8ff }), shaftMat: MAT.shaft.clone() });
+    }
+    // ----- Strom-Empfänger an der Wand -----
+    if (k === 'I') {
+      const [dx, dz] = wallDir(c, r);
+      const rg = new THREE.Group(); rg.position.set(cc.x + dx * (CELL / 2 - 0.15), 1.6, cc.z + dz * (CELL / 2 - 0.15)); rg.rotation.y = yawFacing(-dx, -dz); group.add(rg);
+      const plate = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.9, 0.12), MAT.hazard); rg.add(plate);
+      const dish = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.2, 0.2, 20), MAT.copper); dish.rotation.x = Math.PI / 2; dish.position.z = 0.15; rg.add(dish);
+      const tip = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 8), MAT.metal); tip.position.z = 0.28; rg.add(tip);
+      const ind = new THREE.MeshBasicMaterial({ color: 0xff2020 });
+      const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), ind); lamp.position.set(0, 0.55, 0.05); rg.add(lamp);
+      const rc = { kind: 'receiver', group: rg, ind, powered: false };
+      [plate, dish, tip].forEach(m => ref(m, rc)); w.receivers.push(rc);
     }
 
     // ----- Hebel -----
@@ -617,7 +796,7 @@ function buildWorld() {
         belt.rotation.x = -Math.PI / 2; if (along === 'x') belt.rotation.z = Math.PI / 2;
         belt.position.set(bx, 0.76, bz); group.add(belt);
         for (let i = 0; i < 2; i++) {
-          const toy = rng() < 0.5 ? makeMiniZipper(rng() < 0.5 ? 0x5a2a7a : 0x8a3a2a) : new THREE.Mesh(new RoundedBoxGeometry(0.3, 0.3, 0.3, 2, 0.04), new THREE.MeshStandardMaterial({ color: [0xd23a3a, 0x3a6ad2, 0xe8c040][Math.floor(rng() * 3)], roughness: 0.5 }));
+          const toy = rng() < 0.5 ? makeMiniZipper(rng() < 0.5 ? 0x5a2a7a : 0x8a3a2a) : new THREE.Mesh(new RoundedBoxGeometry(0.3, 0.3, 0.3, 2, 0.04), toyMat([0xd23a3a, 0x3a6ad2, 0xe8c040][Math.floor(rng() * 3)]));
           const o = (i - 0.5) * 1.8 + (rng() - 0.5);
           toy.position.set(bx + (along === 'x' ? o : 0), 0.76 + (toy.isMesh ? 0.15 : 0), bz + (along === 'z' ? o : 0));
           toy.rotation.y = rng() * 6; group.add(toy);
@@ -639,7 +818,7 @@ function buildWorld() {
         // verstreute Spielzeugwürfel
         const colors = [0xd23a3a, 0x3a6ad2, 0xe8c040, 0x3aa860];
         for (let i = 0; i < 3; i++) {
-          const b = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.22, 0.22), new THREE.MeshStandardMaterial({ color: colors[Math.floor(rng() * 4)], roughness: 0.6 }));
+          const b = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.22, 0.22), toyMat(colors[Math.floor(rng() * 4)]));
           b.position.set(cc.x + (rng() - 0.5) * 2.6, 0.11, cc.z + (rng() - 0.5) * 2.6); b.rotation.y = rng() * 3;
           b.castShadow = true; group.add(b);
         }
@@ -661,10 +840,11 @@ function buildWorld() {
           rail.position.set(cc.x + dx * 1.95, y, cc.z + dz * 1.95); group.add(rail);
         }
       }
-      const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.5), new THREE.MeshStandardMaterial({ map: TX.metalTexture('#8a1a1a', false, 'ZELLE 0'), roughness: 0.6 }));
+      const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.5), new THREE.MeshStandardMaterial({ map: once('tex#8a1a1aZELLE 0', () => TX.metalTexture('#8a1a1a', false, 'ZELLE 0')), roughness: 0.6 }));
       const [ox, oz] = openDir(c, r);
       sign.position.set(cc.x + ox * 2.05, 2.8, cc.z + oz * 2.05); sign.rotation.y = yawFacing(ox, oz); group.add(sign);
       const proto = new TailorModel();
+      mergeSiblings(proto.root, animatedParts(proto));
       proto.root.position.set(cc.x - ox * 0.4, 0, cc.z - oz * 0.4); proto.root.rotation.y = yawFacing(ox, oz); proto.root.scale.setScalar(1.3);
       group.add(proto.root);
       w.proto = { model: proto, pos: proto.root.position.clone(), yaw: proto.root.rotation.y, seen: false, strike: 0, strikeT: 0 };
@@ -679,7 +859,7 @@ function buildWorld() {
       const px = cc.x + dx * 1.35, pz = cc.z + dz * 1.35;
       const vg = new THREE.Group(); vg.position.set(px, 0, pz); vg.rotation.y = yawFacing(-dx, -dz); group.add(vg);
       const ped = new THREE.Mesh(new RoundedBoxGeometry(1.0, 0.9, 1.0, 2, 0.04), MAT.wood); ped.position.y = 0.45; ped.castShadow = ped.receiveShadow = true; vg.add(ped);
-      const plaque = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.18), new THREE.MeshStandardMaterial({ map: TX.metalTexture('#b08a3a', false, 'MILA'), metalness: 0.8, roughness: 0.3 }));
+      const plaque = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.18), new THREE.MeshStandardMaterial({ map: once('tex#b08a3aMILA', () => TX.metalTexture('#b08a3a', false, 'MILA')), metalness: 0.8, roughness: 0.3 }));
       plaque.position.set(0, 0.7, 0.505); vg.add(plaque);
       const glass = new THREE.Mesh(new THREE.BoxGeometry(0.95, 1.15, 0.95), MAT.glass); glass.position.y = 1.475; vg.add(glass);
       const lid = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.06, 1.0), MAT.wood); lid.position.y = 2.08; vg.add(lid);
@@ -691,14 +871,14 @@ function buildWorld() {
     }
 
     // ----- Stahlträger unter der Decke -----
-    if (k !== '#' && k !== 'O') {
+    if (k !== '#' && k !== 'O' && k !== 'R') {
       w.beams.push([cc.x, cc.z, ch(c, r - 1) === '#' && ch(c, r + 1) === '#']);
     }
 
     // ----- Rohre an der Decke in Gängen -----
     const nsCorr = ch(c - 1, r) === '#' && ch(c + 1, r) === '#';
     const ewCorr = ch(c, r - 1) === '#' && ch(c, r + 1) === '#';
-    if ((nsCorr || ewCorr) && !'1234EZW'.includes(k)) {
+    if ((nsCorr || ewCorr) && !'123456EZHWR'.includes(k)) {
       const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, CELL, 8), MAT.pipe);
       if (nsCorr) { pipe.rotation.x = Math.PI / 2; pipe.position.set(cc.x + 1.55, WALL_H - 0.3, cc.z); }
       else { pipe.rotation.z = Math.PI / 2; pipe.position.set(cc.x, WALL_H - 0.3, cc.z + 1.55); }
@@ -731,6 +911,7 @@ function buildWorld() {
   });
   plankIM.castShadow = plankIM.receiveShadow = true; group.add(plankIM);
 
+  mergeStatic(group, w);
   tuneEnv(group);
 
   // Lichtpool: nur die nächsten Lampen bekommen echte Lichtquellen (schnell auf dem iPad)
@@ -741,6 +922,44 @@ function buildWorld() {
   }
   return w;
 }
+
+// Alles, was sich nie bewegt, wird pro Bereich und Material zu EINEM Objekt verschmolzen.
+// Statt über tausend Zeichenaufrufen pro Bild sind es dann nur noch ein paar Dutzend (viel flüssiger auf dem iPad).
+function mergeStatic(group, w) {
+  group.updateMatrixWorld(true);
+  const keep = new Set([w.proto?.model.root].filter(Boolean));
+  const rayPlain = new Set(w.rayTargets.filter(m => !m.userData.ref));
+  const hasRef = o => { let f = false; o.traverse(x => { if (x.userData.ref) f = true; }); return f; };
+  const buckets = new Map(), victims = [];
+  const CH = CELL * 4;
+  const collect = (o) => {
+    if (!mergeable(o)) return;
+    const m = o.material;
+    if (o.matrixWorld.determinant() < 0) return;
+    o.getWorldPosition(_mv);
+    const key = [Math.floor(_mv.x / CH), Math.floor(_mv.z / CH), m.uuid, o.castShadow, o.receiveShadow, rayPlain.has(o)].join('|');
+    if (!buckets.has(key)) buckets.set(key, { m, cast: o.castShadow, recv: o.receiveShadow, ray: rayPlain.has(o), list: [] });
+    buckets.get(key).list.push(o); victims.push(o);
+  };
+  for (const child of [...group.children]) {
+    if (keep.has(child) || hasRef(child)) continue;
+    child.traverse(collect);
+  }
+  for (const b of buckets.values()) {
+    if (b.list.length < 2) { const i = victims.indexOf(b.list[0]); if (i >= 0) victims.splice(i, 1); continue; }
+    const geo = mergeGeos(b.list, false);
+    const mesh = new THREE.Mesh(geo, b.m);
+    mesh.castShadow = b.cast; mesh.receiveShadow = b.recv; mesh.matrixAutoUpdate = false;
+    group.add(mesh);
+    if (b.ray) w.rayTargets.push(mesh);
+  }
+  const gone = new Set(victims);
+  for (const o of victims) o.parent?.remove(o);
+  w.rayTargets = w.rayTargets.filter(m => !gone.has(m));
+  // leere Gruppen aufräumen
+  for (const child of [...group.children]) if (child.isGroup && !child.children.length) group.remove(child);
+}
+const _mv = new THREE.Vector3();
 
 // ======================================================================
 //  Kollision, Sichtlinie, Wegfindung
@@ -762,7 +981,7 @@ function collide(pos, rad) {
   const [cx, cz] = toCell(pos.x, pos.z);
   for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
     const ck = ch(cx + dx, cz + dz);
-    if (ck !== '#' && ck !== 'W') continue; // Grube = nicht begehbar
+    if (ck !== '#' && ck !== 'W' && ck !== 'R') continue; // Grube und Regale = nicht begehbar
     _cb.x0 = (cx + dx) * CELL; _cb.x1 = _cb.x0 + CELL; _cb.z0 = (cz + dz) * CELL; _cb.z1 = _cb.z0 + CELL;
     pushOut(pos, rad, _cb);
   }
@@ -771,9 +990,9 @@ function collide(pos, rad) {
 
 function passable(c, r) {
   const k = ch(c, r);
-  if (k === '#' || k === 'G' || k === 'O' || k === 'W') return false;
-  if (k === '1' || k === '2' || k === '3' || k === '4' || k === 'Z') return W.doors[k].open;
+  if (k === '#' || k === 'G' || k === 'O' || k === 'W' || k === 'R') return false;
   if (k === 'E') return W.gate.open;
+  if (W.doors[k]) return W.doors[k].open;
   return true;
 }
 function los(a, b) {
@@ -809,7 +1028,7 @@ function randomFloorNear(c0, r0, radius) {
   for (let i = 0; i < 40; i++) {
     const c = c0 + Math.round((Math.random() * 2 - 1) * radius), r = r0 + Math.round((Math.random() * 2 - 1) * radius);
     const k = ch(c, r);
-    if (passable(c, r) && k !== 'X' && k !== 'E') return [c, r];
+    if (passable(c, r) && !'XEhke'.includes(k)) return [c, r];
   }
   return [c0, r0];
 }
@@ -828,6 +1047,7 @@ const P = {
 
 // ----- Monster -----
 const monster = new MonsterModel();
+mergeSiblings(monster.root, animatedParts(monster));
 tuneEnv(monster.root, 0.3);
 scene.add(monster.root);
 const M = {
@@ -876,8 +1096,9 @@ const hands = [0, 1].map(side => {
   const world = makeHand(color); world.scale.setScalar(1.6); world.visible = false; scene.add(world);
   const cable = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 1, 6), new THREE.MeshStandardMaterial({ color: 0x222226, roughness: 0.6 }));
   cable.visible = false; scene.add(cable);
+  const mats = [hand.children[0].material, world.children[0].material];
   return {
-    side, vm, hand, carryBat, rest, world, cable, state: 'idle', pos: new THREE.Vector3(), target: new THREE.Vector3(),
+    side, vm, hand, carryBat, rest, world, cable, mats, chargeT: 0, state: 'idle', pos: new THREE.Vector3(), target: new THREE.Vector3(),
     hit: null, grabbing: null, carrying: null, kick: 0, muzzleLocal: new THREE.Vector3(side ? 0.28 : -0.28, -0.25, -0.5),
   };
 });
@@ -900,10 +1121,10 @@ function say(text, dur = 4, who = '') {
   const label = who === 'TAILOR' ? 'THE TAILOR' : who;
   hud.sub.innerHTML = who ? `<b style="color:${colors[who] || '#ffcc33'}">${label}:</b> ${text}` : text;
   hud.sub.style.opacity = 1; subTimer = dur;
-  if (who === 'MILA') { audio.radio(); audio.speak(text, 'MILA'); }
-  if (who === 'TAILOR') { audio.growl(0.5); audio.speak(text, 'TAILOR'); }
-  if (who === 'ZIPPER') { audio.zipper(); audio.speak(text, 'ZIPPER', { urgent: true }); }
-  if (who === 'DURCHSAGE') { audio.chime(); setTimeout(() => audio.speak(text, 'DURCHSAGE'), 900); }
+  if (who === 'MILA') { audio.radio(); voice(text, 'MILA'); }
+  if (who === 'TAILOR') { audio.growl(0.5); voice(text, 'TAILOR'); }
+  if (who === 'ZIPPER') { audio.zipper(); voice(text, 'ZIPPER', { urgent: true }); }
+  if (who === 'DURCHSAGE') { audio.chime(); setTimeout(() => voice(text, 'DURCHSAGE'), 900); }
 }
 function objective(t) { hud.obj.textContent = t; }
 function updateBatteryHud() { [...hud.bats.children].forEach((el, i) => el.classList.toggle('on', i < G.placed)); }
@@ -914,7 +1135,8 @@ function schedule(delay, fn) { G.events.push({ t: G.time + delay, fn }); }
 // ======================================================================
 function resetGame() {
   buildWorld();
-  Object.assign(G, { time: 0, flash: true, placed: 0, powered: false, monsterAwake: false, noise: null, chase: 0, blackout: 0, focus: null, events: [], leversPulled: 0, shake: 0, part2: false, hasKey: false, zone3: false, fusesTaken: 0, fusesIn: 0, liftT: 0, liftReady: false });
+  Object.assign(G, { time: 0, flash: true, placed: 0, powered: false, monsterAwake: false, noise: null, chase: 0, blackout: 0, focus: null, events: [], leversPulled: 0, shake: 0, part2: false, hasKey: false, zone3: false, fusesTaken: 0, fusesIn: 0, liftT: 0, liftReady: false, zone4: false, zipperL: false, codeOk: false, zone5: false, zipperK: false, finalChase: false });
+  for (const h of hands) h.chargeT = 0;
   audio.alarm = false;
   P.pos.copy(W.start); P.vel.set(0, 0, 0); P.yaw = W.startYaw; P.pitch = 0; P.eye = EYE; P.stamina = 100; P.hidden = null; P.exhausted = false;
   M.pos.copy(W.monsterStart); M.yaw = Math.atan2(W.start.x - W.monsterStart.x, W.start.z - W.monsterStart.z); M.state = 'dormant'; M.path = null; M.aware = 0; M.lost = 0; M.sawHide = false; M.speed = 0; M.growlT = 8;
@@ -937,7 +1159,7 @@ function resetGame() {
 // ======================================================================
 //  Speicherpunkte: automatisch an wichtigen Stellen, „Fortsetzen“ im Menü
 // ======================================================================
-const SAVE_KEY = 'stitched-save-v2'; // v2: neue Batterie-Plätze
+const SAVE_KEY = 'stitched-save-v3'; // v3: längeres Kapitel (Lager, Spielzimmer, Tunnel)
 function readSave() { try { return JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); } catch (e) { return null; } }
 function clearSave() { try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* egal */ } updateContinueBtn(); }
 let saveTagT = 0;
@@ -950,6 +1172,8 @@ function checkpoint() {
     levers: W.levers.filter(l => l.pulled).map(l => l.id),
     awake: G.monsterAwake, part2: !!G.part2, key: !!G.hasKey, keyDoor: !!W.doors['Z']?.open,
     zone3: !!G.zone3, fuses: W.fuses.map((f, i) => (f.taken ? i : -1)).filter(i => i >= 0), fusesIn: G.fusesIn, lift: G.liftT > 0 || G.liftReady,
+    gateH: !!G.liftReady, zone4: !!G.zone4, zipperL: !!G.zipperL, cubes: W.cubes.map((c, i) => (c.found ? i : -1)).filter(i => i >= 0), codeOk: !!G.codeOk,
+    zone5: !!G.zone5, zipperK: !!G.zipperK, receivers: W.receivers.map((r, i) => (r.powered ? i : -1)).filter(i => i >= 0), final: !!G.finalChase,
     pos: [P.pos.x, P.pos.z], yaw: P.yaw, time: G.time,
   };
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); } catch (e) { return; }
@@ -991,7 +1215,7 @@ function applySave(d) {
     for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
       if (!passable(c, r) || '.KNL'.indexOf(ch(c, r)) < 0) continue;
       const cc = center(c, r), dd = cc.distanceTo(P.pos);
-      if (dd > bestD && !los(cc, P.pos) && (!d.part2 || r >= 14) && findPath([c, r], toCell(P.pos.x, P.pos.z))) { bestD = dd; best = cc; }
+      if (dd > bestD && dd < 60 && !los(cc, P.pos) && zoneOf(r) === zoneOf(toCell(P.pos.x, P.pos.z)[1]) && findPath([c, r], toCell(P.pos.x, P.pos.z))) { bestD = dd; best = cc; }
     }
     if (best) M.pos.copy(best);
     else if (d.part2 && W.vent) M.pos.set(W.vent.pos.x, 0, W.vent.pos.z); // Notfall: an der Lüftung warten
@@ -1010,9 +1234,58 @@ function applySave(d) {
     for (let k = 0; k < G.fusesIn; k++) { W.fusebox.slots[k].fuse.visible = true; W.fusebox.slots[k].ind.color.set(0x30ff60); }
     monster.root.visible = false; M.state = 'patrol'; M.pos.set(W.vent.pos.x, 0, W.vent.pos.z); M.aware = 0;
     fuseObjective();
-    if (d.lift) callLift(); // Finale neu starten: 20 Sekunden durchhalten
+    if (d.lift && !d.gateH) callLift(); // 20 Sekunden durchhalten, bis das Lagertor offen ist
+    if (d.gateH) { G.liftReady = true; const H = W.doors['H']; H.open = true; H.opening = true; H.t = 1; H.box.on = false; H.mesh.position.y = WALL_H / 2 + (WALL_H - 0.35); H.indMat.color.set(0x30ff60); fuseObjective(); }
+    if (d.zone4) applyLaterZones(d);
   } else if (d.part2) objective(d.keyDoor ? 'Schnell in den Aufzug!' : d.key ? 'Öffne die gelbe Sicherheitstür mit der Karte!' : 'Finde die Schlüsselkarte in der Nähstube.');
   else if (G.placed >= 3) powerOn();
+}
+
+// Bereiche nach der Montagehalle wiederherstellen
+function zoneOf(r) { return r <= 10 ? 0 : r <= 20 ? 1 : r <= 33 ? 2 : r <= 43 ? 3 : r <= 53 ? 4 : 5; }
+function shutDoor(id) { const x = W.doors[id]; if (!x) return; x.open = false; x.opening = false; x.closing = false; x.t = 0; x.box.on = true; x.mesh.position.y = WALL_H / 2; x.indMat.color.set(0xff2020); }
+function setOpen(id) { const x = W.doors[id]; if (!x) return; x.open = true; x.opening = true; x.closing = false; x.t = 1; x.box.on = false; x.mesh.position.y = WALL_H / 2 + (WALL_H - 0.35); x.indMat.color.set(0x30ff60); }
+function placeZipperAway() {
+  let best = null, bestD = 0;
+  const pz = zoneOf(toCell(P.pos.x, P.pos.z)[1]);
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    if (!passable(c, r) || '.KNL'.indexOf(ch(c, r)) < 0 || zoneOf(r) !== pz) continue;
+    const cc = center(c, r), dd = cc.distanceTo(P.pos);
+    if (dd > bestD && !los(cc, P.pos) && findPath([c, r], toCell(P.pos.x, P.pos.z))) { bestD = dd; best = cc; }
+  }
+  if (best) M.pos.copy(best);
+  M.state = 'patrol'; M.wait = 5; M.path = null; M.aware = 0; M.lost = 0; M.sawHide = false;
+  monster.setAngry(false); monster.root.visible = true; G.monsterAwake = true;
+}
+function hideZipperAt(v) { M.pos.set(v.pos.x, 0, v.pos.z); M.state = 'patrol'; M.path = null; M.wait = 4; M.aware = 0; monster.setAngry(false); monster.root.visible = false; }
+function applyLaterZones(d) {
+  audio.alarm = false;
+  G.events = []; // keine alten Ereignisse aus der Montagehalle
+  G.liftT = 0; G.liftReady = true; G.zone4 = true;
+  shutDoor('H');
+  for (const l of W.lamps) if (l.base < 26 && !l.fixed) { l.color.set(0xffa860); l.bulbMat.color.set(0xffa860); l.shaftMat.color.set(0xffd9a0); }
+  for (const i of d.cubes || []) { const cb = W.cubes[i]; if (cb) { cb.found = true; cb.glow.visible = false; } }
+  if (d.codeOk) { G.codeOk = true; setOpen('5'); }
+  if (!d.zone5) {
+    if (d.zipperL) { G.zipperL = true; placeZipperAway(); } else { hideZipperAt(W.vent2); schedule(25, () => zipperSneaksIn('L')); }
+    storageObjective(); updateCodeHud();
+    monster.root.position.set(M.pos.x, 0, M.pos.z);
+    return;
+  }
+  G.zone5 = true; shutDoor('5'); updateCodeHud();
+  for (const i of d.receivers || []) { const rc = W.receivers[i]; if (rc) { rc.powered = true; rc.ind.color.set(0x30ff60); } }
+  const n = W.receivers.filter(r => r.powered).length;
+  if (n >= 2) setOpen('6'); else if (n === 1) W.doors['6'].indMat.color.set(0xffc020);
+  if (d.final) {
+    // letzte Jagd neu starten: am Tunnel-Anfang, Zipper wieder hinter dir
+    P.pos.copy(center(...W.finalCell)); P.yaw = Math.PI; collide(P.pos, PR);
+    startFinalChase(true);
+    say('Letzter Speicherpunkt geladen. <b>RENN!</b>', 3);
+  } else if (d.zipperK) { G.zipperK = true; placeZipperAway(); }
+  else if (n >= 1) { hideZipperAt(W.ventL); schedule(4, () => zipperSneaksIn('K')); }
+  else hideZipperAt(W.ventL);
+  playObjective();
+  monster.root.position.set(M.pos.x, 0, M.pos.z);
 }
 
 function startGame(fromSave) {
@@ -1023,6 +1296,7 @@ function startGame(fromSave) {
   audio.stopSpeech();
   audio.setVolume(settings.vol);
   audio.setAmbience(true);
+  voiceBank.preload(audio.ctx);
   resetGame();
   if (save) applySave(save);
   showScreen(null);
@@ -1076,7 +1350,7 @@ function powerOn() {
   schedule(2.5, () => {
     W.gate.opening = true; audio.door(); audio.alarm = true;
     W.gate.indMat.color.set(0x30ff60);
-    for (const l of W.lamps) if (l.base < 26) { l.color.set(0xff2a18); l.bulbMat.color.set(0xff2a18); l.shaftMat.color.set(0xff3020); l.flicker = true; }
+    for (const l of W.lamps) if (l.base < 26 && !l.fixed) { l.color.set(0xff2a18); l.bulbMat.color.set(0xff2a18); l.shaftMat.color.set(0xff3020); l.flicker = true; }
     say('Der Generator läuft! Das Tor ist offen – <b>LAUF!</b>', 5, 'MILA');
     schedule(5.5, () => say('Lauf nur. Du kannst mir nicht entkommen. Ich halte alle Fäden.', 5, 'TAILOR'));
     objective('FLIEH DURCH DAS AUSGANGSTOR!');
@@ -1099,7 +1373,7 @@ function enterPart2() {
   const g = W.gate; g.opening = false; g.closing = true; g.open = false; g.box.on = true;
   g.indMat.color.set(0xff2020);
   audio.alarm = false; audio.door();
-  for (const l of W.lamps) if (l.base < 26) { l.color.set(0xffa860); l.bulbMat.color.set(0xffa860); l.shaftMat.color.set(0xffd9a0); l.flicker = Math.random() < 0.3; }
+  for (const l of W.lamps) if (l.base < 26 && !l.fixed) { l.color.set(0xffa860); l.bulbMat.color.set(0xffa860); l.shaftMat.color.set(0xffd9a0); l.flicker = Math.random() < 0.3; }
   // Zipper bleibt hinter dem Tor zurück
   M.pos.copy(W.monsterStart); M.state = 'patrol'; M.path = null; M.wait = 4; M.aware = 0; M.lost = 0; M.sawHide = false;
   monster.setAngry(false); monster.root.visible = false;
@@ -1145,10 +1419,10 @@ function openKeyDoor() {
   say('Die Tür geht auf – schnell durch!', 3, 'MILA');
 }
 
-// Bereich „Die Montagehalle“: Sicherheitstür knallt zu, 2 Sicherungen, Aufzug rufen
+// Bereich „Die Montagehalle“: Sicherheitstür knallt zu, 2 Sicherungen, Lagertor öffnen
 function fuseObjective() {
-  if (G.liftReady) return objective('Der Aufzug ist da – REIN!');
-  if (G.liftT > 0) return objective(`Halte durch! Aufzug kommt in ${Math.ceil(G.liftT)} s`);
+  if (G.liftReady) return objective('Das Lagertor ist offen – REIN!');
+  if (G.liftT > 0) return objective(`Halte durch! Das Lagertor öffnet sich in ${Math.ceil(G.liftT)} s`);
   const have = G.fusesTaken - G.fusesIn;
   objective(have > 0 ? `Setz die Sicherungen in den Kasten am Aufzug (${G.fusesTaken}/2)` : `Finde 2 Sicherungen für den Aufzug (${G.fusesTaken}/2)`);
 }
@@ -1182,23 +1456,186 @@ function insertFuses() {
   audio.insertBattery();
   if (G.fusesIn >= 2) callLift(); else { say('Eine Sicherung sitzt. Noch eine.', 3); fuseObjective(); checkpoint(); }
 }
-// Aufzug rufen: 20 Sekunden durchhalten, während Zipper aus der zweiten Lüftung bricht
+// Strom ist da – aber der Aufzug ist kaputt. Das Lagertor braucht 20 Sekunden, während Zipper aus der Lüftung bricht.
 function callLift() {
   if (G.liftT > 0 || G.liftReady) return;
   G.liftT = 20;
-  say('Achtung. Aufzug wird gerufen. Ankunft in zwanzig Sekunden.', 4, 'DURCHSAGE');
+  say('Achtung. Aufzug defekt. Lagertor wird geöffnet. Bitte zwanzig Sekunden warten.', 4.5, 'DURCHSAGE');
+  schedule(5, () => { if (!G.zone4) say('Das Seil vom Aufzug ist gerissen! Wir müssen durchs Lager – dahinter gibt es einen <b>Lastenaufzug</b>.', 5, 'MILA'); });
   checkpoint();
   monster.root.visible = true;
-  zipperFromVent(W.vent2, 'Er ist in der Halle! <b>Halte durch, bis der Aufzug da ist!</b>');
+  zipperFromVent(W.vent2, 'Er ist in der Halle! <b>Halte durch, bis das Tor offen ist!</b>');
 }
 function updateLift(dt) {
   if (!(G.liftT > 0)) return;
   G.liftT -= dt;
   if (G.liftT <= 0) {
     G.liftT = 0; G.liftReady = true; audio.chime();
-    say('Der Aufzug ist da! <b>REIN!</b>', 4, 'MILA');
+    const H = W.doors['H']; if (H) { H.opening = true; audio.door(); H.indMat.color.set(0x30ff60); }
+    say('Das Tor ist offen! <b>REIN INS LAGER!</b>', 4, 'MILA');
   }
   fuseObjective();
+}
+
+// ----------------------------------------------------------------------
+//  Bereich „Das Spielzeuglager“: Regal-Labyrinth, 4 Zahlenwürfel, Zahlenschloss
+// ----------------------------------------------------------------------
+function storageObjective() {
+  if (G.codeOk) return objective('Die Tür ist offen – geh ins Spielzimmer!');
+  const n = W.cubes.filter(c => c.found).length;
+  objective(n < 4 ? `Finde die 4 Zahlenwürfel im Lager (${n}/4)` : 'Gib den Code am Zahlenschloss ein!');
+}
+function updateCodeHud() {
+  const el = $('codeHud');
+  el.classList.toggle('hidden', !G.zone4 || G.zone5);
+  el.innerHTML = '<span class="label">CODE</span>' + CUBE_ORDER.map(col => {
+    const cb = W.cubes.find(c => c.color === col);
+    return `<i style="border-color:${CUBE_COLORS[col]};color:${CUBE_COLORS[col]}">${cb && cb.found ? cb.digit : '?'}</i>`;
+  }).join('');
+}
+function enterStorage() {
+  if (G.zone4) return;
+  G.zone4 = true;
+  const H = W.doors['H']; H.opening = false; H.closing = true; H.open = false; H.box.on = true; H.indMat.color.set(0xff2020);
+  audio.door(); audio.alarm = false;
+  // Zipper bleibt hinter dem Tor in der Montagehalle
+  M.pos.set(W.vent2.pos.x, 0, W.vent2.pos.z); M.state = 'patrol'; M.path = null; M.wait = 4; M.aware = 0; M.lost = 0; M.sawHide = false;
+  monster.setAngry(false); monster.root.visible = false;
+  for (const l of W.lamps) if (l.base < 26 && !l.fixed) { l.color.set(0xffa860); l.bulbMat.color.set(0xffa860); l.shaftMat.color.set(0xffd9a0); }
+  storageObjective(); updateCodeHud();
+  say('Puh … das Tor ist zu. Das ist das Spielzeuglager.', 4, 'MILA');
+  schedule(4.5, () => say('Die Tür zum Spielzimmer hat ein <b>Zahlenschloss</b>. Die Zahlen stehen auf den großen Spielwürfeln.', 5.5, 'MILA'));
+  schedule(11, () => say('So viele Regale … So viele Verstecke. Er findet dich trotzdem.', 4.5, 'TAILOR'));
+  schedule(0.8, checkpoint);
+  schedule(30, () => zipperSneaksIn('L'));
+}
+// Zipper kriecht leise durch eine Lüftung herein – er sucht dich, jagt aber noch nicht
+function zipperSneaksIn(zone) {
+  if (zone === 'L' ? (G.zipperL || !G.zone4 || G.zone5) : (G.zipperK || !G.zone5 || G.finalChase)) return;
+  const v = zone === 'L' ? W.ventL : W.ventK;
+  if (!v) return;
+  if (zone === 'L') G.zipperL = true; else G.zipperK = true;
+  G.blackout = 1.6; audio.powerDown();
+  schedule(1.0, () => {
+    M.pos.set(v.pos.x + v.dir[0] * 1.2, 0, v.pos.z + v.dir[1] * 1.2);
+    M.yaw = Math.atan2(-v.dir[0], -v.dir[1]); M.state = 'patrol'; M.path = null; M.wait = 2; M.aware = 0; M.lost = 0;
+    monster.root.visible = true; monster.setAngry(false); monster.root.position.set(M.pos.x, 0, M.pos.z);
+    audio.setMonsterPos(M.pos); audio.metalBang(); audio.zipper();
+    G.monsterAwake = true;
+  });
+  schedule(2.2, () => {
+    if (zone === 'L') say('Hörst du das? Er ist durch die Lüftung ins Lager gekrochen! <b>Duck dich</b> und bleib zwischen den Regalen.', 5, 'MILA');
+    else say('Oh nein … er ist hier drin! Versteck dich, wenn er kommt – und lade die Hand weiter auf!', 5, 'MILA');
+  });
+  schedule(6.5, () => say('Wo bist du … ich höre dich …', 3, 'ZIPPER'));
+  schedule(2.5, checkpoint);
+}
+function findCube(cb) {
+  if (!cb || cb.found) return;
+  cb.found = true; cb.glow.visible = false; cb.mesh.material.emissiveIntensity = 0;
+  audio.chime();
+  const n = W.cubes.filter(c => c.found).length;
+  const names = { red: 'Rot', yellow: 'Gelb', green: 'Grün', blue: 'Blau' };
+  say(n < 4 ? `${names[cb.color]}er Würfel: <b>${cb.digit}</b>. (${n}/4)` : 'Alle vier Zahlen! Ab zum Zahlenschloss an der Tür.', 3.5);
+  storageObjective(); updateCodeHud();
+  if (n === 1 && !G.zipperL) schedule(4, () => zipperSneaksIn('L'));
+  checkpoint();
+}
+// Zahlenschloss: eigenes kleines Fenster mit Ziffernfeld
+let codeInput = '';
+function openKeypad() {
+  if (G.codeOk) return;
+  G.mode = 'keypad'; codeInput = ''; renderKeypad();
+  $('keypad').classList.remove('hidden'); unlock();
+}
+function closeKeypad() { $('keypad').classList.add('hidden'); if (G.mode === 'keypad') { G.mode = 'playing'; lockPointer(); } }
+function renderKeypad() { $('kpDisplay').textContent = (codeInput + '____').slice(0, 4).split('').join(' '); }
+function keypadPress(k) {
+  if (G.mode !== 'keypad') return;
+  audio.flashClick();
+  if (k === 'C') codeInput = '';
+  else if (k === 'OK') {
+    if (codeInput === DOOR_CODE) { closeKeypad(); codeAccepted(); return; }
+    codeInput = ''; $('kpDisplay').classList.add('wrong'); setTimeout(() => $('kpDisplay').classList.remove('wrong'), 500);
+    audio.beep(false);
+    G.noise = { pos: P.pos.clone(), radius: 14, t: 0.3 }; // das Piepen ist laut …
+  } else if (codeInput.length < 4) codeInput += k;
+  renderKeypad();
+}
+function codeAccepted() {
+  G.codeOk = true; audio.beep(true);
+  const d = W.doors['5']; d.opening = true; audio.door(); d.indMat.color.set(0x30ff60);
+  storageObjective(); checkpoint();
+  say('Richtig! Die Tür geht auf.', 3, 'MILA');
+}
+
+// ----------------------------------------------------------------------
+//  Bereich „Das Spielzimmer“: Hand an der Stromspule laden, zwei Empfänger
+// ----------------------------------------------------------------------
+const CHARGE_TIME = 15;
+function playObjective() {
+  if (G.finalChase) return objective('RENN ZUM LASTENAUFZUG!');
+  const n = W.receivers.filter(r => r.powered).length;
+  if (n >= 2) return objective('Die Strom-Tür ist offen – zum Lastenaufzug!');
+  const ch2 = hands.find(h => h.chargeT > 0);
+  objective(ch2 ? `Hand geladen (${Math.ceil(ch2.chargeT)} s) – schieß sie auf einen Empfänger! (${n}/2)` : `Lade eine Hand an der Stromspule und bring Strom zu den Empfängern (${n}/2)`);
+}
+function enterPlayroom() {
+  if (G.zone5) return;
+  G.zone5 = true;
+  const d = W.doors['5']; d.opening = false; d.closing = true; d.open = false; d.box.on = true; d.indMat.color.set(0xff2020);
+  audio.door();
+  M.pos.set(W.ventL.pos.x, 0, W.ventL.pos.z); M.state = 'patrol'; M.path = null; M.wait = 4; M.aware = 0; M.lost = 0; M.sawHide = false;
+  monster.setAngry(false); monster.root.visible = false;
+  updateCodeHud(); playObjective();
+  say('Die Tür ist zu. Das hier war früher das Spielzimmer.', 4, 'MILA');
+  schedule(4.5, () => say('Die Tür zum Lastenaufzug braucht Strom. Schieß eine Hand auf die <b>Stromspule</b>, dann ist sie geladen.', 5.5, 'MILA'));
+  schedule(10.5, () => say('Dann schnell zu einem <b>Empfänger</b> an der Wand und die geladene Hand darauf schießen. Es gibt zwei.', 5.5, 'MILA'));
+  schedule(17, () => say('Mein liebes Spielzimmer. Hier habe ich Mila das Sprechen beigebracht.', 5, 'TAILOR'));
+  schedule(0.8, checkpoint);
+}
+function chargeHand(h) {
+  h.chargeT = CHARGE_TIME; audio.zap();
+  if (!G.chargedOnce) { G.chargedOnce = true; say('Die Hand ist geladen! Schnell – die Ladung hält nicht lange.', 3.5, 'MILA'); }
+  playObjective();
+}
+function powerReceiver(rc, h) {
+  if (rc.powered) return;
+  if (!(h.chargeT > 0)) { say('Die Hand hat keinen Strom. Lade sie erst an der Spule.', 3); return; }
+  h.chargeT = 0; rc.powered = true; rc.ind.color.set(0x30ff60); audio.zap(); audio.powerUp();
+  const n = W.receivers.filter(r => r.powered).length;
+  const d = W.doors['6'];
+  if (n === 1) {
+    d.indMat.color.set(0xffc020);
+    say('Einer ist an! Noch ein Empfänger.', 3, 'MILA');
+    schedule(3.5, () => zipperSneaksIn('K'));
+  } else {
+    d.opening = true; audio.door(); d.indMat.color.set(0x30ff60);
+    say('Beide Empfänger haben Strom! Die Tür ist offen – <b>zum Lastenaufzug!</b>', 4.5, 'MILA');
+  }
+  playObjective(); checkpoint();
+}
+
+// ----------------------------------------------------------------------
+//  Bereich „Der Förderband-Tunnel“: die letzte Verfolgungsjagd
+// ----------------------------------------------------------------------
+function startFinalChase(fromSave) {
+  if (G.finalChase && !fromSave) return;
+  G.finalChase = true;
+  const d = W.doors['6']; d.opening = false; d.closing = false; d.open = true; d.box.on = false;
+  if (!fromSave) checkpoint();
+  // Zipper bricht hinter dir durch – ein paar Meter Vorsprung
+  const back = center(9, 51);
+  M.pos.copy(back); M.yaw = 0; M.path = null;
+  monster.root.visible = true; monster.root.position.set(M.pos.x, 0, M.pos.z);
+  G.monsterAwake = true; P.stamina = 100; P.exhausted = false;
+  G.blackout = 0.6; G.shake = 1.2; audio.metalBang(); audio.alarm = true;
+  for (const l of W.lamps) if (l.base < 26 && !l.fixed) { l.color.set(0xff2a18); l.bulbMat.color.set(0xff2a18); l.shaftMat.color.set(0xff3020); }
+  startChase(true); audio.setMonsterPos(M.pos); audio.roar();
+  playObjective();
+  say('Er ist direkt hinter dir! <b>RENN!</b> Bleib nicht stehen!', 4, 'MILA');
+  schedule(5, () => say('Du gehörst MIR! Zipper, bring ihn zurück!', 4, 'TAILOR'));
+  schedule(14, () => say('Gleich geschafft! Der Lastenaufzug ist am Ende vom Tunnel!', 4, 'MILA'));
 }
 
 const ZIPPER_LINES = ['Ich näh dich fest …', 'Zipper hat dich gefunden …', 'Bleib bei mir … für immer.', 'Komm her … lächle für mich.', 'Wir spielen für immer.'];
@@ -1241,7 +1678,7 @@ function toggleLocker(lk) {
 
 function openNote(n) {
   G.mode = 'note'; n.read = true; audio.paper();
-  const all = [...NOTES, ...NOTES_PART2], note = all[n.idx % all.length];
+  const all = [...NOTES, ...NOTES_PART2, ...NOTES_PART3], note = all[n.idx % all.length];
   $('noteTitle').textContent = note.title;
   $('noteBody').textContent = note.body;
   $('note').classList.remove('hidden');
@@ -1280,6 +1717,13 @@ function unlock() { if (document.pointerLockElement) document.exitPointerLock();
 addEventListener('keydown', e => {
   keys[e.code] = true;
   if (G.mode === 'note' && (e.code === 'KeyE' || e.code === 'Escape' || e.code === 'Space')) { closeNote(); return; }
+  if (G.mode === 'keypad') {
+    if (/^(Digit|Numpad)[0-9]$/.test(e.code)) keypadPress(e.code.slice(-1));
+    else if (e.code === 'Backspace' || e.code === 'KeyC') keypadPress('C');
+    else if (e.code === 'Enter' || e.code === 'NumpadEnter') keypadPress('OK');
+    else if (e.code === 'Escape') closeKeypad();
+    return;
+  }
   if (G.mode !== 'playing') return;
   if (e.code === 'KeyE') interact();
   if (e.code === 'KeyF') toggleFlash();
@@ -1362,6 +1806,8 @@ function toggleFlash() { G.flash = !G.flash; audio.flashClick(); }
   btn('tCrouch', el => { touch.crouch = !touch.crouch; if (touch.crouch) { touch.run = false; $('tRun').classList.remove('active'); } el.classList.toggle('active', touch.crouch); });
   btn('tPause', () => pause());
   $('note').addEventListener('pointerdown', () => { if (G.mode === 'note') closeNote(); });
+  document.querySelectorAll('#keypad .keys button').forEach(b => b.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); keypadPress(b.dataset.k); }));
+  $('kpClose').addEventListener('click', e => { e.stopPropagation(); closeKeypad(); });
 })();
 
 // ======================================================================
@@ -1398,6 +1844,14 @@ function updateFocus() {
     else if (o.kind === 'fusebox' && d < 4) { const have = G.fusesTaken - G.fusesIn; hot = have > 0; text = have > 0 ? '[E] Sicherung einsetzen' : `Sicherungskasten · ${G.fusesIn}/2`; }
     else if (o.kind === 'keydoor' && !o.open && !o.opening && d < 5) { hot = G.hasKey; text = G.hasKey ? '[E] Karte an die Tür halten' : 'Gesperrt. Hier brauchst du die Schlüsselkarte.'; }
     else if (o.kind === 'door' && !o.open && !o.opening && d < 6) text = 'Verschlossen. Irgendwo muss ein Hebel mit dieser Farbe sein.';
+    else if (o.kind === 'cube' && !o.found) { hot = true; text = d < 3 ? '[E] / Hand: Zahl merken' : 'Hand schießen: Zahl merken'; }
+    else if (o.kind === 'cube' && o.found && d < 6) text = `Würfel: ${o.digit}`;
+    else if (o.kind === 'keypad' && d < 3.2 && !G.codeOk) { hot = true; text = '[E] Code eingeben'; }
+    else if (o.kind === 'codedoor' && !o.open && !o.opening && d < 6) text = 'Verschlossen. Daneben ist ein Zahlenschloss.';
+    else if (o.kind === 'shutter' && !o.open && !o.opening && d < 6) text = G.liftT > 0 ? 'Das Tor öffnet sich gleich …' : 'Das Lagertor hat keinen Strom.';
+    else if (o.kind === 'powerdoor' && !o.open && !o.opening && d < 6) text = 'Keine Energie. Bring Strom zu den zwei Empfängern.';
+    else if (o.kind === 'coil') { hot = true; text = 'Hand schießen: Hand aufladen'; }
+    else if (o.kind === 'receiver' && !o.powered) { const ch3 = hands.some(h => h.chargeT > 0); hot = ch3; text = ch3 ? 'Geladene Hand schießen: Strom geben' : 'Empfänger · braucht eine geladene Hand'; }
   }
   if (isTouch) text = text.replace('[E] / ', '').replace('[E]', 'E:');
   hud.prompt.textContent = text;
@@ -1420,6 +1874,10 @@ function interact() {
     takeFuse(o);
   } else if (o.kind === 'fusebox' && a.dist < 4) {
     insertFuses();
+  } else if (o.kind === 'cube' && !o.found && a.dist < 3) {
+    findCube(o);
+  } else if (o.kind === 'keypad' && a.dist < 3.2) {
+    openKeypad();
   } else if (o.kind === 'keydoor' && G.hasKey && a.dist < 5) {
     openKeyDoor();
   } else if (o.kind === 'battery' && !o.taken && a.dist < 2.6) {
@@ -1453,7 +1911,7 @@ function fire(side) {
   const a = aim(15);
   camera.getWorldDirection(_fwd);
   h.target.copy(a ? a.point : _v.copy(camera.position).addScaledVector(_fwd, 15));
-  h.hit = a && a.obj && ['battery', 'lever', 'key', 'fuse'].includes(a.obj.kind) ? a.obj : null;
+  h.hit = a && a.obj && ['battery', 'lever', 'key', 'fuse', 'cube', 'coil', 'receiver'].includes(a.obj.kind) ? a.obj : null;
   h.pos.copy(camera.localToWorld(_v2.copy(h.muzzleLocal)));
   h.state = 'out'; h.kick = 1;
   h.hand.visible = false;
@@ -1467,6 +1925,15 @@ function updateHands(dt) {
   camera.updateMatrixWorld();
   for (const h of hands) {
     h.kick = Math.max(0, h.kick - dt * 4);
+    // geladene Hand leuchtet blau und knistert
+    if (h.chargeT > 0) {
+      h.chargeT -= dt;
+      const e = 0.5 + Math.random() * 0.5;
+      h.mats.forEach(m => { m.emissive.setRGB(0.15 * e, 0.45 * e, 1.0 * e); });
+      if (Math.random() < dt * 3) audio.spark?.();
+      if (h.chargeT <= 0) { h.chargeT = 0; h.mats.forEach(m => m.emissive.set(0)); if (G.zone5) { say('Die Ladung ist weg. Lade die Hand nochmal an der Spule.', 3); } }
+      if (G.zone5) playObjective();
+    }
     const muzzle = camera.localToWorld(_v2.copy(h.muzzleLocal));
     if (h.state === 'out') {
       _v.subVectors(h.target, h.pos); const d = _v.length(), step = 42 * dt;
@@ -1477,6 +1944,9 @@ function updateHands(dt) {
           if (h.hit.kind === 'key') takeKey();
           if (h.hit.kind === 'fuse') takeFuse(h.hit);
           if (h.hit.kind === 'lever') pullLever(h.hit);
+          if (h.hit.kind === 'cube') findCube(h.hit);
+          if (h.hit.kind === 'coil') chargeHand(h);
+          if (h.hit.kind === 'receiver') powerReceiver(h.hit, h);
         }
         h.hit = null;
         audio.grabReturn();
@@ -1541,7 +2011,7 @@ function updatePlayer(dt) {
 
   P.crouch = !!(keys.KeyC || touch.crouch);
   let sprint = !!(keys.ShiftLeft || keys.ShiftRight || touch.run) && moving && !P.crouch && !P.exhausted;
-  if (sprint) { P.stamina -= 16 * dt; P.staminaDelay = 0.9; if (P.stamina <= 0) { P.stamina = 0; P.exhausted = true; sprint = false; } }
+  if (sprint) { P.stamina -= (G.finalChase ? 0 : 16) * dt; P.staminaDelay = 0.9; if (P.stamina <= 0) { P.stamina = 0; P.exhausted = true; sprint = false; } }
   else { P.staminaDelay -= dt; if (P.staminaDelay <= 0) P.stamina = Math.min(100, P.stamina + 24 * dt); if (P.stamina > 30) P.exhausted = false; }
 
   let speed = P.crouch ? 3.0 : sprint ? 6.4 : 4.0; // geduckt fast so schnell wie gehen
@@ -1576,7 +2046,10 @@ function updatePlayer(dt) {
   const [c, r] = toCell(P.pos.x, P.pos.z);
   if (W.part2Cell && !G.part2 && c === W.part2Cell[0] && r === W.part2Cell[1]) enterPart2();
   if (G.part2 && !G.zone3 && W.doors['Z']?.open && r >= 22) enterAssembly();
-  if (W.exitCell && c === W.exitCell[0] && r === W.exitCell[1] && G.liftReady) win();
+  if (W.storeCell && G.liftReady && !G.zone4 && r >= W.storeCell[1]) enterStorage();
+  if (W.playCell && G.codeOk && !G.zone5 && r >= W.playCell[1]) enterPlayroom();
+  if (W.finalCell && G.zone5 && !G.finalChase && r >= W.finalCell[1]) startFinalChase();
+  if (W.exitCell && c === W.exitCell[0] && r === W.exitCell[1] && G.finalChase) win();
 }
 
 function lightAt(pos) {
@@ -1656,7 +2129,7 @@ function updateMonster(dt) {
     if (!M.path || !M.path.length) { const [lc, lr] = toCell(M.lastSeen.x, M.lastSeen.z); monsterGoTo(randomFloorNear(lc, lr, 3)); }
     if (M.search <= 0) { M.state = 'patrol'; monster.setAngry(false); M.path = null; }
   } else if (M.state === 'chase') {
-    speed = G.powered ? 4.4 : 3.9; // langsamer als der Spieler beim Rennen (6.4)
+    speed = G.finalChase ? 5.3 : G.powered ? 4.4 : 3.9; // langsamer als der Spieler beim Rennen (6.4) – im Tunnel schneller als Gehen
     if (M.sees) { M.lastSeen.copy(P.pos); M.lost = 0; }
     else M.lost += dt * (P.hidden && !M.sawHide ? 2.5 : 1);
     if (P.hidden && M.sawHide) {
@@ -1665,7 +2138,7 @@ function updateMonster(dt) {
       if (M.pos.distanceTo(fr) < 3) dest = fr;
       else { M.pathT -= dt; if (M.pathT <= 0 || !M.path) { M.pathT = 0.3; monsterGoTo(toCell(fr.x, fr.z)); } }
       if (M.pos.distanceTo(fr) < 1.3) { die(); return; }
-    } else if (M.lost > (G.powered ? 5 : 3)) {
+    } else if (M.lost > (G.powered ? 5 : 3) && !G.finalChase) {
       M.state = 'search'; M.search = 8; M.path = null;
       monsterGoTo(toCell(M.lastSeen.x, M.lastSeen.z));
       if (!G.powered) say('Es hat dich verloren … vorerst.', 3);
@@ -1801,7 +2274,9 @@ function updateWorld(dt) {
   for (const lv of W.levers) if (lv.pulled && lv.t < 1) { lv.t = Math.min(1, lv.t + dt * 4); lv.pivot.rotation.x = 0.5 + lv.t * 2.1; }
   const pulse = 1 + Math.sin(G.time * 4) * 0.35;
   MAT.batteryBody.emissiveIntensity = pulse;
-  for (const b of W.batteries) if (!b.taken) { b.mesh.rotation.y += dt * 0.6; b.glow.intensity = 2.5 * pulse; }
+  for (const b of W.batteries) if (!b.taken) { b.mesh.rotation.y += dt * 0.6; b.glow.material.opacity = 0.45 + 0.3 * pulse; }
+  for (const cb of W.cubes) if (!cb.found) cb.glow.material.opacity = 0.2 + 0.15 * pulse;
+  if (W.coil) W.coil.glow.material.opacity = 0.4 + Math.random() * 0.5;
 }
 
 const _lampSort = [];
@@ -1872,7 +2347,7 @@ function updateMenu(dt) {
 // ======================================================================
 //  Bildschirme
 // ======================================================================
-const screens = ['intro', 'menu', 'credits', 'controls', 'settings', 'pause', 'dead', 'win', 'loading'];
+const screens = ['intro', 'menu', 'credits', 'controls', 'settings', 'voiceStudio', 'pause', 'dead', 'win', 'loading'];
 function showScreen(id) { screens.forEach(s => $(s).classList.toggle('hidden', s !== id)); }
 
 function pause() {
@@ -1907,7 +2382,10 @@ $('btnQuitGame').onclick = () => {
   $('menu').classList.remove('appear');
   showScreen('intro');
 };
-document.querySelectorAll('.back').forEach(b => b.onclick = () => showScreen(lastScreen));
+document.querySelectorAll('.back').forEach(b => b.onclick = () => {
+  if (b.closest('#voiceStudio')) { if (recKey) toggleRecord(recKey); audio.stopVoice(); showScreen('settings'); return; }
+  showScreen(lastScreen);
+});
 $('btnResume').onclick = resume;
 $('btnRestart').onclick = () => { audio.ctx?.resume(); startGame(true); };
 $('btnQuit').onclick = toMenu;
@@ -1917,6 +2395,8 @@ document.querySelectorAll('.toMenu').forEach(b => b.onclick = toMenu);
 $('sens').value = settings.sens; $('vol').value = settings.vol; $('quality').value = settings.quality;
 $('sens').oninput = e => { settings.sens = +e.target.value; saveSettings(); };
 $('vol').oninput = e => { settings.vol = +e.target.value; audio.setVolume(settings.vol); saveSettings(); };
+$('bright').value = settings.bright;
+$('bright').oninput = e => { settings.bright = +e.target.value; applyBrightness(); saveSettings(); };
 $('quality').onchange = e => { settings.quality = e.target.value; saveSettings(); applyQuality(true); };
 
 // ----- Eigenes Menübild (bleibt nur im Browser dieses Geräts, in IndexedDB) -----
@@ -1952,15 +2432,86 @@ $('bgFile').onchange = async e => {
   try { await bgStore.set(f); } catch (err) { $('bgHint').textContent = 'Menübild gesetzt, aber es konnte nicht gespeichert werden – nach dem Neuladen ist es wieder weg.'; }
   e.target.value = '';
 };
-// Stimmen testen – muss direkt im Tippen passieren, damit iOS die Sprachausgabe freigibt
+// Stimmen testen – muss direkt im Tippen passieren, damit iOS den Ton freigibt
 $('voiceTest').onclick = () => {
   audio.init(); audio.primeSpeech();
-  audio.speak('Hallo! Ich bin Mila. Kannst du mich hören?', 'MILA', { urgent: true });
-  const S = window.speechSynthesis;
-  const n = S ? S.getVoices().filter(v => (v.lang || '').toLowerCase().startsWith('de')).length : 0;
-  $('bgHint').textContent = !S ? 'Dieser Browser kann leider nicht sprechen.'
-    : n ? `Mila spricht jetzt (${n} deutsche Stimmen gefunden). Nichts gehört? Lautlos-Modus aus und lauter drehen.`
-      : 'Keine deutsche Stimme gefunden. Am iPad: Einstellungen > Bedienungshilfen > Gesprochene Inhalte > Stimmen > Deutsch > eine Stimme laden.';
+  const line = 'Hallo! Ich bin Mila. Kannst du mich hören?', key = lineKey('MILA', line);
+  if (voiceBank.has(key)) { voiceBank.buffer(audio.ctx, key).then(b => audio.playVoice(b, 'MILA', settings.voiceFx !== false)); $('bgHint').textContent = 'Das ist deine Aufnahme von Mila.'; return; }
+  if (settings.voices === 'both') {
+    audio.speak(line, 'MILA', { urgent: true });
+    $('bgHint').textContent = 'Das ist die Computerstimme. Für echte Stimmen: Sprecher-Studio öffnen und Sätze aufnehmen.';
+  } else $('bgHint').textContent = 'Noch keine Aufnahme. Öffne das Sprecher-Studio und nimm Milas Sätze mit deiner Stimme auf.';
+};
+$('voiceMode').value = settings.voices || 'rec';
+$('voiceMode').onchange = e => { settings.voices = e.target.value; saveSettings(); };
+
+// ----- Sprecher-Studio: jeden Satz selbst aufnehmen -----
+const recorder = new Recorder();
+let recKey = null, fileKey = null;
+const studioMsg = t => { $('studioMsg').textContent = t; };
+function renderStudio() {
+  const filter = $('studioFilter').value;
+  $('voiceFx').checked = settings.voiceFx !== false;
+  $('studioCount').textContent = `${voiceBank.count()} von ${LINES.length} Sätzen aufgenommen`;
+  const colors = { MILA: '#6fe0d8', TAILOR: '#ff4a3a', ZIPPER: '#c08aff', DURCHSAGE: '#cfd8dc' };
+  const list = $('studioList'); list.innerHTML = '';
+  LINES.forEach(l => {
+    if (filter && l.who !== filter) return;
+    const key = lineKey(l.who, l.text);
+    const row = document.createElement('div');
+    row.className = 'sLine' + (voiceBank.has(key) ? ' has' : '');
+    const plain = l.text.replace(/<[^>]+>/g, '');
+    row.innerHTML = `<i class="dot"></i><span class="who" style="color:${colors[l.who]}">${WHO_LABEL[l.who]}</span><span class="txt"></span><span class="btns">
+      <button class="rec">${recKey === key ? 'STOPP' : 'AUFNEHMEN'}</button><button class="play">ANHÖREN</button><button class="file">DATEI</button><button class="del">LÖSCHEN</button></span>`;
+    row.querySelector('.txt').textContent = plain;
+    const rb = row.querySelector('.rec'); if (recKey === key) rb.classList.add('on');
+    rb.onclick = () => toggleRecord(key);
+    row.querySelector('.play').onclick = () => {
+      audio.init();
+      if (!voiceBank.has(key)) { studioMsg('Für diesen Satz gibt es noch keine Aufnahme.'); return; }
+      voiceBank.buffer(audio.ctx, key).then(b => b ? audio.playVoice(b, l.who, settings.voiceFx !== false) : studioMsg('Die Aufnahme konnte nicht abgespielt werden.'));
+    };
+    row.querySelector('.file').onclick = () => { fileKey = key; $('studioFile').click(); };
+    row.querySelector('.del').onclick = async () => { if (!voiceBank.hasOwn(key)) return; await voiceBank.remove(key); studioMsg('Aufnahme gelöscht.'); renderStudio(); };
+    list.appendChild(row);
+  });
+}
+async function toggleRecord(key) {
+  audio.init();
+  if (recKey) {
+    const k = recKey; recKey = null;
+    const blob = await recorder.stop();
+    if (blob) { await voiceBank.set(k, blob); studioMsg('Gespeichert! Tippe auf ANHÖREN.'); } else studioMsg('Die Aufnahme war zu kurz. Nochmal versuchen.');
+    renderStudio();
+    if (k === key) return;
+  }
+  if (!Recorder.supported()) { studioMsg('Hier geht das Mikrofon leider nicht. Nimm den Satz mit der Sprachmemos-App auf und lade ihn mit DATEI.'); return; }
+  try { audio.stopVoice(); await recorder.start(); recKey = key; studioMsg('Aufnahme läuft … sprich den Satz und tippe dann auf STOPP.'); }
+  catch (e) { studioMsg('Kein Zugriff aufs Mikrofon. Erlaube das Mikrofon – oder nimm mit der Sprachmemos-App auf und lade die Datei mit DATEI.'); }
+  renderStudio();
+}
+$('studioFile').onchange = async e => {
+  const f = e.target.files && e.target.files[0]; e.target.value = '';
+  if (!f || !fileKey) return;
+  await voiceBank.set(fileKey, f); studioMsg('Datei übernommen!'); renderStudio();
+};
+$('btnStudio').onclick = async () => { audio.init(); await voiceBank.ready; showScreen('voiceStudio'); studioMsg(''); renderStudio(); };
+$('studioFilter').onchange = renderStudio;
+$('voiceFx').onchange = e => { settings.voiceFx = e.target.checked; saveSettings(); };
+$('studioExport').onclick = async () => {
+  if (!voiceBank.local.size) { studioMsg('Noch keine Aufnahmen zum Sichern.'); return; }
+  studioMsg('Wird gepackt …');
+  const pack = await voiceBank.exportPack();
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(pack)], { type: 'application/json' }));
+  a.download = 'stitched-stimmen.json'; document.body.appendChild(a); a.click(); a.remove();
+  studioMsg('Gesichert als „stitched-stimmen.json“. Mit „Paket laden“ kannst du sie auf einem anderen Gerät wieder laden.');
+};
+$('studioImport').onchange = async e => {
+  const f = e.target.files && e.target.files[0]; e.target.value = '';
+  if (!f) return;
+  try { const n = await voiceBank.importPack(JSON.parse(await f.text())); studioMsg(`${n} Aufnahmen geladen.`); } catch (err) { studioMsg('Diese Datei ist kein Stimmen-Paket.'); }
+  renderStudio();
 };
 $('bgReset').onclick = async () => {
   applyMenuBg(null);
@@ -1998,9 +2549,13 @@ function setupComposer(on) {
   $('grain').style.display = 'none'; $('vignette').style.display = 'none';
 }
 
-function applyQuality(rebuild) {
+function basePixelRatio() {
   const q = settings.quality, dpr = devicePixelRatio || 1;
-  renderer.setPixelRatio(q === 'low' ? Math.min(dpr, 1) * 0.75 : q === 'mid' ? Math.min(dpr, 1.35) : Math.min(dpr, 2));
+  return q === 'low' ? Math.min(dpr, 1) * 0.75 : q === 'mid' ? Math.min(dpr, isTouch ? 1.1 : 1.35) : Math.min(dpr, 2);
+}
+function applyQuality(rebuild) {
+  const q = settings.quality;
+  dyn.scale = 1;
   const shadows = q !== 'low';
   if (renderer.shadowMap.enabled !== shadows) {
     renderer.shadowMap.enabled = shadows;
@@ -2015,6 +2570,7 @@ function applyQuality(rebuild) {
 
 function resize() {
   const w = innerWidth, h = innerHeight;
+  renderer.setPixelRatio(basePixelRatio() * dyn.scale);
   renderer.setSize(w, h);
   if (composer) { composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(w, h); }
   camera.aspect = vmCam.aspect = w / h;
@@ -2031,6 +2587,7 @@ grain.width = 160; grain.height = 100;
 const gimg = gctx.createImageData(160, 100);
 let grainT = 0;
 function updateGrain(dt) {
+  if (composer) return; // Korn macht dann der Film-Shader
   grainT -= dt; if (grainT > 0) return; grainT = 0.05;
   const d = gimg.data;
   for (let i = 0; i < d.length; i += 4) { const v = Math.random() * 255; d[i] = d[i + 1] = d[i + 2] = v; d[i + 3] = 255; }
@@ -2062,9 +2619,27 @@ function updateDust(dt) {
 //  Hauptschleife
 // ======================================================================
 const clock = new THREE.Clock();
+// Automatische Auflösung: Wenn das Gerät nicht hinterherkommt, rechnet das Spiel mit etwas weniger Pixeln (gegen Ruckeln)
+const dyn = { scale: 1, acc: 0, n: 0, frame: 0 };
+function adaptResolution(dt) {
+  if (G.mode !== 'playing' || dt <= 0) { dyn.acc = 0; dyn.n = 0; return; }
+  dyn.acc += dt; dyn.n++;
+  if (dyn.acc < 1.5) return;
+  const avg = dyn.acc / dyn.n; dyn.acc = 0; dyn.n = 0;
+  const old = dyn.scale;
+  if (avg > 1 / 40) dyn.scale = Math.max(0.55, dyn.scale - 0.1);       // unter 40 Bilder/s: schärfe runter
+  else if (avg < 1 / 57) dyn.scale = Math.min(1, dyn.scale + 0.05);    // läuft flüssig: wieder schärfer
+  if (dyn.scale !== old) resize();
+}
 function frame() {
   requestAnimationFrame(frame);
-  tick(Math.min(clock.getDelta(), 0.05));
+  const rawDt = clock.getDelta();
+  adaptResolution(rawDt);
+  tick(Math.min(rawDt, 0.05));
+  // Schatten der Taschenlampe bei "Mittel" nur jedes zweite Bild neu berechnen
+  dyn.frame++;
+  renderer.shadowMap.autoUpdate = false;
+  renderer.shadowMap.needsUpdate = settings.quality === 'high' || dyn.frame % 2 === 0;
   if (composer) {
     filmPass.uniforms.time.value = (performance.now() / 1000) % 100;
     const onStage = G.mode === 'menu';
@@ -2170,4 +2745,4 @@ const unlockAudio = () => {
 for (const ev of ['touchend', 'click', 'keydown']) addEventListener(ev, unlockAudio, { capture: true });
 
 // Für Tests / Debug
-window.__pp6 = { THREE, G, P, M, audio, monster, W: () => W, hands, camera, fire, interact, aim, simulate: (sec) => { for (let t = 0; t < sec; t += 1 / 60) { scene.updateMatrixWorld(); tick(1 / 60); } } };
+window.__pp6 = { THREE, G, P, M, audio, renderer, scene, monster, buildWorld, W: () => W, hands, camera, fire, interact, aim, simulate: (sec) => { for (let t = 0; t < sec; t += 1 / 60) { scene.updateMatrixWorld(); tick(1 / 60); } } };

@@ -121,7 +121,6 @@ export class TailorModel {
       const eye = new THREE.Mesh(new THREE.SphereGeometry(0.02, 8, 6), this.eyeMat);
       eye.position.set(0.07 * s, 0.03, 0.18); this.head.add(eye);
     }
-    const eyeGlow = new THREE.PointLight(0xffe6a0, 0.8, 2.5, 2); eyeGlow.position.set(0, 0.03, 0.35); this.head.add(eyeGlow);
     // Garnspule mit rotem Faden und eine riesige Nähnadel quer durch den Kopf
     const spool = new THREE.Group(); spool.position.y = 0.26; this.head.add(spool);
     for (const y of [-0.05, 0.05]) { const d = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.02, 16), rust); d.position.y = y; spool.add(d); }

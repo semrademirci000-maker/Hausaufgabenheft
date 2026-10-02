@@ -169,8 +169,8 @@ export class MonsterModel {
       });
     }
 
-    this.eyeLight = new THREE.PointLight(0xff2010, 0, 3, 2);
-    this.eyeLight.position.set(0, 0.1, 0.7); this.head.add(this.eyeLight);
+    // kein echtes Licht mehr in den Augen (jede Lichtquelle kostet auf dem iPad viel Leistung)
+    this.eyeLight = { intensity: 0 };
 
     this.phase = 0; this.lean = 0; this.open = 0; this.openTarget = 0; this.twitch = 0; this.jerk = 0;
     this.forceOpen = false;

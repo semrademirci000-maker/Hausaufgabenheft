@@ -25,11 +25,24 @@ struct GameView: UIViewRepresentable {
         web.isInspectable = true // Safari → Entwickler → Gerät, zum Fehlersuchen
         #endif
 
+        web.uiDelegate = context.coordinator
         web.load(URLRequest(url: URL(string: "\(BundleSchemeHandler.scheme)://game/index.html")!))
         return web
     }
 
     func updateUIView(_ uiView: WKWebView, context: Context) {}
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
+    /// Erlaubt dem Sprecher-Studio das Mikrofon (iOS fragt trotzdem einmal nach).
+    final class Coordinator: NSObject, WKUIDelegate {
+        @available(iOS 15.0, *)
+        func webView(_ webView: WKWebView, requestMediaCapturePermissionFor origin: WKSecurityOrigin,
+                     initiatedByFrame frame: WKFrameInfo, type: WKMediaCaptureType,
+                     decisionHandler: @escaping (WKPermissionDecision) -> Void) {
+            decisionHandler(type == .microphone ? .grant : .deny)
+        }
+    }
 }
 
 /// Liefert Dateien aus dem App-Bundle mit dem richtigen MIME-Typ aus.
