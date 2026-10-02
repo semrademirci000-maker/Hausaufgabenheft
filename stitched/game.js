@@ -163,7 +163,7 @@ const MAT = {
   dark: new THREE.MeshStandardMaterial({ color: 0x151515, roughness: 0.7, metalness: 0.4 }),
   shade: new THREE.MeshStandardMaterial({ color: 0x2a2d2a, emissive: 0x3a2a14, roughness: 0.6, metalness: 0.5, side: THREE.DoubleSide }),
   pit: new THREE.MeshBasicMaterial({ color: 0x000000 }),
-  puddle: new THREE.MeshPhysicalMaterial({ color: 0x1a1816, roughness: 0.02, metalness: 0.1, clearcoat: 1, transparent: true, opacity: 0.55, depthWrite: false, envMapIntensity: 1.2 }),
+  puddle: new THREE.MeshStandardMaterial({ color: 0x1a1816, roughness: 0.05, metalness: 0.3, transparent: true, opacity: 0.55, depthWrite: false, envMapIntensity: 1.2 }),
   posters: [0, 1, 2].map(k => new THREE.MeshStandardMaterial({ map: TX.posterTexture(k), roughness: 0.95, transparent: true, alphaTest: 0.5 })),
   shaft: new THREE.MeshBasicMaterial({ color: 0xffd9a0, transparent: true, opacity: 0.045, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: true }),
   batteryBody: new THREE.MeshStandardMaterial({ color: 0x2a6cff, emissive: 0x1b4dff, emissiveIntensity: 1.2, roughness: 0.3, metalness: 0.3 }),
@@ -915,7 +915,7 @@ function buildWorld() {
   tuneEnv(group);
 
   // Lichtpool: nur die nächsten Lampen bekommen echte Lichtquellen (schnell auf dem iPad)
-  const poolSize = settings.quality === 'low' ? 4 : settings.quality === 'mid' ? 6 : 8;
+  const poolSize = Math.min(poolSizeFor(), perf.lights);
   for (let i = 0; i < poolSize; i++) {
     const l = new THREE.PointLight(0xffcf95, 0, 14, 1.6);
     scene.add(l); w.lightPool.push(l);
@@ -1854,12 +1854,13 @@ function updateFocus() {
     else if (o.kind === 'receiver' && !o.powered) { const ch3 = hands.some(h => h.chargeT > 0); hot = ch3; text = ch3 ? 'Geladene Hand schießen: Strom geben' : 'Empfänger · braucht eine geladene Hand'; }
   }
   if (isTouch) text = text.replace('[E] / ', '').replace('[E]', 'E:');
-  hud.prompt.textContent = text;
+  if (hud.prompt.textContent !== text) hud.prompt.textContent = text;
   hud.cross.classList.toggle('hot', hot);
 }
 
 function interact() {
   if (P.hidden) { toggleLocker(); return; }
+  updateFocus(); // immer mit dem aktuellen Blick
   const a = G.focus;
   if (!a || !a.obj) return;
   const o = a.obj;
@@ -2551,19 +2552,26 @@ function setupComposer(on) {
 
 function basePixelRatio() {
   const q = settings.quality, dpr = devicePixelRatio || 1;
-  return q === 'low' ? Math.min(dpr, 1) * 0.75 : q === 'mid' ? Math.min(dpr, isTouch ? 1.1 : 1.35) : Math.min(dpr, 2);
+  return q === 'low' ? Math.min(dpr, 1) * 0.8 : q === 'mid' ? Math.min(dpr, isTouch ? 1.0 : 1.35) : Math.min(dpr, isTouch ? 1.5 : 2);
+}
+function poolSizeFor() { return settings.quality === 'low' ? 4 : settings.quality === 'mid' ? (isTouch ? 4 : 6) : 8; }
+function applyShadows() {
+  // auf iPad/iPhone gibt es Schatten nur bei "Hoch"
+  const shadows = settings.quality !== 'low' && perf.shadows && !(isTouch && settings.quality === 'mid');
+  if (renderer.shadowMap.enabled !== shadows) {
+    renderer.shadowMap.enabled = shadows;
+    flashlight.castShadow = shadows;
+    scene.traverse(o => { if (o.material) [].concat(o.material).forEach(m => { m.needsUpdate = true; }); });
+  }
 }
 function applyQuality(rebuild) {
   const q = settings.quality;
   dyn.scale = 1;
-  const shadows = q !== 'low';
-  if (renderer.shadowMap.enabled !== shadows) {
-    renderer.shadowMap.enabled = shadows;
-    scene.traverse(o => { if (o.material) [].concat(o.material).forEach(m => { m.needsUpdate = true; }); });
-  }
+  Object.assign(perf, { shadows: true, bloom: true, lights: 8 }); // neue Einstellung = neuer Versuch
+  applyShadows();
   flashlight.shadow.mapSize.set(q === 'high' ? 1024 : 512, q === 'high' ? 1024 : 512);
   flashlight.shadow.map?.dispose(); flashlight.shadow.map = null;
-  setupComposer(q !== 'low');
+  setupComposer(q !== 'low' && perf.bloom);
   if (rebuild && G.mode === 'menu') resetGame();
   resize();
 }
@@ -2621,14 +2629,37 @@ function updateDust(dt) {
 const clock = new THREE.Clock();
 // Automatische Auflösung: Wenn das Gerät nicht hinterherkommt, rechnet das Spiel mit etwas weniger Pixeln (gegen Ruckeln)
 const dyn = { scale: 1, acc: 0, n: 0, frame: 0 };
+// Leistungs-Wächter: Ist das Gerät zu langsam, schaltet das Spiel nacheinander die teuersten Effekte ab
+// (1. Schatten, 2. Leuchten/Bloom, 3. weniger Lampenlicht) und senkt erst danach die Auflösung.
+// Was einmal abgeschaltet ist, bleibt aus (sonst gibt es beim Umschalten jedes Mal einen Ruckler).
+const perf = { shadows: true, bloom: true, lights: 8 };
+function perfSet(o) {
+  Object.assign(perf, o);
+  applyShadows();
+  setupComposer(settings.quality !== 'low' && perf.bloom);
+  if (W) {
+    const want = Math.min(poolSizeFor(), perf.lights);
+    while (W.lightPool.length > want) scene.remove(W.lightPool.pop());
+    while (W.lightPool.length < want) { const l = new THREE.PointLight(0xffcf95, 0, 14, 1.6); scene.add(l); W.lightPool.push(l); }
+  }
+  resize();
+}
+function degradeOnce() {
+  if (perf.shadows && renderer.shadowMap.enabled) { perfSet({ shadows: false }); return true; }
+  if (perf.bloom && composer) { perfSet({ bloom: false }); return true; }
+  if (perf.lights > 3 && W && W.lightPool.length > 3) { perfSet({ lights: 3 }); return true; }
+  return false;
+}
 function adaptResolution(dt) {
-  if (G.mode !== 'playing' || dt <= 0) { dyn.acc = 0; dyn.n = 0; return; }
+  if (G.mode !== 'playing' || dt <= 0 || dt > 0.5) { dyn.acc = 0; dyn.n = 0; return; }
   dyn.acc += dt; dyn.n++;
-  if (dyn.acc < 1.5) return;
+  if (dyn.acc < 1.0) return;
   const avg = dyn.acc / dyn.n; dyn.acc = 0; dyn.n = 0;
   const old = dyn.scale;
-  if (avg > 1 / 40) dyn.scale = Math.max(0.55, dyn.scale - 0.1);       // unter 40 Bilder/s: schärfe runter
-  else if (avg < 1 / 57) dyn.scale = Math.min(1, dyn.scale + 0.05);    // läuft flüssig: wieder schärfer
+  if (avg > 1 / 45) {                                        // unter 45 Bilder/s
+    if (dyn.slow = (dyn.slow || 0) + 1, dyn.slow >= 2 && degradeOnce()) { dyn.slow = 0; return; }
+    dyn.scale = Math.max(0.6, dyn.scale - 0.1);
+  } else { dyn.slow = 0; if (avg < 1 / 58) dyn.scale = Math.min(1, dyn.scale + 0.05); }
   if (dyn.scale !== old) resize();
 }
 function frame() {
@@ -2636,6 +2667,9 @@ function frame() {
   const rawDt = clock.getDelta();
   adaptResolution(rawDt);
   tick(Math.min(rawDt, 0.05));
+  renderOnce();
+}
+function renderOnce() {
   // Schatten der Taschenlampe bei "Mittel" nur jedes zweite Bild neu berechnen
   dyn.frame++;
   renderer.shadowMap.autoUpdate = false;
@@ -2666,15 +2700,22 @@ function tick(dt) {
     updateProto(dt);
     updateLift(dt);
     G.shake = Math.max(0, (G.shake || 0) - dt * 1.5);
-    if (G.mode === 'playing') updateFocus();
+    // Zielen prüfen reicht 20-mal pro Sekunde (spart viel Rechenzeit)
+    G.focusT = (G.focusT || 0) - dt;
+    if (G.mode === 'playing' && G.focusT <= 0) { G.focusT = 0.05; updateFocus(); }
     if (G.noise) { G.noise.t -= dt; if (G.noise.t < 0) G.noise = null; }
     subTimer -= dt; if (subTimer <= 0) hud.sub.style.opacity = 0;
     if (saveTagT > 0) { saveTagT -= dt; if (saveTagT <= 0) $('saveTag').classList.remove('on'); }
-    hud.stamina.style.width = P.stamina + '%';
-    hud.staminaWrap.style.opacity = P.stamina < 99 ? 1 : 0;
-    hud.stamina.style.background = P.exhausted ? '#c0392b' : '#e8e2d6';
-    hud.hidden.classList.toggle('on', !!P.hidden);
-    hud.flash.classList.toggle('on', G.flash);
+    // Anzeige nur ändern, wenn sich etwas geändert hat (jede Änderung kostet auf dem iPad Zeit)
+    const stam = Math.round(P.stamina), hk = stam + '|' + P.exhausted + '|' + !!P.hidden + '|' + G.flash;
+    if (hk !== hud.last) {
+      hud.last = hk;
+      hud.stamina.style.width = stam + '%';
+      hud.staminaWrap.style.opacity = stam < 99 ? 1 : 0;
+      hud.stamina.style.background = P.exhausted ? '#c0392b' : '#e8e2d6';
+      hud.hidden.classList.toggle('on', !!P.hidden);
+      hud.flash.classList.toggle('on', G.flash);
+    }
   } else if (G.mode === 'jumpscare') {
     updateJumpscare(dt);
   } else if (G.mode === 'menu') {
@@ -2745,4 +2786,4 @@ const unlockAudio = () => {
 for (const ev of ['touchend', 'click', 'keydown']) addEventListener(ev, unlockAudio, { capture: true });
 
 // Für Tests / Debug
-window.__pp6 = { THREE, G, P, M, audio, renderer, scene, monster, buildWorld, W: () => W, hands, camera, fire, interact, aim, simulate: (sec) => { for (let t = 0; t < sec; t += 1 / 60) { scene.updateMatrixWorld(); tick(1 / 60); } } };
+window.__pp6 = { THREE, G, P, M, audio, renderer, scene, monster, buildWorld, renderOnce, perfSet, perf, W: () => W, hands, camera, fire, interact, aim, simulate: (sec) => { for (let t = 0; t < sec; t += 1 / 60) { scene.updateMatrixWorld(); tick(1 / 60); } } };
