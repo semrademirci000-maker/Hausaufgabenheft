@@ -225,14 +225,14 @@ scene.add(camera);
 scene.add(new THREE.HemisphereLight(0x3a3040, 0x0a0806, 0.22));
 
 const flash = new THREE.SpotLight(0xffe2c0, 55, 0, 0.44, 0.6, 2);
-flash.position.set(0.18, 0.04, 0.05);
+flash.position.set(0.18, 0.26, 0.05);
 flash.castShadow = true;
 flash.shadow.mapSize.set(1024, 1024);
 flash.shadow.camera.near = 0.2; flash.shadow.camera.far = 30;
 flash.shadow.bias = -0.0008;
 camera.add(flash);
 const flashTarget = new THREE.Object3D(); flashTarget.position.set(0, 0.05, -6); camera.add(flashTarget); flash.target = flashTarget;
-const babyFill = new THREE.PointLight(0xffd6b0, 0.22, 1.2, 2); babyFill.position.set(0.15, -0.1, -0.2); camera.add(babyFill);
+const babyFill = new THREE.PointLight(0xffd6b0, 0.45, 1.2, 2); babyFill.position.set(0.15, -0.02, -0.25); camera.add(babyFill);
 
 function resize() {
   const w = window.innerWidth, h = window.innerHeight;
@@ -462,7 +462,7 @@ function makeStarrer() {
 const MAKERS = { krabbler: makeKrabbler, lauscher: makeLauscher, starrer: makeStarrer };
 
 // ---------- Spieler-Hände mit Baby ----------
-const rig = new THREE.Group(); rig.position.set(0, -.43, -.66); rig.rotation.x = -.05; rig.scale.setScalar(.82); camera.add(rig);
+const rig = new THREE.Group(); rig.position.set(0, -.33, -.7); rig.rotation.x = -.05; rig.scale.setScalar(.82); camera.add(rig);
 const heldBaby = makeBaby(); rig.add(heldBaby);
 [-1, 1].forEach(s => {
   const arm = new THREE.Group(); rig.add(arm);
@@ -530,7 +530,7 @@ function bus(pan, wet = true) {
   node.connect(master); if (wet) node.connect(verbIn);
   return g;
 }
-function voice({ t0 = 0, dur = .8, f = [420, 540, 400], vol = .3, F = [1050, 2500, 4200], pan, breath = .12, vib = 9, glide = true }) {
+function voice({ t0 = 0, dur = .8, f = [420, 540, 400], vol = .3, F = [1050, 2500, 4200], pan, breath = .12, vib = 9, glide = true, nasal = false }) {
   if (!ac) return;
   const t = ac.currentTime + t0, out = bus(pan);
   const env = ac.createGain(); env.connect(out);
@@ -546,7 +546,8 @@ function voice({ t0 = 0, dur = .8, f = [420, 540, 400], vol = .3, F = [1050, 250
   nz.connect(ng);
   [[F[0], 7, 2.6], [F[1], 9, 1.5], [F[2], 11, .7]].forEach(([fr, q, gain], i) => {
     const bp = ac.createBiquadFilter(); bp.type = "bandpass"; bp.Q.value = q;
-    if (i === 0 && glide) { bp.frequency.setValueAtTime(fr * .62, t); bp.frequency.linearRampToValueAtTime(fr, t + .12); } else bp.frequency.value = fr;
+    if (nasal && i < 2) { bp.frequency.setValueAtTime(i ? 1000 : 300, t); bp.frequency.setValueAtTime(i ? 1000 : 300, t + .06); bp.frequency.linearRampToValueAtTime(fr, t + .13); }
+    else if (i === 0 && glide) { bp.frequency.setValueAtTime(fr * .62, t); bp.frequency.linearRampToValueAtTime(fr, t + .12); } else bp.frequency.value = fr;
     const g = ac.createGain(); g.gain.value = gain;
     src.connect(bp); ng.connect(bp); bp.connect(g).connect(soft);
   });
@@ -582,6 +583,11 @@ const sfx = {
     const v = .08 + level * .12;
     voice({ dur: .24, f: [370, 440, 360], vol: v, F: [850, 2200, 3800], pan, vib: 5 });
     voice({ t0: .34, dur: .34, f: [380, 470, 340], vol: v * 1.1, F: [900, 2300, 3900], pan, vib: 6 });
+  },
+  mama() { // "Ma-ma": Lippen zu (nasal), dann offenes a
+    [[0, .26, [430, 470, 420]], [.36, .38, [400, 380, 330]]].forEach(([t0, dur, f]) => {
+      voice({ t0, dur, f, vol: .2, F: [850, 1450, 2900], vib: 3, breath: .08, nasal: true });
+    });
   },
   fuss() { voice({ dur: .55, f: [330, 390, 320], vol: .12, F: [450, 1150, 2600], vib: 4, glide: false }); },
   coo() { [0, .22, .5].forEach((d, i) => voice({ t0: d, dur: .2 + i * .05, f: [330 + i * 30, 430, 360], vol: .12, F: [750, 1350, 3000], vib: 4, breath: .2 })); },
@@ -968,7 +974,7 @@ function updateMonsters(dt) {
     m.sndT -= dt;
     if (m.sndT <= 0 && d < 11) {
       const v = .16 * Math.pow(1 - d / 11, 1.5), pan = Math.sin(wrapA(Math.atan2(m.y - P.y, m.x - P.x) - P.a));
-      if (m.type === "krabbler") { sfx.chitter(v, pan); m.sndT = rnd(.35, .9); }
+      if (m.type === "krabbler") { if (d < 7) sfx.chitter(v * .6, pan); m.sndT = rnd(2.5, 5); }
       else if (m.type === "lauscher") { sfx.breath(v * 1.3, pan); m.sndT = 1.7; }
       else if (m.moving) { sfx.creak(v * 1.5, pan); m.sndT = .7; } else m.sndT = .3;
     }
@@ -1063,9 +1069,9 @@ function update(dt) {
     B.look += (clamp(rel / 1.4, -1, 1) - B.look) * Math.min(1, dt * 5);
     B.fear = 1 - nd / 7.5;
     B.whimT -= dt;
-    if (B.whimT <= 0 && B.calm <= 0 && B.cry <= 0) { B.whimT = 1.1 + nd * .35; sfx.whimper(B.fear, Math.sin(rel) * .8); }
+    if (B.whimT <= 0 && B.calm <= 0 && B.cry <= 0 && nd < 4.5) { B.whimT = rnd(6, 9); sfx.whimper(B.fear, Math.sin(rel) * .8); }
   } else { B.look *= 1 - Math.min(1, dt * 2); B.fear = Math.max(0, B.fear - dt); }
-  B.giggleT -= dt; if (B.giggleT <= 0) { B.giggleT = rnd(12, 22); if (B.awake > 0 && B.fear < .1 && B.cry <= 0) (Math.random() < .5 ? sfx.giggle : sfx.coo)(); }
+  B.giggleT -= dt; if (B.giggleT <= 0) { B.giggleT = rnd(18, 30); if (B.awake > 0 && B.fear < .1 && B.cry <= 0) { const r = Math.random(); (r < .5 ? sfx.mama : r < .75 ? sfx.coo : sfx.giggle)(); } }
 
   // Lampen flackern
   lamps.forEach(l => {
@@ -1227,7 +1233,7 @@ window.__bbDebug = {
   toExit() { P.x = exitC.x + .5; P.y = exitC.y + .5; },
   look(a, p) { P.a = a; P.pitch = p; },
   near(d = 1.6) { const m = monsters[0]; m.x = P.x + Math.cos(P.a) * d; m.y = P.y + Math.sin(P.a) * d; m.face = P.a + Math.PI; grace = 99; },
-  shake, cry: () => sfx.cry(),
+  shake, cry: () => sfx.cry(), mama: () => sfx.mama(),
   meter() { const an = ac.createAnalyser(); an.fftSize = 2048; master.connect(an); const buf = new Float32Array(2048); let peak = 0; const iv = setInterval(() => { an.getFloatTimeDomainData(buf); for (const v of buf) peak = Math.max(peak, Math.abs(v)); }, 20); return () => { clearInterval(iv); return peak; }; },
   state: () => ({ state, floor: run && run.floor, got, total, hearts: run && run.hearts, monsters: monsters.map(m => [m.type, m.state]) }),
 };
