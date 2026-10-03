@@ -343,3 +343,26 @@ body:not(.touch) #bTuer { bottom: calc(130px + env(safe-area-inset-bottom, 0)); 
   #bTaser { width: 80px; height: 80px; right: calc(120px + env(safe-area-inset-right, 0)); bottom: calc(126px + env(safe-area-inset-bottom, 0)); }
   #bTuer { right: calc(120px + env(safe-area-inset-right, 0)); bottom: calc(214px + env(safe-area-inset-bottom, 0)); padding: 7px 10px; font-size: 12px; }
 }
+
+/* Kamera-Bildschirm mit vier Ansichten */
+#kameraSchirm { position: fixed; inset: 0; z-index: 25; display: flex; flex-direction: column; padding: calc(10px + env(safe-area-inset-top, 0)) calc(12px + env(safe-area-inset-right, 0)) calc(8px + env(safe-area-inset-bottom, 0)) calc(12px + env(safe-area-inset-left, 0)); gap: 8px; }
+.kgitter { flex: 1; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 8px; min-height: 0; }
+.zelle { position: relative; border: 2px solid #2e4a33; border-radius: 6px; }
+.zelle span { position: absolute; left: 8px; top: 6px; font: 20px/1 'VT323', monospace; color: #d6ffd8; text-shadow: 0 0 4px #000; }
+.zelle b { position: absolute; right: 8px; top: 6px; font: 18px/1 'VT323', monospace; color: #ff6a5a; display: none; animation: rec .8s steps(2) infinite; }
+.zelle.alarm { border-color: #ff4a3d; box-shadow: 0 0 18px rgba(255, 60, 40, .7); }
+.zelle.alarm b { display: block; }
+.kleiste { display: flex; align-items: center; gap: 12px; font: 22px/1 'VT323', monospace; color: #d6ffd8; }
+.kleiste .rec { width: 10px; height: 10px; border-radius: 50%; background: #ff3a2a; animation: rec 1s steps(2) infinite; }
+.kleiste #kamZeit { margin-right: auto; }
+.kleiste .knopf { font: 800 14px 'Inter', sans-serif; }
+#kZurueck { background: #2a6a3a; border-color: #8de39a; }
+#bKameraAn { position: absolute; left: 50%; bottom: calc(110px + env(safe-area-inset-bottom, 0)); transform: translateX(-50%); background: rgba(30, 90, 50, .92); border: 2px solid #8de39a; padding: 12px 20px; font-size: 15px; }
+
+#aufgabe {
+  position: absolute; left: calc(12px + env(safe-area-inset-left, 0)); top: calc(96px + env(safe-area-inset-top, 0));
+  max-width: min(320px, 40vw); background: rgba(70, 50, 10, .88); border: 1px solid #f0c040; border-radius: 10px;
+  padding: 7px 11px; font-size: 13px; font-weight: 700; color: #ffe9a8;
+}
+@media (max-height: 460px) { #aufgabe { top: calc(78px + env(safe-area-inset-top, 0)); font-size: 12px; } }
+body.kameraAn #hud, body.kameraAn #touch, body.kameraAn #ton, body.kameraAn #vignette { display: none !important; }

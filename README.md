@@ -64,11 +64,13 @@ Der Bus N13 setzt dich an der Endstation ab, und du übernimmst die Nachtschicht
 - **Monster:** Manche Kunden sind keine Menschen (leuchtende Augen, kein Schatten, Zucken,
   seltsame Wünsche). Dann: **Rollladen runter!** Wer zu spät ist, wird gejagt und muss
   **hinten raus zum Bus rennen** – Ausdauer einteilen!
-- **Überwachungskamera:** oben links siehst du draußen live (VORNE, HINTERTÜR, HALTESTELLE – antippen
-  wechselt), dasselbe Bild läuft auf dem Monitor an der Theke. Ab Nacht 2 schleichen manche Monster
+- **Überwachungskamera:** am PC auf der Theke „KAMERA ANSEHEN“ – vier Kameras gleichzeitig
+  (vorne, hinten, links, rechts), rot markiert bei Bewegung. Ab Nacht 2 schleichen manche Monster
   zur **Hintertür** – dann über die Theke durchs Fenster raus!
 - **Taser:** hängt an der Wand neben der Hintertür. Bleibt ein Monster vor der Tür stehen: Tür auf und
   SCHOCKEN (3 Schüsse pro Nacht). Bei einer Jagd betäubt der Taser das Monster für ein paar Sekunden.
+- **Aufgaben:** Müll rausbringen – Sack aus dem Eimer holen und hinten in den Container werfen.
+  Hinter dem Zaun lauern Kreaturen …
 - **3 Nächte** (22 Uhr bis 6 Uhr), 3 Herzen, jede Nacht mehr Monster. Vorne gibt es eine kurze Geschichte.
 - Steuerung am Handy: links Stick, Wischen zum Umsehen, Antippen zum Benutzen.
   Am Rechner: WASD, Maus ziehen, Klick/E, Shift rennen, R Rollladen.
