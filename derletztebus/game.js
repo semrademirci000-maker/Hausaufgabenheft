@@ -1,733 +1,1844 @@
-/* Der letzte Bus – eine interaktive Gruselgeschichte.
-   Bei jeder Runde wird zufällig ausgelost, welcher Fahrgast kein Mensch ist.
-   Wer genau hinsieht und zuhört, findet es heraus. */
-'use strict';
+// Der letzte Bus – Nachtkiosk
+// Du übernimmst die Nachtschicht im Kiosk an der Endstation. Busse bringen
+// Kunden: Sachen aus dem Regal holen, auf die Theke legen, kassieren,
+// Wechselgeld geben. Manche Kunden sind keine Menschen – dann Rollladen runter.
+// Kommt eines rein: hinten raus und zum Bus rennen!
+import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { Ton } from './audio.js';
+import { ENV, T, initTexturen, baueUmgebung, sterne, mond, lichtkegel, baueNachbearbeitung } from './grafik.js';
+import * as Fig from './figuren.js';
 
-const $ = s => document.querySelector(s);
-const pause = ms => new Promise(r => setTimeout(r, ms));
-const ZAHLEN = ['keinen einzigen', 'eins', 'zwei', 'drei', 'vier', 'fünf', 'sechs'];
+const $ = id => document.getElementById(id);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const zufall = (a, b) => a + Math.random() * (b - a);
+const wuerfel = a => a[Math.floor(Math.random() * a.length)];
+const euro = ct => (ct < 0 ? '−' : '') + (Math.abs(ct) / 100).toFixed(2).replace('.', ',') + ' €';
+const isTouch = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
 
-/* ---------------------------------------------------------------
-   Die Fahrgäste. Jeder hat eine „menschliche“ und eine „Ding“-Fassung
-   seiner Hinweise: [Mensch, Ding]. Auch Menschen wirken manchmal
-   seltsam – genau hinsehen lohnt sich.
-   --------------------------------------------------------------- */
-const LEUTE = {
-  berger: {
-    name: 'Frau Berger', kurz: 'HB',
-    einstieg: [
-      'Eine alte Frau steigt ein. In der einen Hand eine Einkaufstasche, in der anderen Stricknadeln. Sie nickt dir zu und setzt sich schräg gegenüber.',
-      'Aus ihrer Tasche hängt ein roter Schal. Er ist viel zu lang. Er reicht bis auf den Boden.'
-    ],
-    reden: [
-      ['Sie lächelt. „Der ist für meinen Enkel. Er wird nächste Woche zehn.“', 'Sie hält den Schal hoch. „Ich höre einfach nie rechtzeitig auf. Das sagt meine Tochter auch immer.“'],
-      ['Sie lächelt. „Der ist für meinen Enkel.“ Die Nadeln klappern weiter, während sie dich ansieht. Sie schaut nicht ein einziges Mal auf ihre Hände.', '„Er wird zehn“, sagt sie. „Er wird schon so lange zehn.“']
-    ],
-    ansehen: [
-      ['Du beobachtest sie heimlich. Sie pustet in einen Becher Tee aus ihrer Thermoskanne, und ihre Brille beschlägt dabei.', 'Ihre Hände zittern ein bisschen. Ganz normale, müde, alte Hände.'],
-      ['Du beobachtest sie heimlich. Sie pustet in einen Becher Tee aus ihrer Thermoskanne. Ihre Brille beschlägt nicht.', 'Dann siehst du es: Der Becher ist leer. Sie trinkt trotzdem. Schluck für Schluck.']
-    ],
-    nochmal: [
-      ['„Weißt du, wo dieser Bus eigentlich hinfährt?“, fragt sie leise. „Ich glaube, ich bin falsch eingestiegen. Ich wollte zum Klinikum.“', 'Sie lacht nervös und strickt schneller.'],
-      ['„Du warst schon mal hier“, sagt sie, ohne aufzusehen. „Letzten Winter. Mit der blauen Mütze.“', 'Du hattest letzten Winter eine blaue Mütze. Du hast sie verloren. In einem Bus.']
-    ],
-    beschuldigt: '„Ich?“ Frau Berger lässt die Nadeln sinken. Ihre Augen füllen sich mit Tränen. „Kind, ich will doch nur zu meinem Enkel.“',
-    enttarnt: [
-      'Frau Berger hört auf zu stricken. Zum ersten Mal.',
-      'Der rote Schal rutscht von ihrem Schoß und hört nicht auf zu rutschen, Meter um Meter, bis er den ganzen Gang bedeckt.',
-      '„Schade“, sagt sie. Ihr Mund bewegt sich dabei nicht.'
-    ],
-    lacht: '„Er wird zehn“, flüstert Frau Berger hinter dir. „Und du wirst … gar nichts mehr.“'
-  },
+// ======================================================================
+//  Waren, Nächte, Speicher
+// ======================================================================
+const WAREN = [
+  { id: 'wasser', name: 'Wasser', emoji: '💧', preis: 100 },
+  { id: 'cola', name: 'Cola', emoji: '🥤', preis: 200 },
+  { id: 'chips', name: 'Chips', emoji: '🍟', preis: 250 },
+  { id: 'schoko', name: 'Schokolade', emoji: '🍫', preis: 150 },
+  { id: 'kaugummi', name: 'Kaugummi', emoji: '🍬', preis: 50 },
+  { id: 'zeitung', name: 'Zeitung', emoji: '📰', preis: 300 }
+];
+const WARE = Object.fromEntries(WAREN.map(w => [w.id, w]));
+const SELTSAM = ['rohes Fleisch', 'deine Stimme', 'einen Zahn', 'dein Gesicht', 'kalte Erde', 'DICH', 'deinen Namen', 'Haare'];
 
-  jonas: {
-    name: 'Jonas', kurz: 'JO',
-    einstieg: [
-      'Ein Junge steigt ein, vielleicht sechzehn. Die Kapuze tief im Gesicht, große Kopfhörer über den Ohren.',
-      'Er lässt sich auf die letzte Bank fallen und starrt auf sein Handy. Der Bildschirm ist schwarz.'
-    ],
-    reden: [
-      ['Er zieht einen Kopfhörer herunter. „Was?“', '„Mein Akku ist leer, seit ich eingestiegen bin. War vorhin noch bei achtzig.“ Er reibt sich die Arme. „Ist dir auch so kalt?“'],
-      ['Er zieht einen Kopfhörer herunter. Aus dem Kopfhörer kommt keine Musik. Nur Atmen. Langsam. Im selben Takt wie deins.', '„Was?“, fragt er. Seine Lippen bewegen sich einen Moment zu spät.']
-    ],
-    ansehen: [
-      ['Er wippt nervös mit dem Fuß. An seinen Turnschuhen klebt frischer Matsch, und auf seiner Hand ist ein Pflaster mit kleinen Dinos drauf.', 'Er sieht aus wie jemand, der dringend nach Hause will.'],
-      ['Er sitzt ganz still. Zu still.', 'Du beobachtest ihn, bis der Bus die nächste Kurve nimmt. Er blinzelt nicht. Kein einziges Mal.']
-    ],
-    nochmal: [
-      ['„Meine Mutter bringt mich um“, murmelt er. „Ich hab versprochen, um zwölf zu Hause zu sein.“', 'Er sieht aus dem Fenster. „Die Bäume in der Lindenallee hatten heute Mittag noch Blätter. Ich schwör’s.“'],
-      ['„Wie heißt du?“, fragt er. Du sagst es ihm.', '„{name}“, wiederholt er. Dann noch einmal. „{name}.“ Und noch einmal, leiser, als würde er üben, wie es klingt.']
-    ],
-    beschuldigt: 'Jonas springt auf. „Was? Ich? Spinnst du? Ich hab Hunger, mir ist kalt und ich will nach Hause!“ Seine Stimme bricht.',
-    enttarnt: [
-      'Jonas nimmt langsam die Kopfhörer ab. Darunter sind keine Ohren.',
-      'Er lächelt. Das Lächeln geht zu weit. Viel zu weit.',
-      '„{name}“, sagt er mit deiner Stimme. „Fast hätte ich es richtig gekonnt.“'
-    ],
-    lacht: '„{name}“, sagt Jonas hinter dir. Mit deiner Stimme. Diesmal klingt es perfekt.'
-  },
+const NAECHTE = [
+  { monster: 0.25, geduld: 50, lauern: 9, tempo: 3.6, waren: [1, 2], pause: [4, 7] },
+  { monster: 0.35, geduld: 42, lauern: 7, tempo: 3.9, waren: [1, 3], pause: [3, 6] },
+  { monster: 0.45, geduld: 36, lauern: 5.5, tempo: 4.2, waren: [2, 3], pause: [2.5, 5] }
+];
+const MIN_PRO_SEK = 1.6;      // Spielminuten pro echter Sekunde (22:00 → 06:00 ≈ 5 Minuten)
+const NACHT_LAENGE = 480;     // Minuten von 22 bis 6 Uhr
 
-  mira: {
-    name: 'Mira', kurz: 'MI',
-    einstieg: [
-      'Eine junge Frau steigt ein. Unter ihrem Regenmantel trägt sie hellblaue Krankenhauskleidung, in der Hand einen Kaffeebecher. Ihre Augen sind rot vor Müdigkeit.',
-      'Hinter ihr, am Friedhofstor, steht jetzt niemand mehr.'
-    ],
-    reden: [
-      ['„Nachtschicht“, sagt sie und hebt den Becher. „Zwölf Stunden.“', '„Ich wohne hinter dem Friedhof. Ist eine Abkürzung. Nachts ein bisschen gruselig, aber man gewöhnt sich dran.“'],
-      ['„Nachtschicht“, sagt sie. „Ich habe heute jemanden verloren.“ Sie lächelt dabei.', '„Aber jetzt ist er ja wieder da.“ Sie sieht an dir vorbei. Auf den leeren Platz neben dir.']
-    ],
-    ansehen: [
-      ['Auf ihrem Namensschild steht „M. Okafor – Station 4“. Ihr Regenmantel ist trocken, nur an ihren Schuhen klebt feuchtes Gras vom Friedhof.', 'Sie gähnt so heftig, dass ihr die Augen tränen. Der Kaffee dampft.'],
-      ['Ihr Namensschild ist leer.', 'Ihr Mantel tropft. Dabei hat es am Friedhof gar nicht geregnet. Die Pfütze unter ihrem Sitz wird immer größer. Das Wasser ist schwarz.']
-    ],
-    nochmal: [
-      ['Sie mustert dich, so wie Krankenschwestern das machen. „Du bist ganz schön blass. Hast du heute was gegessen?“', 'Sie gibt dir einen Müsliriegel. Ihre Finger sind warm.'],
-      ['Sie greift nach deinem Handgelenk, ganz professionell, und fühlt deinen Puls. Ihre Finger sind eiskalt.', '„Hm“, sagt sie. „Noch.“']
-    ],
-    beschuldigt: 'Mira sieht dich müde an. „Ehrlich jetzt? Ich hab zwölf Stunden Leute gerettet, und du …“ Sie schüttelt den Kopf und sieht weg.',
-    enttarnt: [
-      'Mira stellt den Kaffeebecher ab. Er ist voll mit schwarzem Wasser.',
-      'Sie steht auf, und das Wasser läuft aus ihren Ärmeln, aus ihren Haaren, aus ihren Augen.',
-      '„Ich hätte gut auf dich aufgepasst“, sagt sie. „Für immer.“'
-    ],
-    lacht: '„Hm“, macht Mira hinter dir, und ihre kalten Finger legen sich um dein Handgelenk. „Jetzt nicht mehr.“'
-  },
+const SPEICHER = 'derletztebus.kiosk';
+function lade() { try { return JSON.parse(localStorage.getItem(SPEICHER)) || {}; } catch (e) { return {}; } }
+function speichere(d) { try { localStorage.setItem(SPEICHER, JSON.stringify(d)); } catch (e) { /* egal */ } }
 
-  albrecht: {
-    name: 'Herr Albrecht', kurz: 'HA',
-    einstieg: [
-      'Ein großer Mann in einem grauen Mantel steigt ein und nimmt höflich den Hut ab. Sein Regenschirm ist zusammengeklappt und völlig trocken.',
-      '„Guten Abend allerseits“, sagt er und setzt sich direkt hinter den Fahrer.'
-    ],
-    reden: [
-      ['„Albrecht, sehr angenehm.“ Er nickt dir zu und tippt auf den Anhänger an deinem Rucksack. „Und du bist {name}. Steht ja hier.“', '„Man sollte seinen Namen nachts nicht so offen herumtragen“, sagt er. „Man weiß nie, wer mitliest.“'],
-      ['„Guten Abend, {name}“, sagt er freundlich.', 'Du hast ihm deinen Namen nicht gesagt. Er steht nirgends. „Wir kennen uns noch nicht“, sagt er. „Aber bald.“']
-    ],
-    ansehen: [
-      ['Er liest Zeitung. Eine ganz normale Zeitung von heute, mit Fußballergebnissen und Wetterbericht. Ab und zu schüttelt er den Kopf.', 'Er riecht nach Pfefferminz und Rasierwasser.'],
-      ['Er liest Zeitung. Du schielst auf die Seite: Das Datum ist von morgen.', 'Auf der Titelseite ist ein Foto. Von diesem Bus.']
-    ],
-    nochmal: [
-      ['„Ich fahre diese Strecke jede Nacht“, erzählt er. „Ich bin Nachtwächter im Stadtmuseum.“', '„Diese Haltestelle hatte früher einen Namen. Irgendwann ist er einfach … abgeblättert. Niemand hat ihn neu geschrieben.“'],
-      ['„Ich fahre diese Strecke jede Nacht“, sagt er. „Schon sehr, sehr lange.“', 'Er zählt die Fahrgäste mit dem Finger ab. Bei dir hört er auf und lächelt.']
-    ],
-    beschuldigt: 'Herr Albrecht hebt die Augenbrauen. „Junger Mensch, das ist eine ziemlich unhöfliche Behauptung.“ Seine Hände krallen sich um den Regenschirm. Sie zittern.',
-    enttarnt: [
-      'Herr Albrecht faltet seine Zeitung zusammen, ordentlich, Kante auf Kante.',
-      'Dann setzt er seinen Hut auf. Unter dem Hut ist kein Gesicht mehr. Nur Dunkelheit, die dich ansieht.',
-      '„Morgen“, sagt die Dunkelheit höflich. „Morgen steht es in der Zeitung.“'
-    ],
-    lacht: '„Wir kennen uns noch nicht“, sagt Herr Albrecht hinter dir. „Aber jetzt haben wir ja Zeit.“'
-  },
+// ======================================================================
+//  Grafik
+// ======================================================================
+const HOCH = (() => { try { return localStorage.getItem('derletztebus.grafik') !== 'niedrig'; } catch (e) { return true; } })();
+const renderer = new THREE.WebGLRenderer({ antialias: !HOCH, powerPreference: 'high-performance' });
+let pixelRatio = Math.min(devicePixelRatio, HOCH ? (isTouch ? 1.5 : 2) : 1);
+renderer.setPixelRatio(pixelRatio);
+renderer.setSize(innerWidth, innerHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.shadowMap.enabled = HOCH;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+$('spiel').appendChild(renderer.domElement);
 
-  lotte: {
-    name: 'Lotte', kurz: 'LO',
-    einstieg: [
-      'Ein kleines Mädchen in einer gelben Regenjacke steigt ein. Ganz allein. Sie drückt einen Stoffhasen an sich, der nur ein Ohr hat.',
-      'Der Fahrer sagt nichts. Sie setzt sich auf den Platz direkt neben der Tür.'
-    ],
-    reden: [
-      ['„Ich warte auf meine Mama“, sagt sie ernst. „Sie hat gesagt, ich soll an der Schule warten. Aber dann ist es so dunkel geworden.“', 'Ihre Unterlippe zittert. „Fährt der Bus nach Hause?“'],
-      ['„Ich warte auf meine Mama“, sagt sie ernst. „Schon seit 1987.“', 'Dann kichert sie, als wäre das ein richtig guter Witz.']
-    ],
-    ansehen: [
-      ['Ihre Schuhe sind mit Doppelknoten zugebunden, so wie Eltern das machen. Aus ihrer Jackentasche guckt ein Zettel:', '„Lotte, Klasse 1b. Bei Fragen bitte Mama anrufen.“ Darunter eine Telefonnummer.'],
-      ['Die Deckenlampe hängt genau über ihr. Unter ihrem Sitz ist der Boden hell.', 'Sie wirft keinen Schatten. Und ihr Hase hat jetzt zwei Ohren.']
-    ],
-    nochmal: [
-      ['Sie hält dir ihren Hasen hin. „Das ist Herr Hoppel. Er hat Angst im Dunkeln.“', '„Ich nicht“, sagt sie. Dann rückt sie ein Stück näher an dich heran. „Na gut. Ein bisschen.“'],
-      ['„Du sitzt auf dem Platz von jemandem“, flüstert sie.', '„Er kommt gleich wieder.“']
-    ],
-    beschuldigt: 'Lotte versteht nicht sofort. Dann fängt sie an zu weinen, ganz leise, und drückt Herrn Hoppel an sich. „Ich will zu meiner Mama.“',
-    enttarnt: [
-      'Lotte hört auf zu kichern.',
-      'Sie lässt den Hasen fallen. Er landet mit einem nassen Geräusch, das nicht nach Stoff klingt.',
-      '„Du hättest mein Freund sein können“, sagt sie, und ihre Stimme ist plötzlich sehr, sehr alt.'
-    ],
-    lacht: 'Hinter dir kichert Lotte. „Jetzt bist du dran mit Warten.“'
-  }
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x03050a);
+scene.fog = new THREE.FogExp2(0x070b14, 0.021);
+
+const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.05, 220);
+camera.rotation.order = 'YXZ';
+
+initTexturen();
+baueUmgebung(renderer);
+
+let post = HOCH ? baueNachbearbeitung(renderer, scene, camera, isTouch ? 0 : 4) : null;
+if (post) $('vignette').style.display = 'none';
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  if (post) { post.composer.setSize(innerWidth, innerHeight); post.bloom.resolution.set(innerWidth / 2, innerHeight / 2); }
+});
+
+scene.add(new THREE.HemisphereLight(0x4a5a88, 0x0c0a08, 0.5));
+
+// ---------- Materialien ----------
+const wiederhole = (s, x, y) => { for (const t of [s.map, s.normalMap, s.roughnessMap]) t.repeat.set(x, y); };
+const pbr = (s, extra = {}) => new THREE.MeshStandardMaterial({
+  map: s.map, normalMap: s.normalMap, roughnessMap: s.roughnessMap, roughness: 1,
+  normalScale: new THREE.Vector2(1, 1), envMap: ENV, envMapIntensity: 0.7, ...extra
+});
+const std = (farbe, extra = {}) => new THREE.MeshStandardMaterial({ color: farbe, roughness: 0.6, envMap: ENV, envMapIntensity: 0.5, ...extra });
+const leinwand = (w, h, malen) => {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  malen(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
+  return t;
 };
 
-/* ---------------------------------------------------------------
-   Die Haltestellen – jede seltsamer als die vorige.
-   --------------------------------------------------------------- */
-const HALTE = [
-  { szene: 'stadt', schild: 'Marktplatz', uhr: '00:47', regen: 1, laternen: true },
-  {
-    szene: 'bahnhof', schild: 'Hauptbahnhof', uhr: '00:53', regen: 1, laternen: true, steigt: 'berger',
-    fahrt: ['Der Bus fährt durch die leere Innenstadt. Alle Ampeln sind grün. Alle gleichzeitig.'],
-    text: ['Die große Uhr über dem Bahnhofseingang hat keine Zeiger.', 'Der Bahnhof ist leer. Nur unter dem Wartehäuschen steht jemand, als hätte er genau auf diesen Bus gewartet.']
-  },
-  {
-    szene: 'linden', schild: 'Lindenallee', uhr: '01:04', regen: .35, laternen: 'flackern', steigt: 'jonas',
-    fahrt: ['Die Scheibenwischer quietschen. Irgendwann merkst du, dass sie im Takt quietschen. Wie ein Lied, das du kennst und an das du dich nicht erinnern willst.'],
-    text: ['Die Lindenallee. Hier läufst du jeden Morgen zur Schule. Aber so kennst du sie nicht.', 'Die Bäume sind kahl, alle, und ihre Äste hängen über die Straße wie lange, dünne Finger. Der Regen hört auf, als hätte jemand ihn abgedreht.']
-  },
-  {
-    szene: 'friedhof', schild: 'Am Alten Friedhof', uhr: '01:13', regen: 0, laternen: false, steigt: 'mira',
-    fahrt: ['Der Bus biegt ab, wo er nicht abbiegen sollte. Die Straßen werden schmaler. Die Häuser haben keine Türen mehr.'],
-    text: ['Diese Haltestelle gibt es nicht. Der Alte Friedhof liegt am anderen Ende der Stadt, und dort fährt kein Bus.', 'Nebel kriecht zwischen den Grabsteinen hervor und legt sich um die Räder. Das Tor steht offen.']
-  },
-  {
-    szene: 'namenlos', schild: '', uhr: '01:31', regen: 0, laternen: 'eine', steigt: 'albrecht',
-    fahrt: ['Lange fährt der Bus durch völlige Dunkelheit. Draußen ist kein einziges Licht. Im Glas siehst du nur euch selbst.'],
-    text: ['Der Bus hält an einer Haltestelle ohne Namen. Das Schild ist leer. Auf dem Fahrplan steht nur eine einzige Abfahrtszeit: jetzt.', 'Rundherum ist nichts. Keine Häuser, keine Straße. Nur eine Laterne, die genau über dem Bus brennt.']
-  },
-  {
-    szene: 'schule', schild: 'Schulstraße', uhr: '02:00', regen: 0, laternen: true, steigt: 'lotte',
-    fahrt: ['Der Bus wird schneller. Die Laternen ziehen so schnell vorbei, dass sie zu einem einzigen Lichtstreifen verschwimmen.'],
-    text: ['Schulstraße. Deine Schule. Es ist zwei Uhr nachts, und in jedem einzelnen Fenster brennt Licht.', 'In deinem Klassenzimmer, zweiter Stock, drittes Fenster, sitzt jemand an deinem Platz. Bevor du genauer hinsehen kannst, gehen alle Lichter gleichzeitig aus.']
-  },
-  {
-    szene: 'zuhause', schild: 'Ahornweg', uhr: '02:47', regen: .2, laternen: true, zuhause: true,
-    fahrt: ['Der Motor brummt tief und gleichmäßig, wie etwas Großes, das schläft.'],
-    text: ['Ahornweg. Deine Haltestelle. Endlich.', 'Da ist euer Haus. In der Küche brennt Licht. Durch das Fenster siehst du jemanden am Tisch sitzen. Er wartet auf dich.', 'Die Türen öffnen sich. Niemand steigt ein. Trotzdem senkt sich der Bus ein Stück, als wäre etwas Schweres zugestiegen.', 'Der Fahrer wartet.']
-  },
-  {
-    szene: 'ende', schild: 'Endstation', uhr: '00:47', regen: 0, laternen: false, ende: true,
-    fahrt: ['Der Bus fährt weiter. Weg von deinem Haus, weg von allem. Die Straße unter den Rädern wird weich und still.']
-  }
-];
-
-const FAHRER = [
-  ['Du gehst nach vorne. „Entschuldigung, wohin fährt dieser Bus?“', 'Der Fahrer antwortet nicht. Im Rückspiegel siehst du nur den Schirm seiner Mütze.'],
-  ['„Hallo? Ich muss zum Ahornweg.“', 'Der Fahrer hebt einen Finger, ohne sich umzudrehen, und zeigt auf das Schild über seinem Kopf: BITTE WÄHREND DER FAHRT NICHT MIT DEM FAHRER SPRECHEN.', 'Darunter hat jemand mit Kuli geschrieben: ZÄHL LIEBER.'],
-  ['Diesmal sind seine Augen im Rückspiegel zu sehen. Müde Augen. Sie kommen dir bekannt vor.', 'Sehr bekannt.'],
-  ['„Sie sehen aus wie …“, fängst du an.', 'Der Fahrer klappt den Rückspiegel nach oben.'],
-  ['Der Fahrer summt leise. Es ist dasselbe Lied wie das der Scheibenwischer.']
-];
-
-const ENDEN = {
-  ausgestiegen: 'Ausgestiegen',
-  fahrgast: 'Fahrgast',
-  doppelt: 'Doppelt',
-  steuer: 'Am Steuer'
+wiederhole(T.fliesen, 3.75, 3.1);
+wiederhole(T.wand, 2.2, 1);
+wiederhole(T.aussen, 3, 1.2);
+wiederhole(T.asphalt, 50, 1.5);
+wiederhole(T.platten, 24, 10.7);
+wiederhole(T.decke, 3, 2.5);
+const M = {
+  boden: pbr(T.fliesen, { envMapIntensity: 1 }),
+  wand: pbr(T.wand),
+  aussen: pbr(T.aussen, { metalness: 0.5, envMapIntensity: 0.9 }),
+  decke: pbr(T.decke, { envMapIntensity: 0.2 }),
+  dach: std(0x23262d, { roughness: 0.8 }),
+  holz: pbr(T.holz, { envMapIntensity: 0.35 }),
+  theke: std(0x7d786b, { roughness: 0.38, envMapIntensity: 0.7 }),
+  metall: pbr(T.metall, { metalness: 0.9, envMapIntensity: 1.1 }),
+  dunkel: std(0x15171c, { roughness: 0.7 }),
+  asphalt: pbr(T.asphalt, { envMapIntensity: 1.3 }),
+  platten: pbr(T.platten, { envMapIntensity: 1.2 }),
+  erde: new THREE.MeshStandardMaterial({ color: 0x0b100e, roughness: 1 }),
+  unsichtbar: new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }),
+  roehre: new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff4dc, emissiveIntensity: 2.2 })
 };
 
-/* ---------------------------------------------------------------
-   Spielzustand
-   --------------------------------------------------------------- */
-let S;
-function neuesSpiel(name) {
-  S = {
-    name,
-    ding: pick(Object.keys(LEUTE)),
-    da: [],             // eingestiegene Fahrgäste
-    getan: new Set(),   // z. B. 'jonas:ansehen'
-    spiegel: false,
-    fahrer: 0,
-    aufmerksam: 0,      // wie sehr das Ding bemerkt hat, dass du es beobachtest
-    warnung1: false,
-    warnung2: false
+function kiste(w, h, d, mat, x, y, z, eltern = scene) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+  m.position.set(x, y, z);
+  if (mat !== M.unsichtbar) { m.castShadow = true; m.receiveShadow = true; }
+  eltern.add(m);
+  return m;
+}
+function rundkiste(w, h, d, r, mat, x, y, z, eltern = scene) {
+  const m = new THREE.Mesh(new RoundedBoxGeometry(w, h, d, 3, r), mat);
+  m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true;
+  eltern.add(m);
+  return m;
+}
+
+// ======================================================================
+//  Kollision (alles in der Draufsicht als Rechtecke)
+// ======================================================================
+const HINDERNISSE = [];
+function hindernis(x0, x1, z0, z1, aktiv) { HINDERNISSE.push({ x0, x1, z0, z1, aktiv }); }
+function schiebeRaus(p, r) {
+  for (const b of HINDERNISSE) {
+    if (b.aktiv && !b.aktiv()) continue;
+    const cx = clamp(p.x, b.x0, b.x1), cz = clamp(p.z, b.z0, b.z1);
+    const dx = p.x - cx, dz = p.z - cz, d2 = dx * dx + dz * dz;
+    if (d2 >= r * r) continue;
+    if (d2 > 1e-8) {
+      const d = Math.sqrt(d2);
+      p.x = cx + dx / d * r; p.z = cz + dz / d * r;
+    } else {
+      const l = p.x - b.x0, re = b.x1 - p.x, u = p.z - b.z0, o = b.z1 - p.z, m = Math.min(l, re, u, o);
+      if (m === l) p.x = b.x0 - r; else if (m === re) p.x = b.x1 + r; else if (m === u) p.z = b.z0 - r; else p.z = b.z1 + r;
+    }
+  }
+  p.x = clamp(p.x, -20, 12);
+  p.z = clamp(p.z, -8.3, 8);
+}
+const KIOSK = { x0: -3.2, x1: 3.2, z0: -2.7, z1: 2.7 };
+const drinnen = p => p.x > -3.05 && p.x < 3.05 && p.z > -2.55 && p.z < 2.55;
+function siehtDurch(ax, az, bx, bz, box = KIOSK, rand = 0.15) {
+  // Schneidet die Strecke a→b das Rechteck? (Slab-Methode)
+  let t0 = 0, t1 = 1;
+  const dx = bx - ax, dz = bz - az;
+  const pruef = (p, q) => {
+    if (Math.abs(p) < 1e-9) return q >= 0;
+    const r = q / p;
+    if (p < 0) { if (r > t1) return false; if (r > t0) t0 = r; } else { if (r < t0) return false; if (r < t1) t1 = r; }
+    return true;
   };
+  const x0 = box.x0 - rand, x1 = box.x1 + rand, z0 = box.z0 - rand, z1 = box.z1 + rand;
+  const trifft = pruef(-dx, ax - x0) && pruef(dx, x1 - ax) && pruef(-dz, az - z0) && pruef(dz, z1 - az);
+  return !trifft;
 }
-function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
-const istDing = id => S.ding === id;
-const n = s => s.replace(/\{name\}/g, S.name);
 
-/* ---------------------------------------------------------------
-   Erzähl-Werkzeuge
-   --------------------------------------------------------------- */
-const textEl = $('#text'), wahlEl = $('#wahl'), zeitEl = $('#zeit'), geschichteEl = $('#geschichte');
-let eilig = false;
-geschichteEl.addEventListener('click', e => { if (!e.target.closest('button')) eilig = true; });
+// ======================================================================
+//  Welt bauen
+// ======================================================================
+const klickbar = [];
+const W = {};   // wichtige Teile der Welt
+const KEIN_LICHT = () => ({ intensity: 0, position: new THREE.Vector3(), color: new THREE.Color() });
 
-function runter() { geschichteEl.scrollTop = geschichteEl.scrollHeight; }
-function leeren() { textEl.innerHTML = ''; }
-
-async function sag(zeilen, klasse) {
-  if (!Array.isArray(zeilen)) zeilen = [zeilen];
-  for (let z of zeilen) {
-    z = n(z);
-    const p = document.createElement('p');
-    p.className = klasse || (/^[„»]/.test(z) ? 'rede' : '');
-    textEl.appendChild(p);
-    const knoten = document.createTextNode('');
-    p.appendChild(knoten);
-    for (let i = 0; i < z.length; i++) {
-      if (eilig) { knoten.data = z; break; }
-      knoten.appendData(z[i]);
-      if (i % 4 === 0) { runter(); if (z[i] !== ' ') Klang.tippen(); }
-      const c = z[i];
-      await pause('.!?…'.includes(c) ? 240 : c === ',' ? 90 : 20);
-    }
-    runter();
-    await pause(eilig ? 40 : 320);
+function spot(farbe, staerke, reichweite, winkel, halbschatten, abnahme, pos, ziel, schatten, karte = 512, eltern = scene) {
+  const l = new THREE.SpotLight(farbe, staerke, reichweite, winkel, halbschatten, abnahme);
+  l.position.copy(pos); l.target.position.copy(ziel);
+  eltern.add(l); eltern.add(l.target);
+  if (schatten && HOCH) {
+    l.castShadow = true; l.shadow.mapSize.set(karte, karte);
+    l.shadow.bias = -0.0006; l.shadow.normalBias = 0.025; l.shadow.camera.near = 0.3; l.shadow.camera.far = reichweite;
   }
+  return l;
 }
 
-function trenner() {
-  const p = document.createElement('p'); p.className = 'trenner'; textEl.appendChild(p);
+// ---------- Etiketten und Waren ----------
+const ET = {};
+function etikett(id) {
+  if (ET[id]) return ET[id];
+  const schrift = (g, text, x, y, groesse, farbe) => {
+    g.font = `800 ${groesse}px Inter, Arial, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = farbe; g.fillText(text, x, y);
+  };
+  const malen = {
+    cola: () => leinwand(256, 128, (g, w, h) => {
+      const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#ec2a30'); gr.addColorStop(1, '#a30f18');
+      g.fillStyle = gr; g.fillRect(0, 0, w, h);
+      g.fillStyle = '#fff'; g.beginPath(); g.moveTo(0, h * 0.6); g.bezierCurveTo(w * 0.3, h * 0.3, w * 0.6, h * 0.95, w, h * 0.5);
+      g.lineTo(w, h * 0.66); g.bezierCurveTo(w * 0.6, h * 1.1, w * 0.3, h * 0.48, 0, h * 0.76); g.fill();
+      schrift(g, 'COLA', 64, 34, 38, '#fff'); schrift(g, 'COLA', 192, 34, 38, '#fff');
+    }),
+    wasser: () => leinwand(256, 64, (g, w, h) => {
+      g.fillStyle = '#e9f4ff'; g.fillRect(0, 0, w, h);
+      g.fillStyle = '#2f7fd0'; g.fillRect(0, 0, w, 10); g.fillRect(0, h - 10, w, 10);
+      schrift(g, 'WASSER', 64, 32, 28, '#1b5aa5'); schrift(g, 'WASSER', 192, 32, 28, '#1b5aa5');
+    }),
+    chips: () => leinwand(256, 384, (g, w, h) => {
+      const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#ffd23a'); gr.addColorStop(1, '#f2a010');
+      g.fillStyle = gr; g.fillRect(0, 0, w, h);
+      g.fillStyle = '#d3281c'; g.beginPath(); g.ellipse(w / 2, h * 0.45, w * 0.46, h * 0.2, 0, 0, Math.PI * 2); g.fill();
+      schrift(g, 'KNUSPER', w / 2, h * 0.45, 46, '#fff6d8'); schrift(g, 'PAPRIKA', w / 2, h * 0.58, 26, '#ffe9a0');
+      g.fillStyle = '#f6c14a';
+      for (let i = 0; i < 7; i++) { g.beginPath(); g.ellipse(40 + i * 30, h * 0.8 + (i % 2) * 24, 18, 11, i, 0, Math.PI * 2); g.fill(); }
+    }),
+    schoko: () => leinwand(128, 256, (g, w, h) => {
+      const gr = g.createLinearGradient(0, 0, w, h); gr.addColorStop(0, '#7b3fb4'); gr.addColorStop(1, '#4a1f80');
+      g.fillStyle = gr; g.fillRect(0, 0, w, h);
+      g.fillStyle = '#e6c04a'; g.fillRect(0, h * 0.34, w, 6); g.fillRect(0, h * 0.66, w, 6);
+      schrift(g, 'SCHOKO', w / 2, h * 0.5, 30, '#f6e08a'); schrift(g, 'VOLLMILCH', w / 2, h * 0.82, 14, '#e6d7f6');
+    }),
+    kaugummi: () => leinwand(128, 128, (g, w, h) => {
+      const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#53d98a'); gr.addColorStop(1, '#1f9c5a');
+      g.fillStyle = gr; g.fillRect(0, 0, w, h);
+      schrift(g, 'FRISCH', w / 2, h * 0.4, 28, '#fff'); schrift(g, 'MINZE', w / 2, h * 0.68, 20, '#d6ffe6');
+    }),
+    zeitung: () => leinwand(160, 200, (g, w, h) => {
+      g.fillStyle = '#ecebe3'; g.fillRect(0, 0, w, h);
+      g.fillStyle = '#1c1c1c'; g.font = 'bold 30px serif'; g.textAlign = 'left'; g.fillText('MORGEN', 10, 34);
+      g.fillRect(8, 42, w - 16, 3);
+      g.fillStyle = '#555'; g.fillRect(10, 54, w - 20, 62);
+      for (let y = 126; y < h - 8; y += 9) { g.fillStyle = '#8a8a8a'; g.fillRect(10, y, w - 20 - (y % 3) * 14, 4); }
+    })
+  };
+  ET[id] = malen[id]();
+  return ET[id];
 }
 
-function waehle(optionen) {
-  eilig = false;
-  return new Promise(fertig => {
-    wahlEl.innerHTML = '';
-    for (const o of optionen) {
-      const b = document.createElement('button');
-      b.textContent = n(o.text);
-      if (o.klasse) b.className = o.klasse;
-      b.onclick = () => { wahlEl.innerHTML = ''; Klang.klick(); fertig(o.wert); };
-      wahlEl.appendChild(b);
+function wareModell(id) {
+  const g = new THREE.Group();
+  const folie = (map, extra = {}) => new THREE.MeshStandardMaterial({ map, roughness: 0.3, metalness: 0.45, envMap: ENV, envMapIntensity: 1, ...extra });
+  const alu = std(0xb8bcc2, { metalness: 0.9, roughness: 0.28, envMapIntensity: 1.2 });
+  let m;
+  switch (id) {
+    case 'cola': {
+      m = new THREE.Mesh(new THREE.CylinderGeometry(0.033, 0.033, 0.122, 24), [folie(etikett('cola'), { metalness: 0.6, roughness: 0.25 }), alu, alu]);
+      m.position.y = 0.061; g.add(m);
+      const r = new THREE.Mesh(new THREE.TorusGeometry(0.0315, 0.002, 6, 24), alu); r.rotation.x = Math.PI / 2; r.position.y = 0.122; g.add(r);
+      const l = new THREE.Mesh(new THREE.BoxGeometry(0.014, 0.001, 0.02), alu); l.position.set(0.004, 0.1225, 0); g.add(l);
+      break;
     }
-    runter();
+    case 'wasser': {
+      const profil = [[0.001, 0], [0.034, 0], [0.037, 0.012], [0.037, 0.15], [0.033, 0.18], [0.017, 0.2], [0.016, 0.222], [0.001, 0.222]].map(([r, y]) => new THREE.Vector2(r, y));
+      const glas = new THREE.MeshPhysicalMaterial({ color: 0xd2ecff, transparent: true, opacity: 0.4, roughness: 0.05, envMap: ENV, envMapIntensity: 1.6 });
+      m = new THREE.Mesh(new THREE.LatheGeometry(profil, 24), glas); g.add(m);
+      const wasser = new THREE.Mesh(new THREE.CylinderGeometry(0.0335, 0.0335, 0.14, 20), new THREE.MeshStandardMaterial({ color: 0x9cc8ee, transparent: true, opacity: 0.35, roughness: 0.1 }));
+      wasser.position.y = 0.08; g.add(wasser);
+      const band = new THREE.Mesh(new THREE.CylinderGeometry(0.0375, 0.0375, 0.07, 24, 1, true), new THREE.MeshStandardMaterial({ map: etikett('wasser'), roughness: 0.5, side: THREE.DoubleSide }));
+      band.position.y = 0.09; g.add(band);
+      const kappe = new THREE.Mesh(new THREE.CylinderGeometry(0.0175, 0.0175, 0.02, 16), std(0x2f7fd0, { roughness: 0.4 })); kappe.position.y = 0.232; g.add(kappe);
+      break;
+    }
+    case 'chips': {
+      const geo = new THREE.BoxGeometry(0.15, 0.23, 0.05, 10, 14, 2);
+      const p = geo.attributes.position;
+      for (let i = 0; i < p.count; i++) {
+        const x = p.getX(i); let y = p.getY(i), z = p.getZ(i);
+        const t = y / 0.115, rand = Math.abs(t);
+        z *= 1 + 0.55 * (1 - t * t);
+        const naht = Math.min(1, Math.max(0, (rand - 0.8) / 0.17));
+        z *= 1 - naht * 0.92;
+        if (rand > 0.93) y += Math.sin(x * 260) * 0.0022 * Math.sign(t);
+        p.setXYZ(i, x * (1 - 0.04 * (1 - t * t)), y, z);
+      }
+      geo.computeVertexNormals(); geo.translate(0, 0.115, 0);
+      m = new THREE.Mesh(geo, folie(etikett('chips'), { metalness: 0.55, roughness: 0.28 })); g.add(m);
+      break;
+    }
+    case 'schoko': {
+      m = new THREE.Mesh(new RoundedBoxGeometry(0.085, 0.17, 0.014, 2, 0.004), folie(etikett('schoko'), { metalness: 0.2, roughness: 0.45 }));
+      m.position.y = 0.085; m.rotation.x = -0.08; g.add(m);
+      break;
+    }
+    case 'kaugummi': {
+      m = new THREE.Mesh(new RoundedBoxGeometry(0.075, 0.085, 0.02, 2, 0.005), folie(etikett('kaugummi'), { metalness: 0.15, roughness: 0.4 }));
+      m.position.y = 0.0425; g.add(m);
+      break;
+    }
+    case 'zeitung': {
+      const papier = std(0xe4e2d8, { roughness: 0.85 });
+      for (let i = 0; i < 4; i++) {
+        const b = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.004, 0.3), i === 3
+          ? [papier, papier, new THREE.MeshStandardMaterial({ map: etikett('zeitung'), roughness: 0.85 }), papier, papier, papier] : papier);
+        b.position.set(zufall(-0.004, 0.004), 0.002 + i * 0.0045, zufall(-0.004, 0.004)); b.rotation.y = zufall(-0.05, 0.05); g.add(b);
+      }
+      break;
+    }
+  }
+  g.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  return g;
+}
+
+function preisSchild(ware) {
+  return leinwand(256, 80, (g, w, h) => {
+    g.fillStyle = '#fff9e6'; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#e23c2c'; g.fillRect(0, 0, 10, h);
+    g.fillStyle = '#1a1a1a'; g.font = 'bold 34px Inter, Arial'; g.textBaseline = 'middle'; g.textAlign = 'left';
+    g.fillText(ware.name, 22, 28);
+    g.fillStyle = '#c4231a'; g.font = 'bold 32px Inter, Arial'; g.fillText(euro(ware.preis), 22, 62);
   });
 }
-const weiter = (text = 'Weiter ▸') => waehle([{ text, wert: 1, klasse: 'weiter' }]);
 
-/* ---------------------------------------------------------------
-   Bild: Fenster, Regen, Sitze, Licht
-   --------------------------------------------------------------- */
-const draussen = $('#draussen');
+function plakat(breite, hoehe, malen, x, y, z, drehung) {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(breite, hoehe), new THREE.MeshStandardMaterial({ map: leinwand(256, Math.round(256 * hoehe / breite), malen), roughness: 0.55, envMap: ENV, envMapIntensity: 0.3 }));
+  m.position.set(x, y, z); m.rotation.y = drehung; m.receiveShadow = true;
+  scene.add(m);
+  return m;
+}
 
-function svgUrl(svg) { return 'url("data:image/svg+xml,' + encodeURIComponent(svg) + '")'; }
+function baueWelt() {
+  // ---------------------------------------------------------------- Himmel
+  scene.add(sterne());
+  const mondRichtung = new THREE.Vector3(-0.45, 0.6, -0.66).normalize();
+  const mondSprite = mond(); mondSprite.position.copy(mondRichtung).multiplyScalar(150); scene.add(mondSprite);
+  const horizont = new THREE.Mesh(new THREE.CylinderGeometry(160, 160, 70, 40, 1, true), new THREE.MeshBasicMaterial({
+    map: leinwand(4, 128, (g, w, h) => {
+      const gr = g.createLinearGradient(0, 0, 0, h);
+      gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(0.6, 'rgba(70,50,60,0.25)'); gr.addColorStop(0.9, 'rgba(150,90,60,0.42)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = gr; g.fillRect(0, 0, w, h);
+    }), side: THREE.BackSide, transparent: true, depthWrite: false, fog: false
+  }));
+  horizont.position.y = 20; scene.add(horizont);
+  if (HOCH) {
+    W.mond = new THREE.DirectionalLight(0x8197d6, 0.6);
+    W.mond.position.copy(mondRichtung).multiplyScalar(40);
+    W.mond.castShadow = true; W.mond.shadow.mapSize.set(2048, 2048);
+    const sc = W.mond.shadow.camera; sc.left = -16; sc.right = 16; sc.top = 16; sc.bottom = -16; sc.near = 5; sc.far = 90;
+    W.mond.shadow.bias = -0.0004; W.mond.shadow.normalBias = 0.03;
+    scene.add(W.mond, W.mond.target);
+  }
 
-function streifenFuer(szene, laternen) {
-  const W = 600, H = 200;
-  let fern = '', nah = '';
-  const r = (a, b) => a + Math.random() * (b - a);
-  if (szene === 'stadt' || szene === 'bahnhof' || szene === 'zuhause' || szene === 'schule') {
-    let x = 0;
-    while (x < W) {
-      const w = r(40, 90), h = szene === 'zuhause' ? r(50, 80) : r(70, 150);
-      fern += `<rect x="${x}" y="${H - h}" width="${w - 4}" height="${h}" fill="#0b0d14"/>`;
-      if (szene === 'zuhause') fern += `<path d="M${x - 4} ${H - h} L${x + w / 2} ${H - h - 26} L${x + w} ${H - h}Z" fill="#0b0d14"/>`;
-      for (let fy = H - h + 10; fy < H - 20; fy += 18) {
-        for (let fx = x + 8; fx < x + w - 14; fx += 14) {
-          const an = szene === 'schule' ? true : Math.random() < (szene === 'zuhause' ? .08 : .3);
-          if (an) fern += `<rect x="${fx}" y="${fy}" width="7" height="9" fill="${szene === 'schule' ? '#dfe8ff' : '#f2c56b'}" opacity="${r(.5, .95)}"/>`;
-        }
+  // Skyline in der Ferne
+  {
+    const fenster = leinwand(128, 256, (g, w, h) => {
+      g.fillStyle = '#05070b'; g.fillRect(0, 0, w, h);
+      for (let y = 6; y < h - 6; y += 14) for (let x = 6; x < w - 6; x += 12) {
+        if (Math.random() < 0.22) { g.fillStyle = Math.random() < 0.8 ? '#ffd9a0' : '#a8c8ff'; g.fillRect(x, y, 6, 8); }
       }
-      x += w;
+    });
+    const hMat = new THREE.MeshStandardMaterial({ color: 0x090c12, roughness: 1, emissive: 0xffffff, emissiveMap: fenster, emissiveIntensity: 0.9 });
+    for (let i = 0; i < 16; i++) {
+      const b = zufall(8, 18), h = zufall(14, 38), x = -70 + i * 9.5 + zufall(-3, 3), z = zufall(-62, -48);
+      const geo = new THREE.BoxGeometry(b, h, zufall(8, 14));
+      const uv = geo.attributes.uv; for (let k = 0; k < uv.count; k++) uv.setXY(k, uv.getX(k) * b / 10, uv.getY(k) * h / 20);
+      const m = new THREE.Mesh(geo, hMat); m.position.set(x, h / 2 - 1, z); scene.add(m);
     }
-  } else if (szene === 'linden') {
-    for (let x = 10; x < W; x += r(50, 80)) {
-      const h = r(110, 160), y0 = H - h;
-      fern += `<g stroke="#050608" stroke-width="5" fill="none" stroke-linecap="round"><path d="M${x} ${H} L${x} ${y0 + 40}"/>`;
-      for (let k = 0; k < 6; k++) {
-        const ax = x + r(-40, 40), ay = y0 + r(-10, 50);
-        fern += `<path d="M${x} ${y0 + r(40, 80)} Q${x + (ax - x) / 2} ${ay + 20} ${ax} ${ay}" stroke-width="${r(1.5, 3)}"/>`;
+  }
+
+  // ---------------------------------------------------------------- Boden draußen
+  const erde = new THREE.Mesh(new THREE.PlaneGeometry(300, 300), M.erde);
+  erde.rotation.x = -Math.PI / 2; erde.position.y = -0.02; erde.receiveShadow = true; scene.add(erde);
+  const platz = new THREE.Mesh(new THREE.PlaneGeometry(36, 16), M.platten);
+  platz.rotation.x = -Math.PI / 2; platz.position.set(-4, -0.01, 1); platz.receiveShadow = true; scene.add(platz);
+  const strasse = new THREE.Mesh(new THREE.PlaneGeometry(200, 6), M.asphalt);
+  strasse.rotation.x = -Math.PI / 2; strasse.position.set(0, -0.005, -10); strasse.receiveShadow = true; scene.add(strasse);
+  const strich = new THREE.MeshStandardMaterial({ color: 0x9a9a80, roughness: 0.5, envMap: ENV, envMapIntensity: 0.8 });
+  for (let x = -90; x < 90; x += 6) kiste(3, 0.01, 0.15, strich, x, 0.002, -10).castShadow = false;
+  kiste(200, 0.16, 0.3, std(0x5a5c60, { roughness: 0.8 }), 0, 0.07, -7.1);   // Bordstein
+  const gully = new THREE.Mesh(new THREE.CircleGeometry(0.35, 20), M.metall);
+  gully.rotation.x = -Math.PI / 2; gully.position.set(-4.6, 0.003, -9); scene.add(gully);
+
+  // Pfützen spiegeln die Lichter
+  const wasserMat = new THREE.MeshStandardMaterial({
+    color: 0x05070b, roughness: 0.03, metalness: 0, envMap: ENV, envMapIntensity: 1.8,
+    normalMap: T.wasser, normalScale: new THREE.Vector2(0.12, 0.12), transparent: true, opacity: 0.94
+  });
+  W.pfuetzen = wasserMat;
+  for (const [x, z, rx, rz] of [[2.2, -5.0, 1.5, 0.75], [-3.2, -5.7, 1.2, 0.6], [6.4, -2.2, 1.0, 1.5], [-8.6, -6.3, 1.7, 0.7], [-0.4, -8.2, 2.4, 0.8], [5.0, 2.0, 1.2, 0.9], [-6.5, -3.0, 1.0, 1.2]]) {
+    const p = new THREE.Mesh(new THREE.CircleGeometry(1, 36), wasserMat);
+    p.rotation.x = -Math.PI / 2; p.scale.set(rx, rz, 1); p.position.set(x, 0.007, z); scene.add(p);
+  }
+
+  // ---------------------------------------------------------------- Kiosk
+  const innenBoden = new THREE.Mesh(new THREE.PlaneGeometry(6, 5), M.boden);
+  innenBoden.rotation.x = -Math.PI / 2; innenBoden.position.y = 0.005; innenBoden.receiveShadow = true; scene.add(innenBoden);
+  const decke = new THREE.Mesh(new THREE.PlaneGeometry(6, 5), M.decke);
+  decke.rotation.x = Math.PI / 2; decke.position.y = 2.99; decke.receiveShadow = true; scene.add(decke);
+  const H = 3;
+  kiste(6.4, H, 0.2, M.wand, 0, H / 2, 2.6);
+  kiste(6.6, H, 0.05, M.aussen, 0, H / 2, 2.73);
+  kiste(0.2, H, 5.2, M.wand, -3.1, H / 2, 0);
+  kiste(0.05, H, 5.5, M.aussen, -3.23, H / 2, 0);
+  kiste(0.2, H, 2.9, M.wand, 3.1, H / 2, -1.05);
+  kiste(0.2, H, 0.9, M.wand, 3.1, H / 2, 2.05);
+  kiste(0.2, 0.8, 1.2, M.wand, 3.1, 2.6, 1.0);
+  kiste(0.05, H, 2.9, M.aussen, 3.23, H / 2, -1.25);
+  kiste(0.05, H, 1.0, M.aussen, 3.23, H / 2, 2.2);
+  kiste(0.05, 0.8, 1.2, M.aussen, 3.23, 2.6, 1.0);
+  kiste(6.4, 1.0, 0.2, M.wand, 0, 0.5, -2.6);
+  kiste(6.6, 1.0, 0.05, M.aussen, 0, 0.5, -2.73);
+  kiste(6.4, 0.7, 0.2, M.wand, 0, 2.65, -2.6);
+  kiste(6.6, 0.7, 0.05, M.aussen, 0, 2.65, -2.73);
+  kiste(1.0, 1.3, 0.2, M.wand, -2.6, 1.65, -2.6);
+  kiste(1.0, 1.3, 0.2, M.wand, 2.6, 1.65, -2.6);
+  kiste(1.1, 1.3, 0.05, M.aussen, -2.65, 1.65, -2.73);
+  kiste(1.1, 1.3, 0.05, M.aussen, 2.65, 1.65, -2.73);
+  // Rahmen des Verkaufsfensters
+  kiste(4.3, 0.05, 0.12, M.metall, 0, 2.33, -2.78);
+  kiste(0.05, 1.3, 0.12, M.metall, -2.12, 1.65, -2.78);
+  kiste(0.05, 1.3, 0.12, M.metall, 2.12, 1.65, -2.78);
+  // Dach mit Aufbauten
+  rundkiste(6.9, 0.22, 5.9, 0.04, M.dach, 0, H + 0.12, 0);
+  kiste(6.9, 0.18, 0.06, std(0x3a3d44, { roughness: 0.5 }), 0, H + 0.34, -2.95);
+  kiste(0.06, 0.18, 5.9, std(0x3a3d44, { roughness: 0.5 }), -3.45, H + 0.34, 0);
+  kiste(0.06, 0.18, 5.9, std(0x3a3d44, { roughness: 0.5 }), 3.45, H + 0.34, 0);
+  for (const [x, z] of [[-1.6, 0.8], [1.9, -0.5]]) {
+    const v = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 0.4, 16), M.metall); v.position.set(x, H + 0.4, z); v.castShadow = true; scene.add(v);
+    const d = new THREE.Mesh(new THREE.ConeGeometry(0.25, 0.14, 16), M.metall); d.position.set(x, H + 0.67, z); scene.add(d);
+  }
+  const fallrohr = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 3.1, 10), std(0x4a4d55, { roughness: 0.4, metalness: 0.5 }));
+  fallrohr.position.set(3.4, 1.5, -2.85); fallrohr.castShadow = true; scene.add(fallrohr);
+
+  // Theke
+  const theke = rundkiste(4.4, 0.08, 0.75, 0.02, M.theke, 0, 1.02, -2.2);
+  theke.userData = { typ: 'theke' }; klickbar.push(theke);
+  kiste(4.4, 1.0, 0.1, M.holz, 0, 0.5, -1.86);
+  kiste(4.4, 0.06, 0.2, M.metall, 0, 0.03, -1.8);
+  kiste(0.1, 1.0, 0.75, M.holz, -2.2, 0.5, -2.2);
+  kiste(0.1, 1.0, 0.75, M.holz, 2.2, 0.5, -2.2);
+  kiste(4.4, 0.03, 0.06, M.metall, 0, 1.065, -1.84);
+  hindernis(-2.25, 2.25, -2.6, -1.8);
+
+  // Leuchtstoffröhren und Licht
+  rundkiste(1.5, 0.07, 0.3, 0.02, std(0xdcdcd6, { roughness: 0.5 }), 0, 2.955, 0);
+  W.roehre = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 1.3, 12), M.roehre);
+  W.roehre.rotation.z = Math.PI / 2; W.roehre.position.set(0, 2.915, -0.07); scene.add(W.roehre);
+  const roehre2 = new THREE.Mesh(W.roehre.geometry, M.roehre); roehre2.rotation.z = Math.PI / 2; roehre2.position.set(0, 2.915, 0.07); scene.add(roehre2);
+  W.licht = spot(0xfff0d8, 34, 15, 1.25, 0.95, 1.3, new THREE.Vector3(0, 2.88, 0), new THREE.Vector3(0, 0, 0), true, 1024);
+  // Weiches Fensterlicht: leuchtet mit der Deckenlampe und beleuchtet die Gesichter der Kunden draußen
+  W.fensterLicht = new THREE.PointLight(0xffe2b8, 10, 8, 1.5);
+  W.fensterLicht.position.set(0, 2.3, -1.5); scene.add(W.fensterLicht);
+  {
+    let staerke = 34;
+    Object.defineProperty(W.licht, 'intensity', {
+      configurable: true,
+      get: () => staerke,
+      set: v => { staerke = v; W.fensterLicht.intensity = v * 0.3; }
+    });
+  }
+  W.notlicht = new THREE.PointLight(0xff1a10, 0, 10, 1.6);
+  W.notlicht.position.set(0, 2.6, 1); scene.add(W.notlicht);
+  W.monsterLicht = HOCH ? new THREE.PointLight(0xff2a14, 0, 6, 2) : KEIN_LICHT();
+  if (HOCH) scene.add(W.monsterLicht);
+
+  // Leuchtschild über dem Fenster
+  W.schildMat = new THREE.MeshBasicMaterial({ map: leinwand(512, 96, (g, w, h) => {
+    g.fillStyle = '#120808'; g.fillRect(0, 0, w, h);
+    g.font = 'bold 66px Inter, Arial, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.shadowColor = '#ff3355'; g.shadowBlur = 18; g.fillStyle = '#ff6a7e'; g.fillText('KIOSK', 190, 52);
+    g.shadowColor = '#40c8ff'; g.fillStyle = '#9fe4ff'; g.fillText('24h', 410, 52);
+  }) });
+  const schild = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 0.64), W.schildMat);
+  schild.position.set(0, 3.55, -2.8); schild.rotation.y = Math.PI; scene.add(schild);
+  rundkiste(3.6, 0.8, 0.1, 0.03, M.dunkel, 0, 3.55, -2.74);
+  W.schildLicht = HOCH ? new THREE.PointLight(0xff4466, 5, 7, 1.8) : KEIN_LICHT();
+  if (HOCH) { W.schildLicht.position.set(0, 3.3, -3.6); scene.add(W.schildLicht); }
+
+  // Wände als Hindernisse
+  hindernis(-3.25, 3.25, 2.5, 2.78);
+  hindernis(-3.25, -3.0, -2.78, 2.78);
+  hindernis(3.0, 3.25, -2.78, 0.4);
+  hindernis(3.0, 3.25, 1.6, 2.78);
+  hindernis(3.0, 3.25, 0.4, 1.6, () => !W.tuerOffen);
+  hindernis(-3.25, 3.25, -2.78, -2.5);
+
+  // Hintertür mit Rahmen, Klinke und Lampe
+  W.tuerOffen = false; W.tuerWinkel = 0;
+  kiste(0.1, 2.3, 0.08, M.metall, 3.1, 1.15, 0.36);
+  kiste(0.1, 2.3, 0.08, M.metall, 3.1, 1.15, 1.64);
+  kiste(0.1, 0.08, 1.3, M.metall, 3.1, 2.3, 1.0);
+  W.tuer = new THREE.Group(); W.tuer.position.set(3.12, 0, 0.4); scene.add(W.tuer);
+  const tuerMat = std(0x4b5d54, { roughness: 0.45, metalness: 0.35, envMapIntensity: 0.9 });
+  kiste(0.06, 2.2, 1.2, tuerMat, 0, 1.1, 0.6, W.tuer);
+  kiste(0.08, 0.5, 0.9, std(0x3b4a43, { roughness: 0.5, metalness: 0.3 }), 0, 0.5, 0.6, W.tuer);
+  kiste(0.12, 0.04, 0.16, M.metall, 0, 1.05, 1.0, W.tuer);
+  W.tuerLicht = new THREE.PointLight(0xffd8a0, 4, 8, 1.8);
+  W.tuerLicht.position.set(3.9, 2.4, 1); scene.add(W.tuerLicht);
+  rundkiste(0.34, 0.14, 0.22, 0.03, M.dunkel, 3.38, 2.5, 1);
+  kiste(0.3, 0.05, 0.18, M.roehre, 3.38, 2.42, 1).castShadow = false;
+  const ausgang = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.2), new THREE.MeshBasicMaterial({
+    map: leinwand(256, 72, (g, w, h) => {
+      g.fillStyle = '#0a8a30'; g.fillRect(0, 0, w, h);
+      g.fillStyle = '#e8ffe8'; g.font = 'bold 44px Inter, Arial, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('AUSGANG ➜', w / 2, h / 2 + 2);
+    })
+  }));
+  ausgang.position.set(2.98, 2.55, 1.0); ausgang.rotation.y = -Math.PI / 2; scene.add(ausgang);
+
+  // Regale an der Rückwand
+  for (const y of [0.45, 0.95, 1.45, 1.95]) kiste(5.4, 0.04, 0.45, M.holz, -0.2, y, 2.27);
+  for (const x of [-2.9, -0.95, 1.0, 2.5]) kiste(0.05, 2.0, 0.45, M.holz, x, 1.0, 2.27);
+  kiste(5.5, 2.0, 0.02, std(0x2a2118, { roughness: 0.9 }), -0.2, 1.0, 2.49);
+  hindernis(-2.95, 2.55, 2.02, 2.55);
+  const regal = [
+    ['wasser', -1.92, 0.97, 8, 0.115], ['cola', 0.02, 0.97, 14, 0.12], ['chips', 1.75, 0.97, 6, 0.235],
+    ['schoko', -1.92, 1.47, 12, 0.14], ['kaugummi', 0.02, 1.47, 14, 0.12], ['zeitung', 1.75, 1.47, 3, 0.4]
+  ];
+  for (const [id, x, y, anzahl, abstand] of regal) {
+    for (let reihe = 0; reihe < 2; reihe++) {
+      const n = anzahl - reihe;
+      for (let i = 0; i < n; i++) {
+        const w = wareModell(id);
+        w.position.set(x + (i - (n - 1) / 2) * abstand + (id === 'zeitung' ? (reihe ? 0.1 : 0) : 0), y, reihe ? 2.36 : 2.2);
+        w.rotation.y = zufall(-0.35, 0.35) + (id === 'zeitung' ? 0 : Math.PI);
+        if (id === 'zeitung' && reihe) { w.visible = false; continue; }
+        scene.add(w);
       }
-      fern += '</g>';
     }
-  } else if (szene === 'friedhof') {
-    fern += `<rect x="0" y="${H - 30}" width="${W}" height="30" fill="#151a1c"/>`;
-    for (let x = 10; x < W; x += r(28, 50)) {
-      const h = r(18, 34);
-      fern += Math.random() < .4
-        ? `<path d="M${x + 6} ${H - 28 - h} v${h + 4} M${x} ${H - 18 - h} h12" stroke="#101415" stroke-width="4"/>`
-        : `<path d="M${x} ${H - 26} v-${h - 8} a8 8 0 0 1 16 0 v${h - 8}Z" fill="#101415"/>`;
+    const treffer = kiste(1.6, 0.46, 0.5, M.unsichtbar, x, y + 0.2, 2.2);
+    treffer.userData = { typ: 'regal', ware: id }; klickbar.push(treffer);
+    const preis = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.16), new THREE.MeshBasicMaterial({ map: preisSchild(WARE[id]) }));
+    preis.position.set(x, y - 0.06, 2.03); preis.rotation.y = Math.PI; scene.add(preis);
+  }
+  // Kartons und Wasserkisten
+  const karton = std(0xa88456, { roughness: 0.85 });
+  for (const [x, y, b, h, t] of [[-2.2, 2.12, 0.55, 0.3, 0.38], [-1.3, 2.12, 0.45, 0.26, 0.35], [0.4, 2.14, 0.6, 0.32, 0.4], [2.0, 2.1, 0.5, 0.24, 0.36]]) {
+    const k = rundkiste(b, h, t, 0.01, karton, x, y, 2.28); k.rotation.y = zufall(-0.08, 0.08);
+    kiste(b * 0.18, 0.002, t + 0.01, std(0xc8b48a, { roughness: 0.4 }), x, y + h / 2 + 0.001, 2.28);
+  }
+  for (let i = 0; i < 3; i++) rundkiste(0.5, 0.28, 0.34, 0.015, std(0x2a5ea0, { roughness: 0.5 }), -2.2 + i * 0.6, 0.6, 2.25);
+
+  // Kühlschrank mit leuchtender Glastür
+  rundkiste(0.9, 2.0, 0.7, 0.03, std(0xd8dde3, { roughness: 0.28, metalness: 0.3, envMapIntensity: 1 }), -2.5, 1.0, 1.4);
+  const kuehl = leinwand(128, 256, (g, w, h) => {
+    g.fillStyle = '#cfe8f6'; g.fillRect(0, 0, w, h);
+    const farben = ['#d62a2a', '#2f7fd0', '#e8b020', '#3fa860', '#d62a2a', '#6a4a2a'];
+    for (let r = 0; r < 5; r++) {
+      g.fillStyle = '#8aa4b4'; g.fillRect(0, 48 * r + 44, w, 4);
+      for (let i = 0; i < 6; i++) { g.fillStyle = farben[(i + r * 2) % 6]; g.fillRect(8 + i * 19, 48 * r + 10, 13, 34); g.fillStyle = '#fff'; g.fillRect(10 + i * 19, 48 * r + 6, 9, 5); }
     }
-    for (let x = 0; x < W; x += 9) nah += `<rect x="${x}" y="${H - 70}" width="3" height="70" fill="#07090a"/>`;
-    nah += `<rect x="0" y="${H - 64}" width="${W}" height="3" fill="#07090a"/><rect x="0" y="${H - 22}" width="${W}" height="3" fill="#07090a"/>`;
+  });
+  W.kuehlGlas = new THREE.MeshStandardMaterial({ color: 0x223038, emissive: 0xffffff, emissiveMap: kuehl, emissiveIntensity: 0.75, roughness: 0.05, envMap: ENV, envMapIntensity: 1.4 });
+  const glas = new THREE.Mesh(new THREE.PlaneGeometry(0.76, 1.6), W.kuehlGlas);
+  glas.position.set(-2.5, 1.1, 1.04); glas.rotation.y = Math.PI; scene.add(glas);
+  hindernis(-2.98, -2.02, 1.03, 1.78);
+
+  // Kasse mit Bildschirm
+  W.kasse = new THREE.Group(); W.kasse.position.set(1.55, 1.06, -2.2); scene.add(W.kasse);
+  rundkiste(0.5, 0.14, 0.4, 0.025, std(0x1a1c20, { roughness: 0.45 }), 0, 0.07, 0, W.kasse);
+  for (let r = 0; r < 3; r++) for (let c = 0; c < 6; c++) kiste(0.04, 0.012, 0.04, std(r === 0 ? 0xcc3333 : 0x888c92, { roughness: 0.4 }), -0.1 + c * 0.05, 0.145, 0.02 + r * 0.05 - 0.05, W.kasse);
+  W.kasseCanvas = document.createElement('canvas'); W.kasseCanvas.width = 128; W.kasseCanvas.height = 64;
+  W.kasseTextur = new THREE.CanvasTexture(W.kasseCanvas); W.kasseTextur.colorSpace = THREE.SRGBColorSpace;
+  W.zeigeKasse = text => {
+    const g = W.kasseCanvas.getContext('2d');
+    g.fillStyle = '#052a10'; g.fillRect(0, 0, 128, 64);
+    g.fillStyle = '#5dff8a'; g.font = 'bold 30px monospace'; g.textAlign = 'right'; g.textBaseline = 'middle'; g.fillText(text, 120, 32);
+    W.kasseTextur.needsUpdate = true;
+  };
+  W.zeigeKasse('0,00');
+  const bild = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.17), new THREE.MeshBasicMaterial({ map: W.kasseTextur }));
+  bild.position.set(0, 0.3, 0.067); bild.rotation.x = -0.35; W.kasse.add(bild);
+  rundkiste(0.38, 0.21, 0.03, 0.01, M.dunkel, 0, 0.3, 0.075, W.kasse).rotation.x = -0.35;
+  const kasseTreffer = kiste(0.7, 0.6, 0.6, M.unsichtbar, 0, 0.25, 0, W.kasse);
+  kasseTreffer.userData = { typ: 'kasse' }; klickbar.push(kasseTreffer);
+
+  // Theken-Deko: Klingel, Trinkgeld-Glas, Notizblock
+  {
+    const klingel = new THREE.Mesh(new THREE.SphereGeometry(0.045, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2), std(0xd8b04a, { metalness: 0.9, roughness: 0.25, envMapIntensity: 1.5 }));
+    klingel.position.set(-1.2, 1.06, -2.3); klingel.castShadow = true; scene.add(klingel);
+    kiste(0.01, 0.025, 0.01, M.metall, -1.2, 1.1, -2.3);
+    const glasKrug = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.045, 0.11, 18, 1, true), new THREE.MeshPhysicalMaterial({ color: 0xcfe6ff, transparent: true, opacity: 0.3, roughness: 0.05, envMap: ENV, envMapIntensity: 1.6, side: THREE.DoubleSide }));
+    glasKrug.position.set(-0.7, 1.115, -2.38); scene.add(glasKrug);
+    for (let i = 0; i < 6; i++) { const mz = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.003, 12), std(0xd9b04a, { metalness: 0.9, roughness: 0.3 })); mz.position.set(-0.7 + zufall(-0.03, 0.03), 1.065 + i * 0.003, -2.38 + zufall(-0.03, 0.03)); scene.add(mz); }
+    rundkiste(0.14, 0.012, 0.2, 0.003, std(0xf2eed8, { roughness: 0.9 }), -0.1, 1.067, -2.0).rotation.y = 0.2;
   }
-  if (laternen === true || laternen === 'flackern') {
-    for (let x = 60; x < W; x += 300) {
-      nah += `<rect x="${x}" y="40" width="5" height="${H - 40}" fill="#08090c"/><rect x="${x - 12}" y="36" width="30" height="6" fill="#08090c"/>`;
-      nah += `<ellipse cx="${x + 3}" cy="46" rx="22" ry="6" fill="#ffd27a" opacity=".85"/><path d="M${x - 10} 46 L${x - 50} ${H} L${x + 56} ${H} L${x + 16} 46Z" fill="#ffd27a" opacity=".07"/>`;
+
+  // Wanduhr (zeigt die Spielzeit)
+  {
+    const c = document.createElement('canvas'); c.width = c.height = 256; W.uhrCanvas = c;
+    W.uhrTextur = new THREE.CanvasTexture(c); W.uhrTextur.colorSpace = THREE.SRGBColorSpace; W.uhrTextur.anisotropy = 8;
+    const ziffer = new THREE.Mesh(new THREE.CircleGeometry(0.2, 48), new THREE.MeshStandardMaterial({ map: W.uhrTextur, roughness: 0.4, envMap: ENV, envMapIntensity: 0.5 }));
+    ziffer.position.set(0.95, 2.62, 2.485); ziffer.rotation.y = Math.PI; scene.add(ziffer);
+    const rahmen = new THREE.Mesh(new THREE.TorusGeometry(0.205, 0.016, 10, 48), std(0x15171c, { roughness: 0.4 }));
+    rahmen.position.set(0.95, 2.62, 2.48); scene.add(rahmen);
+    W.uhrMinute = -1;
+    W.zeichneUhr = minuten => {
+      const m5 = Math.floor(minuten / 5);
+      if (m5 === W.uhrMinute) return;
+      W.uhrMinute = m5;
+      const g = c.getContext('2d'), r = 128;
+      g.fillStyle = '#f2efe4'; g.fillRect(0, 0, 256, 256);
+      g.strokeStyle = '#1a1a1a'; g.fillStyle = '#1a1a1a'; g.lineCap = 'round';
+      for (let i = 0; i < 60; i++) {
+        const a = i / 60 * Math.PI * 2, l = i % 5 ? 6 : 16;
+        g.lineWidth = i % 5 ? 2 : 5;
+        g.beginPath(); g.moveTo(r + Math.sin(a) * (r - 8), r - Math.cos(a) * (r - 8)); g.lineTo(r + Math.sin(a) * (r - 8 - l), r - Math.cos(a) * (r - 8 - l)); g.stroke();
+      }
+      g.font = 'bold 30px Inter, Arial'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      for (const z of [12, 3, 6, 9]) { const a = z / 12 * Math.PI * 2; g.fillText(String(z), r + Math.sin(a) * 86, r - Math.cos(a) * 86); }
+      const gesamt = 22 * 60 + m5 * 5, std12 = (gesamt / 60) % 12, mi = gesamt % 60;
+      const zeiger = (winkel, laenge, dicke, farbe) => {
+        g.strokeStyle = farbe; g.lineWidth = dicke;
+        g.beginPath(); g.moveTo(r - Math.sin(winkel) * 14, r + Math.cos(winkel) * 14); g.lineTo(r + Math.sin(winkel) * laenge, r - Math.cos(winkel) * laenge); g.stroke();
+      };
+      zeiger(std12 / 12 * Math.PI * 2, 58, 9, '#1a1a1a');
+      zeiger(mi / 60 * Math.PI * 2, 88, 6, '#1a1a1a');
+      g.fillStyle = '#b01818'; g.beginPath(); g.arc(r, r, 8, 0, Math.PI * 2); g.fill();
+      W.uhrTextur.needsUpdate = true;
+    };
+    W.zeichneUhr(0);
+  }
+
+  // Plakate und Schilder
+  plakat(0.6, 0.85, (g, w, h) => {
+    g.fillStyle = '#143c8c'; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#ffd23a'; g.font = 'bold 54px Inter, Arial'; g.textAlign = 'center'; g.fillText('LOTTO', w / 2, 62);
+    g.fillStyle = '#fff'; g.font = 'bold 20px Inter, Arial'; g.fillText('JACKPOT', w / 2, 100);
+    g.fillStyle = '#ffd23a'; g.font = 'bold 74px Inter, Arial'; g.fillText('9 Mio', w / 2, 190);
+    for (let i = 0; i < 6; i++) { g.fillStyle = '#fff'; g.beginPath(); g.arc(36 + i * 36, 250, 15, 0, Math.PI * 2); g.fill(); g.fillStyle = '#143c8c'; g.font = 'bold 16px Inter'; g.fillText(String(7 + i * 7), 36 + i * 36, 256); }
+  }, -2.985, 1.95, -0.7, Math.PI / 2);
+  plakat(0.5, 0.7, (g, w, h) => {
+    g.fillStyle = '#ffe9f0'; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#e2437d'; g.beginPath(); g.arc(w / 2, 120, 62, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#c9a063'; g.beginPath(); g.moveTo(w / 2 - 44, 150); g.lineTo(w / 2 + 44, 150); g.lineTo(w / 2, 280); g.fill();
+    g.fillStyle = '#e2437d'; g.font = 'bold 46px Inter, Arial'; g.textAlign = 'center'; g.fillText('EIS', w / 2, 40 + 270);
+  }, -2.985, 1.7, 0.35, Math.PI / 2);
+  plakat(0.42, 0.3, (g, w, h) => {
+    g.fillStyle = '#fff'; g.fillRect(0, 0, w, h);
+    g.strokeStyle = '#c4231a'; g.lineWidth = 10; g.strokeRect(5, 5, w - 10, h - 10);
+    g.fillStyle = '#c4231a'; g.font = 'bold 34px Inter, Arial'; g.textAlign = 'center'; g.fillText('BITTE', w / 2, 56);
+    g.fillStyle = '#1a1a1a'; g.font = 'bold 22px Inter, Arial'; g.fillText('RICHTIG', w / 2, 100); g.fillText('WECHSELN!', w / 2, 128);
+  }, 2.62, 1.7, -2.49, 0);
+  // Fußmatte am Fenster
+  rundkiste(2.2, 0.02, 0.7, 0.01, std(0x1a1a1c, { roughness: 0.95 }), 0, 0.015, -1.15);
+  // Mülleimer
+  {
+    const eimer = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.17, 0.5, 18), std(0x394a3e, { roughness: 0.5 }));
+    eimer.position.set(2.72, 0.25, 2.2); eimer.castShadow = true; scene.add(eimer);
+    hindernis(2.5, 2.95, 1.95, 2.45);
+  }
+  // Überwachungskamera mit blinkender LED
+  {
+    const kam = new THREE.Group(); kam.position.set(-2.88, 2.72, -2.2); scene.add(kam);
+    rundkiste(0.12, 0.1, 0.22, 0.02, std(0xdcdcd8, { roughness: 0.4 }), 0, 0, 0, kam);
+    const linse = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.05, 14), M.dunkel); linse.rotation.x = Math.PI / 2; linse.position.z = 0.13; kam.add(linse);
+    W.kamLed = new THREE.Mesh(new THREE.SphereGeometry(0.008, 8, 6), new THREE.MeshBasicMaterial({ color: new THREE.Color(5, 0.1, 0.1) }));
+    W.kamLed.position.set(0.04, 0.03, 0.11); kam.add(W.kamLed);
+    kam.rotation.y = 0.6; kam.rotation.x = 0.25;
+  }
+  // Lüfter an der Wand
+  {
+    W.luefter = new THREE.Group(); W.luefter.position.set(2.96, 2.55, -1.3); scene.add(W.luefter);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.025, 8, 28), std(0xc8c8c4, { roughness: 0.4 })); ring.rotation.y = Math.PI / 2; W.luefter.add(ring);
+    const flug = new THREE.Group(); W.luefter.add(flug); W.luefterFlug = flug;
+    for (let i = 0; i < 4; i++) {
+      const b = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.17, 0.07), std(0x8a8d92, { roughness: 0.5, metalness: 0.5 }));
+      b.position.y = 0.09; b.rotation.y = 0.5; const arm = new THREE.Group(); arm.add(b); arm.rotation.x = i * Math.PI / 2; flug.add(arm);
     }
+    const dunkelGitter = new THREE.Mesh(new THREE.CircleGeometry(0.19, 20), new THREE.MeshBasicMaterial({ color: 0x050505, transparent: true, opacity: 0.55, side: THREE.DoubleSide }));
+    dunkelGitter.rotation.y = Math.PI / 2; dunkelGitter.position.x = 0.01; W.luefter.add(dunkelGitter);
   }
-  if (laternen === 'eine') {
-    nah = `<rect x="295" y="30" width="5" height="${H - 30}" fill="#0a0a0a"/><ellipse cx="298" cy="34" rx="20" ry="6" fill="#ffd27a"/><path d="M285 36 L230 ${H} L366 ${H} L311 36Z" fill="#ffd27a" opacity=".12"/>`;
+  // Staub, der im Licht schwebt
+  {
+    const n = 140, pos = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) { pos[i * 3] = zufall(-2.9, 2.9); pos[i * 3 + 1] = zufall(0.3, 2.8); pos[i * 3 + 2] = zufall(-2.3, 2.3); }
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    W.staub = new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xfff2d8, size: 0.014, transparent: true, opacity: 0.4, depthWrite: false, blending: THREE.AdditiveBlending }));
+    W.staub.frustumCulled = false; scene.add(W.staub);
   }
-  const wrap = inhalt => `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${inhalt}</svg>`;
-  return { fern: wrap(fern), nah: wrap(nah) };
-}
 
-function szene(h) {
-  const faehrt = draussen.classList.contains('faehrt'), schnell = draussen.classList.contains('schnell');
-  draussen.className = 'szene-' + h.szene;
-  draussen.classList.toggle('faehrt', faehrt);
-  draussen.classList.toggle('schnell', schnell);
-  const st = streifenFuer(h.szene, h.laternen);
-  for (const [id, svg] of [['#fern', st.fern], ['#nah', st.nah]]) {
-    const el = $(id);
-    el.style.backgroundImage = svgUrl(svg);
-    el.style.backgroundSize = '50% 100%';
+  // Rollladen + Schalter
+  W.rollladen = new THREE.Mesh(new THREE.BoxGeometry(4.3, 1, 0.04), pbr(T.rollladen, { metalness: 0.7, envMapIntensity: 1 }));
+  W.rollladen.position.set(0, 2.3, -2.76); W.rollladen.castShadow = true; scene.add(W.rollladen);
+  rundkiste(4.5, 0.3, 0.3, 0.05, M.metall, 0, 2.42, -2.9);
+  W.rollStand = 0; W.rollZiel = 0;
+  const schalter = new THREE.Group(); schalter.position.set(-2.95, 1.45, -2.0); scene.add(schalter);
+  rundkiste(0.08, 0.36, 0.26, 0.012, std(0xf0c020, { roughness: 0.4 }), 0, 0, 0, schalter);
+  W.schalterKnopf = rundkiste(0.06, 0.12, 0.12, 0.01, new THREE.MeshStandardMaterial({ color: 0xd01010, emissive: 0x600000, roughness: 0.3 }), 0.05, 0, 0, schalter);
+  const schalterTreffer = kiste(0.5, 0.6, 0.6, M.unsichtbar, 0.1, 0, 0, schalter);
+  schalterTreffer.userData = { typ: 'rollladen' }; klickbar.push(schalterTreffer);
+
+  // ---------------------------------------------------------------- Draußen
+  // Haltestelle mit Leuchtkasten
+  {
+    const hs = new THREE.Group(); hs.position.set(-11.5, 0, -5.4); scene.add(hs);
+    kiste(3.2, 2.2, 0.05, new THREE.MeshPhysicalMaterial({ color: 0xa8c4d4, transparent: true, opacity: 0.22, roughness: 0.05, envMap: ENV, envMapIntensity: 1.6 }), 0, 1.2, 0.5, hs).castShadow = false;
+    rundkiste(3.5, 0.1, 1.5, 0.03, M.dach, 0, 2.35, 0, hs);
+    for (const x of [-1.6, 1.6]) kiste(0.08, 2.35, 0.08, M.metall, x, 1.17, 0.5, hs);
+    rundkiste(2.2, 0.06, 0.4, 0.02, M.holz, 0, 0.5, 0.25, hs);
+    kiste(0.06, 0.5, 0.06, M.metall, -0.9, 0.25, 0.25, hs); kiste(0.06, 0.5, 0.06, M.metall, 0.9, 0.25, 0.25, hs);
+    const kasten = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 1.4), new THREE.MeshStandardMaterial({
+      color: 0x111111, emissive: 0xffffff, emissiveIntensity: 0.95,
+      emissiveMap: leinwand(200, 280, (g, w, h) => {
+        g.fillStyle = '#eef4ff'; g.fillRect(0, 0, w, h);
+        g.fillStyle = '#2d7a3e'; g.fillRect(0, 0, w, 44); g.fillStyle = '#fff'; g.font = 'bold 26px Inter, Arial'; g.textAlign = 'left'; g.fillText('N13 Fahrplan', 10, 31);
+        g.fillStyle = '#222'; g.font = '18px Inter, Arial';
+        ['22:00', '22:45', '23:30', '00:15', '01:00', '— — —'].forEach((z, i) => g.fillText(z + '   Endstation', 12, 80 + i * 28));
+      })
+    }));
+    kasten.position.set(0, 1.35, 0.46); kasten.rotation.y = Math.PI; hs.add(kasten);
+    W.hsLicht = HOCH ? new THREE.PointLight(0xdfeaff, 3.5, 6, 2) : KEIN_LICHT();
+    if (HOCH) { W.hsLicht.position.set(-11.5, 1.9, -4.4); scene.add(W.hsLicht); }
+    hindernis(-13.2, -9.8, -5.0, -4.8);
   }
-  $('#nah').classList.toggle('flimmert', h.laternen === 'flackern');
-  regenStufe = h.regen;
-  Klang.regen(h.regen);
-}
+  kiste(0.08, 2.6, 0.08, M.metall, -8, 1.3, -6.7);
+  const hSchild = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 0.69), new THREE.MeshBasicMaterial({
+    map: leinwand(128, 160, (g, w, h) => {
+      g.fillStyle = '#f3e9b0'; g.beginPath(); g.arc(64, 60, 56, 0, Math.PI * 2); g.fill();
+      g.lineWidth = 10; g.strokeStyle = '#2d7a3e'; g.stroke();
+      g.fillStyle = '#2d7a3e'; g.font = 'bold 70px Arial'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('H', 64, 64);
+      g.fillStyle = '#f3efe2'; g.fillRect(4, 124, 120, 32);
+      g.fillStyle = '#111'; g.font = 'bold 20px Arial'; g.fillText('Endstation', 64, 141);
+    })
+  }));
+  hSchild.position.set(-8, 2.5, -6.65); hSchild.rotation.y = Math.PI; scene.add(hSchild);
 
-function fahren(an, schnell) {
-  draussen.classList.toggle('faehrt', an);
-  draussen.classList.toggle('schnell', !!schnell);
-  Klang.motor(an ? (schnell ? 1 : .8) : .3);
-}
-
-function schildZeigen(text) {
-  const s = $('#schild');
-  s.classList.remove('hidden');
-  s.querySelector('b').textContent = text;
-  s.style.animation = 'none'; void s.offsetWidth; s.style.animation = '';
-}
-function schildWeg() { $('#schild').classList.add('hidden'); }
-
-function sitzeZeichnen() {
-  const el = $('#sitze');
-  el.innerHTML = '';
-  const du = document.createElement('div');
-  du.className = 'platz du';
-  du.innerHTML = '<i>DU</i><span></span>';
-  du.querySelector('span').textContent = S.name;
-  el.appendChild(du);
-  for (const id of S.da) {
-    const p = document.createElement('div');
-    p.className = 'platz';
-    p.innerHTML = `<i>${LEUTE[id].kurz}</i><span>${LEUTE[id].name}</span>`;
-    el.appendChild(p);
-  }
-}
-
-function flackern() {
-  document.body.classList.remove('flackern'); void document.body.offsetWidth;
-  document.body.classList.add('flackern');
-  $('#led').classList.add('stoerung');
-  setTimeout(() => $('#led').classList.remove('stoerung'), 1300);
-}
-
-// Regen auf der Scheibe
-const regenCanvas = $('#regen'), rc = regenCanvas.getContext('2d');
-let regenStufe = 0, tropfen = [];
-function regenSchleife() {
-  const w = regenCanvas.clientWidth, h = regenCanvas.clientHeight;
-  if (regenCanvas.width !== w || regenCanvas.height !== h) { regenCanvas.width = w; regenCanvas.height = h; }
-  rc.clearRect(0, 0, w, h);
-  const ziel = Math.floor(regenStufe * 90);
-  while (tropfen.length < ziel) tropfen.push({ x: Math.random() * w, y: Math.random() * h, v: 4 + Math.random() * 6, l: 8 + Math.random() * 14 });
-  if (tropfen.length > ziel) tropfen.length = ziel;
-  const schraeg = draussen.classList.contains('faehrt') ? -0.35 : -0.05;
-  rc.strokeStyle = 'rgba(180,200,230,.35)'; rc.lineWidth = 1;
-  rc.beginPath();
-  for (const t of tropfen) {
-    rc.moveTo(t.x, t.y); rc.lineTo(t.x + t.l * schraeg, t.y + t.l);
-    t.y += t.v; t.x += t.v * schraeg;
-    if (t.y > h || t.x < -20) { t.y = -20; t.x = Math.random() * (w + 40); }
-  }
-  rc.stroke();
-  requestAnimationFrame(regenSchleife);
-}
-
-/* ---------------------------------------------------------------
-   Gespeicherte Enden
-   --------------------------------------------------------------- */
-const ENDEN_KEY = 'derletztebus.enden';
-function gefundeneEnden() { try { return JSON.parse(localStorage.getItem(ENDEN_KEY)) || []; } catch (e) { return []; } }
-function endeMerken(k) {
-  try {
-    const a = gefundeneEnden();
-    if (!a.includes(k)) { a.push(k); localStorage.setItem(ENDEN_KEY, JSON.stringify(a)); }
-  } catch (e) { /* egal */ }
-}
-function endenZeigen() {
-  const gef = gefundeneEnden();
-  const el = $('#enden');
-  el.innerHTML = '';
-  if (!gef.length) return;
-  for (const k of Object.keys(ENDEN)) {
-    const s = document.createElement('span');
-    s.textContent = gef.includes(k) ? '★ ' + ENDEN[k] : '? ? ?';
-    if (gef.includes(k)) s.className = 'ja';
-    el.appendChild(s);
-  }
-  const info = document.createElement('span');
-  info.textContent = `${gef.length} von ${Object.keys(ENDEN).length} Enden`;
-  el.appendChild(info);
-}
-
-/* ---------------------------------------------------------------
-   Ablauf
-   --------------------------------------------------------------- */
-async function einleitung() {
-  const h = HALTE[0];
-  szene(h); $('#uhr').textContent = h.uhr;
-  schildZeigen(h.schild);
-  Klang.motor(0); Klang.unbehagen(0);
-  await sag(['Es ist 00:47. Der Regen ist so kalt, dass er in den Ohren wehtut.',
-    'Du hast die letzte Bahn verpasst. Dein Handy hat noch 3 % Akku. Bis nach Hause sind es vier Haltestellen. Normalerweise.',
-    'Dann biegen zwei Scheinwerfer um die Ecke. Ein Nachtbus. Auf der Anzeige leuchtet: N13 – ENDSTATION.',
-    'Die N13 kennst du nicht. Aber sie hält direkt vor dir, und die Türen öffnen sich mit einem langen Seufzen.']);
-  Klang.motor(.3); Klang.tueren();
-  let w = await waehle([{ text: 'Einsteigen', wert: 'rein' }, { text: 'Lieber auf einen anderen Bus warten', wert: 'warten' }]);
-  if (w === 'warten') {
-    await sag(['Du wartest. Der Bus wartet auch.', 'Es kommt kein anderer Bus. Es kommt kein Auto, kein Mensch, nicht einmal eine Katze. Die Türen stehen offen. Drinnen ist es warm und hell.',
-      'Dein Handy geht aus.'], 'leise');
-    await waehle([{ text: 'Einsteigen', wert: 'rein' }]);
-  }
-  await sag(['Der Bus ist leer. Es riecht nach nassen Jacken und altem Kaugummi.',
-    'Der Fahrer trägt eine Mütze und dreht sich nicht um. Du hältst ihm dein Ticket hin. Er nickt nur.',
-    'Du setzt dich in die Mitte, ans Fenster. Die Türen schließen sich hinter dir.']);
-  Klang.tueren();
-  sitzeZeichnen();
-  await weiter('Losfahren ▸');
-}
-
-async function fahrtZu(i) {
-  const h = HALTE[i];
-  leeren();
-  zeitEl.innerHTML = '';
-  schildWeg();
-  fahren(true, h.szene === 'schule');
-  Klang.unbehagen(Math.min(1, i / 6));
-  await sag(h.fahrt, 'leise');
-  await pause(900);
-  szene(h);
-  await pause(700);
-  fahren(false);
-  Klang.gong();
-  $('#uhr').textContent = h.uhr;
-  schildZeigen(h.schild);
-  await sag(h.ende ? 'ENDSTATION' : (h.schild ? h.schild.toUpperCase() : '– – –'), 'halt');
-  if (h.text) await sag(h.text);
-}
-
-async function einsteigenLassen(id) {
-  Klang.tueren();
-  await sag(LEUTE[id].einstieg);
-  S.da.push(id);
-  sitzeZeichnen();
-  Klang.tueren();
-}
-
-// Zwei Dinge kannst du zwischen zwei Haltestellen tun.
-async function zwischenHalt() {
-  let zuege = 2;
-  while (zuege > 0) {
-    trenner();
-    zeitEl.innerHTML = 'Bis zur nächsten Haltestelle: <b>' + '●'.repeat(zuege) + '○'.repeat(2 - zuege) + '</b>';
-    const opt = [];
-    for (const id of S.da) {
-      const offen = ['reden', 'ansehen'].filter(a => !S.getan.has(id + ':' + a)).length
-        + (S.getan.has(id + ':reden') && !S.getan.has(id + ':nochmal') ? 1 : 0);
-      if (offen) opt.push({ text: LEUTE[id].name + ' …', wert: 'p:' + id });
+  // Straßenlaternen mit Lichtkegel und Schatten
+  W.laternen = [];
+  [[-6, -6.6, true], [7, -6.6, true], [-15, 4, false]].forEach(([x, z, echt], idx) => {
+    kiste(0.12, 4.2, 0.12, M.dunkel, x, 2.1, z);
+    rundkiste(0.14, 0.14, 0.14, 0.04, M.dunkel, x, 0.07, z);
+    kiste(0.6, 0.08, 0.14, M.dunkel, x, 4.2, z);
+    rundkiste(0.55, 0.12, 0.3, 0.05, M.dunkel, x, 4.12, z);
+    const lins = kiste(0.42, 0.03, 0.22, M.roehre, x, 4.04, z); lins.castShadow = false;
+    if (echt && (HOCH || idx === 0)) {
+      const l = spot(0xffc477, 70, 22, 0.95, 0.85, 1.4, new THREE.Vector3(x, 4.0, z), new THREE.Vector3(x, 0, z + (z < 0 ? 1 : -1)), idx < 2, 1024);
+      W.laternen.push(l);
+      if (HOCH) { const k = lichtkegel(2.3, 4, 0xffc477, 0.055); k.position.set(x, 4.0, z); scene.add(k); }
     }
-    if (!S.spiegel) opt.push({ text: 'Ins Spiegelbild der Scheibe schauen', wert: 'spiegel' });
-    opt.push({ text: 'Zum Fahrer gehen', wert: 'fahrer' });
-    opt.push({ text: 'Einfach still sitzen bleiben', wert: 'still', klasse: 'zurueck' });
+  });
+  for (const [x, z] of [[5.2, -4.2], [-4.7, -4.5]]) {
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.28, 0.9, 18), std(0x2f5a3a, { roughness: 0.55 }));
+    m.position.set(x, 0.45, z); m.castShadow = true; m.receiveShadow = true; scene.add(m);
+    const deckel = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.34, 0.06, 18), std(0x26492f, { roughness: 0.5 })); deckel.position.set(x, 0.93, z); deckel.castShadow = true; scene.add(deckel);
+    hindernis(x - 0.32, x + 0.32, z - 0.32, z + 0.32);
+  }
+  // Paletten und Kisten neben dem Kiosk
+  for (let i = 0; i < 3; i++) rundkiste(1.1, 0.14, 0.9, 0.01, M.holz, 5.0, 0.07 + i * 0.5, 2.8).rotation.y = i * 0.2;
+  rundkiste(1.0, 0.4, 0.8, 0.02, std(0x2a5ea0, { roughness: 0.5 }), 5.0, 0.2, 2.8);
+  hindernis(4.4, 5.7, 2.3, 3.3);
+  for (let i = 0; i < 3; i++) { const sack = new THREE.Mesh(new THREE.SphereGeometry(0.32, 14, 10), std(0x0c0c0e, { roughness: 0.25, metalness: 0.1, envMapIntensity: 1.2 })); sack.scale.set(1, 0.9, 1); sack.position.set(4.2 + i * 0.3, 0.28, -1.4 + i * 0.35); sack.castShadow = true; scene.add(sack); }
 
-    const w = await waehle(opt);
-    if (w.startsWith('p:')) {
-      const id = w.slice(2);
-      const sub = [];
-      if (!S.getan.has(id + ':reden')) sub.push({ text: 'Mit ' + LEUTE[id].name + ' reden', wert: 'reden' });
-      else if (!S.getan.has(id + ':nochmal')) sub.push({ text: 'Noch einmal mit ' + LEUTE[id].name + ' reden', wert: 'nochmal' });
-      if (!S.getan.has(id + ':ansehen')) sub.push({ text: LEUTE[id].name + ' heimlich genauer ansehen', wert: 'ansehen' });
-      sub.push({ text: '◂ Zurück', wert: 'zurueck', klasse: 'zurueck' });
-      const a = await waehle(sub);
-      if (a === 'zurueck') continue;
-      S.getan.add(id + ':' + a);
-      await sag(LEUTE[id][a][istDing(id) ? 1 : 0]);
-      if (istDing(id)) S.aufmerksam++;
-    } else if (w === 'spiegel') {
-      await spiegelbild();
-    } else if (w === 'fahrer') {
-      await sag(FAHRER[Math.min(S.fahrer, FAHRER.length - 1)]);
-      S.fahrer++;
-    } else {
-      await sag('Du ziehst die Jacke enger und schaust aus dem Fenster. Du versuchst, nicht aufzufallen.', 'leise');
-      if (S.aufmerksam > 0) S.aufmerksam--;
-      zuege = 1;
+  // Bäume
+  const stamm = std(0x1a120c, { roughness: 1 }), nadel = std(0x07100b, { roughness: 1, envMapIntensity: 0.2 });
+  for (let i = 0; i < 46; i++) {
+    const seite = i % 2 ? 1 : -1;
+    const x = zufall(-70, 70), z = seite > 0 ? zufall(12, 40) : zufall(-45, -18), h = zufall(6, 12);
+    const baum = new THREE.Group(); baum.position.set(x, 0, z);
+    const s = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.28, h * 0.4, 7), stamm); s.position.y = h * 0.2; baum.add(s);
+    for (let k = 0; k < 4; k++) {
+      const kegel = new THREE.Mesh(new THREE.ConeGeometry(zufall(2.2, 3) - k * 0.45, h * 0.42, 8), nadel);
+      kegel.position.y = h * 0.35 + k * h * 0.2; kegel.castShadow = HOCH && Math.abs(x) < 25; baum.add(kegel);
     }
-    zuege--;
+    scene.add(baum);
   }
-  zeitEl.innerHTML = '';
-  await warnungen();
+  // Zaun hinter dem Kiosk
+  for (let x = -18; x <= 12; x += 0.6) kiste(0.06, 1.4, 0.06, M.dunkel, x, 0.7, 8.3);
+  kiste(30, 0.06, 0.06, M.dunkel, -3, 1.2, 8.3);
+  kiste(30, 0.06, 0.06, M.dunkel, -3, 0.35, 8.3);
+
+  baueBus();
+  baueRegen();
 }
 
-async function spiegelbild() {
-  S.spiegel = true;
-  const echt = S.da.length;
-  const imGlas = echt - (S.da.includes(S.ding) ? 1 : 0);
-  await sag(['Du wischst mit dem Ärmel über die beschlagene Scheibe. Im dunklen Glas spiegelt sich der ganze Bus: die gelben Haltestangen, die Sitze, du selbst.',
-    `Du zählst die Fahrgäste im Spiegelbild: ${ZAHLEN[imGlas]}.`,
-    `Du drehst dich um und zählst noch einmal, in echt: ${ZAHLEN[echt]}.`]);
-  if (imGlas !== echt) {
-    Klang.schreck();
-    await sag('Du zählst noch einmal. Es bleibt dabei. Einer von ihnen ist im Glas nicht da.', 'unheimlich');
-  } else {
-    await sag('Die Zahlen stimmen. Fürs Erste.');
+// ---------- Bus ----------
+function baueBus() {
+  const g = new THREE.Group();
+  const lack = new THREE.MeshStandardMaterial({ color: 0xe0a20e, roughness: 0.3, metalness: 0.35, envMap: ENV, envMapIntensity: 1.2 });
+  const unten = std(0x24262b, { roughness: 0.5 });
+  rundkiste(11, 2.6, 2.6, 0.2, lack, 0, 1.7, 0, g).castShadow = false;
+  rundkiste(11.04, 0.55, 2.64, 0.12, unten, 0, 0.7, 0, g).castShadow = false;
+  rundkiste(11.03, 0.1, 2.63, 0.03, std(0x1a1a1a, { roughness: 0.6 }), 0, 1.14, 0, g).castShadow = false;
+  const fensterTex = leinwand(1024, 128, (c, w, h) => {
+    const gr = c.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#ffe2b0'); gr.addColorStop(1, '#ffb866');
+    c.fillStyle = gr; c.fillRect(0, 0, w, h);
+    c.fillStyle = 'rgba(70,45,20,0.9)';
+    for (let x = 40; x < w - 120; x += 96) {
+      c.fillRect(x, h - 62, 44, 62); c.beginPath(); c.arc(x + 22, h - 70, 0, 0, 6.3); c.fill();
+      c.fillRect(x + 48, h - 56, 6, 56);
+    }
+    c.fillStyle = '#2a1c0e';
+    c.beginPath(); c.arc(w - 70, 52, 22, 0, Math.PI * 2); c.fill();
+    c.fillRect(w - 100, 74, 60, 54);
+    c.fillStyle = 'rgba(30,22,12,0.95)';
+    for (let x = 0; x <= w; x += 160) c.fillRect(x - 5, 0, 10, h);
+    c.fillRect(0, 0, w, 6);
+  });
+  W.busFenster = new THREE.MeshStandardMaterial({ color: 0x0a0a0a, emissive: 0xffffff, emissiveMap: fensterTex, emissiveIntensity: 1.1, roughness: 0.08, envMap: ENV, envMapIntensity: 1.4 });
+  kiste(9.4, 0.95, 2.64, W.busFenster, -0.6, 2.3, 0, g).castShadow = false;
+  kiste(0.04, 1.2, 2.3, std(0x151a26, { roughness: 0.05, emissive: 0x6a5230, emissiveIntensity: 0.55, envMapIntensity: 1.6 }), 5.51, 2.2, 0, g);
+  const led = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 0.4), new THREE.MeshBasicMaterial({ map: leinwand(512, 96, (c, w, h) => {
+    c.fillStyle = '#100a02'; c.fillRect(0, 0, w, h);
+    c.font = 'bold 54px monospace'; c.textBaseline = 'middle'; c.fillStyle = '#ffaa2b'; c.shadowColor = '#ffaa2b'; c.shadowBlur = 10; c.fillText('N13  ENDSTATION', 18, 50);
+  }) }));
+  led.position.set(5.53, 2.9, 0); led.rotation.y = Math.PI / 2; g.add(led);
+  for (const z of [-0.85, 0.85]) {
+    const s = new THREE.Mesh(new THREE.SphereGeometry(0.16, 16, 10), new THREE.MeshBasicMaterial({ color: new THREE.Color(4, 3.8, 3) }));
+    s.position.set(5.5, 0.95, z); s.scale.x = 0.5; g.add(s);
+    const r = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 8), new THREE.MeshBasicMaterial({ color: new THREE.Color(3, 0.1, 0.1) }));
+    r.position.set(-5.5, 1.0, z); g.add(r);
+    kiste(0.08, 0.3, 0.18, M.dunkel, 5.3, 1.9, z * 1.6, g);
   }
-  await sag('Dein Atem lässt die Scheibe sofort wieder beschlagen. Diesmal bleibt sie trüb, egal wie oft du wischst.', 'leise');
+  W.busTuer = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, emissive: 0xffd080, emissiveIntensity: 0, roughness: 0.2, envMap: ENV, envMapIntensity: 1 });
+  kiste(1.1, 2.1, 0.04, W.busTuer, 3.5, 1.45, 1.31, g).castShadow = false;
+  for (const x of [2.93, 4.07]) { const h = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 2.1, 10), std(0xe0c030, { roughness: 0.3, metalness: 0.6 })); h.position.set(x, 1.45, 1.36); g.add(h); }
+  const reifen = std(0x0c0c0e, { roughness: 0.95 });
+  for (const [x, z] of [[-3.5, 1.2], [3.5, 1.2], [-3.5, -1.2], [3.5, -1.2]]) {
+    const r = new THREE.Mesh(new THREE.CylinderGeometry(0.52, 0.52, 0.3, 24), reifen); r.rotation.x = Math.PI / 2; r.position.set(x, 0.52, z); g.add(r);
+    const n = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.32, 18), M.metall); n.rotation.x = Math.PI / 2; n.position.set(x, 0.52, z); g.add(n);
+  }
+  W.busLicht = HOCH
+    ? spot(0xfff2d0, 80, 40, 0.55, 0.7, 1.2, new THREE.Vector3(5.6, 0.95, 0), new THREE.Vector3(14, 0.1, 0), false, 512, g)
+    : KEIN_LICHT();
+  if (HOCH) {
+    W.busInnen = new THREE.PointLight(0xffc880, 7, 9, 1.6); W.busInnen.position.set(2, 2.2, 2.6); g.add(W.busInnen);
+  }
+  g.position.set(-90, 0, -10);
+  scene.add(g);
+  W.bus = { g, zustand: 'weg', t: 0, x: -90 };
+}
+const BUS_HALT = -11.5;   // Tür bei x = −8
+const BUS_TUER = new THREE.Vector3(-8, 0, -7.7);
+
+// ---------- Regen als Streifen ----------
+const REGEN_N = 1300, REGEN_W = 32;
+function baueRegen() {
+  const pos = new Float32Array(REGEN_N * 6);
+  W.regenV = new Float32Array(REGEN_N);
+  W.regenL = new Float32Array(REGEN_N);
+  for (let i = 0; i < REGEN_N; i++) {
+    W.regenV[i] = zufall(11, 16); W.regenL[i] = zufall(0.25, 0.55);
+    const x = zufall(-REGEN_W / 2, REGEN_W / 2), y = zufall(0, 14), z = zufall(-REGEN_W / 2, REGEN_W / 2);
+    pos.set([x, y, z, x, y + W.regenL[i], z], i * 6);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  W.regen = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: 0xa8bce0, transparent: true, opacity: 0.2, depthWrite: false }));
+  W.regen.frustumCulled = false;
+  scene.add(W.regen);
 }
 
-async function warnungen() {
-  if (S.aufmerksam >= 2 && !S.warnung1) {
-    S.warnung1 = true;
-    flackern();
-    await sag(['Das Licht flackert.', 'Du spürst, dass dich jemand ansieht. Als du aufschaust, schauen alle aus dem Fenster. Alle bis auf einen – aber du warst nicht schnell genug, um zu sehen, wer.'], 'leise');
-  } else if (S.aufmerksam >= 4 && !S.warnung2) {
-    S.warnung2 = true;
-    document.body.classList.add('blackout');
-    Klang.schreck();
-    await sag(['Das Licht geht aus. Komplett. Der Motor läuft weiter.',
-      'In der Dunkelheit setzt sich jemand neben dich. Du spürst, wie der Sitz nachgibt. Etwas Kaltes legt sich auf deine Hand.'], 'leise');
-    await sag('„Nicht so neugierig, {name}“, flüstert es.', 'unheimlich');
-    await pause(900);
-    document.body.classList.remove('blackout');
-    await sag('Das Licht geht wieder an. Neben dir ist niemand. Alle sitzen auf ihren Plätzen. Genau wie vorher.');
-  }
+// ======================================================================
+//  Figuren (Kunden und Monster)
+// ======================================================================
+function baueFigur(monster, zeichen) {
+  const f = Fig.baueFigur(monster, zeichen);
+  scene.add(f.g);
+  return f;
 }
+const verwandeln = Fig.verwandeln;
+const entferneFigur = Fig.entferneFigur;
 
-function namensListe(ids) {
-  const namen = ids.map(id => LEUTE[id].name);
-  if (namen.length <= 1) return namen.join('');
-  return namen.slice(0, -1).join(', ') + ' und ' + namen[namen.length - 1];
-}
-
-async function zuhause() {
-  const w = await waehle([
-    { text: 'Aussteigen und nach Hause rennen', wert: 'raus', klasse: 'gefahr' },
-    { text: 'Sitzen bleiben', wert: 'bleiben' }
-  ]);
-  if (w === 'bleiben') {
-    await sag(['Du bleibst sitzen. Irgendetwas in dir sagt, dass das, was da am Küchentisch sitzt, nicht auf dich wartet.',
-      'Die Türen schließen sich. Das Licht in der Küche geht aus.']);
-    Klang.tueren();
-    return false;
-  }
-  Klang.tueren();
-  await sag(['Du springst aus dem Bus. Die Luft riecht nach nassem Laub und nach Zuhause. Du rennst zur Haustür.',
-    'Hinter dir schließen sich die Türen. Aber der Bus fährt nicht los.',
-    'Du drehst dich um. Im hell erleuchteten Bus sitzen alle noch auf ihren Plätzen. ' + namensListe(S.da) + '. Und in der Mitte, am Fenster:']);
-  Klang.schreck();
-  await sag('Du.', 'unheimlich');
-  await sag(['Dein anderes Ich hebt die Hand und winkt dir zu. Dann fährt der Bus in die Nacht.',
-    'Du schließt die Haustür auf. Am Küchentisch sitzt niemand. Auf dem Tisch liegt dein Handy.',
-    'Es hat 3 % Akku. Die Uhr zeigt 00:47.']);
-  await ende('doppelt');
-  return true;
-}
-
-async function endstation() {
-  await sag(['Draußen ist nichts mehr. Kein Haus, kein Baum, kein Himmel. Nur weißer, stiller Nebel.',
-    'Zum ersten Mal steht der Fahrer auf. Er dreht sich nicht um. Seine Stimme klingt wie ein Radio, das zwischen zwei Sendern rauscht.']);
-  await sag(['„Endstation. Alle Menschen steigen hier aus.“', '„Einer von euch ist kein Mensch. Wer es ist, bleibt im Bus.“', '„Sag es mir, {name}. Du hast doch genau hingesehen.“']);
-  await sag('Alle sehen dich an.', 'leise');
-  const opt = S.da.map(id => ({ text: 'Auf ' + LEUTE[id].name + ' zeigen', wert: id }));
-  opt.push({ text: 'Auf den Fahrer zeigen', wert: 'fahrer', klasse: 'gefahr' });
-  const w = await waehle(opt);
-  leeren();
-
-  if (w === 'fahrer') {
-    await sag(['Du zeigst auf den Fahrer.', 'Er lacht leise. Dann dreht er sich zum ersten Mal um.']);
-    Klang.schreck();
-    await sag('Er hat dein Gesicht. Älter. Müder.', 'unheimlich');
-    await sag(['„Gut geraten“, sagt er mit deiner Stimme. „Ich habe damals auch auf den Fahrer gezeigt.“',
-      'Er nimmt seine Mütze ab und setzt sie dir auf. Sie passt genau.',
-      'Die anderen steigen aus, alle, auch das, was kein Mensch war. Der Nebel verschluckt sie. Dann steigt auch der alte Fahrer aus und ist fort.',
-      'Du setzt dich hinter das Lenkrad. Auf der Anzeige steht: N13 – ENDSTATION.',
-      'Irgendwo in der Stadt steht jemand im Regen und wartet auf den letzten Bus.']);
-    return ende('steuer');
-  }
-
-  await sag(`Du zeigst auf ${LEUTE[w].name}.`);
-  await pause(600);
-
-  if (istDing(w)) {
-    Klang.schreck();
-    flackern();
-    await sag(LEUTE[w].enttarnt, 'unheimlich');
-    const andere = S.da.filter(id => id !== w);
-    await sag(['Der Fahrer nickt. „Gut.“', 'Die Türen öffnen sich.',
-      (andere.length ? `Ihr steigt aus – du, ${namensListe(andere)}.` : 'Du steigst aus.') + ' Der Nebel ist warm, und irgendwo dahinter wird es hell.',
-      `Als du dich umdrehst, fährt der Bus schon. Hinter der Rückscheibe sitzt ${LEUTE[w].name} und winkt. Langsam. Bis der Nebel den Bus verschluckt.`]);
-    szene({ szene: 'zuhause', laternen: true, regen: 0 });
-    Klang.unbehagen(0); Klang.motor(0, 4);
-    await sag(['Du stehst an der Haltestelle Ahornweg. Es dämmert. Ein Vogel singt.',
-      'Dein Handy vibriert: 14 verpasste Anrufe von Zuhause.',
-      'Du hast es geschafft.']);
-    return ende('ausgestiegen');
-  }
-
-  await sag(LEUTE[w].beschuldigt);
-  await sag(['Der Fahrer schweigt sehr lange.', '„Falsch“, sagt er.']);
-  Klang.schreck();
-  await sag(['Hinter dir lacht jemand. Ganz leise.', LEUTE[S.ding].lacht], 'unheimlich');
-  document.body.classList.add('blackout');
-  await sag('Die Lichter gehen aus.', 'leise');
-  await pause(1200);
-  document.body.classList.remove('blackout');
-  S.da = [];
-  sitzeZeichnen();
-  szene(HALTE[0]);
-  schildZeigen(HALTE[0].schild);
-  $('#uhr').textContent = HALTE[0].uhr;
-  fahren(true);
-  await sag(['Als sie wieder angehen, ist der Bus leer. Nur du sitzt noch da, in der Mitte, am Fenster.',
-    'Draußen regnet es. Der Bus hält am Marktplatz. Dort steht jemand im Regen, und die Türen öffnen sich mit einem langen Seufzen.',
-    'Diesmal bist du der Fahrgast, der schon da ist.']);
-  fahren(false);
-  await ende('fahrgast');
-}
-
-async function ende(k) {
-  endeMerken(k);
-  trenner();
-  await sag('ENDE: ' + ENDEN[k].toUpperCase(), 'halt');
-  if (k !== 'ausgestiegen') {
-    await sag(`Kein Mensch war übrigens: ${LEUTE[S.ding].name}.`, 'leise');
-  }
-  const gef = gefundeneEnden().length, alle = Object.keys(ENDEN).length;
-  await sag(`Du hast ${gef} von ${alle} Enden gefunden. Bei jeder Fahrt ist jemand anderes kein Mensch.`, 'leise');
-  await waehle([{ text: 'Noch einmal einsteigen', wert: 1, klasse: 'weiter' }]);
-  Klang.motor(0); Klang.regen(0); Klang.unbehagen(0);
-  $('#bus').classList.add('hidden');
-  $('#titel').classList.remove('hidden');
-  document.body.classList.remove('imBus');
-  endenZeigen();
-}
-
-async function spielen() {
-  leeren();
-  await einleitung();
-  for (let i = 1; i < HALTE.length; i++) {
-    await fahrtZu(i);
-    const h = HALTE[i];
-    if (h.steigt) await einsteigenLassen(h.steigt);
-    if (h.zuhause && await zuhause()) return;
-    if (h.ende) return endstation();
-    await zwischenHalt();
-    await weiter('Weiterfahren ▸');
-  }
-}
-
-/* ---------------------------------------------------------------
-   Start
-   --------------------------------------------------------------- */
-const tonKnopf = $('#ton');
-tonKnopf.classList.toggle('aus', Klang.stumm);
-tonKnopf.onclick = () => { Klang.start(); tonKnopf.classList.toggle('aus', Klang.umschalten()); };
-
-const nameEingabe = $('#nameEingabe');
-try { nameEingabe.value = localStorage.getItem('derletztebus.name') || ''; } catch (e) { /* egal */ }
-
-$('#einsteigen').onclick = () => {
-  let name = nameEingabe.value.trim().replace(/[<>{}]/g, '') || 'Sam';
-  name = name.charAt(0).toUpperCase() + name.slice(1);
-  try { localStorage.setItem('derletztebus.name', name); } catch (e) { /* egal */ }
-  Klang.start();
-  neuesSpiel(name);
-  $('#titel').classList.add('hidden');
-  $('#bus').classList.remove('hidden');
-  document.body.classList.add('imBus');
-  querformat();
-  spielen();
+// ======================================================================
+//  Spielzustand
+// ======================================================================
+const S = {
+  modus: 'titel',        // titel | intro | schicht | kasse | jagd | schreck | uebergang | ende | pause
+  vorPause: 'schicht',
+  nacht: 0,
+  zeit: 0,               // Minuten seit 22:00
+  geld: 0,
+  herzen: 3,
+  kunde: null,
+  naechsterIn: 3,
+  seitMonster: 0,
+  kundenGesamt: 0,
+  tragen: [],
+  theke: [],             // { id, mesh }
+  stat: { bedient: 0, monster: 0, entkommen: 0, verjagt: 0 },
+  flackern: 0
 };
+const spieler = { pos: new THREE.Vector3(0, 0, -0.9), yaw: 0, pitch: -0.05, ausdauer: 1, rennt: false, schrittWeg: 0, wippen: 0 };
+const AUGE = 1.6;
 
-// Auf Handys wie ein richtiges Spiel: Vollbild und quer (klappt auf Android;
-// auf dem iPhone erscheint stattdessen der Hinweis zum Drehen).
-function querformat() {
-  if (!matchMedia('(pointer: coarse)').matches) return;
-  const el = document.documentElement;
-  if (!el.requestFullscreen) return;
-  el.requestFullscreen()
-    .then(() => screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape'))
-    .catch(() => {});
+// ---------- Anzeige ----------
+const hud = {
+  uhr: $('uhr'), nacht: $('nacht'), geld: $('geld'), herzen: $('herzen'), ziel: $('ziel'),
+  tragen: $('tragen'), blase: $('blase'), toast: $('toast'), ausdauer: $('ausdauer')
+};
+function uhrText(min) {
+  const m = Math.floor(min / 5) * 5;
+  const h = (22 + Math.floor(m / 60)) % 24, mm = m % 60;
+  return String(h).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
 }
-$('#hochkant').onclick = () => document.body.classList.add('hochkant');
+function toast(text, farbe = '#fff') {
+  hud.toast.textContent = text; hud.toast.style.color = farbe;
+  hud.toast.classList.remove('zeigen'); void hud.toast.offsetWidth; hud.toast.classList.add('zeigen');
+}
+let letzterZiel = '';
+function ziel(text, warnung = false) {
+  if (text !== letzterZiel) { hud.ziel.textContent = text; letzterZiel = text; }
+  hud.ziel.classList.toggle('warnung', warnung);
+}
+function zeichneTragen() {
+  hud.tragen.innerHTML = '';
+  S.tragen.forEach((id, i) => {
+    const b = document.createElement('button');
+    b.innerHTML = `<span>${WARE[id].emoji}</span>${WARE[id].name}<small>✕</small>`;
+    b.title = 'Zurücklegen';
+    b.addEventListener('pointerdown', e => { e.stopPropagation(); S.tragen.splice(i, 1); Ton.ablegen(); zeichneTragen(); });
+    hud.tragen.appendChild(b);
+  });
+}
+function zeichneInfos() {
+  hud.uhr.textContent = uhrText(S.zeit);
+  hud.nacht.textContent = 'Nacht ' + (S.nacht + 1);
+  hud.geld.textContent = euro(S.geld);
+  hud.herzen.textContent = '❤️'.repeat(Math.max(0, S.herzen)) + '🖤'.repeat(Math.max(0, 3 - S.herzen));
+}
 
-endenZeigen();
-regenSchleife();
+// ======================================================================
+//  Kunden
+// ======================================================================
+function neuerKunde() {
+  const N = NAECHTE[S.nacht];
+  let monster = Math.random() < N.monster;
+  if (S.nacht === 0 && S.kundenGesamt === 0) monster = false;     // der erste Kunde ist immer ein Mensch
+  if (S.seitMonster >= 3) monster = true;                          // spätestens jeder vierte
+  S.seitMonster = monster ? 0 : S.seitMonster + 1;
+  S.kundenGesamt++;
+
+  const zeichen = new Set();
+  if (monster) {
+    zeichen.add(wuerfel(['augen', 'schatten', 'zucken', 'gross']));
+    zeichen.add(wuerfel(['augen', 'schatten', 'zucken', 'gross', 'wunsch', 'wunsch', 'gleiten']));
+  }
+  const f = baueFigur(monster, zeichen);
+  const anzahl = Math.floor(zufall(N.waren[0], N.waren[1] + 1));
+  const bestellung = [...WAREN].sort(() => Math.random() - .5).slice(0, anzahl).map(w => w.id);
+  const summe = bestellung.reduce((s, id) => s + WARE[id].preis, 0);
+  const k = {
+    f, monster, zeichen, bestellung, summe,
+    zahlt: zahlBetrag(summe),
+    wunsch: monster && zeichen.has('wunsch') ? wuerfel(SELTSAM) : null,
+    pos: BUS_TUER.clone(), zustand: 'aussteigen', t: 0,
+    pfad: [], geduld: N.geduld, geduldMax: N.geduld,
+    lauern: N.lauern, gang: 0, zuckT: zufall(1, 2.5), sagt: '', sagtT: 0, sagtRot: false,
+    fensterX: zufall(-1.2, 0.9)
+  };
+  k.f.g.position.copy(k.pos);
+  return k;
+}
+function zahlBetrag(summe) {
+  const r = Math.random();
+  if (r < 0.2) return summe;                                           // passend
+  if (r < 0.45 && summe % 100) return Math.ceil(summe / 100) * 100;    // aufgerundet in Münzen
+  for (const s of [500, 1000, 2000]) if (s > summe) return s;
+  return 2000;
+}
+function sag(k, text, sek = 2.5, rot = false) { k.sagt = text; k.sagtT = sek; k.sagtRot = rot; }
+
+function kundeGeht(k, text) {
+  if (text) sag(k, text, 2.2);
+  k.zustand = 'gehen';
+  k.pfad = [new THREE.Vector3(-6, 0, -6.2), new THREE.Vector3(-28, 0, -6.2)];
+  raeumeTheke();
+  if (S.modus === 'kasse') kasseZu();
+}
+
+function updateKunde(k, dt) {
+  const N = NAECHTE[S.nacht];
+  k.t += dt;
+  if (k.sagtT > 0) k.sagtT -= dt;
+  const zu = W.rollStand > 0.85;
+
+  // Zucken
+  k.zuckZ = k.zuckZ || 0;
+  if (k.monster && k.zeichen.has('zucken')) {
+    k.zuckT -= dt;
+    if (k.zuckT < 0) { k.zuckT = zufall(0.8, 2.2); k.zuckZ = zufall(-0.7, 0.7); k.f.kopf.rotation.y = zufall(-0.9, 0.9); }
+    else if (k.zuckT < 0.5) k.zuckZ *= 0.85;
+  }
+  // leuchtende Augen pulsieren
+  if (k.monster && k.zeichen.has('augen')) k.f.augen.forEach(a => a.scale.setScalar(1.1 + Math.sin(k.t * 6) * 0.3));
+
+  // Monster: Rollladen zu → abgewehrt
+  if (k.monster && zu && ['aussteigen', 'laufen', 'lauern'].includes(k.zustand)) {
+    const amFenster = k.zustand === 'lauern';
+    k.zustand = 'abgewehrt'; k.t = 0;
+    sag(k, 'LASS MICH REIN!', 3, true);
+    if (amFenster) { Ton.schlag(); setTimeout(() => Ton.schlag(), 450); }
+  }
+
+  switch (k.zustand) {
+    case 'aussteigen':
+      if (k.t > 0.6) {
+        k.zustand = 'laufen';
+        k.pfad = [new THREE.Vector3(-7, 0, -6.4), new THREE.Vector3(k.fensterX, 0, -3.35)];
+        if (k.monster) S.flackern = 1.2;
+      }
+      break;
+    case 'laufen':
+      if (gehePfad(k, dt, k.monster && k.zeichen.has('gleiten') ? 1.25 : 1.5)) {
+        k.f.g.rotation.y = 0;
+        if (k.monster) { k.zustand = 'lauern'; k.t = 0; }
+        else if (zu) { k.zustand = 'klopfen'; k.t = 0; sag(k, 'Hallo? Haben Sie noch auf?', 4); Ton.schlag(); }
+        else { k.zustand = 'bestellen'; Ton.klingel(); }
+      }
+      break;
+    case 'klopfen':
+      if (!zu) { k.zustand = 'bestellen'; k.sagtT = 0; Ton.klingel(); }
+      else if (k.t > 5) kundeGeht(k, 'Na toll …');
+      break;
+    case 'bestellen':
+    case 'zahlen':
+      k.geduld -= dt * (k.zustand === 'zahlen' ? 0.5 : 1);
+      if (zu) {
+        S.stat.verjagt++;
+        S.geld = Math.max(0, S.geld - 100);
+        toast('Kunde verjagt −1,00 €', '#ff8a7a'); Ton.fehler();
+        kundeGeht(k, 'Hey! Unverschämt!');
+      } else if (k.geduld <= 0) {
+        toast('Zu langsam!', '#ff8a7a'); Ton.fehler();
+        kundeGeht(k, 'Das dauert mir zu lange!');
+      }
+      break;
+    case 'lauern':
+      k.lauern -= dt;
+      if (k.lauern <= 0) starteJagd(k);
+      break;
+    case 'abgewehrt':
+      k.f.g.visible = k.t < 1.4 || Math.floor(k.t * 14) % 2 === 0;
+      if (k.t > 2.2) {
+        Ton.verschwinden();
+        S.stat.monster++;
+        S.geld += 500;
+        toast('Monster abgewehrt! +5,00 €', '#9be37a');
+        Ton.gut();
+        entferneFigur(k.f);
+        S.kunde = null;
+        S.naechsterIn = zufall(...N.pause);
+        raeumeTheke();
+      }
+      break;
+    case 'gehen':
+      if (gehePfad(k, dt, 1.6)) { entferneFigur(k.f); S.kunde = null; S.naechsterIn = zufall(...N.pause); return; }
+      break;
+  }
+  // Haltung und Blick: Wer wartet, steht ruhig, atmet, blinzelt und schaut dich an
+  if (['bestellen', 'zahlen', 'lauern', 'klopfen', 'abgewehrt'].includes(k.zustand)) {
+    Fig.ruhe(k.f, k.t);
+    Fig.blicken(k.f, dt, camera.position, k.zuckZ);
+  } else if (k.zustand !== 'jagt') {
+    Fig.blicken(k.f, dt, null, k.zuckZ);
+  }
+}
+
+function gehePfad(k, dt, tempo) {
+  const ziel = k.pfad[0];
+  if (!ziel) return true;
+  const dx = ziel.x - k.pos.x, dz = ziel.z - k.pos.z, d = Math.hypot(dx, dz);
+  const schritt = tempo * dt;
+  const gleitet = k.monster && k.zeichen.has('gleiten');
+  if (d <= schritt) { k.pos.x = ziel.x; k.pos.z = ziel.z; k.pfad.shift(); }
+  else { k.pos.x += dx / d * schritt; k.pos.z += dz / d * schritt; k.f.g.rotation.y = Math.atan2(dx, dz); }
+  k.gang += dt * tempo * 5.2;
+  Fig.gehen(k.f, k.gang, clamp(tempo / 1.5, 0.3, 1.2), gleitet);
+  k.f.g.position.set(k.pos.x, gleitet ? 0.05 : Math.abs(Math.cos(k.gang)) * 0.025, k.pos.z);
+  if (k.pfad.length === 0) { Fig.ruhe(k.f, k.t); return true; }
+  return false;
+}
+
+// ---------- Sprechblase ----------
+const _kopfPos = new THREE.Vector3();
+function updateBlase() {
+  const k = S.kunde;
+  const b = hud.blase;
+  if (!k || !['schicht', 'kasse'].includes(S.modus) || !k.f.g.visible) { b.classList.add('weg'); return; }
+  const zu = W.rollStand > 0.85;
+  const N = NAECHTE[S.nacht];
+  let html = '';
+  if (k.sagtT > 0) html = `<div class="${k.sagtRot ? 'seltsam' : ''}">${k.sagt}</div>`;
+  else if (zu) html = '';
+  else if (k.zustand === 'bestellen' || (k.zustand === 'lauern' && !k.wunsch)) {
+    const anteil = k.zustand === 'lauern' ? k.lauern / N.lauern : k.geduld / k.geduldMax;
+    const waren = k.bestellung.map(id => `<span class="ware ${S.theke.some(t => t.id === id) ? 'ok' : ''}">${WARE[id].emoji} ${WARE[id].name}</span>`).join('');
+    html = `Ich hätte gern:<div class="waren">${waren}</div>${geduldBalken(anteil)}`;
+  } else if (k.zustand === 'lauern') {
+    html = `Ich will …<div class="seltsam">${k.wunsch}</div>${geduldBalken(k.lauern / N.lauern)}`;
+  } else if (k.zustand === 'zahlen') {
+    html = `Macht ${euro(k.summe)}?<br>Hier, bitte: <b>💶 ${euro(k.zahlt)}</b>${geduldBalken(k.geduld / k.geduldMax)}`;
+  }
+  if (!html) { b.classList.add('weg'); return; }
+  _kopfPos.set(k.pos.x, 2.25 * k.f.g.scale.y, k.pos.z).project(camera);
+  if (_kopfPos.z > 1 || k.pos.distanceTo(spieler.pos) > 18) { b.classList.add('weg'); return; }
+  b.classList.remove('weg');
+  if (b.dataset.html !== html) { b.innerHTML = html; b.dataset.html = html; }
+  b.style.left = clamp((_kopfPos.x + 1) / 2 * innerWidth, 90, innerWidth - 90) + 'px';
+  b.style.top = clamp((1 - _kopfPos.y) / 2 * innerHeight, 90, innerHeight - 20) + 'px';
+}
+function geduldBalken(a) {
+  const k = a < 0.25 ? 'leer' : a < 0.5 ? 'knapp' : '';
+  return `<div class="geduld"><i class="${k}" style="width:${Math.round(clamp(a, 0, 1) * 100)}%"></i></div>`;
+}
+
+// ======================================================================
+//  Theke, Regal, Kasse, Rollladen
+// ======================================================================
+function nimmWare(id) {
+  if (S.tragen.length >= 4) { toast('Hände voll!', '#ffd27a'); Ton.fehler(); return; }
+  S.tragen.push(id); Ton.nehmen(); zeichneTragen();
+  toast(WARE[id].emoji + ' ' + WARE[id].name, '#fff');
+}
+
+function legeAufTheke() {
+  const k = S.kunde;
+  if (!S.tragen.length) {
+    if (k && k.zustand === 'zahlen') toast('Jetzt zur Kasse!', '#ffd27a');
+    else toast('Du hast nichts in der Hand.', '#ccc');
+    return;
+  }
+  if (!k || !['bestellen', 'lauern'].includes(k.zustand)) { toast('Gerade will niemand etwas.', '#ccc'); return; }
+  if (k.zustand === 'lauern' && k.wunsch) {
+    sag(k, 'Das will ich nicht. Ich will ' + k.wunsch + '.', 3, true);
+    S.tragen = []; zeichneTragen(); Ton.fehler();
+    return;
+  }
+  let falsch = 0;
+  for (const id of S.tragen) {
+    if (!k.bestellung.includes(id) || S.theke.some(t => t.id === id)) { falsch++; continue; }
+    const m = wareModell(id);
+    m.position.set(-1.6 + S.theke.length * 0.45, 1.06, -2.2 + zufall(-0.08, 0.08));
+    m.rotation.y = zufall(-0.4, 0.4);
+    scene.add(m);
+    S.theke.push({ id, mesh: m });
+  }
+  S.tragen = []; zeichneTragen();
+  if (falsch) { toast('Das hat keiner bestellt!', '#ff8a7a'); Ton.fehler(); sag(k, 'Das wollte ich nicht!', 2); }
+  else Ton.ablegen();
+  if (k.bestellung.every(id => S.theke.some(t => t.id === id))) {
+    if (k.monster) return;            // ein Monster bezahlt nie …
+    k.zustand = 'zahlen';
+    Ton.klingel();
+  }
+}
+function raeumeTheke() {
+  for (const t of S.theke) scene.remove(t.mesh);
+  S.theke = [];
+}
+
+// ---------- Kasse ----------
+let rueck = 0;
+function kasseAuf() {
+  const k = S.kunde;
+  if (!k || k.zustand !== 'zahlen') {
+    toast(k && ['bestellen', 'lauern'].includes(k.zustand) ? 'Erst die Sachen auf die Theke legen!' : 'Gerade gibt es nichts zu kassieren.', '#ccc');
+    return;
+  }
+  rueck = 0;
+  $('kListe').innerHTML = k.bestellung.map(id => `<div><span>${WARE[id].emoji} ${WARE[id].name}</span><span>${euro(WARE[id].preis)}</span></div>`).join('');
+  $('kSumme').textContent = euro(k.summe);
+  $('kGegeben').textContent = euro(k.zahlt);
+  $('kRueck').textContent = euro(0);
+  W.zeigeKasse(euro(k.summe).replace(' €', ''));
+  $('kasse').classList.remove('weg');
+  S.modus = 'kasse';
+  Ton.kasse();
+}
+function kasseZu() {
+  W.zeigeKasse('0,00');
+  $('kasse').classList.add('weg');
+  if (S.modus === 'kasse') S.modus = 'schicht';
+}
+function rueckgeldGeben() {
+  const k = S.kunde;
+  if (!k || k.zustand !== 'zahlen') { kasseZu(); return; }
+  const soll = k.zahlt - k.summe;
+  if (rueck < soll) {
+    Ton.fehler(); sag(k, 'Das ist zu wenig Wechselgeld!', 2.5);
+    toast('Zu wenig! Es fehlen ' + euro(soll - rueck), '#ff8a7a');
+    return;
+  }
+  kasseZu();
+  Ton.kasse();
+  S.stat.bedient++;
+  if (rueck > soll) {
+    const verlust = rueck - soll;
+    S.geld = Math.max(0, S.geld + k.summe - verlust);
+    toast(`+${euro(k.summe)}  (${euro(verlust)} zu viel zurück!)`, '#ffd27a');
+    kundeGeht(k, 'Oh, danke! Hihi.');
+  } else {
+    const trinkgeld = Math.random() < 0.35 ? 50 : 0;
+    S.geld += k.summe + trinkgeld;
+    toast(`+${euro(k.summe + trinkgeld)}${trinkgeld ? ' mit Trinkgeld!' : ''}`, '#9be37a');
+    Ton.gut();
+    kundeGeht(k, wuerfel(['Danke! Gute Nacht!', 'Stimmt so. Tschüss!', 'Danke schön!', 'Bis morgen!']));
+  }
+}
+document.querySelectorAll('#kGeld button').forEach(b => b.addEventListener('pointerdown', e => {
+  e.stopPropagation();
+  rueck += Number(b.dataset.ct);
+  $('kRueck').textContent = euro(rueck);
+  W.zeigeKasse(euro(rueck).replace(' €', ''));
+  Ton.muenze();
+}));
+$('kLoeschen').addEventListener('click', () => { rueck = 0; $('kRueck').textContent = euro(0); Ton.ablegen(); });
+$('kGeben').addEventListener('click', rueckgeldGeben);
+$('kZu').addEventListener('click', kasseZu);
+
+// ---------- Rollladen ----------
+function rollladen() {
+  if (!['schicht', 'kasse'].includes(S.modus)) return;
+  W.rollZiel = W.rollZiel ? 0 : 1;
+  Ton.rollladen();
+  $('bRollladen').textContent = W.rollZiel ? '⬆ ROLLLADEN AUF' : '⬇ ROLLLADEN';
+  $('bRollladen').classList.toggle('zu', !!W.rollZiel);
+}
+$('bRollladen').addEventListener('pointerdown', e => { e.stopPropagation(); Ton.start(); rollladen(); });
+
+// ======================================================================
+//  Jagd
+// ======================================================================
+const J = { phase: '', t: 0, k: null, start: new THREE.Vector3() };
+const TUER_INNEN = new THREE.Vector3(2.4, 0, 1.0), TUER_AUSSEN = new THREE.Vector3(3.95, 0, 1.0);
+const ECKEN = [new THREE.Vector3(-3.95, 0, -3.45), new THREE.Vector3(3.95, 0, -3.45), new THREE.Vector3(3.95, 0, 3.45), new THREE.Vector3(-3.95, 0, 3.45)];
+
+function starteJagd(k) {
+  if (S.modus === 'kasse') kasseZu();
+  S.modus = 'jagd';
+  J.phase = 'klettern'; J.t = 0; J.k = k;
+  k.zustand = 'jagt';
+  k.f.g.visible = true;
+  verwandeln(k.f);
+  J.start.copy(k.pos);
+  Ton.schrei(); Ton.jagd(true);
+  W.tuerOffen = true; Ton.tuer();
+  W.licht.intensity = 0; M.roehre.emissiveIntensity = 0;
+  W.notlicht.intensity = 9;
+  W.rollZiel = 0;
+  S.tragen = []; zeichneTragen();
+  // Der Bus wartet an der Haltestelle
+  W.bus.zustand = 'wartet'; W.bus.x = BUS_HALT; W.busTuer.emissiveIntensity = 2.5; Ton.bus(true);
+  $('ausdauer').classList.add('an');
+  $('rot').style.opacity = 0.6;
+  hud.blase.classList.add('weg');
+  ziel('LAUF! Hinten rechts raus zum Bus!', true);
+}
+
+function monsterZiel(m, p) {
+  const mi = drinnen(m), pi = drinnen(p);
+  if (mi && pi) return p;
+  if (mi && !pi) return m.distanceTo(TUER_INNEN) > 0.5 && m.x < 2.7 ? TUER_INNEN : TUER_AUSSEN;
+  // Monster ist draußen
+  if (pi && m.distanceTo(TUER_AUSSEN) < 0.5) return TUER_INNEN;
+  const zielPunkt = pi ? TUER_AUSSEN : p;
+  if (siehtDurch(m.x, m.z, zielPunkt.x, zielPunkt.z)) return zielPunkt;
+  let beste = null, besteD = Infinity;
+  for (const e of ECKEN) {
+    if (m.distanceTo(e) < 0.3 || !siehtDurch(m.x, m.z, e.x, e.z)) continue;
+    const d = m.distanceTo(e) + e.distanceTo(zielPunkt) + (siehtDurch(e.x, e.z, zielPunkt.x, zielPunkt.z) ? 0 : 20);
+    if (d < besteD) { besteD = d; beste = e; }
+  }
+  if (beste) return beste;
+  // Kein Eck zu sehen (z. B. wenn das Monster noch in der Tür steht): erst durch die Tür, sonst zum nächsten Eck
+  if (m.x < 3.9 && Math.abs(m.z - 1.0) < 1.3 && m.distanceTo(TUER_AUSSEN) > 0.3) return TUER_AUSSEN;
+  return ECKEN.reduce((a, b) => (m.distanceTo(b) < m.distanceTo(a) ? b : a));
+}
+
+function updateJagd(dt) {
+  const k = J.k, N = NAECHTE[S.nacht];
+  J.t += dt;
+  W.notlicht.intensity = 7 + Math.sin(J.t * 9) * 3;
+  W.monsterLicht.position.set(k.pos.x, 1.9, k.pos.z + 0.3);
+  W.monsterLicht.intensity = 6 + Math.sin(J.t * 14) * 2;
+  if (J.phase === 'klettern') {
+    const a = clamp(J.t / 1.3, 0, 1);
+    k.pos.x = J.start.x * (1 - a * 0.5);
+    k.pos.z = -3.35 + a * 1.95;
+    k.f.g.position.set(k.pos.x, Math.sin(a * Math.PI) * 1.0, k.pos.z);
+    k.f.g.rotation.y = 0;
+    k.f.armL.rotation.x = k.f.armR.rotation.x = -2.2;
+    if (a >= 1) { J.phase = 'bruellen'; J.t0 = J.t; Ton.schrei(); }
+  } else if (J.phase === 'bruellen') {
+    // Das Monster brüllt kurz – Zeit zum Wegrennen!
+    k.f.g.position.set(k.pos.x, 0, k.pos.z);
+    k.f.kopf.rotation.x = -0.5 + Math.sin(J.t * 40) * 0.05;
+    k.f.armL.rotation.x = k.f.armR.rotation.x = -2.6;
+    if (J.t - J.t0 > 0.9) { J.phase = 'jagen'; J.t0 = J.t; k.f.kopf.rotation.x = 0; k.f.armL.rotation.x = k.f.armR.rotation.x = -1.3; }
+  } else {
+    const z = monsterZiel(k.pos, spieler.pos);
+    const dx = z.x - k.pos.x, dz = z.z - k.pos.z, d = Math.hypot(dx, dz);
+    if (d > 0.01) {
+      const anlauf = clamp((J.t - J.t0) / 1.6, 0.35, 1);       // läuft erst langsam an
+      const s = Math.min(d, N.tempo * anlauf * dt);
+      k.pos.x += dx / d * s; k.pos.z += dz / d * s;
+      k.f.g.rotation.y = Math.atan2(dx, dz);
+    }
+    schiebeRaus(k.pos, 0.3);
+    k.gang += dt * 15;
+    Fig.gehen(k.f, k.gang, 1.35);
+    k.f.armL.rotation.x = -1.3 + Math.sin(k.gang) * 0.5; k.f.armR.rotation.x = -1.3 - Math.sin(k.gang) * 0.5;
+    k.f.g.position.set(k.pos.x, Math.abs(Math.cos(k.gang)) * 0.07, k.pos.z);
+    k.f.kopf.rotation.z = Math.sin(J.t * 23) * 0.15;
+    k.f.kiefer.rotation.x = 0.55 + Math.sin(J.t * 18) * 0.25;
+    const abstand = Math.hypot(k.pos.x - spieler.pos.x, k.pos.z - spieler.pos.z);
+    $('rot').style.opacity = clamp(1.1 - abstand / 8, 0.25, 0.95);
+    if (abstand < 0.85) { erwischt(); return; }
+  }
+  const zumBus = Math.hypot(spieler.pos.x - BUS_TUER.x, spieler.pos.z - BUS_TUER.z);
+  ziel(zumBus < 6 ? 'Rein in den Bus!' : drinnen(spieler.pos) ? 'LAUF! Hinten rechts raus (grünes Schild)!' : 'LAUF zum Bus vorne links!', true);
+  if (zumBus < 1.7) entkommen();
+}
+
+function jagdEnde() {
+  Ton.jagd(false);
+  W.monsterLicht.intensity = 0;
+  $('ausdauer').classList.remove('an');
+  $('rot').style.opacity = 0;
+  if (J.k) { entferneFigur(J.k.f); J.k = null; }
+  if (S.kunde) { entferneFigur(S.kunde.f); S.kunde = null; }
+  raeumeTheke();
+  S.tragen = []; zeichneTragen();
+}
+
+function entkommen() {
+  S.modus = 'uebergang';
+  S.stat.entkommen++;
+  Ton.bustuer(); Ton.sieg();
+  toast('Geschafft! Du bist entkommen!', '#9be37a');
+  ueberblende(() => {
+    jagdEnde();
+    kioskZuruecksetzen();
+    S.zeit += 20;
+    toast('Der Bus hat dich zurückgebracht …', '#ddd');
+  });
+}
+
+function erwischt() {
+  S.modus = 'schreck'; J.t = 0;
+  Ton.schreck();
+  $('rot').style.opacity = 1;
+}
+const _vor = new THREE.Vector3();
+function updateSchreck(dt) {
+  const k = J.k;
+  J.t += dt;
+  kameraAufSpieler();
+  _vor.set(-Math.sin(spieler.yaw), 0, -Math.cos(spieler.yaw));
+  const kx = camera.position.x + _vor.x * (0.6 - Math.min(J.t, 0.3)), kz = camera.position.z + _vor.z * (0.6 - Math.min(J.t, 0.3));
+  k.f.g.position.set(kx, camera.position.y - 1.74 * k.f.g.scale.y, kz);
+  k.f.kiefer.rotation.x = 0.9 + Math.sin(J.t * 35) * 0.15;
+  W.monsterLicht.position.set(kx, camera.position.y, kz); W.monsterLicht.intensity = 10;
+  k.f.g.rotation.y = Math.atan2(camera.position.x - kx, camera.position.z - kz);
+  k.f.kopf.rotation.z = Math.sin(J.t * 40) * 0.2;
+  spieler.pitch += (0 - spieler.pitch) * 0.2;
+  camera.position.x += zufall(-0.03, 0.03); camera.position.y += zufall(-0.03, 0.03);
+  if (J.t > 1.3) {
+    S.modus = 'uebergang';
+    S.herzen--;
+    ueberblende(() => {
+      jagdEnde();
+      zeichneInfos();
+      if (S.herzen <= 0) { zeigeEnde('verloren'); return; }
+      kioskZuruecksetzen();
+      S.zeit += 20;
+      toast('Du wachst hinter der Theke auf …', '#ff8a7a');
+    });
+  }
+}
+
+function kioskZuruecksetzen() {
+  W.tuerOffen = false;
+  W.licht.intensity = 34; M.roehre.emissiveIntensity = 2.2;
+  W.notlicht.intensity = 0;
+  W.rollZiel = 0; W.rollStand = 0;
+  $('bRollladen').textContent = '⬇ ROLLLADEN'; $('bRollladen').classList.remove('zu');
+  W.bus.zustand = 'weg'; W.bus.x = -90; W.busTuer.emissiveIntensity = 0;
+  spieler.pos.set(0, 0, -0.9); spieler.yaw = 0; spieler.pitch = -0.05; spieler.ausdauer = 1;
+  S.naechsterIn = 4;
+  S.modus = 'schicht';
+}
+
+function ueberblende(mitte) {
+  const s = $('schwarz');
+  s.style.opacity = 1;
+  setTimeout(() => { mitte(); setTimeout(() => { s.style.opacity = 0; }, 350); }, 700);
+}
+
+// ======================================================================
+//  Bus fahren lassen
+// ======================================================================
+function updateBus(dt) {
+  const b = W.bus;
+  b.t += dt;
+  if (b.zustand === 'kommt') {
+    const rest = BUS_HALT - b.x;
+    b.x += Math.max(1.2, Math.min(16, rest * 1.4)) * dt;
+    if (b.x >= BUS_HALT - 0.02) {
+      b.x = BUS_HALT; b.zustand = 'haelt'; b.t = 0; Ton.bustuer();
+      W.busTuer.emissiveIntensity = 2.5;
+      if (S.modus === 'schicht' || S.modus === 'kasse') S.kunde = neuerKunde();
+    }
+  } else if (b.zustand === 'haelt') {
+    if (b.t > 2.4 && S.modus !== 'intro') { b.zustand = 'faehrt'; b.t = 0; W.busTuer.emissiveIntensity = 0; Ton.bus(false); }
+  } else if (b.zustand === 'faehrt') {
+    b.x += Math.min(18, 2 + b.t * 4) * dt;
+    if (b.x > 90) b.zustand = 'weg';
+  }
+  b.g.position.x = b.x;
+  const flackert = S.kunde && S.kunde.monster && b.zustand === 'haelt';
+  W.busFenster.emissiveIntensity = flackert && Math.random() < .3 ? 0.1 : 1.1;
+}
+
+// ======================================================================
+//  Spieler und Eingabe
+// ======================================================================
+const tasten = {};
+const stick = { x: 0, y: 0 };
+let rennKnopf = false;
+addEventListener('keydown', e => {
+  tasten[e.code] = true;
+  if (e.code === 'KeyR' || e.code === 'KeyQ') rollladen();
+  if (e.code === 'KeyE' || e.code === 'Space') { e.preventDefault(); tippen(innerWidth / 2, innerHeight / 2); }
+  if (e.code === 'Escape') { if (S.modus === 'kasse') kasseZu(); else pause(); }
+});
+addEventListener('keyup', e => { tasten[e.code] = false; });
+
+// Ziehen = umsehen, kurz tippen = benutzen
+(function zeigen() {
+  const el = renderer.domElement;
+  let id = null, sx = 0, sy = 0, lx = 0, ly = 0, t0 = 0, gezogen = false;
+  el.addEventListener('pointerdown', e => {
+    Ton.start();
+    if (id !== null) return;
+    id = e.pointerId; el.setPointerCapture(e.pointerId);
+    sx = lx = e.clientX; sy = ly = e.clientY; t0 = performance.now(); gezogen = false;
+  });
+  el.addEventListener('pointermove', e => {
+    if (e.pointerId !== id) return;
+    if (Math.hypot(e.clientX - sx, e.clientY - sy) > 8) gezogen = true;
+    if (['schicht', 'jagd'].includes(S.modus)) {
+      const k = isTouch ? 0.006 : 0.004;
+      spieler.yaw -= (e.clientX - lx) * k;
+      spieler.pitch = clamp(spieler.pitch - (e.clientY - ly) * k, -1.2, 1.2);
+    }
+    lx = e.clientX; ly = e.clientY;
+  });
+  const ende = e => {
+    if (e.pointerId !== id) return;
+    id = null;
+    if (!gezogen && performance.now() - t0 < 450) tippen(e.clientX, e.clientY);
+  };
+  el.addEventListener('pointerup', ende);
+  el.addEventListener('pointercancel', e => { if (e.pointerId === id) id = null; });
+})();
+
+(function steuerknueppel() {
+  const s = $('stick'), k = $('knauf');
+  let id = null, mx = 0, my = 0;
+  const beweg = e => {
+    if (e.pointerId !== id) return;
+    let dx = e.clientX - mx, dy = e.clientY - my;
+    const d = Math.hypot(dx, dy), max = 50;
+    if (d > max) { dx *= max / d; dy *= max / d; }
+    k.style.transform = `translate(${dx}px, ${dy}px)`;
+    stick.x = dx / max; stick.y = dy / max;
+  };
+  s.addEventListener('pointerdown', e => {
+    Ton.start();
+    id = e.pointerId; s.setPointerCapture(e.pointerId);
+    const r = s.getBoundingClientRect(); mx = r.left + r.width / 2; my = r.top + r.height / 2;
+    beweg(e);
+  });
+  s.addEventListener('pointermove', beweg);
+  const los = e => { if (e.pointerId !== id) return; id = null; stick.x = stick.y = 0; k.style.transform = ''; };
+  s.addEventListener('pointerup', los); s.addEventListener('pointercancel', los);
+  const r = $('bRennen');
+  r.addEventListener('pointerdown', e => { e.preventDefault(); rennKnopf = true; r.classList.add('aktiv'); });
+  const aus = () => { rennKnopf = false; r.classList.remove('aktiv'); };
+  r.addEventListener('pointerup', aus); r.addEventListener('pointercancel', aus); r.addEventListener('pointerleave', aus);
+})();
+
+const strahl = new THREE.Raycaster();
+const _ndc = new THREE.Vector2();
+function tippen(x, y) {
+  if (S.modus !== 'schicht') return;
+  _ndc.set(x / innerWidth * 2 - 1, -(y / innerHeight) * 2 + 1);
+  strahl.setFromCamera(_ndc, camera);
+  const treffer = strahl.intersectObjects(klickbar, false)[0];
+  if (!treffer) return;
+  if (treffer.distance > 2.8) { toast('Geh näher ran!', '#ccc'); return; }
+  const d = treffer.object.userData;
+  if (d.typ === 'regal') nimmWare(d.ware);
+  else if (d.typ === 'theke') legeAufTheke();
+  else if (d.typ === 'kasse') kasseAuf();
+  else if (d.typ === 'rollladen') rollladen();
+}
+
+function updateSpieler(dt) {
+  let vx = 0, vz = 0;
+  if (tasten.KeyW || tasten.ArrowUp) vz += 1;
+  if (tasten.KeyS || tasten.ArrowDown) vz -= 1;
+  if (tasten.KeyA || tasten.ArrowLeft) vx -= 1;
+  if (tasten.KeyD || tasten.ArrowRight) vx += 1;
+  vx += stick.x; vz -= stick.y;
+  const laenge = Math.hypot(vx, vz);
+  if (laenge > 1) { vx /= laenge; vz /= laenge; }
+  const willRennen = (tasten.ShiftLeft || tasten.ShiftRight || rennKnopf) && laenge > 0.2;
+  spieler.rennt = willRennen && spieler.ausdauer > 0.02 && (spieler.rennt || spieler.ausdauer > 0.2);
+  spieler.ausdauer = clamp(spieler.ausdauer + (spieler.rennt ? -0.28 : 0.2) * dt, 0, 1);
+  $('ausdauer').firstElementChild.style.width = Math.round(spieler.ausdauer * 100) + '%';
+  const tempo = spieler.rennt ? 5.6 : 3.2;
+  const vorX = -Math.sin(spieler.yaw), vorZ = -Math.cos(spieler.yaw);
+  const reX = Math.cos(spieler.yaw), reZ = -Math.sin(spieler.yaw);
+  const bx = (vorX * vz + reX * vx) * tempo * dt, bz = (vorZ * vz + reZ * vx) * tempo * dt;
+  const weg = Math.hypot(bx, bz);
+  // In kleinen Schritten bewegen, damit man auch bei Ruckeln nie durch eine Wand rutscht
+  const teile = Math.max(1, Math.ceil(weg / 0.12));
+  for (let i = 0; i < teile; i++) {
+    spieler.pos.x += bx / teile; spieler.pos.z += bz / teile;
+    schiebeRaus(spieler.pos, 0.3);
+  }
+  spieler.schrittWeg += weg;
+  spieler.wippen += weg * 3.2;
+  if (spieler.schrittWeg > (spieler.rennt ? 0.9 : 0.7)) { spieler.schrittWeg = 0; Ton.schritt(); }
+  kameraAufSpieler();
+}
+function kameraAufSpieler() {
+  camera.position.set(spieler.pos.x, AUGE + Math.sin(spieler.wippen) * 0.035, spieler.pos.z);
+  camera.rotation.set(spieler.pitch, spieler.yaw, 0);
+}
+
+// ======================================================================
+//  Schicht-Ablauf
+// ======================================================================
+function updateSchicht(dt) {
+  S.zeit += dt * MIN_PRO_SEK;
+  if (S.zeit >= NACHT_LAENGE && (!S.kunde || !S.kunde.monster)) { zeigeEnde('geschafft'); return; }
+
+  if (!S.kunde && W.bus.zustand === 'weg') {
+    S.naechsterIn -= dt;
+    if (S.naechsterIn <= 0 && S.zeit < NACHT_LAENGE - 15) { W.bus.zustand = 'kommt'; W.bus.x = -90; W.bus.t = 0; Ton.bus(true); }
+  }
+  if (S.kunde) updateKunde(S.kunde, dt);
+  if (S.modus === 'jagd') return;
+
+  // Hinweise oben
+  const k = S.kunde;
+  if (W.rollZiel && (!k || !k.monster)) ziel('Der Rollladen ist unten. Mach ihn wieder auf!', true);
+  else if (!k) ziel(W.bus.zustand === 'kommt' ? 'Ein Bus kommt …' : 'Warte auf den nächsten Bus …');
+  else if (k.zustand === 'laufen' || k.zustand === 'aussteigen') ziel('Ein Kunde kommt. Mensch … oder Monster?');
+  else if (k.zustand === 'bestellen' || (k.zustand === 'lauern' && !k.wunsch)) {
+    const fehlt = k.bestellung.filter(id => !S.theke.some(t => t.id === id));
+    ziel(fehlt.every(id => S.tragen.includes(id)) ? 'Leg die Sachen auf die Theke (Theke antippen)' : 'Hol die Sachen aus dem Regal hinten');
+  } else if (k.zustand === 'lauern') ziel('Was will der da?!');
+  else if (k.zustand === 'zahlen') ziel('Tippe auf die Kasse und gib das Wechselgeld raus');
+  else ziel('');
+}
+
+function updateWelt(dt) {
+  const t = performance.now() / 1000;
+  // Regen: Tropfen fallen und wandern mit dem Spieler mit
+  {
+    const pos = W.regen.geometry.attributes.position.array, cx = camera.position.x, cz = camera.position.z, schraeg = 0.25;
+    for (let i = 0; i < REGEN_N; i++) {
+      const j = i * 6;
+      let x = pos[j], y = pos[j + 1] - W.regenV[i] * dt, z = pos[j + 2];
+      x += schraeg * W.regenV[i] * dt * 0.2;
+      if (x - cx > REGEN_W / 2) x -= REGEN_W; else if (x - cx < -REGEN_W / 2) x += REGEN_W;
+      if (z - cz > REGEN_W / 2) z -= REGEN_W; else if (z - cz < -REGEN_W / 2) z += REGEN_W;
+      const imKiosk = x > -3.4 && x < 3.4 && z > -3.0 && z < 3.0;
+      if (y < 0 || (imKiosk && y < 3.3)) {
+        y = zufall(10, 14);
+        x = cx + zufall(-REGEN_W / 2, REGEN_W / 2); z = cz + zufall(-REGEN_W / 2, REGEN_W / 2);
+        if (x > -3.4 && x < 3.4 && z > -3.0 && z < 3.0) x += 7;
+      }
+      pos[j] = x; pos[j + 1] = y; pos[j + 2] = z;
+      pos[j + 3] = x - schraeg * W.regenL[i] * 0.2; pos[j + 4] = y + W.regenL[i]; pos[j + 5] = z;
+    }
+    W.regen.geometry.attributes.position.needsUpdate = true;
+  }
+  // Staub im Licht
+  {
+    const p = W.staub.geometry.attributes.position.array;
+    for (let i = 0; i < p.length; i += 3) {
+      p[i] += Math.sin(t * 0.3 + i) * 0.02 * dt; p[i + 1] += Math.sin(t * 0.2 + i * 0.7) * 0.015 * dt - 0.004 * dt; p[i + 2] += Math.cos(t * 0.25 + i) * 0.02 * dt;
+      if (p[i + 1] < 0.2) p[i + 1] = 2.8;
+    }
+    W.staub.geometry.attributes.position.needsUpdate = true;
+  }
+  W.luefterFlug.rotation.x += dt * 9;
+  W.kamLed.visible = Math.floor(t * 1.2) % 2 === 0;
+  W.pfuetzen.normalMap.offset.set((t * 0.02) % 1, (t * 0.013) % 1);
+  // Leuchtschild: ab und zu ein kurzes Flackern
+  W.schildMat.color.setScalar(Math.sin(t * 17) + Math.sin(t * 5.3) > 1.8 ? 0.35 : 1);
+  // Rollladen
+  W.rollStand += clamp(W.rollZiel - W.rollStand, -dt * 1.4, dt * 1.4);
+  const h = Math.max(0.02, W.rollStand * 1.32);
+  W.rollladen.scale.y = h; W.rollladen.position.y = 2.32 - h / 2;
+  W.schalterKnopf.material.emissive.setHex(W.rollZiel ? 0x00a000 : 0x600000);
+  // Tür
+  W.tuerWinkel += ((W.tuerOffen ? Math.PI * 0.55 : 0) - W.tuerWinkel) * Math.min(1, dt * 5);
+  W.tuer.rotation.y = W.tuerWinkel;
+  // Flackern der Röhre
+  if (S.flackern > 0 && S.modus !== 'jagd') {
+    S.flackern -= dt;
+    const an = Math.random() > 0.45 || S.flackern <= 0;
+    W.licht.intensity = an ? 34 : 3; M.roehre.emissiveIntensity = an ? 2.2 : 0.1;
+  }
+  W.zeichneUhr(S.zeit);
+  Ton.atmosphaere(S.modus === 'titel' ? 0.6 : 1, drinnen(spieler.pos) && ['schicht', 'kasse'].includes(S.modus) ? 1 : 0);
+}
+
+// ======================================================================
+//  Titel, Geschichte, Ende
+// ======================================================================
+const daten = lade();
+let gewaehlt = 0;
+function zeigeTitel() {
+  S.modus = 'titel';
+  document.body.classList.remove('spielt');
+  ['hud', 'touch', 'ende', 'pause', 'kasse', 'intro'].forEach(id => $(id).classList.add('weg'));
+  $('titel').classList.remove('weg');
+  const frei = daten.frei || 1;
+  gewaehlt = Math.min(gewaehlt, frei - 1);
+  const n = $('naechte'); n.innerHTML = '';
+  for (let i = 0; i < 3; i++) {
+    const b = document.createElement('button');
+    b.textContent = 'Nacht ' + (i + 1) + (i < frei ? '' : ' 🔒');
+    b.disabled = i >= frei;
+    b.classList.toggle('gewaehlt', i === gewaehlt);
+    b.onclick = () => { gewaehlt = i; zeigeTitel(); };
+    n.appendChild(b);
+  }
+  $('steuerung').textContent = isTouch
+    ? 'Links laufen · Wischen zum Umsehen · Antippen zum Benutzen'
+    : 'WASD laufen · Maus ziehen zum Umsehen · Klicken/E benutzen · Shift rennen · R Rollladen';
+  Ton.jagd(false);
+}
+
+function starteNacht(n) {
+  S.nacht = n;
+  S.zeit = 0; S.geld = 0; S.herzen = 3;
+  jagdEnde();
+  S.naechsterIn = 3; S.seitMonster = 0; S.kundenGesamt = 0;
+  S.stat = { bedient: 0, monster: 0, entkommen: 0, verjagt: 0 };
+  kioskZuruecksetzen();
+  ['titel', 'ende', 'intro', 'pause'].forEach(id => $(id).classList.add('weg'));
+  $('hud').classList.remove('weg');
+  $('touch').classList.toggle('weg', !isTouch);
+  $('fadenkreuz').classList.toggle('weg', isTouch);
+  document.body.classList.add('spielt');
+  zeichneInfos();
+  toast('Nacht ' + (n + 1), '#ffaa2b');
+}
+
+const INTRO = [
+  'Es ist 22 Uhr. Du sitzt ganz allein im letzten Bus. Auf der Anzeige: N13 – ENDSTATION.',
+  'Der Bus hält. Der Fahrer dreht sich nicht um. „Endstation. Raus hier.“',
+  'Hier ist nichts. Keine Häuser, keine Menschen. Nur ein kleiner Kiosk, der in der Dunkelheit leuchtet.',
+  'An der Tür klebt ein Zettel:',
+  null,
+  'Die Tür fällt hinter dir ins Schloss. Deine Schicht beginnt.'
+];
+let introSeite = 0, introTimer = null;
+function zeigeIntro() {
+  S.modus = 'intro'; introSeite = 0;
+  $('titel').classList.add('weg');
+  $('intro').classList.remove('weg');
+  W.bus.zustand = 'kommt'; W.bus.x = -40; W.bus.t = 0; Ton.bus(true);
+  camera.position.set(-8.5, 1.9, -8.6);
+  introSeiteZeigen();
+}
+function introSeiteZeigen() {
+  const text = INTRO[introSeite];
+  clearInterval(introTimer);
+  $('notiz').classList.toggle('weg', text !== null);
+  const el = $('introText');
+  if (text === null) { el.textContent = ''; return; }
+  let i = 0; el.textContent = '';
+  introTimer = setInterval(() => { el.textContent = text.slice(0, ++i); if (i >= text.length) clearInterval(introTimer); }, 28);
+}
+$('iWeiter').addEventListener('click', () => {
+  const text = INTRO[introSeite];
+  if (text && $('introText').textContent.length < text.length) { clearInterval(introTimer); $('introText').textContent = text; return; }
+  introSeite++;
+  if (introSeite >= INTRO.length) { introFertig(); return; }
+  introSeiteZeigen();
+});
+$('iSkip').addEventListener('click', () => introFertig());
+function introFertig() {
+  if (S.modus !== 'intro') return;
+  S.modus = 'uebergang';
+  clearInterval(introTimer);
+  daten.introGesehen = true; speichere(daten);
+  ueberblende(() => { starteNacht(0); });
+}
+const INTRO_KAMERA = [
+  [new THREE.Vector3(-9.5, 2.0, -9.8), new THREE.Vector3(0, 1.8, -2)],
+  [new THREE.Vector3(-8, 1.7, -7.2), new THREE.Vector3(0, 1.8, -2)],
+  [new THREE.Vector3(-4, 1.7, -6), new THREE.Vector3(0, 2.6, -2.7)],
+  [new THREE.Vector3(5.6, 1.7, -1.2), new THREE.Vector3(3.2, 1.5, 1)],
+  [new THREE.Vector3(5.2, 1.7, -0.2), new THREE.Vector3(3.2, 1.4, 1)],
+  [new THREE.Vector3(1.5, 1.6, 0.6), new THREE.Vector3(0, 1.2, -2.4)]
+];
+const _blick = new THREE.Vector3();
+function updateIntro(dt) {
+  const [p, blick] = INTRO_KAMERA[Math.min(introSeite, INTRO_KAMERA.length - 1)];
+  camera.position.lerp(p, Math.min(1, dt * 1.2));
+  _blick.set(0, 0, -1).applyQuaternion(camera.quaternion).multiplyScalar(4).add(camera.position);
+  _blick.lerp(blick, Math.min(1, dt * 2.5));
+  camera.lookAt(_blick);
+  W.tuerOffen = introSeite >= 3 && introSeite < 5;
+}
+
+function updateTitel(dt) {
+  const t = performance.now() / 1000;
+  camera.position.set(-1 + Math.sin(t * 0.1) * 1.8, 1.9 + Math.sin(t * 0.3) * 0.1, -14.5);
+  camera.lookAt(0.2 + Math.sin(t * 0.07) * 0.5, 2.0, -2.5);
+  if (W.bus.zustand === 'weg' && Math.random() < dt * 0.08) { W.bus.zustand = 'kommt'; W.bus.x = -90; W.bus.t = 0; }
+}
+
+function zeigeEnde(art) {
+  S.modus = 'ende';
+  Ton.jagd(false);
+  if (S.kunde) { entferneFigur(S.kunde.f); S.kunde = null; }
+  kasseZu();
+  hud.blase.classList.add('weg');
+  $('ende').classList.remove('weg');
+  const werte = [
+    ['Verdient', euro(S.geld)],
+    ['Kunden bedient', S.stat.bedient],
+    ['Monster abgewehrt', S.stat.monster],
+    ['Monstern entkommen', S.stat.entkommen]
+  ];
+  $('eWerte').innerHTML = werte.map(([a, b]) => `<span>${a}</span><b>${b}</b>`).join('');
+  const knopf = $('eWeiter');
+  if (art === 'verloren') {
+    $('eTitel').textContent = 'Erwischt!';
+    $('eText').textContent = 'Die Nacht hat dich verschluckt. Der Kiosk wartet auf die nächste Aushilfe …';
+    knopf.textContent = 'Nacht ' + (S.nacht + 1) + ' nochmal';
+    knopf.onclick = () => starteNacht(S.nacht);
+  } else if (S.nacht < 2) {
+    daten.frei = Math.max(daten.frei || 1, S.nacht + 2); speichere(daten);
+    $('eTitel').textContent = '06:00 – Geschafft!';
+    $('eText').textContent = 'Die Sonne geht auf. Die Monster verschwinden im Nebel. Aber heute Nacht kommen mehr …';
+    knopf.textContent = 'Weiter zu Nacht ' + (S.nacht + 2);
+    knopf.onclick = () => starteNacht(S.nacht + 1);
+    Ton.sieg();
+  } else {
+    daten.frei = 3; daten.gewonnen = true; speichere(daten);
+    $('eTitel').textContent = 'Du hast es geschafft!';
+    $('eText').textContent = 'Drei Nächte. Der letzte Bus hält vor dem Kiosk. Der Fahrer dreht sich zum ersten Mal um und lächelt: „Du darfst jetzt nach Hause.“';
+    knopf.textContent = 'Nochmal von vorn';
+    knopf.onclick = () => starteNacht(0);
+    Ton.sieg();
+  }
+}
+$('eMenue').addEventListener('click', zeigeTitel);
+
+function pause() {
+  if (!['schicht', 'jagd'].includes(S.modus)) return;
+  S.vorPause = S.modus; S.modus = 'pause';
+  $('pause').classList.remove('weg');
+}
+$('bPause').addEventListener('pointerdown', e => { e.stopPropagation(); pause(); });
+$('pWeiter').addEventListener('click', () => { $('pause').classList.add('weg'); S.modus = S.vorPause; });
+$('pMenue').addEventListener('click', () => { $('pause').classList.add('weg'); jagdEnde(); kioskZuruecksetzen(); zeigeTitel(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
+
+const grafikKnopf = $('grafik');
+{
+  let hoch = true; try { hoch = localStorage.getItem('derletztebus.grafik') !== 'niedrig'; } catch (e) { /* egal */ }
+  grafikKnopf.textContent = 'Grafik: ' + (hoch ? 'Hoch (Schatten, Spiegelungen)' : 'Niedrig (schneller)');
+  grafikKnopf.addEventListener('click', () => {
+    try { localStorage.setItem('derletztebus.grafik', hoch ? 'niedrig' : 'hoch'); } catch (e) { /* egal */ }
+    location.reload();
+  });
+}
+
+$('start').addEventListener('click', () => {
+  Ton.start();
+  if (gewaehlt === 0) zeigeIntro();
+  else starteNacht(gewaehlt);
+});
+
+const tonKnopf = $('ton');
+tonKnopf.classList.toggle('aus', Ton.stumm);
+tonKnopf.addEventListener('click', () => { Ton.start(); tonKnopf.classList.toggle('aus', Ton.umschalten()); });
+
+// ======================================================================
+//  Hauptschleife
+// ======================================================================
+baueWelt();
+zeigeTitel();
+let zuletzt = performance.now();
+const DT_MAX = location.search.includes('test') ? 0.35 : 0.05;   // ?test: für Browser ohne Grafikkarte
+// Wenn das Gerät zu langsam ist, schaltet das Spiel von selbst auf einfachere Grafik
+let leistung = { zeit: 0, bilder: 0 };
+function pruefeLeistung(roh) {
+  if (!post || location.search.includes('test') || !['schicht', 'kasse', 'jagd'].includes(S.modus)) return;
+  leistung.zeit += roh; leistung.bilder++;
+  if (leistung.zeit < 5) return;
+  const fps = leistung.bilder / leistung.zeit;
+  leistung = { zeit: 0, bilder: 0 };
+  if (fps < 22) {
+    try { localStorage.setItem('derletztebus.grafik', 'niedrig'); } catch (e) { /* egal */ }
+    post.composer.dispose(); post = null;
+    renderer.shadowMap.enabled = false;
+    renderer.setPixelRatio(1); renderer.setSize(innerWidth, innerHeight);
+    scene.traverse(o => { if (o.material) [].concat(o.material).forEach(m => { m.needsUpdate = true; }); });
+    $('vignette').style.display = '';
+    toast('Grafik vereinfacht, damit es flüssig läuft', '#ffd27a');
+  }
+}
+
+function zeichne(dt) {
+  if (post) {
+    const u = post.film.uniforms;
+    u.zeit.value = (performance.now() / 1000) % 100;
+    const schock = S.modus === 'schreck' ? 1 : S.modus === 'jagd' ? 0.35 : 0;
+    u.schock.value += (schock - u.schock.value) * Math.min(1, dt * 6);
+    post.composer.render(dt);
+  } else renderer.render(scene, camera);
+}
+
+function schleife(jetzt) {
+  requestAnimationFrame(schleife);
+  const roh = (jetzt - zuletzt) / 1000;
+  const dt = Math.min(DT_MAX, roh);
+  zuletzt = jetzt;
+  pruefeLeistung(roh);
+  if (S.modus !== 'pause') {
+    updateWelt(dt);
+    updateBus(dt);
+  }
+  switch (S.modus) {
+    case 'titel': updateTitel(dt); break;
+    case 'intro': updateIntro(dt); break;
+    case 'schicht': updateSpieler(dt); updateSchicht(dt); break;
+    case 'kasse': kameraAufSpieler(); updateSchicht(dt); break;
+    case 'jagd': updateSpieler(dt); updateJagd(dt); S.zeit += dt * MIN_PRO_SEK; break;
+    case 'schreck': updateSchreck(dt); break;
+  }
+  if (['schicht', 'kasse', 'jagd'].includes(S.modus)) zeichneInfos();
+  updateBlase();
+  zeichne(dt);
+}
+requestAnimationFrame(schleife);
+
+// Für automatische Tests
+window.__kiosk = { S, W, spieler, J, nimmWare, legeAufTheke, kasseAuf, rollladen, rueckgeldGeben, starteNacht, starteJagd, kameraAufSpieler, setzeRueck: v => { rueck = v; } };

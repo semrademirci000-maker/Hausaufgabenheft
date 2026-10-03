@@ -1,118 +1,154 @@
-/* Klang für „Der letzte Bus“ – alles live im Browser erzeugt (Web Audio),
-   keine Sounddateien nötig. */
-const Klang = (() => {
-  let ctx = null, out, motorGain, motorFilter, regenGain, droneGain;
-  let stumm = false;
-  try { stumm = localStorage.getItem('derletztebus.stumm') === '1'; } catch (e) { /* egal */ }
+// Alle Geräusche für „Der letzte Bus – Nachtkiosk“, live mit Web Audio erzeugt.
+// Keine Sounddateien nötig.
 
-  function rauschen(sek) {
-    const b = ctx.createBuffer(1, Math.floor(ctx.sampleRate * sek), ctx.sampleRate);
-    const d = b.getChannelData(0);
-    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
-    return b;
-  }
+let ctx = null, out = null, regenGain = null, summenGain = null, jagdGain = null;
+let stumm = false;
+try { stumm = localStorage.getItem('derletztebus.stumm') === '1'; } catch (e) { /* egal */ }
+let herzTimer = null;
+let letzteAtmo = [-1, -1];
 
-  function start() {
+function rauschBuffer(sek) {
+  const b = ctx.createBuffer(1, Math.floor(ctx.sampleRate * sek), ctx.sampleRate);
+  const d = b.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  return b;
+}
+
+function ton(freq, typ, lautst, dauer, verz = 0, gleitZu = 0) {
+  if (!ctx) return;
+  const t = ctx.currentTime + verz;
+  const o = ctx.createOscillator(); o.type = typ; o.frequency.setValueAtTime(freq, t);
+  if (gleitZu) o.frequency.exponentialRampToValueAtTime(gleitZu, t + dauer);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(lautst, t + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dauer);
+  o.connect(g).connect(out); o.start(t); o.stop(t + dauer + 0.05);
+}
+
+function rauschen(dauer, freq, q, lautst, verz = 0, anstieg = 0.01) {
+  if (!ctx) return;
+  const t = ctx.currentTime + verz;
+  const s = ctx.createBufferSource(); s.buffer = rauschBuffer(dauer + 0.1);
+  const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = freq; f.Q.value = q;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(lautst, t + anstieg);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dauer);
+  s.connect(f).connect(g).connect(out); s.start(t); s.stop(t + dauer + 0.1);
+}
+
+function rampe(param, wert, sek) {
+  if (!ctx) return;
+  const t = ctx.currentTime;
+  param.cancelScheduledValues(t);
+  param.setValueAtTime(param.value, t);
+  param.linearRampToValueAtTime(wert, t + sek);
+}
+
+export const Ton = {
+  start() {
     if (ctx) { ctx.resume(); return; }
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
     ctx = new AC();
-    out = ctx.createGain();
-    out.gain.value = stumm ? 0 : 0.9;
-    out.connect(ctx.destination);
+    out = ctx.createGain(); out.gain.value = stumm ? 0 : 0.85; out.connect(ctx.destination);
 
-    // Motor: tiefes, brummendes Sägezahn-Paar mit leichtem Wabern
-    motorFilter = ctx.createBiquadFilter();
-    motorFilter.type = 'lowpass';
-    motorFilter.frequency.value = 150;
-    motorFilter.Q.value = 3;
-    motorGain = ctx.createGain();
-    motorGain.gain.value = 0;
-    [[38, 'sawtooth', 0.5], [38.7, 'sawtooth', 0.5], [76.2, 'square', 0.1]].forEach(([f, typ, v]) => {
-      const o = ctx.createOscillator(); o.type = typ; o.frequency.value = f;
-      const g = ctx.createGain(); g.gain.value = v;
-      o.connect(g).connect(motorFilter); o.start();
-    });
-    const lfo = ctx.createOscillator(); lfo.frequency.value = 0.35;
-    const lfoG = ctx.createGain(); lfoG.gain.value = 22;
-    lfo.connect(lfoG).connect(motorFilter.frequency); lfo.start();
-    motorFilter.connect(motorGain).connect(out);
-
-    // Regen auf dem Dach
-    const regen = ctx.createBufferSource(); regen.buffer = rauschen(2); regen.loop = true;
-    const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 900;
-    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 5200;
+    // Regen
+    const r = ctx.createBufferSource(); r.buffer = rauschBuffer(2); r.loop = true;
+    const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 1000;
     regenGain = ctx.createGain(); regenGain.gain.value = 0;
-    regen.connect(hp).connect(lp).connect(regenGain).connect(out); regen.start();
+    r.connect(hp).connect(regenGain).connect(out); r.start();
 
-    // Unbehagen: leise, schiefe Töne, die mit jeder Haltestelle lauter werden
-    droneGain = ctx.createGain(); droneGain.gain.value = 0;
-    const dl = ctx.createBiquadFilter(); dl.type = 'lowpass'; dl.frequency.value = 700;
-    [[55, 'sine'], [58.3, 'sine'], [82.4, 'triangle'], [116.5, 'sine']].forEach(([f, typ], i) => {
-      const o = ctx.createOscillator(); o.type = typ; o.frequency.value = f;
-      const g = ctx.createGain(); g.gain.value = i === 3 ? 0.15 : 0.35;
-      const w = ctx.createOscillator(); w.frequency.value = 0.07 + i * 0.05;
-      const wg = ctx.createGain(); wg.gain.value = 0.2;
-      w.connect(wg).connect(g.gain); w.start();
-      o.connect(g).connect(dl); o.start();
+    // Summen der Neonröhre
+    summenGain = ctx.createGain(); summenGain.gain.value = 0;
+    [100, 200, 300].forEach((f, i) => {
+      const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f;
+      const g = ctx.createGain(); g.gain.value = 0.012 / (i + 1);
+      o.connect(g).connect(summenGain); o.start();
     });
-    dl.connect(droneGain).connect(out);
-  }
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900;
+    summenGain.connect(lp).connect(out);
 
-  function rampe(param, wert, sek) {
+    // Jagd-Musik: tiefes, schiefes Dröhnen
+    jagdGain = ctx.createGain(); jagdGain.gain.value = 0;
+    [[55, 'sawtooth'], [58, 'sawtooth'], [110.5, 'square']].forEach(([f, typ]) => {
+      const o = ctx.createOscillator(); o.type = typ; o.frequency.value = f;
+      const g = ctx.createGain(); g.gain.value = 0.25;
+      o.connect(g).connect(jagdGain); o.start();
+    });
+    const jlp = ctx.createBiquadFilter(); jlp.type = 'lowpass'; jlp.frequency.value = 380;
+    const lfo = ctx.createOscillator(); lfo.frequency.value = 4;
+    const lfoG = ctx.createGain(); lfoG.gain.value = 160;
+    lfo.connect(lfoG).connect(jlp.frequency); lfo.start();
+    jagdGain.connect(jlp).connect(out);
+  },
+
+  atmosphaere(regen, summen) {
+    if (!ctx || (regen === letzteAtmo[0] && summen === letzteAtmo[1])) return;
+    letzteAtmo = [regen, summen];
+    rampe(regenGain.gain, regen * 0.09, 2);
+    rampe(summenGain.gain, summen, 0.5);
+  },
+
+  jagd(an) {
     if (!ctx) return;
+    rampe(jagdGain.gain, an ? 0.22 : 0, an ? 0.4 : 2);
+    clearInterval(herzTimer);
+    if (an) herzTimer = setInterval(() => { ton(55, 'sine', 0.5, 0.18); ton(50, 'sine', 0.4, 0.2, 0.2); }, 620);
+  },
+
+  klingel() { ton(1046, 'sine', 0.18, 0.9); ton(784, 'sine', 0.18, 1.2, 0.28); },
+  kasse() {
+    rauschen(0.12, 3000, 1, 0.12);
+    ton(1568, 'triangle', 0.2, 0.5, 0.08); ton(2093, 'triangle', 0.18, 0.7, 0.16);
+  },
+  muenze() { ton(2400 + Math.random() * 600, 'triangle', 0.12, 0.18); ton(3800, 'sine', 0.05, 0.1, 0.02); },
+  nehmen() { ton(520, 'triangle', 0.1, 0.08); ton(780, 'triangle', 0.08, 0.1, 0.05); },
+  ablegen() { ton(200, 'sine', 0.2, 0.12); rauschen(0.08, 1200, 1, 0.05); },
+  fehler() { ton(150, 'square', 0.08, 0.25); ton(140, 'square', 0.08, 0.3, 0.12); },
+  gut() { ton(660, 'triangle', 0.14, 0.15); ton(880, 'triangle', 0.14, 0.15, 0.1); ton(1320, 'triangle', 0.14, 0.3, 0.2); },
+  rollladen() {
+    if (!ctx) return;
+    for (let i = 0; i < 14; i++) rauschen(0.06, 900 + Math.random() * 500, 2, 0.12, i * 0.07);
+    ton(90, 'sine', 0.3, 0.25, 1.0);
+  },
+  schlag() { ton(60, 'sine', 0.7, 0.35); rauschen(0.25, 300, 1, 0.3); },
+  bus(an) {
+    if (!ctx) return;
+    // tiefes Motorbrummen, das an- oder abschwillt
     const t = ctx.currentTime;
-    param.cancelScheduledValues(t);
-    param.setValueAtTime(param.value, t);
-    param.linearRampToValueAtTime(wert, t + sek);
-  }
-
-  function ton(freq, typ, lautst, dauer, verzoegerung = 0) {
-    if (!ctx) return;
-    const t = ctx.currentTime + verzoegerung;
-    const o = ctx.createOscillator(); o.type = typ; o.frequency.value = freq;
+    const o = ctx.createOscillator(); o.type = 'sawtooth';
+    o.frequency.setValueAtTime(an ? 35 : 55, t);
+    o.frequency.linearRampToValueAtTime(an ? 55 : 30, t + 3);
+    const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 220;
     const g = ctx.createGain();
     g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(lautst, t + 0.01);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + dauer);
-    o.connect(g).connect(out); o.start(t); o.stop(t + dauer + 0.05);
-  }
+    g.gain.linearRampToValueAtTime(0.22, t + 0.8);
+    g.gain.linearRampToValueAtTime(0.0001, t + 3.2);
+    o.connect(f).connect(g).connect(out); o.start(t); o.stop(t + 3.3);
+  },
+  bustuer() { rauschen(0.9, 2600, 0.7, 0.14, 0, 0.05); },
+  tuer() { ton(180, 'sawtooth', 0.05, 0.8, 0, 120); rauschen(0.6, 700, 4, 0.06); },
+  schritt() { rauschen(0.07, 260 + Math.random() * 80, 1.5, 0.08); },
+  schrei() {
+    ton(300, 'sawtooth', 0.18, 1.4, 0, 90); ton(317, 'sawtooth', 0.16, 1.4, 0, 95);
+    ton(900, 'square', 0.05, 1.0, 0, 400);
+    rauschen(1.2, 1800, 0.6, 0.18);
+  },
+  schreck() {
+    ton(45, 'sine', 0.9, 1.6);
+    ton(622, 'sawtooth', 0.12, 1.2); ton(659, 'sawtooth', 0.12, 1.2); ton(740, 'sawtooth', 0.1, 1.3);
+    rauschen(1.4, 2500, 0.5, 0.35);
+  },
+  verschwinden() { ton(800, 'sine', 0.12, 1.2, 0, 60); rauschen(1, 4000, 2, 0.06); },
+  sieg() { [523, 659, 784, 1046].forEach((f, i) => ton(f, 'triangle', 0.15, 0.6, i * 0.12)); },
 
-  function zisch(dauer, freq, lautst) {
-    if (!ctx) return;
-    const t = ctx.currentTime;
-    const s = ctx.createBufferSource(); s.buffer = rauschen(dauer + 0.1);
-    const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = freq; f.Q.value = 0.8;
-    const g = ctx.createGain();
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(lautst, t + 0.05);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + dauer);
-    s.connect(f).connect(g).connect(out); s.start(t); s.stop(t + dauer + 0.1);
+  get stumm() { return stumm; },
+  umschalten() {
+    stumm = !stumm;
+    try { localStorage.setItem('derletztebus.stumm', stumm ? '1' : '0'); } catch (e) { /* egal */ }
+    if (ctx) rampe(out.gain, stumm ? 0 : 0.85, 0.2);
+    return stumm;
   }
-
-  return {
-    start,
-    motor(stufe, sek = 1.5) {
-      if (!ctx) return;
-      rampe(motorGain.gain, stufe * 0.32, sek);
-      rampe(motorFilter.frequency, 110 + stufe * 90, sek);
-    },
-    regen(stufe) { if (ctx) rampe(regenGain.gain, stufe * 0.1, 2.5); },
-    unbehagen(stufe) { if (ctx) rampe(droneGain.gain, stufe * 0.16, 4); },
-    gong() { ton(1318, 'sine', 0.2, 1.4); ton(988, 'sine', 0.2, 1.8, 0.35); },
-    tueren() { zisch(1.1, 2400, 0.12); ton(70, 'sine', 0.3, 0.3, 0.9); },
-    schreck() {
-      ton(41, 'sine', 0.6, 2.2);
-      ton(622, 'sawtooth', 0.05, 1.2); ton(659, 'sawtooth', 0.05, 1.2); ton(698, 'sawtooth', 0.04, 1.4);
-    },
-    klick() { ton(1800, 'square', 0.02, 0.04); },
-    tippen() { ton(2600 + Math.random() * 400, 'square', 0.006, 0.015); },
-    get stumm() { return stumm; },
-    umschalten() {
-      stumm = !stumm;
-      try { localStorage.setItem('derletztebus.stumm', stumm ? '1' : '0'); } catch (e) { /* egal */ }
-      if (ctx) rampe(out.gain, stumm ? 0 : 0.9, 0.3);
-      return stumm;
-    }
-  };
-})();
+};

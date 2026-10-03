@@ -2,70 +2,143 @@
 <html lang="de">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#07080c">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#05070d">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Der letzte Bus</title>
+<title>Der letzte Bus – Nachtkiosk</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=VT323&family=Special+Elite&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=VT323&family=Special+Elite&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.min.js", "three/addons/": "./vendor/jsm/" } }
+</script>
 </head>
 <body>
+<div id="spiel"></div>
+<div id="vignette"></div>
+<div id="rot"></div>
+<div id="schwarz"></div>
 
-<!-- Titelbild -->
-<div id="titel" class="screen">
- <div class="spalte">
-  <div class="titel-led"><span>N13</span><span>ENDSTATION</span></div>
-  <h1>Der letzte Bus</h1>
-  <p class="claim">Jede Haltestelle ist seltsamer als die davor.<br>An jeder steigt jemand Neues ein.<br><em>Einer davon ist kein Mensch.</em></p>
- </div>
- <div class="spalte">
-  <label class="name">Wie heißt du?
-    <input id="nameEingabe" maxlength="14" autocomplete="off" placeholder="Sam">
-  </label>
-  <button id="einsteigen" class="gross">Einsteigen</button>
-  <div id="enden"></div>
-  <p class="hinweis">Tippe auf den Text, um ihn schneller zu lesen. Ton an für Gänsehaut.</p>
- </div>
+<!-- Anzeige während der Schicht -->
+<div id="hud" class="weg">
+  <div id="infos">
+    <div id="uhr">22:00</div>
+    <div id="nacht">Nacht 1</div>
+    <div id="geld">0,00 €</div>
+    <div id="herzen"></div>
+  </div>
+  <div id="ziel"></div>
+  <div id="fadenkreuz"></div>
+  <div id="tragen"></div>
+  <div id="ausdauer"><i></i></div>
+  <div id="toast"></div>
+  <div id="blase" class="weg"></div>
+  <button id="bRollladen" class="knopf">⬇ ROLLLADEN</button>
+  <button id="bPause" class="knopf klein">II</button>
 </div>
 
-<main id="bus" class="hidden">
-  <header id="led">
-    <span id="linie">N13</span>
-    <span id="ziel">ENDSTATION</span>
-    <span id="uhr">00:47</span>
-  </header>
+<!-- Touch-Steuerung -->
+<div id="touch" class="weg">
+  <div id="stick"><div id="knauf"></div></div>
+  <button id="bRennen" class="knopf rund">RENNEN</button>
+</div>
 
-  <section id="fenster" aria-hidden="true">
-    <div id="draussen" class="szene-stadt">
-      <div id="fern" class="streifen"></div>
-      <div id="nah" class="streifen"></div>
-      <div id="nebel"></div>
-      <div id="schild" class="hidden"><i></i><b></b></div>
+<!-- Kasse -->
+<div id="kasse" class="weg">
+  <div class="kasse-box">
+    <div class="kasse-kopf"><span>KASSE</span><button id="kZu" class="x">✕</button></div>
+    <div id="kListe"></div>
+    <div class="kasse-zeile"><span>Summe</span><b id="kSumme"></b></div>
+    <div class="kasse-zeile"><span>Kunde gibt dir</span><b id="kGegeben"></b></div>
+    <div class="kasse-zeile summe"><span>Dein Rückgeld</span><b id="kRueck">0,00 €</b></div>
+    <div id="kGeld">
+      <button data-ct="1000" class="schein">10 €</button>
+      <button data-ct="500" class="schein">5 €</button>
+      <button data-ct="200">2 €</button>
+      <button data-ct="100">1 €</button>
+      <button data-ct="50">50 ct</button>
+      <button data-ct="20">20 ct</button>
+      <button data-ct="10">10 ct</button>
     </div>
-    <canvas id="regen"></canvas>
-    <div id="rahmen"></div>
-  </section>
+    <div class="kasse-knoepfe">
+      <button id="kLoeschen">Nochmal</button>
+      <button id="kGeben">Rückgeld geben ✔</button>
+    </div>
+  </div>
+</div>
 
-  <section id="sitze" aria-label="Fahrgäste"></section>
+<!-- Geschichte am Anfang -->
+<div id="intro" class="weg">
+  <div id="introText"></div>
+  <div id="notiz" class="weg">
+    <h3>AUSHILFE GESUCHT – NACHTSCHICHT</h3>
+    <ol>
+      <li>Bediene jeden Kunden. Hol die Sachen aus dem Regal, leg sie auf die Theke.</li>
+      <li>Kassiere an der Kasse und gib das <b>richtige Wechselgeld</b> zurück.</li>
+      <li>Manche Kunden sind <b>keine Menschen</b>. Sie haben keinen Schatten. Ihre Augen leuchten. Sie zucken. Sie wollen Dinge, die wir nicht verkaufen.</li>
+      <li>Kommt so einer: <b>ROLLLADEN RUNTER!</b> Sofort.</li>
+      <li>Kommt er rein: <b>LAUF!</b> Hinten raus zum Bus. Dreh dich nicht um.</li>
+      <li>Halte durch bis 6 Uhr morgens.</li>
+    </ol>
+    <p class="unterschrift">– der alte Besitzer</p>
+  </div>
+  <div class="intro-knoepfe">
+    <button id="iWeiter" class="knopf">Weiter ▸</button>
+    <button id="iSkip" class="knopf leise">Überspringen</button>
+  </div>
+</div>
 
-  <section id="geschichte">
-    <div id="text" aria-live="polite"></div>
-    <div id="zeit"></div>
-    <div id="wahl"></div>
-  </section>
-</main>
+<!-- Titel -->
+<div id="titel">
+  <div class="spalte">
+    <div class="led"><span>N13</span><span>ENDSTATION</span></div>
+    <h1>Der letzte Bus</h1>
+    <h2>NACHTKIOSK</h2>
+    <p class="claim">Du übernimmst die Nachtschicht im Kiosk an der Endstation.<br>
+      Bediene die Kunden, kassiere, gib Wechselgeld.<br>
+      <em>Aber manche Kunden sind keine Menschen.</em></p>
+  </div>
+  <div class="spalte">
+    <div id="naechte"></div>
+    <button id="start" class="gross">Schicht beginnen</button>
+    <button id="grafik" class="knopf leise">Grafik: Hoch</button>
+    <p class="steuerung" id="steuerung"></p>
+  </div>
+</div>
 
-<div id="dunkel"></div>
+<!-- Ende einer Nacht / Game Over -->
+<div id="ende" class="weg">
+  <div class="ende-box">
+    <h2 id="eTitel"></h2>
+    <p id="eText"></p>
+    <div id="eWerte"></div>
+    <div class="ende-knoepfe">
+      <button id="eWeiter" class="gross"></button>
+      <button id="eMenue" class="knopf leise">Zum Titel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Pause -->
+<div id="pause" class="weg">
+  <div class="ende-box">
+    <h2>Pause</h2>
+    <div class="ende-knoepfe">
+      <button id="pWeiter" class="gross">Weiter</button>
+      <button id="pMenue" class="knopf leise">Zum Titel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Handy drehen -->
 <div id="drehen">
   <div class="handy"></div>
   <p>Dreh dein Handy quer.</p>
-  <button id="hochkant">Lieber hochkant spielen</button>
 </div>
+
 <button id="ton" title="Ton an/aus">♪</button>
 
-<script src="audio.js"></script>
-<script src="game.js"></script>
+<script type="module" src="game.js"></script>
 </body>
 </html>
