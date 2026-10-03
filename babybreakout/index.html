@@ -764,7 +764,7 @@ function resetPositions() {
     Object.assign(m, { x: c % N + .5, y: ((c / N) | 0) + .5, path: [], state: "wander", stun: 0, lastSeen: -99, wait: rnd(0, 2) });
     m.obj.scale.setScalar(1);
   });
-  grace = 2.5;
+  grace = 4;
 }
 function buildFloor(previewOnly = false) {
   F = FLOORS[run ? run.floor : 0]; N = F.n;
@@ -914,7 +914,7 @@ function noiseAt(x, y, r, loud = false) {
 }
 
 // ================= Kreaturen-KI =================
-const SPEED = { krabbler: [.85, 1.5], lauscher: [.6, 1.9], starrer: [1.05, 1.05] };
+const SPEED = { krabbler: [.7, 1.2], lauscher: [.55, 1.45], starrer: [.85, .85] }; // Gehen = 1.55, Rennen = 2.6
 function playerSees(m) {
   const d = dist(m.x, m.y, P.x, P.y); if (d > 11) return false;
   const rel = wrapA(Math.atan2(m.y - P.y, m.x - P.x) - P.a);
@@ -922,7 +922,7 @@ function playerSees(m) {
   return Math.abs(rel) < .7 && Math.abs(P.pitch - elev) < .65 && los(P.x, P.y, m.x, m.y);
 }
 function updateMonsters(dt) {
-  const greed = 1 + .35 * (got / Math.max(1, total));
+  const greed = 1 + .2 * (got / Math.max(1, total));
   for (const m of monsters) {
     m.anim += dt;
     if (m.stun > 0) { m.stun -= dt; m.moving = false; continue; }
@@ -939,20 +939,20 @@ function updateMonsters(dt) {
       if (m.state !== "decoy" || m.repath <= 0) { m.state = "decoy"; m.repath = 1; m.path = path(Math.floor(m.x), Math.floor(m.y), Math.floor(decoy.x), Math.floor(decoy.y)); }
     } else {
       if (m.state === "decoy") { m.state = "wander"; m.path = []; }
-      const sees = grace <= 0 && m.type === "krabbler" && d < 6.5 && los(m.x, m.y, P.x, P.y);
+      const sees = grace <= 0 && m.type === "krabbler" && d < 5 && los(m.x, m.y, P.x, P.y);
       if (sees || huntT > 0) {
         if (m.state !== "chase" && sees) { run.seen++; sfx.spotted(); say("Er hat dich gesehen. Lauf!", "#ff4d66", 2); }
         m.state = "chase"; m.lastSeen = T; m.lx = P.x; m.ly = P.y;
       }
       if (m.state === "chase") {
         if (m.repath <= 0) { m.repath = .35; m.path = path(Math.floor(m.x), Math.floor(m.y), Math.floor(m.lx), Math.floor(m.ly)); }
-        if (T - m.lastSeen > 3 && huntT <= 0) { m.state = "investigate"; m.path = path(Math.floor(m.x), Math.floor(m.y), Math.floor(m.lx), Math.floor(m.ly)); }
+        if (T - m.lastSeen > 2 && huntT <= 0) { m.state = "investigate"; m.path = path(Math.floor(m.x), Math.floor(m.y), Math.floor(m.lx), Math.floor(m.ly)); }
       } else if (!m.path.length) {
         if (m.wait > 0) m.wait -= dt;
         else if (m.state === "investigate") { m.state = "wander"; m.wait = 2; }
         else {
           let c; do { c = Math.floor(Math.random() * N * N); } while (isWall(c % N, (c / N) | 0));
-          if (Math.random() < .3) c = Math.floor(P.y) * N + Math.floor(P.x);
+          if (Math.random() < .12) c = Math.floor(P.y) * N + Math.floor(P.x);
           m.path = path(Math.floor(m.x), Math.floor(m.y), c % N, (c / N) | 0); m.wait = rnd(.5, 2);
         }
       }
@@ -978,7 +978,7 @@ function updateMonsters(dt) {
       else if (m.type === "lauscher") { sfx.breath(v * 1.3, pan); m.sndT = 1.7; }
       else if (m.moving) { sfx.creak(v * 1.5, pan); m.sndT = .7; } else m.sndT = .3;
     }
-    if (grace <= 0 && d < .5) return caught(m);
+    if (grace <= 0 && d < .42) return caught(m);
   }
 }
 function caught(m) {
@@ -1019,8 +1019,8 @@ function update(dt) {
   const len = Math.hypot(fwd, side); if (len > 1) { fwd /= len; side /= len; }
   P.moving = len > .15;
   const maxSt = 100 + save.upg.stam * 35;
-  if ((keys.ShiftLeft || keys.ShiftRight || touch.run) && P.moving && P.stamina > 0) { P.running = true; P.stamina = Math.max(0, P.stamina - 26 * dt); }
-  else { P.running = false; P.stamina = Math.min(maxSt, P.stamina + (P.moving ? 12 : 22) * dt); }
+  if ((keys.ShiftLeft || keys.ShiftRight || touch.run) && P.moving && P.stamina > 0) { P.running = true; P.stamina = Math.max(0, P.stamina - 20 * dt); }
+  else { P.running = false; P.stamina = Math.min(maxSt, P.stamina + (P.moving ? 16 : 28) * dt); }
   const sp = (P.running ? 2.6 : 1.55) * dt;
   const dx = Math.cos(P.a), dy = Math.sin(P.a), r = .2;
   const mx = (dx * fwd - dy * side) * sp, my = (dy * fwd + dx * side) * sp;
@@ -1041,7 +1041,7 @@ function update(dt) {
     tmpM.makeScale(0, 0, 0); pelletMesh.setMatrixAt(i, tmpM); pelletMesh.instanceMatrix.needsUpdate = true;
     const pos = pelletGlow.geometry.attributes.position; pos.setY(i, -50); pos.needsUpdate = true;
     if (got === Math.ceil(total / 2)) say("Etwas hat bemerkt, wie gierig du bist …", "#ff4d66", 3);
-    if (got === total) { sfx.open(); setExitOpen(true); huntT = 6; run.stars += 5; say("Die Leiter ist offen! Sie wissen jetzt, wo du bist. Lauf!", "#7dff9a", 4); }
+    if (got === total) { sfx.open(); setExitOpen(true); huntT = 3; run.stars += 5; say("Die Leiter ist offen! Sie wissen jetzt, wo du bist. Lauf!", "#7dff9a", 4); }
   });
   gifts.forEach(g => {
     if (!g.on || dist(g.x, g.y, P.x, P.y) > .45) return;
