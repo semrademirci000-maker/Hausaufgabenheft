@@ -67,6 +67,9 @@ Der Bus N13 setzt dich an der Endstation ab, und du übernimmst die Nachtschicht
 - **3 Nächte** (22 Uhr bis 6 Uhr), 3 Herzen, jede Nacht mehr Monster. Vorne gibt es eine kurze Geschichte.
 - Steuerung am Handy: links Stick, Wischen zum Umsehen, Antippen zum Benutzen.
   Am Rechner: WASD, Maus ziehen, Klick/E, Shift rennen, R Rollladen.
+- **Grafik:** echte Schatten, nasse Straße mit Spiegelungen, Regen, Skyline, Bloom und Filmkorn;
+  Menschen und Monster mit Gesicht, Händen und Gelenken. Auf langsamen Geräten schaltet das Spiel
+  von selbst auf einfachere Grafik (oder unter dem Startknopf „Grafik“ umstellen).
 - Ton (Regen, Kasse, Schreie, Herzschlag) wird live im Browser erzeugt.
 
 Öffnen: `https://semrademirci000-maker.github.io/Hausaufgabenheft/derletztebus/`.

@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/css2?family=VT323&family=Special+Elite&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <script type="importmap">
-{ "imports": { "three": "./vendor/three.module.min.js" } }
+{ "imports": { "three": "./vendor/three.module.min.js", "three/addons/": "./vendor/jsm/" } }
 </script>
 </head>
 <body>
@@ -102,6 +102,7 @@
   <div class="spalte">
     <div id="naechte"></div>
     <button id="start" class="gross">Schicht beginnen</button>
+    <button id="grafik" class="knopf leise">Grafik: Hoch</button>
     <p class="steuerung" id="steuerung"></p>
   </div>
 </div>
