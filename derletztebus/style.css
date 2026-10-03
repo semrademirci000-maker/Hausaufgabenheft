@@ -1,0 +1,291 @@
+:root {
+  --nacht: #07080c;
+  --bus: #12141b;
+  --text: #ddd7c8;
+  --leise: #8b8678;
+  --led: #ffaa2b;
+  --blut: #d24a43;
+  --stange: #c9a227;
+  --rand: #262a35;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  background: var(--nacht);
+  color: var(--text);
+  font: 17px/1.55 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.hidden { display: none !important; }
+button { font: inherit; color: inherit; cursor: pointer; }
+
+/* ---------- Titel ---------- */
+.screen {
+  position: fixed; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 18px; padding: 24px 16px; text-align: center;
+  background:
+    radial-gradient(ellipse at 50% 120%, #2a1d10 0%, transparent 60%),
+    radial-gradient(ellipse at 50% -20%, #0e1424 0%, transparent 70%),
+    var(--nacht);
+  overflow-y: auto;
+}
+.titel-led {
+  font-family: 'VT323', monospace; font-size: 30px; letter-spacing: 3px;
+  color: var(--led); text-shadow: 0 0 10px rgba(255, 170, 43, .7);
+  background: #140d03; border: 2px solid #2b1d08; border-radius: 6px;
+  padding: 4px 16px; display: flex; gap: 22px;
+  animation: flackern 6s infinite;
+}
+h1 {
+  font-family: 'Special Elite', serif; font-weight: 400;
+  font-size: clamp(42px, 11vw, 82px); line-height: 1; margin: 0;
+  letter-spacing: 1px; color: #efe9da;
+  text-shadow: 0 0 30px rgba(255, 170, 43, .15), 3px 3px 0 #000;
+}
+.claim { margin: 0; color: var(--leise); max-width: 30em; }
+.claim em { color: var(--blut); font-style: normal; }
+.name { display: flex; flex-direction: column; gap: 6px; color: var(--leise); font-size: 14px; }
+.name input {
+  font: 20px 'Special Elite', serif; text-align: center; width: 220px; max-width: 100%;
+  background: #0f1117; color: var(--text); border: 1px solid var(--rand); border-radius: 8px;
+  padding: 8px 10px; user-select: text; -webkit-user-select: text;
+}
+.name input:focus { outline: 2px solid var(--led); outline-offset: 2px; }
+.gross {
+  background: var(--led); color: #1a1003; border: 0; border-radius: 999px;
+  padding: 14px 42px; font-weight: 600; font-size: 19px;
+  box-shadow: 0 0 30px rgba(255, 170, 43, .3);
+}
+.gross:active { transform: scale(.97); }
+#enden { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: 520px; }
+#enden span {
+  font-size: 13px; padding: 4px 10px; border-radius: 999px;
+  border: 1px solid var(--rand); color: var(--leise);
+}
+#enden span.ja { border-color: var(--led); color: var(--led); }
+.hinweis { font-size: 13px; color: #5d5a52; margin: 0; }
+
+.spalte { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+
+/* ---------- Bus ---------- */
+#bus {
+  position: fixed; inset: 0;
+  display: flex; flex-direction: column;
+  max-width: 780px; margin: 0 auto;
+  padding: env(safe-area-inset-top, 0) 0 env(safe-area-inset-bottom, 0);
+  background: var(--bus);
+  box-shadow: 0 0 80px #000;
+}
+#led {
+  display: flex; align-items: center; gap: 14px;
+  font-family: 'VT323', monospace; font-size: 26px; letter-spacing: 2px;
+  color: var(--led); text-shadow: 0 0 8px rgba(255, 170, 43, .6);
+  background: #0c0802; border-bottom: 3px solid #1d1406;
+  padding: 4px 16px;
+}
+#ziel { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+#led.stoerung { animation: flackern .3s infinite; }
+
+/* Fenster nach draußen */
+#fenster {
+  position: relative; height: 30vh; min-height: 160px; max-height: 280px;
+  margin: 10px 16px 0; border-radius: 18px; overflow: hidden;
+  background: #05060a;
+}
+#rahmen {
+  position: absolute; inset: 0; border-radius: 18px; pointer-events: none;
+  box-shadow: inset 0 0 0 6px #1b1e27, inset 0 0 40px rgba(0, 0, 0, .9);
+}
+#regen { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+#draussen { position: absolute; inset: 0; transition: background 2s; }
+.streifen {
+  position: absolute; left: 0; bottom: 0; width: 200%; height: 100%;
+  background-repeat: repeat-x; background-position: left bottom;
+}
+#draussen.faehrt #fern { animation: vorbei 26s linear infinite; }
+#draussen.faehrt #nah  { animation: vorbei 5s linear infinite; }
+#draussen.schnell #nah { animation-duration: 1.2s; }
+#draussen.schnell #fern { animation-duration: 7s; }
+@keyframes vorbei { to { transform: translateX(-50%); } }
+#nebel {
+  position: absolute; inset: 0; opacity: 0; transition: opacity 3s;
+  background: linear-gradient(to top, rgba(190, 196, 205, .7), rgba(190, 196, 205, 0) 80%);
+}
+
+#schild {
+  position: absolute; right: 12%; bottom: 14%;
+  display: flex; flex-direction: column; align-items: center;
+  animation: auftauchen .8s ease-out;
+}
+#schild i {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: #e8c22a; border: 3px solid #2d7a3e;
+  display: grid; place-items: center; font: 700 16px 'Inter'; font-style: normal; color: #2d7a3e;
+}
+#schild i::after { content: 'H'; }
+#schild b {
+  margin-top: 4px; background: #f3efe2; color: #121212;
+  font: 600 13px 'Inter'; padding: 3px 9px; border-radius: 3px; min-width: 80px; min-height: 24px;
+  text-align: center; box-shadow: 0 2px 8px rgba(0, 0, 0, .6);
+}
+#schild::after { content: ''; width: 4px; height: 60px; background: #555; }
+@keyframes auftauchen { from { transform: translateX(80px); opacity: 0; } }
+
+/* Szenen */
+.szene-stadt     { background: linear-gradient(#0b1020, #1d2338 70%, #2b2a2a); }
+.szene-bahnhof   { background: linear-gradient(#0a0f1d, #1a2236 70%, #2a2a2e); }
+.szene-linden    { background: linear-gradient(#07090f, #141a26 70%, #1c1d22); }
+.szene-friedhof  { background: linear-gradient(#0d1012, #2a3033 75%, #3a3f40); }
+.szene-friedhof #nebel { opacity: 1; }
+.szene-namenlos  { background: radial-gradient(circle at 50% 0%, #2c2412 0%, #050505 45%); }
+.szene-schule    { background: linear-gradient(#060812, #10162a 70%, #191b24); }
+.szene-zuhause   { background: linear-gradient(#090c18, #18203a 70%, #232530); }
+.szene-ende      { background: #d9dcdf; }
+.szene-ende #nebel { opacity: 1; background: rgba(230, 232, 235, .9); }
+
+/* Sitzreihe mit den Fahrgästen */
+#sitze {
+  display: flex; gap: 8px; padding: 12px 16px 6px;
+  overflow-x: auto; scrollbar-width: none; min-height: 74px;
+}
+#sitze::-webkit-scrollbar { display: none; }
+.platz {
+  flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 3px;
+  width: 64px; font-size: 11px; color: var(--leise); text-align: center; line-height: 1.2;
+  animation: einsteigen .7s ease-out;
+}
+.platz i {
+  width: 40px; height: 40px; border-radius: 50%;
+  display: grid; place-items: center; font: 600 14px 'Inter'; font-style: normal;
+  background: #222634; border: 2px solid #343a4c; color: var(--text);
+}
+.platz.du i { background: #2a2010; border-color: var(--led); color: var(--led); }
+@keyframes einsteigen { from { opacity: 0; transform: translateY(10px); } }
+
+/* Text und Entscheidungen */
+#geschichte {
+  flex: 1; overflow-y: auto; padding: 6px 16px 70px;
+  -webkit-overflow-scrolling: touch;
+  border-top: 1px solid var(--rand);
+  cursor: pointer;
+}
+#text p { margin: 0 0 12px; max-width: 36em; animation: rein .3s; }
+#text p.rede { color: #f1ead6; font-family: 'Special Elite', serif; }
+#text p.unheimlich { color: var(--blut); font-family: 'Special Elite', serif; }
+#text p.leise { color: var(--leise); font-size: 15px; font-style: italic; }
+#text p.halt { font-family: 'VT323', monospace; font-size: 24px; color: var(--led); letter-spacing: 2px; margin-top: 8px; }
+#text p.trenner { height: 1px; background: var(--rand); margin: 18px 0; }
+@keyframes rein { from { opacity: 0; } }
+
+#zeit { font-size: 13px; color: var(--leise); margin: 4px 0 8px; min-height: 1em; }
+#zeit b { color: var(--led); letter-spacing: 3px; }
+#wahl { display: flex; flex-direction: column; gap: 8px; max-width: 36em; }
+#wahl button {
+  text-align: left; padding: 11px 14px; border-radius: 12px;
+  background: #1a1d27; border: 1px solid #2e3343; color: var(--text);
+  animation: rein .4s;
+}
+#wahl button:hover { border-color: var(--led); }
+#wahl button:active { transform: scale(.99); background: #232838; }
+#wahl button.weiter { align-self: flex-start; color: var(--led); border-color: #4a3410; background: transparent; }
+#wahl button.zurueck { color: var(--leise); background: transparent; }
+#wahl button.gefahr { border-color: #5c2522; }
+#wahl .reihe { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Licht aus */
+#dunkel {
+  position: fixed; inset: 0; background: #000; pointer-events: none;
+  opacity: 0; transition: opacity .15s; z-index: 20;
+}
+body.flackern #dunkel { animation: lichtflackern 1.2s steps(1) 1; }
+body.blackout #bus { background: #000; }
+body.blackout #led, body.blackout #fenster, body.blackout #sitze { filter: brightness(0); transition: filter .05s; }
+#draussen.faehrt #nah.flimmert { animation: vorbei 5s linear infinite, flackern 2.5s infinite; }
+#draussen:not(.faehrt) #nah.flimmert { animation: flackern 2.5s infinite; }
+@keyframes lichtflackern {
+  0%, 18%, 40%, 70% { opacity: 0; }
+  10%, 30%, 55%, 85% { opacity: .9; }
+  100% { opacity: 0; }
+}
+@keyframes flackern { 0%, 96%, 100% { opacity: 1; } 97% { opacity: .3; } 98% { opacity: 1; } 99% { opacity: .5; } }
+
+#ton {
+  position: fixed; right: 14px; bottom: calc(14px + env(safe-area-inset-bottom, 0));
+  width: 40px; height: 40px; border-radius: 50%; z-index: 30;
+  background: rgba(20, 22, 30, .85); border: 1px solid var(--rand); color: var(--led);
+}
+#ton.aus { color: #555; text-decoration: line-through; }
+
+@media (max-width: 480px) {
+  body { font-size: 16px; }
+  #fenster { height: 26vh; }
+  #sitze { gap: 4px; }
+  .platz { width: 54px; font-size: 10px; }
+  .platz i { width: 36px; height: 36px; font-size: 13px; }
+}
+
+/* ---------- Querformat: wie ein Handyspiel im Streifen ---------- */
+@media (orientation: landscape) and (min-aspect-ratio: 4/3) {
+  #bus {
+    max-width: none;
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(300px, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    padding: 0 env(safe-area-inset-right, 0) 0 env(safe-area-inset-left, 0);
+  }
+  #led { grid-column: 1; grid-row: 1; }
+  #fenster {
+    grid-column: 1; grid-row: 2;
+    height: auto; min-height: 0; max-height: none;
+    margin: 10px 12px 0 16px;
+  }
+  #sitze { grid-column: 1; grid-row: 3; padding-bottom: calc(8px + env(safe-area-inset-bottom, 0)); }
+  #geschichte {
+    grid-column: 2; grid-row: 1 / 4;
+    border-top: 0; border-left: 1px solid var(--rand);
+    background: #0d0f15;
+    padding-top: calc(14px + env(safe-area-inset-top, 0));
+  }
+  .screen { flex-direction: row; justify-content: center; gap: 48px; }
+  .screen .spalte { flex: 0 1 420px; }
+  .screen h1 { font-size: clamp(38px, 11vh, 82px); }
+}
+@media (orientation: landscape) and (max-height: 500px) {
+  body { font-size: 15px; }
+  #led { font-size: 20px; padding: 2px 16px; }
+  #text p { margin-bottom: 9px; }
+  #wahl { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  #wahl button { padding: 7px 10px; font-size: 14px; line-height: 1.3; }
+  #wahl button.weiter { grid-column: 1 / -1; justify-self: start; }
+  .platz { width: 54px; font-size: 10px; }
+  .platz i { width: 32px; height: 32px; font-size: 12px; }
+  #sitze { padding-top: 8px; min-height: 0; }
+  .screen { padding: 12px 16px; }
+  .screen .spalte { gap: 10px; }
+  .titel-led { font-size: 22px; }
+  .claim { font-size: 14px; }
+}
+
+/* Hinweis: Handy quer drehen */
+#drehen { display: none; }
+@media (orientation: portrait) and (max-width: 700px) {
+  body.imBus:not(.hochkant) #drehen {
+    display: flex; position: fixed; inset: 0; z-index: 40;
+    flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+    padding: 24px 16px; text-align: center;
+    background: rgba(7, 8, 12, .96);
+  }
+}
+#drehen .handy {
+  width: 54px; height: 96px; border: 4px solid var(--led); border-radius: 12px;
+  box-shadow: 0 0 20px rgba(255, 170, 43, .3);
+  animation: drehen 2.4s ease-in-out infinite;
+}
+@keyframes drehen { 0%, 25% { transform: rotate(0); } 55%, 100% { transform: rotate(-90deg); } }
+#drehen p { margin: 0; color: var(--text); font-family: 'Special Elite', serif; font-size: 20px; }
+#drehen button { background: transparent; border: 1px solid var(--rand); color: var(--leise); border-radius: 999px; padding: 8px 18px; font-size: 14px; }

@@ -53,6 +53,25 @@ Die Zahlen siehst du auf `statistik.html`, z. B.
 Die Seite ist nirgends in der App verlinkt. Mit **Mein Gerät nicht mitzählen**
 zählen deine eigenen Starts nicht mit.
 
+## Der letzte Bus (Gruselgeschichte zum Mitspielen)
+
+In `derletztebus/` steckt eine interaktive Gruselgeschichte:
+Du steigst nachts in den Nachtbus N13 – aber die Haltestellen werden immer
+seltsamer. An jeder Haltestelle steigt jemand Neues ein. **Einer davon ist kein Mensch.**
+
+- Zwischen zwei Haltestellen kannst du zwei Dinge tun: mit Leuten reden,
+  sie heimlich genauer ansehen, ins Spiegelbild der Scheibe schauen oder zum Fahrer gehen.
+- Bei jeder Fahrt wird neu ausgelost, wer kein Mensch ist. Auch Menschen wirken
+  manchmal komisch – genau hinsehen!
+- An der Endstation musst du sagen, wer es ist. Es gibt vier Enden zu finden.
+- Ton (Motor, Regen, Gong) wird live im Browser erzeugt.
+- Gespielt wird am besten **quer** wie Brawl Stars oder Roblox: links das Busfenster,
+  rechts die Geschichte. Hält man das Handy hochkant, erscheint ein Hinweis zum Drehen.
+- Das Spiel gibt es auch als **native SwiftUI-App** in [`ios/DerLetzteBus`](ios/DerLetzteBus/README.md).
+
+Öffnen: `derletztebus/index.html`, z. B.
+`https://semrademirci000-maker.github.io/Hausaufgabenheft/derletztebus/`.
+
 ## Auf dem iPad benutzen
 
 Die App ist eine Web-App (HTML/CSS/JavaScript), **keine native SwiftUI-App**.
@@ -82,4 +101,6 @@ Zum schnellen Ausprobieren am Rechner reicht es, `index.html` im Browser zu öff
 | `statistik.html` | Deine private Spieler-Statistik |
 | `stitched/` | Das Spiel STITCHED von Muaz, mit anonymem Zähler |
 | `stitched/board.html` | Privates Board: wer STITCHED gespielt hat |
+| `derletztebus/` | Gruselgeschichte „Der letzte Bus“ zum Mitspielen |
+| `ios/DerLetzteBus/` | „Der letzte Bus“ als native SwiftUI-App |
 | `sw.js`, `manifest.webmanifest`, `icons/` | Offline-Betrieb, App-Icon, Home-Bildschirm |

@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#07080c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Der letzte Bus</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=VT323&family=Special+Elite&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- Titelbild -->
+<div id="titel" class="screen">
+ <div class="spalte">
+  <div class="titel-led"><span>N13</span><span>ENDSTATION</span></div>
+  <h1>Der letzte Bus</h1>
+  <p class="claim">Jede Haltestelle ist seltsamer als die davor.<br>An jeder steigt jemand Neues ein.<br><em>Einer davon ist kein Mensch.</em></p>
+ </div>
+ <div class="spalte">
+  <label class="name">Wie heißt du?
+    <input id="nameEingabe" maxlength="14" autocomplete="off" placeholder="Sam">
+  </label>
+  <button id="einsteigen" class="gross">Einsteigen</button>
+  <div id="enden"></div>
+  <p class="hinweis">Tippe auf den Text, um ihn schneller zu lesen. Ton an für Gänsehaut.</p>
+ </div>
+</div>
+
+<main id="bus" class="hidden">
+  <header id="led">
+    <span id="linie">N13</span>
+    <span id="ziel">ENDSTATION</span>
+    <span id="uhr">00:47</span>
+  </header>
+
+  <section id="fenster" aria-hidden="true">
+    <div id="draussen" class="szene-stadt">
+      <div id="fern" class="streifen"></div>
+      <div id="nah" class="streifen"></div>
+      <div id="nebel"></div>
+      <div id="schild" class="hidden"><i></i><b></b></div>
+    </div>
+    <canvas id="regen"></canvas>
+    <div id="rahmen"></div>
+  </section>
+
+  <section id="sitze" aria-label="Fahrgäste"></section>
+
+  <section id="geschichte">
+    <div id="text" aria-live="polite"></div>
+    <div id="zeit"></div>
+    <div id="wahl"></div>
+  </section>
+</main>
+
+<div id="dunkel"></div>
+<div id="drehen">
+  <div class="handy"></div>
+  <p>Dreh dein Handy quer.</p>
+  <button id="hochkant">Lieber hochkant spielen</button>
+</div>
+<button id="ton" title="Ton an/aus">♪</button>
+
+<script src="audio.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
