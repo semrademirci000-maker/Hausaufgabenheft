@@ -1,0 +1,781 @@
+<!doctype html>
+<html lang="de">
+<meta charset="utf-8">
+<title>Baby Breakout – Baby Firststep</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Nunito:wght@500;700&display=swap">
+<style>
+  /* Layout: ein Spielteppich – Leinwand 4:3 mittig, Overlays darüber. Bewusst ein einziges helles Kinderzimmer-Thema. */
+  :root {
+    --mat: #fbeee4;        /* Spielteppich */
+    --mat-dot: #f3dccd;
+    --ink: #4a3550;        /* Pflaumen-Tinte */
+    --rose: #f28fb3;       /* Akzent */
+    --sky: #7cc4ec;
+    --cream: #fffaf5;
+    --display: "Baloo 2", "Comic Sans MS", "Trebuchet MS", system-ui, sans-serif;
+    --body: "Nunito", "Trebuchet MS", system-ui, sans-serif;
+    color-scheme: light;
+  }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--mat);
+    background-image: radial-gradient(var(--mat-dot) 2px, transparent 2.5px);
+    background-size: 26px 26px;
+    color: var(--ink);
+    font-family: var(--body);
+    overflow: hidden;
+    touch-action: none;
+    -webkit-user-select: none; user-select: none;
+  }
+  #wrap {
+    height: 100%;
+    box-sizing: border-box;
+    padding: 12px 16px;
+    display: grid;
+    place-items: center;
+  }
+  #stage {
+    position: relative;
+    width: min(100%, calc((100vh - 24px) * 4 / 3));
+    max-width: 100%;
+    aspect-ratio: 4 / 3;
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 22px;
+    box-shadow: 0 0 0 6px var(--cream), 0 0 0 9px var(--rose), 0 18px 40px rgba(74, 53, 80, .18);
+    cursor: none;
+  }
+  .overlay {
+    position: absolute; inset: 0;
+    display: grid; place-items: center;
+    border-radius: 22px;
+    background: rgba(255, 250, 245, .82);
+    backdrop-filter: blur(3px);
+    text-align: center;
+    padding: 4% 6%;
+    box-sizing: border-box;
+  }
+  .overlay .inner { display: grid; gap: clamp(8px, 2vh, 18px); justify-items: center; max-width: 34em; }
+  h1 {
+    font-family: var(--display);
+    font-weight: 800;
+    margin: 0;
+    line-height: .9;
+    font-size: clamp(34px, 8vw, 78px);
+    letter-spacing: -.01em;
+    text-wrap: balance;
+  }
+  h1 .b { color: var(--rose); }
+  h1 .k { color: var(--sky); }
+  .sub {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: clamp(15px, 2.6vw, 24px);
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--ink);
+    opacity: .75;
+    margin: 0;
+  }
+  p { margin: 0; font-size: clamp(13px, 1.9vw, 17px); line-height: 1.45; }
+  .keys { display: flex; flex-wrap: wrap; gap: 6px 14px; justify-content: center; font-size: clamp(12px, 1.6vw, 15px); opacity: .85; }
+  .keys b { font-family: var(--display); }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 18px; justify-content: center; font-size: clamp(12px, 1.6vw, 15px); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend i { width: 14px; height: 14px; border-radius: 50%; display: inline-block; }
+  button {
+    font-family: var(--display);
+    font-weight: 800;
+    font-size: clamp(18px, 3vw, 28px);
+    color: #fff;
+    background: var(--rose);
+    border: 0;
+    border-radius: 999px;
+    padding: .35em 1.4em .25em;
+    box-shadow: 0 5px 0 #c9688d;
+    cursor: pointer;
+    transition: transform .12s;
+  }
+  button:hover { transform: translateY(-2px); }
+  button:active { transform: translateY(3px); box-shadow: 0 2px 0 #c9688d; }
+  button:focus-visible { outline: 3px solid var(--sky); outline-offset: 4px; }
+  .best { font-family: var(--display); font-weight: 700; font-variant-numeric: tabular-nums; opacity: .8; }
+  @media (prefers-reduced-motion: reduce) { button { transition: none; } }
+</style>
+
+<div id="wrap">
+  <div id="stage">
+    <canvas id="game" aria-label="Baby Breakout Spielfeld"></canvas>
+
+    <div class="overlay" id="titleScreen">
+      <div class="inner">
+        <p class="sub">Baby Firststep</p>
+        <h1><span class="b">Baby</span> <span class="k">Breakout</span></h1>
+        <p>Das Baby macht seine ersten Schritte und hält ein Kissen hoch. Lass den Ball hüpfen und räum alle ABC-Klötze ab, bevor Mittagsschlaf ist.</p>
+        <div class="legend">
+          <span><i style="background:#f28fb3"></i>Schnuller: breites Kissen</span>
+          <span><i style="background:#7cc4ec"></i>Fläschchen: +1 Herz</span>
+          <span><i style="background:#c99a6b"></i>Teddy: 3 Bälle</span>
+          <span><i style="background:#b8a3ec"></i>Mond: langsamer Ball</span>
+        </div>
+        <div class="keys">
+          <span><b>Finger / Maus</b> bewegen</span>
+          <span><b>Tippen / Leertaste</b> Ball los</span>
+          <span><b>← →</b> laufen</span>
+          <span><b>P</b> Pause</span>
+        </div>
+        <button id="startBtn" type="button">Los geht's!</button>
+        <div class="best" id="bestLine"></div>
+      </div>
+    </div>
+
+    <div class="overlay" id="endScreen" hidden>
+      <div class="inner">
+        <p class="sub" id="endSub">Mittagsschlaf</p>
+        <h1 id="endTitle">Zzz…</h1>
+        <p id="endText"></p>
+        <button id="againBtn" type="button">Nochmal!</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  // ---------- Grundgerüst ----------
+  const W = 800, H = 600;
+  const cv = document.getElementById("game");
+  const ctx = cv.getContext("2d");
+  const titleScreen = document.getElementById("titleScreen");
+  const endScreen = document.getElementById("endScreen");
+  const FONT = '"Baloo 2", "Trebuchet MS", system-ui, sans-serif';
+
+  function resize() {
+    const r = cv.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    cv.width = Math.round(r.width * dpr);
+    cv.height = Math.round(r.height * dpr);
+    ctx.setTransform(cv.width / W, 0, 0, cv.height / H, 0, 0);
+  }
+  window.addEventListener("resize", resize);
+
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+  };
+
+  // ---------- Klang (Web Audio, startet erst nach Antippen) ----------
+  let ac = null;
+  function audio() {
+    if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch { ac = null; } }
+    if (ac && ac.state === "suspended") ac.resume();
+    return ac;
+  }
+  function tone(freq, dur, type = "sine", vol = 0.15, slideTo = null, delay = 0) {
+    const a = ac; if (!a) return;
+    const t = a.currentTime + delay;
+    const o = a.createOscillator(), g = a.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(freq, t);
+    if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t + dur);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g).connect(a.destination);
+    o.start(t); o.stop(t + dur + 0.02);
+  }
+  const PENTA = [523, 587, 659, 784, 880, 1047, 1175, 1319];
+  const sfx = {
+    brick(i) { tone(PENTA[i % PENTA.length], 0.18, "triangle", 0.14); },
+    tough() { tone(330, 0.1, "square", 0.05); tone(392, 0.1, "triangle", 0.08, null, 0.03); },
+    boing() { tone(260, 0.16, "sine", 0.18, 520); },
+    wall() { tone(900, 0.04, "sine", 0.04); },
+    giggle() { [0, .07, .14, .21, .28].forEach((d, i) => tone(700 + (i % 2) * 180, 0.06, "sine", 0.1, 820 + (i % 2) * 200, d)); },
+    power() { [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.12, "triangle", 0.12, null, i * 0.07)); },
+    lose() { tone(440, 0.5, "sine", 0.14, 180); tone(330, 0.6, "triangle", 0.06, 140, 0.1); },
+    clear() { [523, 659, 784, 659, 784, 1047].forEach((f, i) => tone(f, 0.16, "triangle", 0.13, null, i * 0.11)); },
+    lullaby() { [784, 659, 784, 659, 587, 523].forEach((f, i) => tone(f, 0.35, "sine", 0.08, null, i * 0.3)); }
+  };
+
+  // ---------- Level ----------
+  // . leer · 1 Klotz · 2 Doppelklotz (2 Treffer) · P Klotz mit Geschenk
+  const LEVELS = [
+    { name: "Erste Schritte", words: ["MAMA", "PAPA", "BABY"], map: [
+      "..........",
+      "..111111..",
+      ".11P11P11.",
+      "..111111..",
+    ]},
+    { name: "Krabbelgruppe", words: ["KRABBELN", "LACHEN", "SPIELEN", "TEDDY"], map: [
+      "1111111111",
+      "1P111111P1",
+      ".11222211.",
+      "..111111..",
+      "...1PP1...",
+    ]},
+    { name: "Purzelbaum", words: ["HOPPLA", "PURZEL", "BAUM", "HURRA", "OMA"], map: [
+      "2.2.2.2.2.",
+      ".1.1P1.1.1",
+      "1111111111",
+      "1P222222P1",
+      "1111111111",
+      "..1.11.1..",
+    ]},
+    { name: "Laufrad", words: ["LAUFEN", "RENNEN", "SPRINGEN", "SCHAUKEL", "RUTSCHE", "OPA"], map: [
+      "1111111111",
+      "2222222222",
+      "1P11PP11P1",
+      "2112112112",
+      "1111111111",
+      ".2222222.",
+      "...P..P...",
+    ]},
+    { name: "Großer Schritt", words: ["KINDERGARTEN", "FREUNDE", "BAUKLOTZ", "SANDKASTEN", "GEBURTSTAG", "KUCHEN", "KERZE"], map: [
+      "2222222222",
+      "2P111111P2",
+      "2122222212",
+      "21P1111P12",
+      "2122222212",
+      "2111PP1112",
+      "2222222222",
+    ]},
+  ];
+  const COLS = 10, BW = 70, BH = 30, GAP = 6;
+  const OX = (W - (COLS * BW + (COLS - 1) * GAP)) / 2, OY = 72;
+  const PALETTE = [
+    { face: "#f7a8c4", edge: "#d97a9e", ink: "#9c3c66" },
+    { face: "#8ecdf0", edge: "#5ea8d2", ink: "#2c6e96" },
+    { face: "#9be3c0", edge: "#6cc29b", ink: "#2f7a59" },
+    { face: "#ffe08a", edge: "#e9bf55", ink: "#9a7215" },
+    { face: "#c9b3f2", edge: "#a088d6", ink: "#5f449c" },
+    { face: "#ffc09f", edge: "#ec9670", ink: "#a0512c" },
+  ];
+  const POWERS = {
+    big:   { col: "#f28fb3", label: "Schnuller!" },
+    life:  { col: "#7cc4ec", label: "Fläschchen! +1" },
+    multi: { col: "#c99a6b", label: "Teddy-Bälle!" },
+    slow:  { col: "#b8a3ec", label: "Schlaflied…" },
+  };
+
+  // ---------- Zustand ----------
+  let state = "title";          // title, serve, play, pause, clear, over
+  let level = 0, score = 0, lives = 3, steps = 0, best = store.get("babybreakout.best", 0);
+  let bricks = [], balls = [], drops = [], parts = [], floats = [];
+  let timer = 0, bigT = 0, slowT = 0, shake = 0;
+  const baby = { x: W / 2, tx: W / 2, w: 120, phase: 0, mood: 0, blink: 0 };
+  const PY = 520, PH = 14;       // Kissen: Oberkante und Höhe
+  const keys = {};
+
+  function buildLevel(n) {
+    const L = LEVELS[n];
+    bricks = [];
+    L.map.forEach((row, r) => {
+      const word = L.words[r % L.words.length];
+      let li = 0;
+      [...row].forEach((ch, c) => {
+        if (ch === ".") return;
+        bricks.push({
+          x: OX + c * (BW + GAP), y: OY + r * (BH + GAP), w: BW, h: BH,
+          hp: ch === "2" ? 2 : 1, max: ch === "2" ? 2 : 1, gift: ch === "P",
+          letter: word[li++ % word.length],
+          pal: PALETTE[(r + c) % PALETTE.length],
+          wob: 0, alive: true
+        });
+      });
+    });
+  }
+
+  function speedFor() { return 330 + level * 35; }
+
+  function resetBall() {
+    balls = [{ x: baby.x, y: PY - 12, vx: 0, vy: 0, r: 10, spin: 0, stuck: true }];
+    drops = [];
+    bigT = 0; slowT = 0;
+    state = "serve";
+  }
+
+  function launch() {
+    const b = balls.find(b => b.stuck); if (!b) return;
+    const s = speedFor();
+    const a = -Math.PI / 2 + (Math.random() - 0.5) * 0.6;
+    b.vx = Math.cos(a) * s; b.vy = Math.sin(a) * s; b.stuck = false;
+    state = "play";
+    sfx.giggle();
+  }
+
+  function newGame() {
+    level = 0; score = 0; lives = 3; steps = 0;
+    buildLevel(level);
+    baby.x = baby.tx = W / 2;
+    resetBall();
+    titleScreen.hidden = true; endScreen.hidden = true;
+    say(LEVELS[level].name, W / 2, 380, "#4a3550", 40, 2.2);
+  }
+
+  function say(text, x, y, col, size = 22, life = 1) {
+    floats.push({ text, x, y, col, size, life, max: life });
+  }
+
+  function burst(x, y, col, n = 14) {
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2, s = 60 + Math.random() * 220;
+      parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 80, life: 0.6 + Math.random() * 0.5, col, r: 2 + Math.random() * 3.5, star: Math.random() < 0.4, rot: Math.random() * 6 });
+    }
+  }
+
+  // ---------- Eingabe ----------
+  function toGame(e) {
+    const r = cv.getBoundingClientRect();
+    return (e.clientX - r.left) / r.width * W;
+  }
+  cv.addEventListener("pointermove", e => { baby.tx = toGame(e); });
+  cv.addEventListener("pointerdown", e => {
+    audio();
+    baby.tx = toGame(e);
+    if (state === "serve") launch();
+    else if (state === "pause") state = "play";
+  });
+  window.addEventListener("keydown", e => {
+    keys[e.key] = true;
+    if (e.key === " " || e.key === "ArrowUp") {
+      e.preventDefault(); audio();
+      if (state === "serve") launch(); else if (state === "pause") state = "play";
+    }
+    if (e.key === "p" || e.key === "P" || e.key === "Escape") {
+      if (state === "play") state = "pause"; else if (state === "pause") state = "play";
+    }
+  });
+  window.addEventListener("keyup", e => { keys[e.key] = false; });
+  document.addEventListener("visibilitychange", () => { if (document.hidden && state === "play") state = "pause"; });
+
+  document.getElementById("startBtn").addEventListener("click", () => { audio(); newGame(); });
+  document.getElementById("againBtn").addEventListener("click", () => { audio(); newGame(); });
+
+  function showBest() {
+    document.getElementById("bestLine").textContent = best > 0 ? `Rekord: ${best} Punkte` : "";
+  }
+  showBest();
+
+  // ---------- Physik ----------
+  function hitRect(b, r) {
+    const cx = Math.max(r.x, Math.min(b.x, r.x + r.w));
+    const cy = Math.max(r.y, Math.min(b.y, r.y + r.h));
+    const dx = b.x - cx, dy = b.y - cy;
+    return dx * dx + dy * dy <= b.r * b.r;
+  }
+
+  function bounceOff(b, r) {
+    const ox = Math.min(b.x + b.r - r.x, r.x + r.w - (b.x - b.r));
+    const oy = Math.min(b.y + b.r - r.y, r.y + r.h - (b.y - b.r));
+    if (ox < oy) {
+      b.vx = b.x < r.x + r.w / 2 ? -Math.abs(b.vx) : Math.abs(b.vx);
+    } else {
+      b.vy = b.y < r.y + r.h / 2 ? -Math.abs(b.vy) : Math.abs(b.vy);
+    }
+  }
+
+  function smash(br) {
+    br.hp--; br.wob = 1;
+    if (br.hp > 0) { sfx.tough(); score += 5; burst(br.x + br.w / 2, br.y + br.h / 2, br.pal.edge, 6); return; }
+    br.alive = false;
+    const pts = 10 * br.max + level * 2;
+    score += pts;
+    sfx.brick(br.letter.charCodeAt(0));
+    burst(br.x + br.w / 2, br.y + br.h / 2, br.pal.face, 16);
+    say(br.letter, br.x + br.w / 2, br.y + br.h / 2, br.pal.ink, 30, 0.8);
+    if (br.gift || Math.random() < 0.07) {
+      const kinds = Object.keys(POWERS);
+      let k = kinds[Math.floor(Math.random() * kinds.length)];
+      if (k === "life" && lives >= 5) k = "big";
+      drops.push({ x: br.x + br.w / 2, y: br.y + br.h / 2, k, t: 0 });
+    }
+  }
+
+  function applyPower(k) {
+    sfx.power();
+    say(POWERS[k].label, baby.x, PY - 40, POWERS[k].col, 26, 1.3);
+    if (k === "big") bigT = 15;
+    if (k === "life") lives = Math.min(5, lives + 1);
+    if (k === "slow") { slowT = 10; sfx.lullaby(); }
+    if (k === "multi") {
+      const src = balls.find(b => !b.stuck) || balls[0];
+      const s = Math.hypot(src.vx, src.vy) || speedFor();
+      [-0.5, 0.5].forEach(off => {
+        const a = Math.atan2(src.vy || -1, src.vx) + off;
+        balls.push({ x: src.x, y: src.y, vx: Math.cos(a) * s, vy: -Math.abs(Math.sin(a) * s), r: 10, spin: 0, stuck: false });
+      });
+    }
+  }
+
+  function update(dt) {
+    timer += dt;
+    // Partikel & Texte laufen immer
+    parts.forEach(p => { p.life -= dt; p.vy += 520 * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.rot += dt * 6; });
+    parts = parts.filter(p => p.life > 0);
+    floats.forEach(f => { f.life -= dt; f.y -= 30 * dt; });
+    floats = floats.filter(f => f.life > 0);
+    shake = Math.max(0, shake - dt * 3);
+    baby.mood = Math.max(0, baby.mood - dt);
+    baby.blink -= dt; if (baby.blink < -3 - Math.random() * 3) baby.blink = 0.15;
+
+    if (state === "pause" || state === "title" || state === "over") return;
+
+    if (state === "clear") {
+      if (timer > 2.4) {
+        level++;
+        if (level >= LEVELS.length) return finish(true);
+        buildLevel(level);
+        resetBall();
+        say(LEVELS[level].name, W / 2, 380, "#4a3550", 40, 2.2);
+      }
+      return;
+    }
+
+    // Baby laufen lassen
+    if (keys.ArrowLeft || keys.a) baby.tx = baby.x - 520 * dt * 3;
+    if (keys.ArrowRight || keys.d) baby.tx = baby.x + 520 * dt * 3;
+    bigT = Math.max(0, bigT - dt); slowT = Math.max(0, slowT - dt);
+    const targetW = bigT > 0 ? 180 : 120;
+    baby.w += (targetW - baby.w) * Math.min(1, dt * 8);
+    const half = baby.w / 2;
+    baby.tx = Math.max(half + 6, Math.min(W - half - 6, baby.tx));
+    const prev = baby.x;
+    const maxStep = 900 * dt;
+    baby.x += Math.max(-maxStep, Math.min(maxStep, baby.tx - baby.x));
+    const moved = Math.abs(baby.x - prev);
+    baby.phase += moved * 0.09;
+    steps += moved / 40;
+
+    // Geschenke fallen
+    drops.forEach(d => {
+      d.t += dt; d.y += 150 * dt;
+      if (d.y > PY - 12 && d.y < PY + 30 && Math.abs(d.x - baby.x) < baby.w / 2 + 14) { d.got = true; applyPower(d.k); baby.mood = 1.2; }
+    });
+    drops = drops.filter(d => !d.got && d.y < H + 30);
+
+    // Bälle
+    const slow = slowT > 0 ? 0.65 : 1;
+    const paddle = { x: baby.x - half, y: PY, w: baby.w, h: PH };
+    balls.forEach(b => {
+      if (b.stuck) { b.x = baby.x; b.y = PY - b.r - 1; return; }
+      const sp = Math.hypot(b.vx, b.vy);
+      const n = Math.ceil(sp * dt * slow / 5);
+      const h = dt * slow / n;
+      for (let i = 0; i < n; i++) {
+        b.x += b.vx * h; b.y += b.vy * h;
+        b.spin += b.vx * h * 0.03;
+        if (b.x < b.r) { b.x = b.r; b.vx = Math.abs(b.vx); sfx.wall(); }
+        if (b.x > W - b.r) { b.x = W - b.r; b.vx = -Math.abs(b.vx); sfx.wall(); }
+        if (b.y < b.r) { b.y = b.r; b.vy = Math.abs(b.vy); sfx.wall(); }
+        if (b.vy > 0 && hitRect(b, paddle) && b.y < PY + PH) {
+          const rel = Math.max(-1, Math.min(1, (b.x - baby.x) / half));
+          const ang = -Math.PI / 2 + rel * 1.1;
+          const ns = Math.min(speedFor() * 1.5, sp * 1.012);
+          b.vx = Math.cos(ang) * ns; b.vy = Math.sin(ang) * ns;
+          b.y = PY - b.r - 0.5;
+          sfx.boing(); baby.mood = 0.5;
+        }
+        for (const br of bricks) {
+          if (br.alive && hitRect(b, br)) { bounceOff(b, br); smash(br); break; }
+        }
+      }
+      // nie zu flach fliegen
+      if (Math.abs(b.vy) < 70) { b.vy = b.vy < 0 ? -70 : 70; }
+    });
+    balls = balls.filter(b => b.y < H + 30);
+
+    if (balls.length === 0) {
+      lives--; shake = 1; sfx.lose();
+      if (lives <= 0) return finish(false);
+      say("Hoppla!", baby.x, PY - 50, "#d9577f", 32, 1.4);
+      resetBall();
+    }
+
+    if (!bricks.some(b => b.alive)) {
+      state = "clear"; timer = 0; sfx.clear(); sfx.giggle(); baby.mood = 3;
+      score += lives * 50;
+      for (let i = 0; i < 6; i++) burst(80 + Math.random() * 640, 120 + Math.random() * 200, PALETTE[i].face, 20);
+    }
+  }
+
+  function finish(won) {
+    state = "over";
+    if (score > best) { best = score; store.set("babybreakout.best", best); }
+    showBest();
+    document.getElementById("endSub").textContent = won ? "Alle Schritte geschafft" : "Mittagsschlaf";
+    document.getElementById("endTitle").textContent = won ? "Hurra!" : "Zzz…";
+    document.getElementById("endText").textContent = won
+      ? `Das Baby ist durch alle ${LEVELS.length} Zimmer gelaufen: ${score} Punkte und ${Math.round(steps)} Schritte. Rekord: ${best}.`
+      : `Das Baby ist müde geworden – in Zimmer ${level + 1} „${LEVELS[level].name}“. ${score} Punkte, ${Math.round(steps)} Schritte. Rekord: ${best}.`;
+    endScreen.hidden = false;
+    if (won) sfx.clear(); else sfx.lullaby();
+  }
+
+  // ---------- Zeichnen ----------
+  function rr(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  function drawRoom() {
+    // Tapete
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, "#fff6ee"); g.addColorStop(1, "#fde7da");
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    // Sternchen-Muster
+    ctx.fillStyle = "rgba(242,143,179,0.10)";
+    for (let y = 20; y < 470; y += 48) for (let x = (y / 48) % 2 ? 24 : 0; x < W; x += 48) star(x, y, 5, 2.2);
+    // Fußboden (Holzdielen)
+    ctx.fillStyle = "#f0d3bb"; ctx.fillRect(0, 500, W, 100);
+    ctx.strokeStyle = "rgba(160,110,80,0.18)"; ctx.lineWidth = 2;
+    for (let y = 520; y < H; y += 26) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+    for (let i = 0; i < 9; i++) { const y = 500 + (i % 4) * 26, x = (i * 137) % W; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y + 26); ctx.stroke(); }
+    // Fußleiste
+    ctx.fillStyle = "#fffaf5"; ctx.fillRect(0, 494, W, 8);
+  }
+
+  function star(x, y, R, r) {
+    ctx.beginPath();
+    for (let i = 0; i < 10; i++) {
+      const a = -Math.PI / 2 + i * Math.PI / 5, rad = i % 2 ? r : R;
+      ctx.lineTo(x + Math.cos(a) * rad, y + Math.sin(a) * rad);
+    }
+    ctx.closePath(); ctx.fill();
+  }
+
+  function drawBrick(b) {
+    const wob = b.wob > 0 ? Math.sin(b.wob * 30) * b.wob * 3 : 0;
+    b.wob = Math.max(0, b.wob - 0.05);
+    const x = b.x + wob, y = b.y;
+    ctx.fillStyle = "rgba(74,53,80,0.12)"; rr(x + 2, y + 4, b.w, b.h, 7); ctx.fill();
+    ctx.fillStyle = b.pal.edge; rr(x, y, b.w, b.h, 7); ctx.fill();
+    ctx.fillStyle = b.pal.face; rr(x + 3, y + 3, b.w - 6, b.h - 6, 5); ctx.fill();
+    if (b.max === 2) {
+      ctx.strokeStyle = b.hp === 2 ? "rgba(255,255,255,0.75)" : "rgba(255,255,255,0.35)";
+      ctx.lineWidth = 2; rr(x + 6, y + 6, b.w - 12, b.h - 12, 4); ctx.stroke();
+      if (b.hp === 1) { // Riss
+        ctx.strokeStyle = b.pal.ink; ctx.lineWidth = 1.5; ctx.beginPath();
+        ctx.moveTo(x + 14, y + 4); ctx.lineTo(x + 20, y + 13); ctx.lineTo(x + 15, y + 19); ctx.lineTo(x + 22, y + 27); ctx.stroke();
+      }
+    }
+    ctx.fillStyle = b.pal.ink;
+    ctx.font = `800 21px ${FONT}`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(b.letter, x + b.w / 2, y + b.h / 2 + 2);
+    if (b.gift) { // Schleife
+      ctx.fillStyle = "#fff";
+      ctx.beginPath(); ctx.arc(x + b.w - 10, y + 9, 4, 0, 7); ctx.fill();
+      ctx.fillStyle = "#f28fb3";
+      ctx.beginPath(); ctx.arc(x + b.w - 10, y + 9, 2.4, 0, 7); ctx.fill();
+    }
+  }
+
+  function drawBall(b) {
+    ctx.save(); ctx.translate(b.x, b.y);
+    ctx.fillStyle = "rgba(74,53,80,0.12)"; ctx.beginPath(); ctx.ellipse(2, 4, b.r, b.r * 0.9, 0, 0, 7); ctx.fill();
+    ctx.rotate(b.spin);
+    const cols = ["#f28fb3", "#ffe08a", "#7cc4ec", "#9be3c0"];
+    for (let i = 0; i < 4; i++) {
+      ctx.fillStyle = cols[i]; ctx.beginPath(); ctx.moveTo(0, 0);
+      ctx.arc(0, 0, b.r, i * Math.PI / 2, (i + 1) * Math.PI / 2); ctx.fill();
+    }
+    ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(0, 0, b.r * 0.28, 0, 7); ctx.fill();
+    ctx.restore();
+    ctx.fillStyle = "rgba(255,255,255,0.6)"; ctx.beginPath(); ctx.arc(b.x - 3, b.y - 4, 2.6, 0, 7); ctx.fill();
+  }
+
+  function drawBaby() {
+    const x = baby.x, half = baby.w / 2;
+    const walking = Math.abs(baby.tx - baby.x) > 1.5;
+    const ph = baby.phase;
+    const bob = walking ? Math.abs(Math.sin(ph)) * 3 : Math.sin(timer * 2) * 0.8;
+    const by = 0 - bob;
+    const skin = "#ffd9c2", skinD = "#f2b99c";
+
+    // Schatten
+    ctx.fillStyle = "rgba(74,53,80,0.15)";
+    ctx.beginPath(); ctx.ellipse(x, 594, 30, 5, 0, 0, 7); ctx.fill();
+
+    // Beinchen (erste Schritte)
+    const legA = walking ? Math.sin(ph) * 7 : 0;
+    ctx.strokeStyle = skin; ctx.lineWidth = 8; ctx.lineCap = "round";
+    [[-8, legA], [8, -legA]].forEach(([ox, sw]) => {
+      ctx.beginPath(); ctx.moveTo(x + ox, 578 + by); ctx.lineTo(x + ox + sw, 590 - Math.max(0, sw) * 0.3); ctx.stroke();
+      ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.ellipse(x + ox + sw + (ox < 0 ? -2 : 2), 592, 6, 3.5, 0, 0, 7); ctx.fill();
+    });
+
+    // Ärmchen hoch zum Kissen
+    ctx.strokeStyle = skin; ctx.lineWidth = 7;
+    const reach = Math.min(half - 12, 34);
+    ctx.beginPath(); ctx.moveTo(x - 12, 566 + by); ctx.quadraticCurveTo(x - reach - 4, 550 + by, x - reach, PY + PH + 1); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x + 12, 566 + by); ctx.quadraticCurveTo(x + reach + 4, 550 + by, x + reach, PY + PH + 1); ctx.stroke();
+
+    // Strampler + Windel
+    ctx.fillStyle = "#9be3c0";
+    ctx.beginPath(); ctx.ellipse(x, 570 + by, 17, 14, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = "#fffaf5";
+    ctx.beginPath(); ctx.ellipse(x, 580 + by, 15, 7, 0, 0, Math.PI); ctx.fill();
+    ctx.fillStyle = "#6cc29b"; ctx.beginPath(); ctx.arc(x, 566 + by, 2, 0, 7); ctx.fill();
+
+    // Kopf
+    const hy = 545 + by;
+    ctx.fillStyle = skin; ctx.beginPath(); ctx.arc(x, hy, 15, 0, 7); ctx.fill();
+    ctx.fillStyle = skinD; ctx.beginPath(); ctx.arc(x - 15, hy + 1, 4, 0, 7); ctx.arc(x + 15, hy + 1, 4, 0, 7); ctx.fill();
+    // Haarlocke
+    ctx.strokeStyle = "#c98a5a"; ctx.lineWidth = 2.5; ctx.beginPath();
+    ctx.moveTo(x - 1, hy - 14); ctx.quadraticCurveTo(x + 6, hy - 22, x + 4, hy - 13); ctx.stroke();
+    // Augen
+    ctx.fillStyle = "#4a3550"; ctx.strokeStyle = "#4a3550"; ctx.lineWidth = 2;
+    const happy = baby.mood > 0 || state === "clear";
+    const sleepy = state === "over";
+    [-5.5, 5.5].forEach(ox => {
+      if (sleepy || baby.blink > 0) { ctx.beginPath(); ctx.moveTo(x + ox - 2.5, hy - 1); ctx.lineTo(x + ox + 2.5, hy - 1); ctx.stroke(); }
+      else if (happy) { ctx.beginPath(); ctx.arc(x + ox, hy, 2.6, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke(); }
+      else { ctx.beginPath(); ctx.arc(x + ox, hy - 1, 2.2, 0, 7); ctx.fill(); }
+    });
+    // Bäckchen
+    ctx.fillStyle = "rgba(242,143,179,0.45)";
+    ctx.beginPath(); ctx.arc(x - 9, hy + 5, 3.2, 0, 7); ctx.arc(x + 9, hy + 5, 3.2, 0, 7); ctx.fill();
+    // Mund
+    ctx.strokeStyle = "#9c3c66"; ctx.lineWidth = 1.8; ctx.beginPath();
+    if (happy) { ctx.fillStyle = "#d9577f"; ctx.arc(x, hy + 5, 3.6, 0, Math.PI); ctx.fill(); }
+    else ctx.arc(x, hy + 4, 2.6, 0.2, Math.PI - 0.2), ctx.stroke();
+
+    // Kissen (das Paddel)
+    const px = x - half;
+    ctx.fillStyle = "rgba(74,53,80,0.14)"; rr(px + 2, PY + 4, baby.w, PH, 8); ctx.fill();
+    ctx.fillStyle = bigT > 0 ? "#f7a8c4" : "#c9b3f2"; rr(px, PY, baby.w, PH, 8); ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,0.55)"; rr(px + 6, PY + 2, baby.w - 12, 4, 2); ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,0.8)";
+    for (let i = px + 16; i < px + baby.w - 10; i += 18) { ctx.beginPath(); ctx.arc(i, PY + PH / 2 + 1, 1.6, 0, 7); ctx.fill(); }
+  }
+
+  function drawDrop(d) {
+    const x = d.x, y = d.y, wig = Math.sin(d.t * 6) * 0.2;
+    ctx.save(); ctx.translate(x, y); ctx.rotate(wig);
+    ctx.fillStyle = "rgba(255,255,255,0.9)"; ctx.beginPath(); ctx.arc(0, 0, 17, 0, 7); ctx.fill();
+    ctx.strokeStyle = POWERS[d.k].col; ctx.lineWidth = 3; ctx.stroke();
+    if (d.k === "big") { // Schnuller
+      ctx.fillStyle = "#f28fb3"; ctx.beginPath(); ctx.ellipse(0, 2, 10, 6, 0, 0, 7); ctx.fill();
+      ctx.fillStyle = "#ffe08a"; ctx.beginPath(); ctx.arc(0, -5, 5, 0, 7); ctx.fill();
+      ctx.strokeStyle = "#d97a9e"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 8, 4, 0, Math.PI); ctx.stroke();
+    } else if (d.k === "life") { // Fläschchen
+      ctx.fillStyle = "#fff"; ctx.strokeStyle = "#7cc4ec"; ctx.lineWidth = 2;
+      rr(-6, -4, 12, 15, 3); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = "#7cc4ec"; ctx.fillRect(-6, -6, 12, 4);
+      ctx.fillStyle = "#ffd9a8"; ctx.beginPath(); ctx.ellipse(0, -9, 3.5, 4, 0, 0, 7); ctx.fill();
+      ctx.fillStyle = "rgba(124,196,236,0.5)"; ctx.fillRect(-5, 4, 10, 6);
+    } else if (d.k === "multi") { // Teddy
+      ctx.fillStyle = "#c99a6b";
+      ctx.beginPath(); ctx.arc(-7, -7, 4, 0, 7); ctx.arc(7, -7, 4, 0, 7); ctx.fill();
+      ctx.beginPath(); ctx.arc(0, 0, 9, 0, 7); ctx.fill();
+      ctx.fillStyle = "#f0d3bb"; ctx.beginPath(); ctx.ellipse(0, 3, 4.5, 3.5, 0, 0, 7); ctx.fill();
+      ctx.fillStyle = "#4a3550"; ctx.beginPath(); ctx.arc(-3.5, -2, 1.3, 0, 7); ctx.arc(3.5, -2, 1.3, 0, 7); ctx.arc(0, 2, 1.4, 0, 7); ctx.fill();
+    } else { // Mond
+      ctx.fillStyle = "#b8a3ec"; ctx.beginPath(); ctx.arc(0, 0, 9, 0, 7); ctx.fill();
+      ctx.fillStyle = "rgba(255,255,255,0.95)"; ctx.beginPath(); ctx.arc(4, -3, 8, 0, 7); ctx.fill();
+      ctx.fillStyle = "#ffe08a"; star(-9, -9, 3.5, 1.5);
+    }
+    ctx.restore();
+  }
+
+  function drawHUD() {
+    ctx.textBaseline = "middle";
+    // Herzen
+    for (let i = 0; i < 5; i++) {
+      const x = 26 + i * 26, y = 30;
+      ctx.fillStyle = i < lives ? "#f28fb3" : "rgba(74,53,80,0.12)";
+      ctx.beginPath();
+      ctx.moveTo(x, y + 8);
+      ctx.bezierCurveTo(x - 13, y - 1, x - 7, y - 11, x, y - 4);
+      ctx.bezierCurveTo(x + 7, y - 11, x + 13, y - 1, x, y + 8);
+      ctx.fill();
+    }
+    ctx.fillStyle = "#4a3550";
+    ctx.textAlign = "center";
+    ctx.font = `800 22px ${FONT}`;
+    ctx.fillText(`Zimmer ${level + 1} · ${LEVELS[level].name}`, W / 2, 31);
+    ctx.textAlign = "right";
+    ctx.font = `800 24px ${FONT}`;
+    ctx.fillText(String(score).padStart(5, "0"), W - 22, 26);
+    ctx.font = `700 13px ${FONT}`;
+    ctx.fillStyle = "rgba(74,53,80,0.6)";
+    ctx.fillText(`${Math.round(steps)} Schritte`, W - 22, 46);
+    // aktive Effekte
+    let ex = 22;
+    [[bigT, "Schnuller", "#f28fb3"], [slowT, "Schlaflied", "#b8a3ec"]].forEach(([t, n, c]) => {
+      if (t <= 0) return;
+      ctx.textAlign = "left"; ctx.font = `700 13px ${FONT}`; ctx.fillStyle = c;
+      ctx.fillText(`${n} ${Math.ceil(t)}s`, ex, 56); ex += 100;
+    });
+  }
+
+  function draw() {
+    ctx.save();
+    if (shake > 0) ctx.translate((Math.random() - 0.5) * shake * 10, (Math.random() - 0.5) * shake * 10);
+    drawRoom();
+    bricks.forEach(b => b.alive && drawBrick(b));
+    drops.forEach(drawDrop);
+    if (state !== "title") drawBaby();
+    balls.forEach(drawBall);
+
+    parts.forEach(p => {
+      ctx.globalAlpha = Math.min(1, p.life * 2); ctx.fillStyle = p.col;
+      if (p.star) { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); star(0, 0, p.r * 1.8, p.r * 0.8); ctx.restore(); }
+      else { ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7); ctx.fill(); }
+    });
+    ctx.globalAlpha = 1;
+    floats.forEach(f => {
+      ctx.globalAlpha = Math.min(1, f.life / f.max * 2);
+      ctx.font = `800 ${f.size}px ${FONT}`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.lineWidth = 5; ctx.strokeStyle = "#fffaf5"; ctx.strokeText(f.text, f.x, f.y);
+      ctx.fillStyle = f.col; ctx.fillText(f.text, f.x, f.y);
+    });
+    ctx.globalAlpha = 1;
+    ctx.restore();
+
+    if (state !== "title") drawHUD();
+
+    if (state === "serve") centerText("Tippen oder Leertaste – Ball los!", 420, 20);
+    if (state === "pause") { ctx.fillStyle = "rgba(255,250,245,0.7)"; ctx.fillRect(0, 0, W, H); centerText("Pause", 280, 56); centerText("Tippen oder P zum Weiterspielen", 330, 20); }
+    if (state === "clear") centerText(level + 1 >= LEVELS.length ? "Geschafft!" : "Zimmer aufgeräumt!", 300, 48);
+    if (state === "over") { // Zzz
+      ctx.fillStyle = "#b8a3ec"; ctx.textAlign = "left";
+      for (let i = 0; i < 3; i++) { ctx.font = `800 ${16 + i * 6}px ${FONT}`; ctx.fillText("z", baby.x + 18 + i * 12, 530 - i * 18 - Math.sin(timer * 2 + i) * 4); }
+    }
+  }
+
+  function centerText(t, y, size) {
+    ctx.font = `800 ${size}px ${FONT}`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.lineWidth = 6; ctx.strokeStyle = "#fffaf5"; ctx.strokeText(t, W / 2, y);
+    ctx.fillStyle = "#4a3550"; ctx.fillText(t, W / 2, y);
+  }
+
+  // ---------- Schleife ----------
+  let last = performance.now();
+  function frame(now) {
+    const dt = Math.min(0.033, (now - last) / 1000); last = now;
+    update(dt); draw();
+    requestAnimationFrame(frame);
+  }
+
+  // Titelbild: ein Level als Kulisse
+  buildLevel(0);
+  resize();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => draw());
+  requestAnimationFrame(frame);
+})();
+</script>
