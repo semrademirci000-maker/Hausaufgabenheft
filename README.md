@@ -73,6 +73,10 @@ Der Bus N13 setzt dich an der Endstation ab, und du übernimmst die Nachtschicht
   Hinter dem Zaun lauern Kreaturen …
 - **Stromausfall:** Das Licht flackert und geht aus – Kasse, Rollladen und Kameras sind tot.
   Am Sicherungskasten (linke Wand) die Kabel Farbe zu Farbe verbinden und den Hauptschalter hoch.
+- **Spuk:** Zwischen den Kunden passiert Unheimliches – etwas steht plötzlich hinter dir,
+  ein Gesicht starrt durchs Fenster, Schritte auf dem Dach, Flüstern, blutige Schrift an der Wand,
+  ein Gesicht auf dem Monitor. Das alte Wandtelefon (rechte Wand) klingelt – wer abnimmt, hört Dinge,
+  die er nicht hören will. Je später die Nacht, desto öfter.
 - **3 Nächte** (22 Uhr bis 6 Uhr), 3 Herzen, jede Nacht mehr Monster. Vorne gibt es eine kurze Geschichte.
 - Steuerung am Handy: links Stick, Wischen zum Umsehen, Antippen zum Benutzen.
   Am Rechner: WASD, Maus ziehen, Klick/E, Shift rennen, R Rollladen.

@@ -391,3 +391,10 @@ body.kameraAn #hud, body.kameraAn #touch, body.kameraAn #ton, body.kameraAn #vig
 .hebel.oben span { transform: rotate(-25deg); background: #2c2; }
 .hebel:disabled { opacity: .55; }
 .hebel:not(:disabled) { background: #1f7a35; border-color: #9be3a6; animation: rlWarnen .5s infinite alternate; }
+
+/* Untertitel für Flüstern und Telefon */
+#untertitel {
+  position: fixed; left: 50%; bottom: 22%; transform: translateX(-50%); z-index: 22; pointer-events: none;
+  font: 26px 'Special Elite', serif; color: #d63a2e; text-shadow: 0 0 12px #000, 0 0 4px #000; opacity: 0; transition: opacity .6s; text-align: center; max-width: 80vw;
+}
+#untertitel.zeigen { opacity: 1; }
