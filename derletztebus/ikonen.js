@@ -58,6 +58,7 @@ export const IKONEN = {
     <rect x="9" y="27" width="30" height="5" rx="1.5" fill="#a2a8b1"/>
     <rect x="9" y="34" width="30" height="5" rx="1.5" fill="#8f959e"/>
     <rect x="21" y="40" width="6" height="3" rx="1" fill="#e6e9ee"/>`),
+  blitz: svg(`<path d="M28 3L10 27h11l-4 18 21-26H26z" fill="#1c1400" stroke="#fff6c0" stroke-width="1.5" stroke-linejoin="round"/>`),
   kamera: svg(`
     <rect x="5" y="14" width="28" height="19" rx="3.5" fill="#e4e6ea" stroke="#6c7078" stroke-width="2"/>
     <circle cx="19" cy="23.5" r="6.4" fill="#2a2d33" stroke="#6c7078" stroke-width="1.6"/><circle cx="19" cy="23.5" r="3" fill="#3f6aa0"/>

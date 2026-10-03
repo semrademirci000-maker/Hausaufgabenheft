@@ -319,3 +319,27 @@ body.spielt #ton { top: calc(102px + env(safe-area-inset-top, 0)); }
 }
 #kamKopf span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #kamName { min-width: 0; }
+
+/* Taser und Tür */
+#bTaser {
+  position: absolute; right: calc(136px + env(safe-area-inset-right, 0)); bottom: calc(150px + env(safe-area-inset-bottom, 0));
+  width: 96px; height: 96px; border-radius: 50%; padding: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: radial-gradient(circle at 40% 35%, #ffe680, #f0b020 70%); color: #1c1400; border: 3px solid #fff2b0;
+  font-size: 12px; font-weight: 900; box-shadow: 0 0 22px rgba(120, 190, 255, .55);
+}
+#bTaser .blitz { width: 34px; height: 34px; }
+#bTaser .blitz svg { width: 100%; height: 100%; }
+#bTaser small { font-size: 11px; font-weight: 800; }
+#bTaser.leer { filter: grayscale(1); opacity: .6; }
+#bTaser:active { transform: scale(.92); }
+#bTuer {
+  position: absolute; right: calc(136px + env(safe-area-inset-right, 0)); bottom: calc(256px + env(safe-area-inset-bottom, 0));
+  background: rgba(60, 80, 70, .9); border: 2px solid #9fc8b0; padding: 10px 14px;
+}
+body:not(.touch) #bTaser { bottom: calc(24px + env(safe-area-inset-bottom, 0)); }
+body:not(.touch) #bTuer { bottom: calc(130px + env(safe-area-inset-bottom, 0)); right: calc(22px + env(safe-area-inset-right, 0)); }
+@media (max-height: 460px) {
+  #bTaser { width: 80px; height: 80px; right: calc(120px + env(safe-area-inset-right, 0)); bottom: calc(126px + env(safe-area-inset-bottom, 0)); }
+  #bTuer { right: calc(120px + env(safe-area-inset-right, 0)); bottom: calc(214px + env(safe-area-inset-bottom, 0)); padding: 7px 10px; font-size: 12px; }
+}
