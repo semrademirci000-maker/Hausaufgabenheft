@@ -465,18 +465,19 @@ function baueWelt() {
   W.monsterLicht = HOCH ? new THREE.PointLight(0xff2a14, 0, 6, 2) : KEIN_LICHT();
   if (HOCH) scene.add(W.monsterLicht);
 
-  // Leuchtschild über dem Fenster
-  W.schildMat = new THREE.MeshBasicMaterial({ map: leinwand(512, 96, (g, w, h) => {
+  // Leuchtschild „KIOSK 24/7“ oben auf dem Dach – komplett sichtbar
+  W.schildMat = new THREE.MeshBasicMaterial({ map: leinwand(640, 128, (g, w, h) => {
     g.fillStyle = '#120808'; g.fillRect(0, 0, w, h);
-    g.font = 'bold 66px Inter, Arial, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.shadowColor = '#ff3355'; g.shadowBlur = 18; g.fillStyle = '#ff6a7e'; g.fillText('KIOSK', 190, 52);
-    g.shadowColor = '#40c8ff'; g.fillStyle = '#9fe4ff'; g.fillText('24h', 410, 52);
+    g.font = 'bold 86px Inter, Arial, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.shadowColor = '#ff3355'; g.shadowBlur = 22; g.fillStyle = '#ff6a7e'; g.fillText('KIOSK', 220, 68);
+    g.shadowColor = '#40c8ff'; g.fillStyle = '#9fe4ff'; g.fillText('24/7', 500, 68);
   }) });
-  const schild = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 0.64), W.schildMat);
-  schild.position.set(0, 3.55, -2.8); schild.rotation.y = Math.PI; scene.add(schild);
-  rundkiste(3.6, 0.8, 0.1, 0.03, M.dunkel, 0, 3.55, -2.74);
+  const schild = new THREE.Mesh(new THREE.PlaneGeometry(3.8, 0.76), W.schildMat);
+  schild.position.set(0, 4.02, -2.99); schild.rotation.y = Math.PI; scene.add(schild);
+  rundkiste(4.0, 0.92, 0.12, 0.03, M.dunkel, 0, 4.02, -2.91);
+  for (const x of [-1.6, 1.6]) kiste(0.08, 0.6, 0.08, M.metall, x, 3.4, -2.9);
   W.schildLicht = HOCH ? new THREE.PointLight(0xff4466, 5, 7, 1.8) : KEIN_LICHT();
-  if (HOCH) { W.schildLicht.position.set(0, 3.3, -3.6); scene.add(W.schildLicht); }
+  if (HOCH) { W.schildLicht.position.set(0, 3.7, -3.8); scene.add(W.schildLicht); }
 
   // Wände als Hindernisse
   hindernis(-3.25, 3.25, 2.5, 2.78);
@@ -495,7 +496,22 @@ function baueWelt() {
   kiste(0.1, 0.08, 1.3, M.metall, 3.1, 2.3, 1.0);
   W.tuer = new THREE.Group(); W.tuer.position.set(3.12, 0, 0.4); scene.add(W.tuer);
   const tuerMat = std(0x4b5d54, { roughness: 0.45, metalness: 0.35, envMapIntensity: 0.9 });
-  kiste(0.06, 2.2, 1.2, tuerMat, 0, 1.1, 0.6, W.tuer);
+  const tuerBlatt = kiste(0.06, 2.2, 1.2, tuerMat, 0, 1.1, 0.6, W.tuer);
+  tuerBlatt.userData = { typ: 'tuer' }; klickbar.push(tuerBlatt);
+  // Taser in der Ladestation an der Wand neben der Hintertür
+  {
+    const st = new THREE.Group(); st.position.set(2.96, 1.35, -0.35); st.rotation.y = -Math.PI / 2; scene.add(st);
+    rundkiste(0.3, 0.42, 0.06, 0.02, std(0x24262c, { roughness: 0.5 }), 0, 0, 0, st);
+    const lampe = new THREE.Mesh(new THREE.CircleGeometry(0.018, 12), new THREE.MeshBasicMaterial({ color: new THREE.Color(0.2, 3, 0.4) }));
+    lampe.position.set(0.1, 0.16, 0.035); st.add(lampe); W.taserLampe = lampe;
+    W.taserWand = baueTaser(); W.taserWand.position.set(0, -0.02, 0.06); W.taserWand.rotation.z = Math.PI / 2; st.add(W.taserWand);
+    const schildT = new THREE.Mesh(new THREE.PlaneGeometry(0.28, 0.07), new THREE.MeshBasicMaterial({ map: leinwand(256, 64, (g, w, h) => {
+      g.fillStyle = '#f0c020'; g.fillRect(0, 0, w, h); g.fillStyle = '#111'; g.font = 'bold 40px Inter, Arial'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('TASER', w / 2, h / 2 + 2);
+    }) }));
+    schildT.position.set(0, 0.25, 0.035); st.add(schildT);
+    const treffer = kiste(0.5, 0.6, 0.4, M.unsichtbar, 0, 0, 0.1, st);
+    treffer.userData = { typ: 'taser' }; klickbar.push(treffer);
+  }
   kiste(0.08, 0.5, 0.9, std(0x3b4a43, { roughness: 0.5, metalness: 0.3 }), 0, 0.5, 0.6, W.tuer);
   kiste(0.12, 0.04, 0.16, M.metall, 0, 1.05, 1.0, W.tuer);
   W.tuerLicht = new THREE.PointLight(0xffd8a0, 4, 8, 1.8);
@@ -988,6 +1004,105 @@ function updateRegen(dt) {
   }
 }
 
+// ---------- Taser ----------
+function baueTaser() {
+  const g = new THREE.Group();
+  rundkiste(0.05, 0.16, 0.04, 0.012, std(0xf0c020, { roughness: 0.4 }), 0, 0, 0, g);
+  rundkiste(0.052, 0.06, 0.042, 0.01, std(0x1a1a1c, { roughness: 0.5 }), 0, -0.06, 0, g);
+  for (const x of [-0.013, 0.013]) kiste(0.006, 0.03, 0.006, M.metall, x, 0.094, 0, g);
+  return g;
+}
+// Taser in der Hand (hängt an der Kamera)
+const handTaser = baueTaser();
+handTaser.position.set(0.17, -0.17, -0.38); handTaser.rotation.set(-1.35, 0.15, 0.1); handTaser.visible = false;
+camera.add(handTaser); scene.add(camera);
+const blitzGeo = new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(new Float32Array(14 * 3), 3));
+const blitzStrahl = new THREE.Line(blitzGeo, new THREE.LineBasicMaterial({ color: new THREE.Color(2.5, 3.5, 8), transparent: true }));
+blitzStrahl.frustumCulled = false; blitzStrahl.visible = false; scene.add(blitzStrahl);
+const TASER_LADUNG = 3;
+
+function taserNehmen() {
+  if (S.taser) { toast('Du hast den Taser schon.', '#ccc'); return; }
+  S.taser = true; S.ladung = TASER_LADUNG;
+  W.taserWand.visible = false; W.taserLampe.material.color.setRGB(3, 0.2, 0.1);
+  handTaser.visible = true;
+  Ton.nehmen(); toast('Taser genommen! (3 Schüsse)', '#8fd4ff');
+  zeichneTaser();
+}
+function zeichneTaser() {
+  const b = $('bTaser');
+  b.classList.toggle('weg', !S.taser);
+  $('taserLadung').textContent = S.ladung + '/' + TASER_LADUNG;
+  b.classList.toggle('leer', S.ladung <= 0);
+}
+// Hat der Spieler freie Sicht auf das Ziel? (durch offene Tür oder offenes Fenster)
+function freieSicht(a, b) {
+  const ai = drinnen(a), bi = drinnen(b);
+  if (ai === bi) return ai || siehtDurch(a.x, a.z, b.x, b.z);
+  const draussen = ai ? b : a;
+  if (W.tuerOffen && draussen.x > 3 && Math.abs(draussen.z - 1.0) < 2.2) return true;
+  if (W.rollStand < 0.4 && draussen.z < -2.5 && Math.abs(draussen.x) < 2.6) return true;
+  return false;
+}
+function schocken() {
+  if (!['schicht', 'jagd'].includes(S.modus)) return;
+  if (!S.taser) { toast('Hol den Taser von der Wand neben der Hintertür!', '#ffd27a'); return; }
+  if (S.ladung <= 0) { toast('Der Taser ist leer!', '#ff8a7a'); Ton.fehler(); return; }
+  S.ladung--; zeichneTaser();
+  Ton.taser();
+  // Ziel: das Monster (oder ein Kunde) vor dir
+  const vor = new THREE.Vector3(-Math.sin(spieler.yaw), 0, -Math.cos(spieler.yaw));
+  const k = J.k || S.kunde;
+  let treffer = false;
+  const start = new THREE.Vector3(); handTaser.getWorldPosition(start);
+  let ende = camera.position.clone().addScaledVector(vor, 3.5);
+  if (k && k.f.g.visible) {
+    const d = new THREE.Vector3(k.pos.x - spieler.pos.x, 0, k.pos.z - spieler.pos.z);
+    const abstand = d.length(), winkel = d.normalize().dot(vor);
+    if (abstand < 3.6 && winkel > 0.72 && freieSicht(spieler.pos, k.pos)) {
+      treffer = true;
+      ende = new THREE.Vector3(k.pos.x, 1.3 * k.f.g.scale.y, k.pos.z);
+    }
+  }
+  W.blitzZeit = 0.45; W.blitzStart = start; W.blitzEnde = ende;
+  if (!treffer) { toast('Daneben!', '#ccc'); return; }
+  if (S.modus === 'jagd') {
+    J.betaeubt = 3.5;
+    toast('Geschockt! Schnell weg!', '#8fd4ff');
+  } else if (k.monster) {
+    k.zustand = 'geschockt'; k.t = 0;
+    sag(k, 'AAAARGH!', 1.5, true);
+  } else {
+    S.geld = Math.max(0, S.geld - 300);
+    toast('Das war ein Mensch! −3,00 €', '#ff8a7a'); Ton.fehler();
+    kundeGeht(k, 'AUA! Spinnst du?!');
+  }
+}
+function updateTaser(dt) {
+  if (W.blitzZeit > 0) {
+    W.blitzZeit -= dt;
+    const p = blitzGeo.attributes.position.array, a = W.blitzStart, b = W.blitzEnde;
+    for (let i = 0; i < 14; i++) {
+      const t = i / 13, wackeln = Math.sin(t * Math.PI) * 0.12;
+      p[i * 3] = a.x + (b.x - a.x) * t + zufall(-1, 1) * wackeln;
+      p[i * 3 + 1] = a.y + (b.y - a.y) * t + zufall(-1, 1) * wackeln;
+      p[i * 3 + 2] = a.z + (b.z - a.z) * t + zufall(-1, 1) * wackeln;
+    }
+    blitzGeo.attributes.position.needsUpdate = true;
+    blitzStrahl.visible = Math.random() > 0.2;
+    handTaser.position.z = -0.38 + zufall(-0.01, 0.01);
+  } else blitzStrahl.visible = false;
+}
+function tuerUmschalten() {
+  if (S.modus !== 'schicht') return;
+  W.tuerOffen = !W.tuerOffen;
+  Ton.tuer();
+  $('tuerText').textContent = W.tuerOffen ? 'ZU' : 'AUF';
+  const k = S.kunde;
+  // Wer die Tür öffnet, während ein Monster davor steht, sollte schnell sein …
+  if (W.tuerOffen && k && k.monster && k.zustand === 'tuerKlopfen') { k.lauern = Math.min(k.lauern, 1.6); sag(k, 'ENDLICH …', 1.5, true); }
+}
+
 // ---------- Überwachungskamera ----------
 const CAMS = [
   { name: 'VORNE', pos: [0.6, 3.25, -3.2], ziel: [0.2, 0.9, -8.5], fov: 72 },
@@ -1083,6 +1198,9 @@ function kameraWechseln() {
   Ton.klick();
 }
 document.querySelector('#bRollladen .rl-ik').innerHTML = IKONEN.rollladen;
+document.querySelector('#bTaser .blitz').innerHTML = IKONEN.blitz;
+$('bTaser').addEventListener('pointerdown', e => { e.stopPropagation(); Ton.start(); schocken(); });
+$('bTuer').addEventListener('pointerdown', e => { e.stopPropagation(); Ton.start(); tuerUmschalten(); });
 $('kamera').addEventListener('pointerdown', e => { e.stopPropagation(); kameraWechseln(); });
 $('bKamera').addEventListener('pointerdown', e => {
   e.stopPropagation();
@@ -1287,13 +1405,26 @@ function updateKunde(k, dt) {
       break;
     }
     case 'schleichen':
-      if (gehePfad(k, dt, 2.1)) { k.zustand = 'tuerKlopfen'; k.t = 0; k.klopfen = 0; k.lauern = N.lauern * 0.75; k.f.g.rotation.y = -Math.PI / 2; }
+      if (gehePfad(k, dt, 2.1)) { k.zustand = 'tuerKlopfen'; k.t = 0; k.klopfen = 0; k.lauern = N.lauern * 2.2; k.f.g.rotation.y = -Math.PI / 2; }
       break;
     case 'tuerKlopfen':
       k.lauern -= dt; k.klopfen -= dt;
       k.f.armL.rotation.x = k.f.armR.rotation.x = -1.4 - Math.max(0, Math.sin(k.t * 9)) * 0.6;
       if (k.klopfen <= 0) { k.klopfen = zufall(0.45, 0.8); Ton.schlag(); W.tuerZittern = 0.12; }
       if (k.lauern <= 0) starteJagd(k, 'tuer');
+      break;
+    case 'geschockt':
+      // zappelt unter Strom und löst sich dann auf
+      k.f.g.position.set(k.pos.x + zufall(-0.04, 0.04), zufall(0, 0.04), k.pos.z + zufall(-0.04, 0.04));
+      k.f.armL.rotation.x = zufall(-2.5, 0); k.f.armR.rotation.x = zufall(-2.5, 0); k.zuckZ = zufall(-0.8, 0.8);
+      k.f.g.visible = k.t < 1.2 || Math.floor(k.t * 16) % 2 === 0;
+      if (k.t > 1.9) {
+        Ton.verschwinden(); Ton.gut();
+        S.stat.monster++; S.geld += 700;
+        toast('Monster weggeschockt! +7,00 €', '#8fd4ff');
+        entferneFigur(k.f); S.kunde = null; S.naechsterIn = zufall(...N.pause); raeumeTheke();
+        return;
+      }
       break;
     case 'abgewehrt':
       k.f.g.visible = k.t < 1.4 || Math.floor(k.t * 14) % 2 === 0;
@@ -1540,6 +1671,17 @@ function monsterZiel(m, p) {
 function updateJagd(dt) {
   const k = J.k, N = NAECHTE[S.nacht];
   J.t += dt;
+  if (J.betaeubt > 0) {
+    J.betaeubt -= dt;
+    k.f.g.position.set(k.pos.x + zufall(-0.04, 0.04), zufall(0, 0.05), k.pos.z + zufall(-0.04, 0.04));
+    k.f.armL.rotation.x = zufall(-2.5, 0); k.f.armR.rotation.x = zufall(-2.5, 0);
+    k.f.kopf.rotation.z = zufall(-0.6, 0.6);
+    W.monsterLicht.intensity = Math.random() * 6;
+    const zb = Math.hypot(spieler.pos.x - BUS_TUER.x, spieler.pos.z - BUS_TUER.z);
+    ziel('Es ist betäubt – LAUF zum Bus!', true);
+    if (zb < 1.7) entkommen();
+    return;
+  }
   W.notlicht.intensity = 7 + Math.sin(J.t * 9) * 3;
   W.monsterLicht.position.set(k.pos.x, 1.9, k.pos.z + 0.3);
   W.monsterLicht.intensity = 6 + Math.sin(J.t * 14) * 2;
@@ -1648,7 +1790,8 @@ function updateSchreck(dt) {
 }
 
 function kioskZuruecksetzen() {
-  W.tuerOffen = false; W.fensterFrei = false;
+  W.tuerOffen = false; W.fensterFrei = false; J.betaeubt = 0;
+  if ($('tuerText')) $('tuerText').textContent = 'AUF';
   W.licht.intensity = 34; M.roehre.emissiveIntensity = 2.2;
   W.notlicht.intensity = 0;
   W.rollZiel = 0; W.rollStand = 0;
@@ -1700,6 +1843,8 @@ addEventListener('keydown', e => {
   tasten[e.code] = true;
   if (e.code === 'KeyR' || e.code === 'KeyQ') rollladen();
   if (e.code === 'KeyC') kameraWechseln();
+  if (e.code === 'KeyF') schocken();
+  if (e.code === 'KeyT') tuerUmschalten();
   if (e.code === 'KeyE' || e.code === 'Space') { e.preventDefault(); tippen(innerWidth / 2, innerHeight / 2); }
   if (e.code === 'Escape') { if (S.modus === 'kasse') kasseZu(); else pause(); }
 });
@@ -1774,6 +1919,8 @@ function tippen(x, y) {
   else if (d.typ === 'theke') legeAufTheke();
   else if (d.typ === 'kasse') kasseAuf();
   else if (d.typ === 'rollladen') rollladen();
+  else if (d.typ === 'taser') taserNehmen();
+  else if (d.typ === 'tuer') tuerUmschalten();
 }
 
 function updateSpieler(dt) {
@@ -1827,7 +1974,7 @@ function updateSchicht(dt) {
   // Hinweise oben
   const k = S.kunde;
   if (k && k.zustand === 'schleichen') ziel('Es geht ums Haus herum! Schau auf die Kamera!', true);
-  else if (k && k.zustand === 'tuerKlopfen') ziel(W.rollZiel ? 'Es hämmert an der Hintertür! Rollladen hoch – raus durchs Fenster!' : 'Es hämmert an der Hintertür! Gleich ist es drin!', true);
+  else if (k && k.zustand === 'tuerKlopfen') ziel(S.taser ? 'Es steht vor der Hintertür! Tür auf und SCHOCKEN!' : 'Es hämmert an der Hintertür! Hol den Taser (Wand neben der Tür)!', true);
   else if (W.rollZiel && (!k || !k.monster)) ziel('Der Rollladen ist unten. Mach ihn wieder auf!', true);
   else if (!k) ziel(W.bus.zustand === 'kommt' ? 'Ein Bus kommt …' : 'Warte auf den nächsten Bus …');
   else if (k.zustand === 'laufen' || k.zustand === 'aussteigen') ziel('Ein Kunde kommt. Mensch … oder Monster?');
@@ -1906,7 +2053,7 @@ function zeigeTitel() {
   const n = $('naechte'); n.innerHTML = '';
   for (let i = 0; i < 3; i++) {
     const b = document.createElement('button');
-    b.textContent = 'Nacht ' + (i + 1) + (i < frei ? '' : ' 🔒');
+    b.textContent = 'Nacht ' + (i + 1) + (i < frei ? '' : ' (gesperrt)');
     b.disabled = i >= frei;
     b.classList.toggle('gewaehlt', i === gewaehlt);
     b.onclick = () => { gewaehlt = i; zeigeTitel(); };
@@ -1924,6 +2071,8 @@ function starteNacht(n) {
   jagdEnde();
   S.naechsterIn = 3; S.seitMonster = 0; S.kundenGesamt = 0;
   S.stat = { bedient: 0, monster: 0, entkommen: 0, verjagt: 0 };
+  S.taser = false; S.ladung = 0; handTaser.visible = false;
+  W.taserWand.visible = true; W.taserLampe.material.color.setRGB(0.2, 3, 0.4); zeichneTaser();
   kioskZuruecksetzen();
   ['titel', 'ende', 'intro', 'pause'].forEach(id => $(id).classList.add('weg'));
   $('hud').classList.remove('weg');
@@ -2127,6 +2276,7 @@ function schleife(jetzt) {
   updateBlase();
   zeichne(dt);
   updateKamera(dt);
+  updateTaser(dt);
   zeichneKameraBild();
 }
 requestAnimationFrame(schleife);

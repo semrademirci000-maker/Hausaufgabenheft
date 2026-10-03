@@ -4,7 +4,7 @@
 let ctx = null, out = null, regenGain = null, summenGain = null, jagdGain = null;
 let stumm = false;
 try { stumm = localStorage.getItem('derletztebus.stumm') === '1'; } catch (e) { /* egal */ }
-let herzTimer = null;
+let herzTimer = null, dachGain = null, tropfenTimer = null, tropfenBuffer = null;
 let letzteAtmo = [-1, -1];
 
 function rauschBuffer(sek) {
@@ -54,18 +54,53 @@ export const Ton = {
     ctx = new AC();
     out = ctx.createGain(); out.gain.value = stumm ? 0 : 0.85; out.connect(ctx.destination);
 
-    // Regen
-    const r = ctx.createBufferSource(); r.buffer = rauschBuffer(2); r.loop = true;
-    const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 1000;
+    // Regen: weiches (rosa) Rauschen statt hartem Zischen, darüber einzelne Tropfen
+    const rosa = (sek) => {
+      const b = ctx.createBuffer(2, Math.floor(ctx.sampleRate * sek), ctx.sampleRate);
+      for (let k = 0; k < 2; k++) {
+        const d = b.getChannelData(k);
+        let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+        for (let i = 0; i < d.length; i++) {
+          const w = Math.random() * 2 - 1;
+          b0 = 0.99886 * b0 + w * 0.0555179; b1 = 0.99332 * b1 + w * 0.0750759; b2 = 0.969 * b2 + w * 0.153852;
+          b3 = 0.8665 * b3 + w * 0.3104856; b4 = 0.55 * b4 + w * 0.5329522; b5 = -0.7616 * b5 - w * 0.016898;
+          d[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + w * 0.5362) * 0.11; b6 = w * 0.115926;
+        }
+      }
+      return b;
+    };
     regenGain = ctx.createGain(); regenGain.gain.value = 0;
-    r.connect(hp).connect(regenGain).connect(out); r.start();
-    const r2 = ctx.createBufferSource(); r2.buffer = rauschBuffer(3); r2.loop = true;
-    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 420; bp.Q.value = 0.6;
-    const g2 = ctx.createGain(); g2.gain.value = 0.9;
-    const wogen = ctx.createOscillator(); wogen.frequency.value = 0.13;
-    const wogenG = ctx.createGain(); wogenG.gain.value = 0.35;
-    wogen.connect(wogenG).connect(g2.gain); wogen.start();
-    r2.connect(bp).connect(g2).connect(regenGain); r2.start();
+    regenGain.connect(out);
+    const r = ctx.createBufferSource(); r.buffer = rosa(4); r.loop = true;
+    const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 250;
+    const weich = ctx.createBiquadFilter(); weich.type = 'lowpass'; weich.frequency.value = 5200;
+    r.connect(hp).connect(weich).connect(regenGain); r.start();
+    // Prasseln auf dem Dach (im Kiosk lauter)
+    dachGain = ctx.createGain(); dachGain.gain.value = 0;
+    dachGain.connect(out);
+    tropfenTimer = setInterval(() => {
+      if (!ctx || stumm) return;
+      const t = ctx.currentTime;
+      for (let i = 0; i < 6; i++) {
+        const w = t + Math.random() * 0.1;
+        const s = ctx.createBufferSource(); s.buffer = tropfenBuffer || (tropfenBuffer = rauschBuffer(0.05));
+        const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 1800 + Math.random() * 4500; f.Q.value = 3 + Math.random() * 4;
+        const g = ctx.createGain();
+        const laut = 0.02 + Math.random() * 0.06;
+        g.gain.setValueAtTime(laut, w); g.gain.exponentialRampToValueAtTime(0.0001, w + 0.02 + Math.random() * 0.03);
+        const pan = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+        if (pan) { pan.pan.value = Math.random() * 2 - 1; s.connect(f).connect(g).connect(pan).connect(regenGain); }
+        else s.connect(f).connect(g).connect(regenGain);
+        s.start(w); s.stop(w + 0.06);
+        if (Math.random() < 0.5) {
+          const d = ctx.createBufferSource(); d.buffer = tropfenBuffer;
+          const df = ctx.createBiquadFilter(); df.type = 'bandpass'; df.frequency.value = 500 + Math.random() * 900; df.Q.value = 2;
+          const dg = ctx.createGain(); const dw = t + Math.random() * 0.1;
+          dg.gain.setValueAtTime(0.05 + Math.random() * 0.08, dw); dg.gain.exponentialRampToValueAtTime(0.0001, dw + 0.05);
+          d.connect(df).connect(dg).connect(dachGain); d.start(dw); d.stop(dw + 0.07);
+        }
+      }
+    }, 100);
 
     // Summen der Neonröhre
     summenGain = ctx.createGain(); summenGain.gain.value = 0;
@@ -94,7 +129,8 @@ export const Ton = {
   atmosphaere(regen, summen) {
     if (!ctx || (regen === letzteAtmo[0] && summen === letzteAtmo[1])) return;
     letzteAtmo = [regen, summen];
-    rampe(regenGain.gain, regen * 0.09, 2);
+    rampe(regenGain.gain, regen * 0.55, 2);
+    rampe(dachGain.gain, summen > 0 ? 0.9 : 0.15, 1);
     rampe(summenGain.gain, summen, 0.5);
   },
 
@@ -109,6 +145,10 @@ export const Ton = {
   kasse() {
     rauschen(0.12, 3000, 1, 0.12);
     ton(1568, 'triangle', 0.2, 0.5, 0.08); ton(2093, 'triangle', 0.18, 0.7, 0.16);
+  },
+  taser() {
+    if (!ctx) return;
+    for (let i = 0; i < 9; i++) { rauschen(0.05, 3000 + Math.random() * 3000, 2, 0.25, i * 0.045); ton(60 + Math.random() * 40, 'square', 0.12, 0.05, i * 0.045); }
   },
   klick() { ton(1900, 'square', 0.03, 0.04); },
   muenze() { ton(2400 + Math.random() * 600, 'triangle', 0.12, 0.18); ton(3800, 'sine', 0.05, 0.1, 0.02); },
