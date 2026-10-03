@@ -60,7 +60,7 @@ $('spiel').appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x03050a);
-scene.fog = new THREE.FogExp2(0x070b14, 0.021);
+scene.fog = new THREE.FogExp2(0x060910, 0.028);
 
 const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.05, 220);
 camera.rotation.order = 'YXZ';
@@ -78,7 +78,7 @@ addEventListener('resize', () => {
   if (post) { post.composer.setSize(innerWidth, innerHeight); post.bloom.resolution.set(innerWidth / 2, innerHeight / 2); }
 });
 
-const himmelLicht = new THREE.HemisphereLight(0x4a5a88, 0x0c0a08, 0.5);
+const himmelLicht = new THREE.HemisphereLight(0x3a4670, 0x0a0806, 0.32);
 scene.add(himmelLicht);
 
 // ---------- Materialien ----------
@@ -706,6 +706,24 @@ function baueWelt() {
     const tr = kiste(0.7, 0.8, 0.5, M.unsichtbar, 0, 0, 0.15, sk);
     tr.userData = { typ: 'sicherung' }; klickbar.push(tr);
   }
+  // altes Wandtelefon (rechte Wand)
+  {
+    const t = new THREE.Group(); t.position.set(2.95, 1.5, -1.75); t.rotation.y = -Math.PI / 2; scene.add(t);
+    rundkiste(0.18, 0.26, 0.08, 0.02, std(0x3a1414, { roughness: 0.35 }), 0, 0, 0, t);
+    W.hoerer = rundkiste(0.05, 0.24, 0.05, 0.02, std(0x2a0e0e, { roughness: 0.3 }), -0.06, 0.0, 0.07, t);
+    const kabel = new THREE.Mesh(new THREE.TorusGeometry(0.03, 0.006, 6, 18, Math.PI * 5), std(0x1a0808));
+    kabel.position.set(-0.06, -0.2, 0.06); kabel.rotation.y = Math.PI / 2; t.add(kabel);
+    const tr = kiste(0.45, 0.5, 0.35, M.unsichtbar, 0, 0, 0.1, t);
+    tr.userData = { typ: 'telefon' }; klickbar.push(tr);
+  }
+  // Schrift an der Rückwand, die nur bei Spuk erscheint
+  W.schriftMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, map: leinwand(512, 160, (g, w, h) => {
+    g.font = 'bold 60px "Special Elite", serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillStyle = '#7a0000'; g.fillText('LASS MICH REIN', w / 2, 70);
+    for (let i = 0; i < 26; i++) { const x = 40 + Math.random() * (w - 80); g.fillRect(x, 90, 3 + Math.random() * 3, 20 + Math.random() * 60); }
+  }) });
+  const schrift = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 0.47), W.schriftMat);
+  schrift.position.set(-0.6, 2.74, 2.47); schrift.rotation.y = Math.PI; scene.add(schrift);
   plakat(0.5, 0.7, (g, w, h) => {
     g.fillStyle = '#ffe9f0'; g.fillRect(0, 0, w, h);
     g.fillStyle = '#e2437d'; g.beginPath(); g.arc(w / 2, 120, 62, 0, Math.PI * 2); g.fill();
@@ -1165,6 +1183,185 @@ function neueAufgabe() {
   W.muellVoll.visible = true;
   toast('Neue Aufgabe: Müll rausbringen!', '#ffd27a'); Ton.klingel();
 }
+// ---------- SPUK: Schreckmomente während der Schicht ----------
+const SPUK = { aktiv: null, naechster: 25, geraeusch: 8, t: 0, erzwungen: null };
+let spukGestalt = null;
+function gestaltHolen() {
+  if (spukGestalt) return spukGestalt;
+  spukGestalt = Fig.baueFigur(true, new Set(['augen', 'schatten']));
+  Fig.verwandeln(spukGestalt); spukGestalt.g.scale.set(1.0, 1.22, 1.0);
+  spukGestalt.g.visible = false; scene.add(spukGestalt.g);
+  return spukGestalt;
+}
+function untertitel(text, sek = 3) {
+  const el = $('untertitel');
+  el.textContent = text; el.classList.remove('zeigen'); void el.offsetWidth; el.classList.add('zeigen');
+  clearTimeout(untertitel.t); untertitel.t = setTimeout(() => el.classList.remove('zeigen'), sek * 1000);
+}
+function schreckBlitz() {
+  Ton.stich();
+  $('rot').style.transition = 'none'; $('rot').style.opacity = 0.9;
+  setTimeout(() => { $('rot').style.transition = 'opacity 1.2s'; $('rot').style.opacity = 0; }, 80);
+  if (post) post.film.uniforms.schock.value = 1.5;
+  SPUK.wackeln = 0.5;
+}
+const vorwaerts = () => new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+function siehtMan(pos, schwelle = 0.82) {
+  const d = new THREE.Vector3().subVectors(pos, camera.position).normalize();
+  return vorwaerts().dot(d) > schwelle;
+}
+const SPUKE = {
+  // Etwas steht hinter dir – dreh dich um!
+  hinterDir() {
+    const vor = vorwaerts(); vor.y = 0; vor.normalize();
+    const p = spieler.pos.clone().addScaledVector(vor, -2.3);
+    p.x = clamp(p.x, -2.5, 2.5); p.z = clamp(p.z, -1.4, 1.75);
+    if (p.distanceTo(spieler.pos) < 1.4 || !drinnen(spieler.pos)) return null;
+    const f = gestaltHolen();
+    f.g.position.copy(p); f.g.rotation.y = Math.atan2(spieler.pos.x - p.x, spieler.pos.z - p.z); f.g.visible = true;
+    Ton.atmen();
+    let gesehen = -1;
+    return t => {
+      Fig.ruhe(f, t); f.kiefer.rotation.x = 0.4 + Math.sin(t * 20) * 0.1;
+      if (gesehen < 0 && siehtMan(new THREE.Vector3(p.x, 1.8, p.z), 0.8)) { gesehen = t; schreckBlitz(); }
+      if (gesehen >= 0) { f.g.visible = Math.floor(t * 30) % 2 === 0; if (t - gesehen > 0.35) { f.g.visible = false; return true; } }
+      if (t > 8) { f.g.visible = false; return true; }
+      return false;
+    };
+  },
+  // Ein Gesicht direkt vor dem Fenster
+  fensterGesicht() {
+    if (W.rollStand > 0.2 || !drinnen(spieler.pos) || spieler.pos.z > 0.6) return null;
+    if (S.kunde && ['bestellen', 'zahlen', 'lauern', 'klopfen'].includes(S.kunde.zustand)) return null;
+    const f = gestaltHolen();
+    const x = clamp(spieler.pos.x, -1.5, 1.5);
+    f.g.position.set(x, -0.7, -2.72); f.g.rotation.y = 0; f.g.visible = false;
+    let gezeigt = -1;
+    return t => {
+      if (gezeigt < 0 && siehtMan(new THREE.Vector3(x, 1.7, -2.7), 0.75)) { gezeigt = t; f.g.visible = true; schreckBlitz(); Ton.schlag(); }
+      if (gezeigt >= 0) {
+        f.g.position.y = -0.7 + Math.min(1, (t - gezeigt) * 6) * 0.35;
+        f.kiefer.rotation.x = 0.9; Fig.blicken(f, 0.016, camera.position, Math.sin(t * 30) * 0.3);
+        if (t - gezeigt > 0.7) { f.g.visible = false; return true; }
+      }
+      return t > 10;
+    };
+  },
+  // Schritte auf dem Dach
+  dach() {
+    if (!drinnen(spieler.pos)) return null;
+    let n = 0;
+    return t => {
+      if (t > n * 0.5 && n < 7) { Ton.dachSchritt(n); n++; SPUK.wackeln = 0.08; if (S.strom && n === 4) S.flackern = 0.6; }
+      if (n === 7 && t > 4) { untertitel('… da ist jemand auf dem Dach …', 3); return true; }
+      return false;
+    };
+  },
+  // Das alte Telefon klingelt
+  telefon() {
+    SPUK.telefonKlingelt = true; let ring = -9;
+    toast('Das Telefon klingelt …', '#ff8a7a');
+    return t => {
+      if (!SPUK.telefonKlingelt) return t > SPUK.telefonEnde;
+      if (t - ring > 1.6) { ring = t; Ton.telefon(); }
+      W.hoerer.position.x = -0.06 + Math.sin(t * 60) * 0.003;
+      if (t > 13) { SPUK.telefonKlingelt = false; return true; }
+      return false;
+    };
+  },
+  // Flüstern
+  fluestern() {
+    Ton.fluestern();
+    untertitel(wuerfel(['… dreh dich um …', '… wir sehen dich …', '… lass uns rein …', '… du bist ganz allein …', '… nicht mehr lange …']), 3.5);
+    return t => t > 4;
+  },
+  // Blutrote Schrift an der Wand
+  schrift() {
+    if (!drinnen(spieler.pos)) return null;
+    let gesehen = false;
+    return t => {
+      const a = t < 3 ? t / 3 : t < 11 ? 1 : Math.max(0, 1 - (t - 11) / 2);
+      W.schriftMat.opacity = a * 0.92;
+      if (!gesehen && a > 0.6 && siehtMan(new THREE.Vector3(-0.6, 2.74, 2.47), 0.8)) { gesehen = true; Ton.stich(); }
+      if (t > 13) { W.schriftMat.opacity = 0; return true; }
+      return false;
+    };
+  },
+  // Gesicht auf dem Kassen-Monitor
+  monitor() {
+    if (!S.strom) return null;
+    if (!W.gesichtTex) W.gesichtTex = leinwand(256, 144, (g, w, h) => {
+      g.fillStyle = '#000'; g.fillRect(0, 0, w, h);
+      const gr = g.createRadialGradient(w / 2, h / 2, 10, w / 2, h / 2, 80); gr.addColorStop(0, '#d8d8d0'); gr.addColorStop(1, '#000');
+      g.fillStyle = gr; g.beginPath(); g.ellipse(w / 2, h / 2 + 6, 52, 66, 0, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#000'; g.beginPath(); g.ellipse(w / 2 - 20, h / 2 - 6, 11, 15, 0, 0, Math.PI * 2); g.ellipse(w / 2 + 20, h / 2 - 6, 11, 15, 0, 0, Math.PI * 2); g.fill();
+      g.beginPath(); g.ellipse(w / 2, h / 2 + 38, 18, 22, 0, 0, Math.PI * 2); g.fill();
+    });
+    const vorher = CCTV.matMonitor.uniforms.tex.value;
+    let an = false;
+    return t => {
+      if (!an) { CCTV.matMonitor.uniforms.tex.value = W.gesichtTex; an = true; Ton.rauschen(); }
+      CCTV.monitorT = 0;
+      if (t > 1.4) { CCTV.matMonitor.uniforms.tex.value = vorher; return true; }
+      return false;
+    };
+  },
+  // Kühlschrank flackert, Flaschen klirren
+  kuehl() {
+    if (!S.strom) return null;
+    Ton.klirren();
+    return t => {
+      W.kuehlLicht.intensity = Math.random() < 0.5 ? 0 : 1.1; W.kuehlInnen.emissiveIntensity = W.kuehlLicht.intensity ? 0.18 : 0;
+      if (t > 2.2) { W.kuehlLicht.intensity = 1.1; W.kuehlInnen.emissiveIntensity = 0.18; return true; }
+      return false;
+    };
+  }
+};
+function telefonAbnehmen() {
+  if (!SPUK.telefonKlingelt) { toast('Nur ein Rauschen in der Leitung.', '#ccc'); return; }
+  SPUK.telefonKlingelt = false;
+  Ton.klick(); Ton.rauschen();
+  const saetze = wuerfel([
+    ['… hallo?', '… ich kann dich sehen.', '… schau hinter dich.'],
+    ['… zähl die Kunden.', '… einer von ihnen ist schon drin.'],
+    ['… mach das Licht nicht aus.', '… es mag die Dunkelheit.', '… und es hat Hunger.'],
+    ['… warum bist du noch hier?', '… der letzte Bus fährt ohne dich.']
+  ]);
+  saetze.forEach((satz, i) => setTimeout(() => untertitel(satz, 2.6), i * 2700));
+  SPUK.telefonEnde = SPUK.aktiv ? SPUK.t + saetze.length * 2.7 : 0;
+  if (saetze.some(x => x.includes('hinter dich'))) SPUK.erzwungen = 'hinterDir';
+  SPUK.naechster = Math.min(SPUK.naechster, saetze.length * 2.7 + 2);
+}
+function spukAus() {
+  if (spukGestalt) spukGestalt.g.visible = false;
+  if (W.schriftMat) W.schriftMat.opacity = 0;
+  SPUK.aktiv = null; SPUK.telefonKlingelt = false;
+}
+function updateSpuk(dt) {
+  if (SPUK.wackeln > 0) {
+    SPUK.wackeln -= dt;
+    camera.position.x += zufall(-1, 1) * SPUK.wackeln * 0.05; camera.position.y += zufall(-1, 1) * SPUK.wackeln * 0.05;
+  }
+  if (S.modus !== 'schicht' || CCTV.offen || R.offen) return;
+  // leise Geräusche aus der Nacht
+  SPUK.geraeusch -= dt;
+  if (SPUK.geraeusch < 0) { SPUK.geraeusch = zufall(9, 22) / (1 + S.nacht * 0.3); wuerfel([Ton.heulen, Ton.kratzen, Ton.wandKlopfen, Ton.heulen])(); }
+  if (SPUK.aktiv) {
+    SPUK.t += dt;
+    if (SPUK.aktiv(SPUK.t)) SPUK.aktiv = null;
+    return;
+  }
+  SPUK.naechster -= dt * (1 + S.nacht * 0.45);
+  if (SPUK.naechster > 0 || (S.kunde && S.kunde.monster && S.kunde.zustand !== 'laufen')) return;
+  const namen = SPUK.erzwungen ? [SPUK.erzwungen] : Object.keys(SPUKE).sort(() => Math.random() - 0.5);
+  SPUK.erzwungen = null;
+  for (const n of namen) {
+    const f = SPUKE[n]();
+    if (f) { SPUK.aktiv = f; SPUK.t = 0; break; }
+  }
+  SPUK.naechster = zufall(20, 40);
+}
+
 // ---------- Quest: Stromausfall und Sicherungskasten ----------
 // Taschenlampe (Handylicht), geht nur bei Stromausfall an
 const handyLicht = HOCH ? new THREE.SpotLight(0xf2f4ff, 0, 14, 0.55, 0.6, 1.4) : KEIN_LICHT();
@@ -2258,6 +2455,7 @@ function tippen(x, y) {
   else if (d.typ === 'monitor') kameraAuf();
   else if (d.typ === 'muelleimer') muellNehmen();
   else if (d.typ === 'sicherung') raetselAuf();
+  else if (d.typ === 'telefon') telefonAbnehmen();
   else if (d.typ === 'container') muellWegwerfen();
 }
 
@@ -2339,7 +2537,7 @@ function updateWelt(dt) {
   if (W.blitz > 0 || W.blitzZweiter > 0) {
     if (W.blitzZweiter > 0) { W.blitzZweiter -= dt; if (W.blitzZweiter <= 0) W.blitz = 0.8; }
     W.blitz = Math.max(0, W.blitz - dt * 5);
-    W.himmelLicht.intensity = 0.5 + W.blitz * 6;
+    W.himmelLicht.intensity = 0.32 + W.blitz * 6;
     scene.background.setRGB(0.012 + W.blitz * 0.25, 0.02 + W.blitz * 0.27, 0.04 + W.blitz * 0.35);
   }
   W.regenMat.uniforms.blitz.value = W.blitz || 0;
@@ -2414,6 +2612,7 @@ function starteNacht(n) {
   S.stat = { bedient: 0, monster: 0, entkommen: 0, verjagt: 0 };
   S.taser = false; S.ladung = 0; handTaser.visible = false;
   S.strom = true; stromAn(); S.stromZeiten = [100, 230, 370];
+  spukAus(); SPUK.naechster = zufall(18, 30); SPUK.geraeusch = 8;
   S.aufgabe = null; S.aufgabenZeiten = [40, 160, 290]; W.muellVoll.visible = false; handSack.visible = false;
   W.taserWand.visible = true; W.taserLampe.material.color.setRGB(0.2, 3, 0.4); zeichneTaser();
   kioskZuruecksetzen();
@@ -2622,9 +2821,10 @@ function schleife(jetzt) {
   updateKamera(dt);
   updateTaser(dt);
   updateNaehe();
-  if (['schicht', 'kasse'].includes(S.modus)) updateKreaturen(dt);
+  if (['schicht', 'kasse'].includes(S.modus)) { updateKreaturen(dt); updateSpuk(dt); }
+  else spukAus();
 }
 requestAnimationFrame(schleife);
 
 // Für automatische Tests
-window.__kiosk = { S, W, spieler, J, camera, nimmWare, legeAufTheke, kasseAuf, rollladen, rueckgeldGeben, starteNacht, starteJagd, kameraAufSpieler, setzeRueck: v => { rueck = v; } };
+window.__kiosk = { S, W, spieler, J, camera, nimmWare, legeAufTheke, kasseAuf, rollladen, rueckgeldGeben, starteNacht, starteJagd, kameraAufSpieler, SPUK, SPUKE, telefonAbnehmen, gestaltHolen, setzeRueck: v => { rueck = v; } };

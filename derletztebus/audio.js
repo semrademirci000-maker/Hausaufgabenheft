@@ -166,6 +166,31 @@ export const Ton = {
   flackern() { for (let i = 0; i < 6; i++) rauschen(0.05, 3000, 2, 0.1, i * 0.12); },
   funke() { for (let i = 0; i < 5; i++) rauschen(0.04, 4000 + Math.random() * 2000, 2, 0.3, i * 0.05); },
   hebel() { ton(90, 'square', 0.3, 0.15); rauschen(0.12, 800, 1, 0.3); ton(220, 'sine', 0.2, 1.2, 0.1, 440); },
+  stich() {
+    // schriller Schreck-Akkord
+    [880, 932, 1245, 1319].forEach((f, i) => ton(f, 'sawtooth', 0.07, 1.1, i * 0.01));
+    ton(55, 'sine', 0.8, 1.4); rauschen(0.7, 3000, 0.6, 0.3);
+  },
+  atmen() { for (let i = 0; i < 3; i++) { rauschen(0.9, 700, 1.2, 0.09, i * 1.5, 0.4); rauschen(0.6, 500, 1.2, 0.06, i * 1.5 + 0.9, 0.2); } },
+  dachSchritt(n) { ton(48, 'sine', 0.5, 0.25); rauschen(0.2, 180 + n * 20, 1, 0.3); },
+  telefon() { for (let i = 0; i < 2; i++) { ton(440, 'square', 0.05, 0.38, i * 0.42); ton(480, 'square', 0.05, 0.38, i * 0.42); } },
+  rauschen() { rauschen(1.4, 2500, 0.3, 0.12, 0, 0.05); },
+  fluestern() {
+    if (!ctx) return;
+    for (let i = 0; i < 9; i++) {
+      const t = ctx.currentTime + i * 0.28 + Math.random() * 0.1;
+      const s = ctx.createBufferSource(); s.buffer = rauschBuffer(0.3);
+      const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 2200 + Math.random() * 2000; f.Q.value = 6;
+      const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.16, t + 0.08); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.28);
+      const p = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+      if (p) { p.pan.value = Math.sin(i) ; s.connect(f).connect(g).connect(p).connect(out); } else s.connect(f).connect(g).connect(out);
+      s.start(t); s.stop(t + 0.3);
+    }
+  },
+  heulen() { ton(320, 'sine', 0.06, 3.2, 0, 180); ton(330, 'triangle', 0.035, 3, 0.1, 190); },
+  kratzen() { for (let i = 0; i < 8; i++) rauschen(0.12, 3500 + Math.random() * 1500, 4, 0.06, i * 0.15); },
+  wandKlopfen() { for (let i = 0; i < 3; i++) { ton(70, 'sine', 0.35, 0.2, i * 0.35); rauschen(0.1, 400, 1, 0.15, i * 0.35); } },
+  klirren() { for (let i = 0; i < 5; i++) ton(2600 + Math.random() * 1800, 'triangle', 0.06, 0.25, i * 0.09); },
   klick() { ton(1900, 'square', 0.03, 0.04); },
   muenze() { ton(2400 + Math.random() * 600, 'triangle', 0.12, 0.18); ton(3800, 'sine', 0.05, 0.1, 0.02); },
   nehmen() { ton(520, 'triangle', 0.1, 0.08); ton(780, 'triangle', 0.08, 0.1, 0.05); },
