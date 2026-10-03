@@ -564,6 +564,7 @@ function baueWelt() {
     const kx = -2.47, kz = 2.14, kb = 1.0, kt = 0.72, kh = 2.0;
     const gehaeuse = std(0xe3e6ea, { roughness: 0.25, metalness: 0.35, envMapIntensity: 1 });
     const innen = new THREE.MeshStandardMaterial({ color: 0xdfeaf2, emissive: 0xcfe8ff, emissiveIntensity: 0.18, roughness: 0.4 });
+    W.kuehlInnen = innen;
     kiste(0.04, kh, kt, gehaeuse, kx - kb / 2 + 0.02, kh / 2, kz);
     kiste(0.04, kh, kt, gehaeuse, kx + kb / 2 - 0.02, kh / 2, kz);
     kiste(kb, 0.05, kt, gehaeuse, kx, kh - 0.025, kz);
@@ -577,8 +578,10 @@ function baueWelt() {
     }) }));
     kopf.position.set(kx, kh - 0.16, kz - kt / 2 - 0.005); kopf.rotation.y = Math.PI; scene.add(kopf);
     // Licht-Leiste innen
-    kiste(kb - 0.1, 0.02, 0.02, std(0xffffff, { emissive: 0xdff0ff, emissiveIntensity: 0.9 }), kx, kh - 0.3, kz - kt / 2 + 0.08).castShadow = false;
-    if (HOCH) { const l = new THREE.PointLight(0xdcefff, 1.1, 2.0, 1.8); l.position.set(kx, 1.4, kz - 0.1); scene.add(l); }
+    W.kuehlLeiste = std(0xffffff, { emissive: 0xdff0ff, emissiveIntensity: 0.9 });
+    kiste(kb - 0.1, 0.02, 0.02, W.kuehlLeiste, kx, kh - 0.3, kz - kt / 2 + 0.08).castShadow = false;
+    W.kuehlLicht = HOCH ? new THREE.PointLight(0xdcefff, 1.1, 2.0, 1.8) : KEIN_LICHT();
+    if (HOCH) { W.kuehlLicht.position.set(kx, 1.4, kz - 0.1); scene.add(W.kuehlLicht); }
     // Gitterböden mit Getränken
     const boeden = [0.3, 0.7, 1.1, 1.5];
     boeden.forEach((y, r) => {
@@ -687,6 +690,22 @@ function baueWelt() {
     g.fillStyle = '#ffd23a'; g.font = 'bold 74px Inter, Arial'; g.fillText('9 Mio', w / 2, 190);
     for (let i = 0; i < 6; i++) { g.fillStyle = '#fff'; g.beginPath(); g.arc(36 + i * 36, 250, 15, 0, Math.PI * 2); g.fill(); g.fillStyle = '#143c8c'; g.font = 'bold 16px Inter'; g.fillText(String(7 + i * 7), 36 + i * 36, 256); }
   }, -2.985, 1.95, -0.7, Math.PI / 2);
+  // Sicherungskasten an der linken Wand
+  {
+    const sk = new THREE.Group(); sk.position.set(-2.93, 1.55, 1.2); sk.rotation.y = Math.PI / 2; scene.add(sk);
+    rundkiste(0.5, 0.62, 0.12, 0.02, std(0x8c939b, { roughness: 0.35, metalness: 0.7, envMapIntensity: 1 }), 0, 0, 0, sk);
+    const warn = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 0.14), new THREE.MeshBasicMaterial({ map: leinwand(128, 112, (g, w, h) => {
+      g.fillStyle = '#f2c21b'; g.beginPath(); g.moveTo(w / 2, 4); g.lineTo(w - 4, h - 4); g.lineTo(4, h - 4); g.fill();
+      g.strokeStyle = '#111'; g.lineWidth = 6; g.stroke();
+      g.fillStyle = '#111'; g.beginPath(); g.moveTo(70, 26); g.lineTo(46, 66); g.lineTo(62, 66); g.lineTo(54, 96); g.lineTo(82, 54); g.lineTo(66, 54); g.fill();
+    }) }));
+    warn.position.set(0, 0.12, 0.062); sk.add(warn);
+    kiste(0.03, 0.12, 0.03, M.metall, 0.19, -0.05, 0.07, sk);
+    W.stromLampe = new THREE.Mesh(new THREE.CircleGeometry(0.015, 12), new THREE.MeshBasicMaterial({ color: new THREE.Color(0.2, 3, 0.4) }));
+    W.stromLampe.position.set(-0.17, 0.24, 0.062); sk.add(W.stromLampe);
+    const tr = kiste(0.7, 0.8, 0.5, M.unsichtbar, 0, 0, 0.15, sk);
+    tr.userData = { typ: 'sicherung' }; klickbar.push(tr);
+  }
   plakat(0.5, 0.7, (g, w, h) => {
     g.fillStyle = '#ffe9f0'; g.fillRect(0, 0, w, h);
     g.fillStyle = '#e2437d'; g.beginPath(); g.arc(w / 2, 120, 62, 0, Math.PI * 2); g.fill();
@@ -1146,11 +1165,148 @@ function neueAufgabe() {
   W.muellVoll.visible = true;
   toast('Neue Aufgabe: Müll rausbringen!', '#ffd27a'); Ton.klingel();
 }
+// ---------- Quest: Stromausfall und Sicherungskasten ----------
+// Taschenlampe (Handylicht), geht nur bei Stromausfall an
+const handyLicht = HOCH ? new THREE.SpotLight(0xf2f4ff, 0, 14, 0.55, 0.6, 1.4) : KEIN_LICHT();
+if (HOCH) { handyLicht.position.set(0.1, -0.05, 0); handyLicht.target.position.set(0.1, -0.2, -2); camera.add(handyLicht); camera.add(handyLicht.target); }
+function stromAus() {
+  S.strom = false;
+  S.flackern = 0;
+  let n = 0;
+  const flacker = setInterval(() => {
+    n++;
+    const an = n % 2 === 0 && n < 9;
+    W.licht.intensity = an ? 34 : 2; M.roehre.emissiveIntensity = an ? 2.2 : 0.05;
+    if (n >= 10) {
+      clearInterval(flacker);
+      if (S.strom) return;
+      W.licht.intensity = 0; M.roehre.emissiveIntensity = 0;
+      W.kuehlLicht.intensity = 0; W.kuehlInnen.emissiveIntensity = 0; W.kuehlLeiste.emissiveIntensity = 0;
+      W.schildMat.color.setScalar(0.05); W.schildLicht.intensity = 0;
+      W.zeigeKasse('');
+      W.stromLampe.material.color.setRGB(3, 0.15, 0.1);
+      handyLicht.intensity = 16;
+      Ton.stromAus();
+      toast('STROMAUSFALL!', '#ff8a7a');
+      if (CCTV.offen) kameraZu();
+      if (S.modus === 'kasse') kasseZu();
+    }
+  }, 120);
+  Ton.flackern();
+}
+function stromAn() {
+  S.strom = true;
+  W.licht.intensity = 34; M.roehre.emissiveIntensity = 2.2;
+  W.kuehlLicht.intensity = 1.1; W.kuehlInnen.emissiveIntensity = 0.18; W.kuehlLeiste.emissiveIntensity = 0.9;
+  W.schildMat.color.setScalar(1); W.schildLicht.intensity = 5;
+  W.zeigeKasse('0,00');
+  W.stromLampe.material.color.setRGB(0.2, 3, 0.4);
+  handyLicht.intensity = 0;
+}
+
+// Rätsel: Kabel nach Farbe verbinden, dann den Hauptschalter hoch
+const KABEL = [['rot', '#e23a33'], ['blau', '#2f7fe0'], ['gelb', '#f2c21b'], ['gruen', '#3fbf5a']];
+const R = { offen: false, verbunden: {}, gewaehlt: null, ziehen: null };
+const misch = a => a.map(v => [Math.random(), v]).sort((x, y) => x[0] - y[0]).map(v => v[1]);
+function raetselAuf() {
+  if (S.strom) { toast('Hier ist alles in Ordnung.', '#ccc'); return; }
+  R.offen = true; R.verbunden = {}; R.gewaehlt = null;
+  const links = $('sLinks'), rechts = $('sRechts');
+  links.innerHTML = ''; rechts.innerHTML = '';
+  for (const [name, farbe] of misch(KABEL)) {
+    const d = document.createElement('div'); d.className = 'skabel'; d.dataset.f = name;
+    d.innerHTML = `<i style="background:${farbe}"></i><b style="background:${farbe}"></b>`; links.appendChild(d);
+  }
+  for (const [name, farbe] of misch(KABEL)) {
+    const d = document.createElement('div'); d.className = 'sbuchse'; d.dataset.f = name;
+    d.innerHTML = `<b style="border-color:${farbe}"></b><i style="background:${farbe}"></i>`; rechts.appendChild(d);
+  }
+  $('sHebel').disabled = true; $('sHebel').classList.remove('oben');
+  $('sicherung').classList.remove('weg');
+  document.body.classList.add('kameraAn');
+  zeichneKabel();
+  Ton.klick();
+}
+function raetselZu() {
+  R.offen = false;
+  $('sicherung').classList.add('weg');
+  document.body.classList.remove('kameraAn');
+}
+function mitte(el, feld) {
+  const r = el.getBoundingClientRect(), f = feld.getBoundingClientRect();
+  return [r.left + r.width / 2 - f.left, r.top + r.height / 2 - f.top];
+}
+function zeichneKabel(zx, zy) {
+  const feld = document.querySelector('.sfeld'), svg = $('sLinien');
+  const f = feld.getBoundingClientRect();
+  svg.setAttribute('viewBox', `0 0 ${f.width} ${f.height}`);
+  let html = '';
+  for (const [name, farbe] of KABEL) {
+    if (!R.verbunden[name]) continue;
+    const [x1, y1] = mitte(document.querySelector(`.skabel[data-f="${name}"] b`), feld);
+    const [x2, y2] = mitte(document.querySelector(`.sbuchse[data-f="${name}"] b`), feld);
+    html += `<path d="M${x1} ${y1} C${(x1 + x2) / 2} ${y1} ${(x1 + x2) / 2} ${y2} ${x2} ${y2}" stroke="${farbe}" stroke-width="12" fill="none" stroke-linecap="round"/>`;
+  }
+  if (R.ziehen && zx !== undefined) {
+    const [x1, y1] = mitte(document.querySelector(`.skabel[data-f="${R.ziehen}"] b`), feld);
+    const farbe = KABEL.find(k => k[0] === R.ziehen)[1];
+    html += `<path d="M${x1} ${y1} C${(x1 + zx) / 2} ${y1} ${(x1 + zx) / 2} ${zy} ${zx} ${zy}" stroke="${farbe}" stroke-width="12" fill="none" stroke-linecap="round" opacity=".85"/>`;
+  }
+  svg.innerHTML = html;
+}
+function kabelVerbinden(links, rechts) {
+  if (links === rechts) {
+    R.verbunden[links] = true; Ton.muenze();
+    document.querySelector(`.skabel[data-f="${links}"]`).classList.add('fertig');
+    document.querySelector(`.sbuchse[data-f="${rechts}"]`).classList.add('fertig');
+    if (KABEL.every(k => R.verbunden[k[0]])) { $('sHebel').disabled = false; toast('Alle Kabel verbunden – Hauptschalter hoch!', '#9be37a'); }
+  } else {
+    Ton.funke(); toast('Falsches Kabel! Funken!', '#ff8a7a');
+    const feld = document.querySelector('.sfeld'); feld.classList.remove('funken'); void feld.offsetWidth; feld.classList.add('funken');
+  }
+  R.ziehen = null; R.gewaehlt = null;
+  document.querySelectorAll('.skabel').forEach(e => e.classList.remove('gewaehlt'));
+  zeichneKabel();
+}
+(function raetselSteuerung() {
+  const feld = document.querySelector('.sfeld');
+  feld.addEventListener('pointerdown', e => {
+    const kabel = e.target.closest('.skabel'), buchse = e.target.closest('.sbuchse');
+    if (kabel && !kabel.classList.contains('fertig')) {
+      R.ziehen = kabel.dataset.f; R.gewaehlt = kabel.dataset.f;
+      document.querySelectorAll('.skabel').forEach(x => x.classList.toggle('gewaehlt', x === kabel));
+      feld.setPointerCapture(e.pointerId);
+      Ton.klick();
+    } else if (buchse && R.gewaehlt && !buchse.classList.contains('fertig')) kabelVerbinden(R.gewaehlt, buchse.dataset.f);
+  });
+  feld.addEventListener('pointermove', e => {
+    if (!R.ziehen) return;
+    const f = feld.getBoundingClientRect();
+    zeichneKabel(e.clientX - f.left, e.clientY - f.top);
+  });
+  feld.addEventListener('pointerup', e => {
+    if (!R.ziehen) return;
+    const unter = document.elementFromPoint(e.clientX, e.clientY);
+    const buchse = unter && unter.closest('.sbuchse');
+    if (buchse && !buchse.classList.contains('fertig')) kabelVerbinden(R.ziehen, buchse.dataset.f);
+    else { R.ziehen = null; zeichneKabel(); }   // Tippen: Kabel bleibt ausgewählt, dann Buchse antippen
+  });
+  $('sHebel').addEventListener('click', () => {
+    if ($('sHebel').disabled) return;
+    $('sHebel').classList.add('oben'); Ton.hebel();
+    setTimeout(() => {
+      raetselZu(); stromAn();
+      S.geld += 400; Ton.gut(); toast('Strom ist wieder da! +4,00 €', '#9be37a');
+    }, 450);
+  });
+  $('sZu').addEventListener('click', () => { raetselZu(); Ton.klick(); });
+})();
+
 function zeigeAufgabe() {
   const el = $('aufgabe');
-  if (!S.aufgabe || !['schicht', 'kasse'].includes(S.modus)) { el.classList.add('weg'); return; }
+  if ((!S.aufgabe && S.strom) || !['schicht', 'kasse'].includes(S.modus)) { el.classList.add('weg'); return; }
   el.classList.remove('weg');
-  const text = S.aufgabe === 'voll' ? 'Aufgabe: Müllsack aus dem Eimer neben der Hintertür holen (+3 €)' : 'Aufgabe: Müllsack in den Container hinter dem Kiosk werfen';
+  const text = !S.strom ? 'STROMAUSFALL! Repariere den Sicherungskasten an der linken Wand (+4 €)' : S.aufgabe === 'voll' ? 'Aufgabe: Müllsack aus dem Eimer neben der Hintertür holen (+3 €)' : 'Aufgabe: Müllsack in den Container hinter dem Kiosk werfen';
   if (el.dataset.t !== text) { el.textContent = text; el.dataset.t = text; }
 }
 function muellNehmen() {
@@ -1231,7 +1387,7 @@ const CCTV = { offen: false, rts: [], mats: [], bewegung: [0, 0, 0, 0], naechste
 const CCTV_SHADER = {
   vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
   fragmentShader: `
-    uniform sampler2D tex; uniform float zeit; uniform float linear; uniform float alarm; varying vec2 vUv;
+    uniform sampler2D tex; uniform float zeit; uniform float linear; uniform float alarm; uniform float strom; varying vec2 vUv;
     float h(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233)) + zeit) * 43758.5453); }
     void main(){
       vec2 uv = vUv;
@@ -1243,6 +1399,7 @@ const CCTV_SHADER = {
       v += (h(uv * 500.0) - 0.5) * 0.14;
       v *= smoothstep(1.15, 0.35, length(uv - 0.5) * 1.45);
       vec3 col = mix(vec3(0.6, 1.0, 0.66), vec3(1.0, 0.55, 0.5), alarm) * v;
+      col *= strom;
       if (linear > 0.5) col = pow(max(col, 0.0), vec3(2.2));
       gl_FragColor = vec4(col, 1.0);
     }`
@@ -1250,9 +1407,9 @@ const CCTV_SHADER = {
 function baueKamera() {
   for (let i = 0; i < CAMS.length; i++) {
     CCTV.rts.push(new THREE.WebGLRenderTarget(HOCH ? 480 : 320, HOCH ? 270 : 180, { type: THREE.HalfFloatType }));
-    CCTV.mats.push(new THREE.ShaderMaterial({ uniforms: { tex: { value: CCTV.rts[i].texture }, zeit: { value: 0 }, linear: { value: 0 }, alarm: { value: 0 } }, ...CCTV_SHADER, depthTest: false, depthWrite: false }));
+    CCTV.mats.push(new THREE.ShaderMaterial({ uniforms: { tex: { value: CCTV.rts[i].texture }, zeit: { value: 0 }, linear: { value: 0 }, alarm: { value: 0 }, strom: { value: 1 } }, ...CCTV_SHADER, depthTest: false, depthWrite: false }));
   }
-  CCTV.matMonitor = new THREE.ShaderMaterial({ uniforms: { tex: { value: CCTV.rts[0].texture }, zeit: { value: 0 }, linear: { value: 1 }, alarm: { value: 0 } }, ...CCTV_SHADER });
+  CCTV.matMonitor = new THREE.ShaderMaterial({ uniforms: { tex: { value: CCTV.rts[0].texture }, zeit: { value: 0 }, linear: { value: 1 }, alarm: { value: 0 }, strom: { value: 1 } }, ...CCTV_SHADER });
   CCTV.szene = new THREE.Scene();
   CCTV.quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), CCTV.mats[0]); CCTV.quad.frustumCulled = false;
   CCTV.szene.add(CCTV.quad);
@@ -1304,6 +1461,7 @@ function updateKamera(dt) {
   const zeit = performance.now() / 1000;
   CCTV.mats.forEach((m, i) => { m.uniforms.zeit.value = zeit % 100; m.uniforms.alarm.value = CCTV.bewegung[i] * (0.5 + 0.5 * Math.sin(zeit * 8)) * 0.6; });
   CCTV.matMonitor.uniforms.zeit.value = zeit % 100;
+  CCTV.matMonitor.uniforms.strom.value = S.strom ? 1 : 0;
   if (CCTV.offen) {
     // jedes Bild eine andere Kamera auffrischen
     renderCam(CCTV.naechste); CCTV.naechste = (CCTV.naechste + 1) % CAMS.length;
@@ -1339,6 +1497,7 @@ function zeichneKameraSchirm() {
 }
 function kameraAuf() {
   if (S.modus !== 'schicht') return;
+  if (!S.strom) { toast('Kein Strom – die Kameras sind aus!', '#ff8a7a'); return; }
   CCTV.offen = true; CCTV.naechste = 0;
   for (let i = 0; i < CAMS.length; i++) renderCam(i);
   $('kameraSchirm').classList.remove('weg');
@@ -1722,6 +1881,7 @@ function raeumeTheke() {
 // ---------- Kasse ----------
 let rueck = 0;
 function kasseAuf() {
+  if (!S.strom) { toast('Kein Strom! Erst den Sicherungskasten reparieren.', '#ff8a7a'); Ton.fehler(); return; }
   const k = S.kunde;
   if (!k || k.zustand !== 'zahlen') {
     toast(k && ['bestellen', 'lauern'].includes(k.zustand) ? 'Erst die Sachen auf die Theke legen!' : 'Gerade gibt es nichts zu kassieren.', '#ccc');
@@ -1781,6 +1941,7 @@ $('kZu').addEventListener('click', kasseZu);
 // ---------- Rollladen ----------
 function rollladen() {
   if (!['schicht', 'kasse'].includes(S.modus)) return;
+  if (!S.strom) { toast('Der Rollladen braucht Strom!', '#ff8a7a'); Ton.fehler(); return; }
   W.rollZiel = W.rollZiel ? 0 : 1;
   Ton.rollladen();
   $('rlText').textContent = W.rollZiel ? 'HOCH' : 'RUNTER';
@@ -1797,7 +1958,7 @@ const ECKEN = [new THREE.Vector3(-3.95, 0, -3.45), new THREE.Vector3(3.95, 0, -3
 
 function starteJagd(k, ort = 'fenster') {
   if (S.modus === 'kasse') kasseZu();
-  kameraZu();
+  kameraZu(); if (R.offen) raetselZu();
   S.modus = 'jagd';
   J.phase = 'klettern'; J.t = 0; J.k = k; J.ort = ort;
   W.fensterFrei = ort === 'tuer';
@@ -1962,6 +2123,7 @@ function updateSchreck(dt) {
 }
 
 function kioskZuruecksetzen() {
+  if (S.strom === false) stromAn();
   W.tuerOffen = false; W.fensterFrei = false; J.betaeubt = 0;
   if ($('tuerText')) $('tuerText').textContent = 'AUF';
   W.licht.intensity = 34; M.roehre.emissiveIntensity = 2.2;
@@ -2080,7 +2242,7 @@ addEventListener('keyup', e => { tasten[e.code] = false; });
 const strahl = new THREE.Raycaster();
 const _ndc = new THREE.Vector2();
 function tippen(x, y) {
-  if (S.modus !== 'schicht' || CCTV.offen) return;
+  if (S.modus !== 'schicht' || CCTV.offen || R.offen) return;
   _ndc.set(x / innerWidth * 2 - 1, -(y / innerHeight) * 2 + 1);
   strahl.setFromCamera(_ndc, camera);
   const treffer = strahl.intersectObjects(klickbar, false)[0];
@@ -2095,6 +2257,7 @@ function tippen(x, y) {
   else if (d.typ === 'tuer') tuerUmschalten();
   else if (d.typ === 'monitor') kameraAuf();
   else if (d.typ === 'muelleimer') muellNehmen();
+  else if (d.typ === 'sicherung') raetselAuf();
   else if (d.typ === 'container') muellWegwerfen();
 }
 
@@ -2145,6 +2308,7 @@ function updateSchicht(dt) {
   }
   if (S.kunde) updateKunde(S.kunde, dt);
   if (!S.aufgabe && S.aufgabenZeiten && S.aufgabenZeiten.length && S.zeit >= S.aufgabenZeiten[0]) { S.aufgabenZeiten.shift(); neueAufgabe(); }
+  if (S.strom && S.stromZeiten && S.stromZeiten.length && S.zeit >= S.stromZeiten[0]) { S.stromZeiten.shift(); stromAus(); }
   zeigeAufgabe();
   if (S.modus === 'jagd') return;
 
@@ -2203,7 +2367,7 @@ function updateWelt(dt) {
   W.tuerZittern = Math.max(0, (W.tuerZittern || 0) - dt * 0.5);
   W.tuer.rotation.y = W.tuerWinkel + (W.tuerZittern ? zufall(-1, 1) * W.tuerZittern : 0);
   // Flackern der Röhre
-  if (S.flackern > 0 && S.modus !== 'jagd') {
+  if (S.flackern > 0 && S.modus !== 'jagd' && S.strom) {
     S.flackern -= dt;
     const an = Math.random() > 0.45 || S.flackern <= 0;
     W.licht.intensity = an ? 34 : 3; M.roehre.emissiveIntensity = an ? 2.2 : 0.1;
@@ -2249,6 +2413,7 @@ function starteNacht(n) {
   S.naechsterIn = 3; S.seitMonster = 0; S.kundenGesamt = 0;
   S.stat = { bedient: 0, monster: 0, entkommen: 0, verjagt: 0 };
   S.taser = false; S.ladung = 0; handTaser.visible = false;
+  S.strom = true; stromAn(); S.stromZeiten = [100, 230, 370];
   S.aufgabe = null; S.aufgabenZeiten = [40, 160, 290]; W.muellVoll.visible = false; handSack.visible = false;
   W.taserWand.visible = true; W.taserLampe.material.color.setRGB(0.2, 3, 0.4); zeichneTaser();
   kioskZuruecksetzen();
@@ -2446,7 +2611,7 @@ function schleife(jetzt) {
   switch (S.modus) {
     case 'titel': updateTitel(dt); break;
     case 'intro': updateIntro(dt); break;
-    case 'schicht': if (CCTV.offen) kameraAufSpieler(); else updateSpieler(dt); updateSchicht(dt); break;
+    case 'schicht': if (CCTV.offen || R.offen) kameraAufSpieler(); else updateSpieler(dt); updateSchicht(dt); break;
     case 'kasse': kameraAufSpieler(); updateSchicht(dt); break;
     case 'jagd': updateSpieler(dt); updateJagd(dt); S.zeit += dt * MIN_PRO_SEK; break;
     case 'schreck': updateSchreck(dt); break;
@@ -2462,4 +2627,4 @@ function schleife(jetzt) {
 requestAnimationFrame(schleife);
 
 // Für automatische Tests
-window.__kiosk = { S, W, spieler, J, nimmWare, legeAufTheke, kasseAuf, rollladen, rueckgeldGeben, starteNacht, starteJagd, kameraAufSpieler, setzeRueck: v => { rueck = v; } };
+window.__kiosk = { S, W, spieler, J, camera, nimmWare, legeAufTheke, kasseAuf, rollladen, rueckgeldGeben, starteNacht, starteJagd, kameraAufSpieler, setzeRueck: v => { rueck = v; } };
