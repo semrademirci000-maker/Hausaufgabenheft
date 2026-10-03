@@ -65,6 +65,7 @@ seltsamer. An jeder Haltestelle steigt jemand Neues ein. **Einer davon ist kein 
   manchmal komisch – genau hinsehen!
 - An der Endstation musst du sagen, wer es ist. Es gibt vier Enden zu finden.
 - Ton (Motor, Regen, Gong) wird live im Browser erzeugt.
+- Das Spiel gibt es auch als **native SwiftUI-App** in [`ios/DerLetzteBus`](ios/DerLetzteBus/README.md).
 
 Öffnen: `derletztebus/index.html`, z. B.
 `https://semrademirci000-maker.github.io/Hausaufgabenheft/derletztebus/`.
@@ -99,4 +100,5 @@ Zum schnellen Ausprobieren am Rechner reicht es, `index.html` im Browser zu öff
 | `stitched/` | Das Spiel STITCHED von Muaz, mit anonymem Zähler |
 | `stitched/board.html` | Privates Board: wer STITCHED gespielt hat |
 | `derletztebus/` | Gruselgeschichte „Der letzte Bus“ zum Mitspielen |
+| `ios/DerLetzteBus/` | „Der letzte Bus“ als native SwiftUI-App |
 | `sw.js`, `manifest.webmanifest`, `icons/` | Offline-Betrieb, App-Icon, Home-Bildschirm |
