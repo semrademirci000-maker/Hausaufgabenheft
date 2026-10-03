@@ -53,24 +53,25 @@ Die Zahlen siehst du auf `statistik.html`, z. B.
 Die Seite ist nirgends in der App verlinkt. Mit **Mein Gerät nicht mitzählen**
 zählen deine eigenen Starts nicht mit.
 
-## Der letzte Bus (Gruselgeschichte zum Mitspielen)
+## Der letzte Bus – Nachtkiosk (3D-Actionspiel)
 
-In `derletztebus/` steckt eine interaktive Gruselgeschichte:
-Du steigst nachts in den Nachtbus N13 – aber die Haltestellen werden immer
-seltsamer. An jeder Haltestelle steigt jemand Neues ein. **Einer davon ist kein Mensch.**
+In `derletztebus/` steckt ein 3D-Spiel (three.js), am besten **quer** gespielt:
+Der Bus N13 setzt dich an der Endstation ab, und du übernimmst die Nachtschicht im Kiosk.
 
-- Zwischen zwei Haltestellen kannst du zwei Dinge tun: mit Leuten reden,
-  sie heimlich genauer ansehen, ins Spiegelbild der Scheibe schauen oder zum Fahrer gehen.
-- Bei jeder Fahrt wird neu ausgelost, wer kein Mensch ist. Auch Menschen wirken
-  manchmal komisch – genau hinsehen!
-- An der Endstation musst du sagen, wer es ist. Es gibt vier Enden zu finden.
-- Ton (Motor, Regen, Gong) wird live im Browser erzeugt.
-- Gespielt wird am besten **quer** wie Brawl Stars oder Roblox: links das Busfenster,
-  rechts die Geschichte. Hält man das Handy hochkant, erscheint ein Hinweis zum Drehen.
-- Das Spiel gibt es auch als **native SwiftUI-App** in [`ios/DerLetzteBus`](ios/DerLetzteBus/README.md).
+- **Kiosk führen:** Kunden steigen aus dem Bus und kommen ans Fenster. Hol die bestellten
+  Sachen aus dem Regal, leg sie auf die Theke, kassiere an der Kasse und gib das
+  **richtige Wechselgeld** raus (Münzen und Scheine antippen).
+- **Monster:** Manche Kunden sind keine Menschen (leuchtende Augen, kein Schatten, Zucken,
+  seltsame Wünsche). Dann: **Rollladen runter!** Wer zu spät ist, wird gejagt und muss
+  **hinten raus zum Bus rennen** – Ausdauer einteilen!
+- **3 Nächte** (22 Uhr bis 6 Uhr), 3 Herzen, jede Nacht mehr Monster. Vorne gibt es eine kurze Geschichte.
+- Steuerung am Handy: links Stick, Wischen zum Umsehen, Antippen zum Benutzen.
+  Am Rechner: WASD, Maus ziehen, Klick/E, Shift rennen, R Rollladen.
+- Ton (Regen, Kasse, Schreie, Herzschlag) wird live im Browser erzeugt.
 
-Öffnen: `derletztebus/index.html`, z. B.
-`https://semrademirci000-maker.github.io/Hausaufgabenheft/derletztebus/`.
+Öffnen: `https://semrademirci000-maker.github.io/Hausaufgabenheft/derletztebus/`.
+
+> Die SwiftUI-App in `ios/DerLetzteBus` enthält noch die erste, reine Textgeschichte.
 
 ## Auf dem iPad benutzen
 
@@ -101,6 +102,6 @@ Zum schnellen Ausprobieren am Rechner reicht es, `index.html` im Browser zu öff
 | `statistik.html` | Deine private Spieler-Statistik |
 | `stitched/` | Das Spiel STITCHED von Muaz, mit anonymem Zähler |
 | `stitched/board.html` | Privates Board: wer STITCHED gespielt hat |
-| `derletztebus/` | Gruselgeschichte „Der letzte Bus“ zum Mitspielen |
-| `ios/DerLetzteBus/` | „Der letzte Bus“ als native SwiftUI-App |
+| `derletztebus/` | 3D-Actionspiel „Der letzte Bus – Nachtkiosk“ |
+| `ios/DerLetzteBus/` | „Der letzte Bus“ als SwiftUI-App (noch die Textgeschichte) |
 | `sw.js`, `manifest.webmanifest`, `icons/` | Offline-Betrieb, App-Icon, Home-Bildschirm |
