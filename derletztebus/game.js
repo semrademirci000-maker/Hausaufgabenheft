@@ -676,6 +676,7 @@ async function ende(k) {
   Klang.motor(0); Klang.regen(0); Klang.unbehagen(0);
   $('#bus').classList.add('hidden');
   $('#titel').classList.remove('hidden');
+  document.body.classList.remove('imBus');
   endenZeigen();
 }
 
@@ -711,8 +712,22 @@ $('#einsteigen').onclick = () => {
   neuesSpiel(name);
   $('#titel').classList.add('hidden');
   $('#bus').classList.remove('hidden');
+  document.body.classList.add('imBus');
+  querformat();
   spielen();
 };
+
+// Auf Handys wie ein richtiges Spiel: Vollbild und quer (klappt auf Android;
+// auf dem iPhone erscheint stattdessen der Hinweis zum Drehen).
+function querformat() {
+  if (!matchMedia('(pointer: coarse)').matches) return;
+  const el = document.documentElement;
+  if (!el.requestFullscreen) return;
+  el.requestFullscreen()
+    .then(() => screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape'))
+    .catch(() => {});
+}
+$('#hochkant').onclick = () => document.body.classList.add('hochkant');
 
 endenZeigen();
 regenSchleife();

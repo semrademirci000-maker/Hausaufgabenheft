@@ -12,76 +12,28 @@ struct TitelView: View {
     @FocusState private var tippt: Bool
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 22) {
-                Spacer(minLength: 40)
-
-                HStack(spacing: 22) {
-                    Text("N13")
-                    Text("ENDSTATION")
+        GeometryReader { geo in
+            ScrollView {
+                if geo.size.width > geo.size.height {
+                    // Querformat: links der Titel, rechts Name und Einsteigen
+                    HStack(alignment: .center, spacing: 48) {
+                        VStack(spacing: 14) { kopf }
+                            .frame(maxWidth: 420)
+                        VStack(spacing: 14) { bedienung }
+                            .frame(maxWidth: 420)
+                    }
+                    .padding(.horizontal, 16)
+                    .frame(maxWidth: .infinity, minHeight: geo.size.height)
+                } else {
+                    VStack(spacing: 22) {
+                        kopf
+                        bedienung
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 40)
+                    .frame(maxWidth: .infinity, minHeight: geo.size.height)
                 }
-                .font(Schrift.led(26))
-                .foregroundStyle(Farbe.led)
-                .shadow(color: Farbe.led.opacity(0.7), radius: 8)
-                .padding(.horizontal, 16).padding(.vertical, 6)
-                .background(RoundedRectangle(cornerRadius: 6).fill(Color(red: 0.08, green: 0.05, blue: 0.01)))
-                .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Color(red: 0.17, green: 0.11, blue: 0.03), lineWidth: 2))
-                .opacity(flackern ? 0.35 : 1)
-
-                Text("Der letzte Bus")
-                    .font(Schrift.maschine(54))
-                    .foregroundStyle(Color(red: 0.94, green: 0.91, blue: 0.85))
-                    .multilineTextAlignment(.center)
-                    .minimumScaleFactor(0.5)
-                    .lineLimit(1)
-                    .shadow(color: .black, radius: 0, x: 3, y: 3)
-
-                VStack(spacing: 4) {
-                    Text("Jede Haltestelle ist seltsamer als die davor.")
-                    Text("An jeder steigt jemand Neues ein.")
-                    Text("Einer davon ist kein Mensch.").foregroundStyle(Farbe.blut)
-                }
-                .foregroundStyle(Farbe.leise)
-                .multilineTextAlignment(.center)
-
-                VStack(spacing: 6) {
-                    Text("Wie heißt du?")
-                        .font(.footnote)
-                        .foregroundStyle(Farbe.leise)
-                    TextField("Sam", text: $name)
-                        .font(Schrift.maschine(20))
-                        .multilineTextAlignment(.center)
-                        .textInputAutocapitalization(.words)
-                        .autocorrectionDisabled()
-                        .focused($tippt)
-                        .submitLabel(.go)
-                        .onSubmit(los)
-                        .padding(.vertical, 9)
-                        .frame(maxWidth: 230)
-                        .background(RoundedRectangle(cornerRadius: 8).fill(Color(red: 0.06, green: 0.067, blue: 0.09)))
-                        .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(tippt ? Farbe.led : Farbe.rand))
-                }
-
-                Button(action: los) {
-                    Text("Einsteigen")
-                        .font(.system(size: 19, weight: .semibold))
-                        .foregroundStyle(Color(red: 0.1, green: 0.06, blue: 0.01))
-                        .padding(.horizontal, 44).padding(.vertical, 14)
-                        .background(Capsule().fill(Farbe.led))
-                        .shadow(color: Farbe.led.opacity(0.35), radius: 20)
-                }
-
-                if !spiel.gefundeneEnden.isEmpty { endenListe }
-
-                Text("Tippe auf den Text, um ihn schneller zu lesen. Ton an für Gänsehaut.")
-                    .font(.footnote)
-                    .foregroundStyle(Color(white: 0.36))
-                    .multilineTextAlignment(.center)
-
-                Spacer(minLength: 40)
             }
-            .padding(.horizontal, 16)
-            .frame(maxWidth: .infinity)
         }
         .scrollDismissesKeyboard(.interactively)
         .background(
@@ -95,6 +47,72 @@ struct TitelView: View {
         )
         .onAppear { name = spiel.name }
         .task { await ledFlackern() }
+    }
+
+    @ViewBuilder private var kopf: some View {
+        HStack(spacing: 22) {
+            Text("N13")
+            Text("ENDSTATION")
+        }
+        .font(Schrift.led(26))
+        .foregroundStyle(Farbe.led)
+        .shadow(color: Farbe.led.opacity(0.7), radius: 8)
+        .padding(.horizontal, 16).padding(.vertical, 6)
+        .background(RoundedRectangle(cornerRadius: 6).fill(Color(red: 0.08, green: 0.05, blue: 0.01)))
+        .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Color(red: 0.17, green: 0.11, blue: 0.03), lineWidth: 2))
+        .opacity(flackern ? 0.35 : 1)
+
+        Text("Der letzte Bus")
+            .font(Schrift.maschine(54))
+            .foregroundStyle(Color(red: 0.94, green: 0.91, blue: 0.85))
+            .multilineTextAlignment(.center)
+            .minimumScaleFactor(0.5)
+            .lineLimit(1)
+            .shadow(color: .black, radius: 0, x: 3, y: 3)
+
+        VStack(spacing: 4) {
+            Text("Jede Haltestelle ist seltsamer als die davor.")
+            Text("An jeder steigt jemand Neues ein.")
+            Text("Einer davon ist kein Mensch.").foregroundStyle(Farbe.blut)
+        }
+        .foregroundStyle(Farbe.leise)
+        .multilineTextAlignment(.center)
+    }
+
+    @ViewBuilder private var bedienung: some View {
+        VStack(spacing: 6) {
+            Text("Wie heißt du?")
+                .font(.footnote)
+                .foregroundStyle(Farbe.leise)
+            TextField("Sam", text: $name)
+                .font(Schrift.maschine(20))
+                .multilineTextAlignment(.center)
+                .textInputAutocapitalization(.words)
+                .autocorrectionDisabled()
+                .focused($tippt)
+                .submitLabel(.go)
+                .onSubmit(los)
+                .padding(.vertical, 9)
+                .frame(maxWidth: 230)
+                .background(RoundedRectangle(cornerRadius: 8).fill(Color(red: 0.06, green: 0.067, blue: 0.09)))
+                .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(tippt ? Farbe.led : Farbe.rand))
+        }
+
+        Button(action: los) {
+            Text("Einsteigen")
+                .font(.system(size: 19, weight: .semibold))
+                .foregroundStyle(Color(red: 0.1, green: 0.06, blue: 0.01))
+                .padding(.horizontal, 44).padding(.vertical, 14)
+                .background(Capsule().fill(Farbe.led))
+                .shadow(color: Farbe.led.opacity(0.35), radius: 20)
+        }
+
+        if !spiel.gefundeneEnden.isEmpty { endenListe }
+
+        Text("Tippe auf den Text, um ihn schneller zu lesen. Ton an für Gänsehaut.")
+            .font(.footnote)
+            .foregroundStyle(Color(white: 0.36))
+            .multilineTextAlignment(.center)
     }
 
     private var endenListe: some View {

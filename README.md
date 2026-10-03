@@ -65,6 +65,8 @@ seltsamer. An jeder Haltestelle steigt jemand Neues ein. **Einer davon ist kein 
   manchmal komisch – genau hinsehen!
 - An der Endstation musst du sagen, wer es ist. Es gibt vier Enden zu finden.
 - Ton (Motor, Regen, Gong) wird live im Browser erzeugt.
+- Gespielt wird am besten **quer** wie Brawl Stars oder Roblox: links das Busfenster,
+  rechts die Geschichte. Hält man das Handy hochkant, erscheint ein Hinweis zum Drehen.
 - Das Spiel gibt es auch als **native SwiftUI-App** in [`ios/DerLetzteBus`](ios/DerLetzteBus/README.md).
 
 Öffnen: `derletztebus/index.html`, z. B.

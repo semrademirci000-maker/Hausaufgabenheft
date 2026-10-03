@@ -10,28 +10,55 @@ struct BusView: View {
 
     var body: some View {
         GeometryReader { geo in
-            VStack(spacing: 0) {
-                VStack(spacing: 0) {
-                    LEDAnzeige()
-                    FensterView()
-                        .frame(height: min(280, max(160, geo.size.height * 0.28)))
-                        .padding(.horizontal, 16)
-                        .padding(.top, 10)
-                    SitzReihe()
-                }
-                .overlay {
-                    Color.black
-                        .opacity(spiel.licht == .aus ? 1 : 0)
-                        .allowsHitTesting(false)
-                }
+            let quer = geo.size.width > geo.size.height
+            Group {
+                if quer {
+                    // Querformat wie bei einem Handyspiel: links der Bus, rechts die Geschichte
+                    HStack(spacing: 0) {
+                        VStack(spacing: 0) {
+                            LEDAnzeige()
+                            FensterView()
+                                .frame(maxHeight: .infinity)
+                                .padding(.leading, 16)
+                                .padding(.trailing, 12)
+                                .padding(.top, 10)
+                            SitzReihe()
+                        }
+                        .overlay { dunkel }
+                        .frame(width: geo.size.width * 0.55)
 
-                Rectangle().fill(Farbe.rand).frame(height: 1)
-                GeschichteView()
+                        Rectangle().fill(Farbe.rand).frame(width: 1)
+                        GeschichteView(zweiSpalten: geo.size.height < 500)
+                            .background(Color(red: 0.05, green: 0.06, blue: 0.08))
+                    }
+                } else {
+                    VStack(spacing: 0) {
+                        VStack(spacing: 0) {
+                            LEDAnzeige()
+                            FensterView()
+                                .frame(height: min(280, max(160, geo.size.height * 0.28)))
+                                .padding(.horizontal, 16)
+                                .padding(.top, 10)
+                            SitzReihe()
+                        }
+                        .overlay { dunkel }
+
+                        Rectangle().fill(Farbe.rand).frame(height: 1)
+                        GeschichteView(zweiSpalten: false)
+                    }
+                    .frame(maxWidth: 780)
+                    .frame(maxWidth: .infinity)
+                }
             }
-            .frame(maxWidth: 780)
-            .frame(maxWidth: .infinity)
             .background((spiel.licht == .aus ? Color.black : Farbe.bus).ignoresSafeArea())
         }
+    }
+
+    /// Licht aus im Bus – die Geschichte bleibt lesbar.
+    private var dunkel: some View {
+        Color.black
+            .opacity(spiel.licht == .aus ? 1 : 0)
+            .allowsHitTesting(false)
     }
 }
 
@@ -121,6 +148,8 @@ private struct Platz: View {
 
 private struct GeschichteView: View {
     @EnvironmentObject private var spiel: Spiel
+    /// Auf flachen Handys im Querformat stehen die Knöpfe nebeneinander.
+    let zweiSpalten: Bool
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -142,9 +171,11 @@ private struct GeschichteView: View {
                         .padding(.bottom, 8)
                     }
 
-                    VStack(alignment: .leading, spacing: 8) {
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6, alignment: .leading),
+                                             count: zweiSpalten && spiel.optionen.count > 1 ? 2 : 1),
+                              alignment: .leading, spacing: zweiSpalten ? 6 : 8) {
                         ForEach(spiel.optionen) { o in
-                            WahlKnopf(option: o) { spiel.tippe(o) }
+                            WahlKnopf(option: o, klein: zweiSpalten) { spiel.tippe(o) }
                                 .transition(.opacity)
                         }
                     }
@@ -207,15 +238,16 @@ private struct AbsatzView: View {
 
 private struct WahlKnopf: View {
     let option: Option
+    var klein = false
     let aktion: () -> Void
 
     var body: some View {
         Button(action: aktion) {
             Text(option.text)
-                .font(.system(size: 16))
+                .font(.system(size: klein ? 14 : 16))
                 .foregroundStyle(vorne)
                 .multilineTextAlignment(.leading)
-                .padding(.horizontal, 14).padding(.vertical, 11)
+                .padding(.horizontal, klein ? 10 : 14).padding(.vertical, klein ? 8 : 11)
                 .frame(maxWidth: option.stil == .weiter ? nil : .infinity, alignment: .leading)
                 .background(RoundedRectangle(cornerRadius: 12).fill(hinten))
                 .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(rahmen))

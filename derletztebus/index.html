@@ -15,15 +15,19 @@
 
 <!-- Titelbild -->
 <div id="titel" class="screen">
+ <div class="spalte">
   <div class="titel-led"><span>N13</span><span>ENDSTATION</span></div>
   <h1>Der letzte Bus</h1>
   <p class="claim">Jede Haltestelle ist seltsamer als die davor.<br>An jeder steigt jemand Neues ein.<br><em>Einer davon ist kein Mensch.</em></p>
+ </div>
+ <div class="spalte">
   <label class="name">Wie heißt du?
     <input id="nameEingabe" maxlength="14" autocomplete="off" placeholder="Sam">
   </label>
   <button id="einsteigen" class="gross">Einsteigen</button>
   <div id="enden"></div>
   <p class="hinweis">Tippe auf den Text, um ihn schneller zu lesen. Ton an für Gänsehaut.</p>
+ </div>
 </div>
 
 <main id="bus" class="hidden">
@@ -54,6 +58,11 @@
 </main>
 
 <div id="dunkel"></div>
+<div id="drehen">
+  <div class="handy"></div>
+  <p>Dreh dein Handy quer.</p>
+  <button id="hochkant">Lieber hochkant spielen</button>
+</div>
 <button id="ton" title="Ton an/aus">♪</button>
 
 <script src="audio.js"></script>

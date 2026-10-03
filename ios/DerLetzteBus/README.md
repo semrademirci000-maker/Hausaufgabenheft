@@ -27,6 +27,10 @@ Ordner `ios/DerLetzteBus` `xcodegen generate` ausführen.
 
 Mindestversion: **iOS 17**.
 
+Die App läuft nur **im Querformat** (wie Brawl Stars oder Roblox): links das
+Busfenster mit Sitzreihe, rechts die Geschichte. Auf flachen Handys stehen die
+Antwort-Knöpfe in zwei Spalten.
+
 ## Aufbau des Codes
 
 | Datei | Inhalt |
