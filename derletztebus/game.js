@@ -8,6 +8,7 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import { Ton } from './audio.js';
 import { ENV, T, initTexturen, baueUmgebung, sterne, mond, lichtkegel, baueNachbearbeitung } from './grafik.js';
 import * as Fig from './figuren.js';
+import { ikone, IKONEN } from './ikonen.js';
 
 const $ = id => document.getElementById(id);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -20,12 +21,12 @@ const isTouch = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoi
 //  Waren, Nächte, Speicher
 // ======================================================================
 const WAREN = [
-  { id: 'wasser', name: 'Wasser', emoji: '💧', preis: 100 },
-  { id: 'cola', name: 'Cola', emoji: '🥤', preis: 200 },
-  { id: 'chips', name: 'Chips', emoji: '🍟', preis: 250 },
-  { id: 'schoko', name: 'Schokolade', emoji: '🍫', preis: 150 },
-  { id: 'kaugummi', name: 'Kaugummi', emoji: '🍬', preis: 50 },
-  { id: 'zeitung', name: 'Zeitung', emoji: '📰', preis: 300 }
+  { id: 'wasser', name: 'Wasser', preis: 100 },
+  { id: 'cola', name: 'Cola', preis: 200 },
+  { id: 'chips', name: 'Chips', preis: 250 },
+  { id: 'schoko', name: 'Schokolade', preis: 150 },
+  { id: 'kaugummi', name: 'Kaugummi', preis: 50 },
+  { id: 'zeitung', name: 'Zeitung', preis: 300 }
 ];
 const WARE = Object.fromEntries(WAREN.map(w => [w.id, w]));
 const SELTSAM = ['rohes Fleisch', 'deine Stimme', 'einen Zahn', 'dein Gesicht', 'kalte Erde', 'DICH', 'deinen Namen', 'Haare'];
@@ -77,7 +78,8 @@ addEventListener('resize', () => {
   if (post) { post.composer.setSize(innerWidth, innerHeight); post.bloom.resolution.set(innerWidth / 2, innerHeight / 2); }
 });
 
-scene.add(new THREE.HemisphereLight(0x4a5a88, 0x0c0a08, 0.5));
+const himmelLicht = new THREE.HemisphereLight(0x4a5a88, 0x0c0a08, 0.5);
+scene.add(himmelLicht);
 
 // ---------- Materialien ----------
 const wiederhole = (s, x, y) => { for (const t of [s.map, s.normalMap, s.roughnessMap]) t.repeat.set(x, y); };
@@ -154,6 +156,7 @@ function schiebeRaus(p, r) {
   p.z = clamp(p.z, -8.3, 8);
 }
 const KIOSK = { x0: -3.2, x1: 3.2, z0: -2.7, z1: 2.7 };
+const FENSTER_RAUS = new THREE.Vector3(0, 0, -3.1);
 const drinnen = p => p.x > -3.05 && p.x < 3.05 && p.z > -2.55 && p.z < 2.55;
 function siehtDurch(ax, az, bx, bz, box = KIOSK, rand = 0.15) {
   // Schneidet die Strecke a→b das Rechteck? (Slab-Methode)
@@ -174,7 +177,7 @@ function siehtDurch(ax, az, bx, bz, box = KIOSK, rand = 0.15) {
 //  Welt bauen
 // ======================================================================
 const klickbar = [];
-const W = {};   // wichtige Teile der Welt
+const W = { himmelLicht };   // wichtige Teile der Welt
 const KEIN_LICHT = () => ({ intensity: 0, position: new THREE.Vector3(), color: new THREE.Color() });
 
 function spot(farbe, staerke, reichweite, winkel, halbschatten, abnahme, pos, ziel, schatten, karte = 512, eltern = scene) {
@@ -217,10 +220,17 @@ function etikett(id) {
       for (let i = 0; i < 7; i++) { g.beginPath(); g.ellipse(40 + i * 30, h * 0.8 + (i % 2) * 24, 18, 11, i, 0, Math.PI * 2); g.fill(); }
     }),
     schoko: () => leinwand(128, 256, (g, w, h) => {
-      const gr = g.createLinearGradient(0, 0, w, h); gr.addColorStop(0, '#7b3fb4'); gr.addColorStop(1, '#4a1f80');
+      const gr = g.createLinearGradient(0, 0, w, h); gr.addColorStop(0, '#7d3cc0'); gr.addColorStop(1, '#4e1f86');
       g.fillStyle = gr; g.fillRect(0, 0, w, h);
-      g.fillStyle = '#e6c04a'; g.fillRect(0, h * 0.34, w, 6); g.fillRect(0, h * 0.66, w, 6);
-      schrift(g, 'SCHOKO', w / 2, h * 0.5, 30, '#f6e08a'); schrift(g, 'VOLLMILCH', w / 2, h * 0.82, 14, '#e6d7f6');
+      g.fillStyle = '#e6c04a'; g.fillRect(0, 70, w, 9); g.fillRect(0, 136, w, 9);
+      g.fillStyle = '#f6e08a'; g.beginPath(); g.arc(w / 2, 107, 18, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#5a2a96'; g.beginPath(); g.moveTo(w / 2 - 8, 112); g.lineTo(w / 2, 97); g.lineTo(w / 2 + 8, 112); g.fill();
+      schrift(g, 'SCHOKO', w / 2, 40, 28, '#f6e08a'); schrift(g, 'VOLLMILCH', w / 2, 58, 12, '#e6d7f6');
+      g.fillStyle = '#d7dbe0'; g.beginPath(); g.moveTo(0, 168); g.lineTo(w, 154); g.lineTo(w, 176); g.lineTo(0, 190); g.fill();
+      g.fillStyle = '#5b3420'; g.fillRect(0, 190, w, 66);
+      g.strokeStyle = '#3b2113'; g.lineWidth = 3;
+      for (let x = 32; x < w; x += 32) { g.beginPath(); g.moveTo(x, 186); g.lineTo(x, h); g.stroke(); }
+      g.beginPath(); g.moveTo(0, 222); g.lineTo(w, 222); g.stroke();
     }),
     kaugummi: () => leinwand(128, 128, (g, w, h) => {
       const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#53d98a'); gr.addColorStop(1, '#1f9c5a');
@@ -431,7 +441,7 @@ function baueWelt() {
   kiste(0.1, 1.0, 0.75, M.holz, -2.2, 0.5, -2.2);
   kiste(0.1, 1.0, 0.75, M.holz, 2.2, 0.5, -2.2);
   kiste(4.4, 0.03, 0.06, M.metall, 0, 1.065, -1.84);
-  hindernis(-2.25, 2.25, -2.6, -1.8);
+  hindernis(-2.25, 2.25, -2.6, -1.8, () => !W.fensterFrei);
 
   // Leuchtstoffröhren und Licht
   rundkiste(1.5, 0.07, 0.3, 0.02, std(0xdcdcd6, { roughness: 0.5 }), 0, 2.955, 0);
@@ -474,7 +484,9 @@ function baueWelt() {
   hindernis(3.0, 3.25, -2.78, 0.4);
   hindernis(3.0, 3.25, 1.6, 2.78);
   hindernis(3.0, 3.25, 0.4, 1.6, () => !W.tuerOffen);
-  hindernis(-3.25, 3.25, -2.78, -2.5);
+  hindernis(-3.25, -2.1, -2.78, -2.5);
+  hindernis(2.1, 3.25, -2.78, -2.5);
+  hindernis(-2.1, 2.1, -2.78, -2.5, () => !(W.fensterFrei && W.rollStand < 0.5));
 
   // Hintertür mit Rahmen, Klinke und Lampe
   W.tuerOffen = false; W.tuerWinkel = 0;
@@ -498,53 +510,92 @@ function baueWelt() {
   }));
   ausgang.position.set(2.98, 2.55, 1.0); ausgang.rotation.y = -Math.PI / 2; scene.add(ausgang);
 
-  // Regale an der Rückwand
-  for (const y of [0.45, 0.95, 1.45, 1.95]) kiste(5.4, 0.04, 0.45, M.holz, -0.2, y, 2.27);
-  for (const x of [-2.9, -0.95, 1.0, 2.5]) kiste(0.05, 2.0, 0.45, M.holz, x, 1.0, 2.27);
-  kiste(5.5, 2.0, 0.02, std(0x2a2118, { roughness: 0.9 }), -0.2, 1.0, 2.49);
-  hindernis(-2.95, 2.55, 2.02, 2.55);
+  // Regale an der Rückwand (links davon steht der Kühlschrank in der Ecke)
+  for (const y of [0.45, 0.95, 1.45, 1.95]) kiste(4.5, 0.04, 0.45, M.holz, 0.325, y, 2.27);
+  for (const x of [-1.9, -0.43, 1.05, 2.55]) kiste(0.05, 2.0, 0.45, M.holz, x, 1.0, 2.27);
+  kiste(4.6, 2.0, 0.02, std(0x2a2118, { roughness: 0.9 }), 0.325, 1.0, 2.49);
+  hindernis(-1.95, 2.6, 2.02, 2.55);
   const regal = [
-    ['wasser', -1.92, 0.97, 8, 0.115], ['cola', 0.02, 0.97, 14, 0.12], ['chips', 1.75, 0.97, 6, 0.235],
-    ['schoko', -1.92, 1.47, 12, 0.14], ['kaugummi', 0.02, 1.47, 14, 0.12], ['zeitung', 1.75, 1.47, 3, 0.4]
+    ['wasser', -1.165, 0.97, 7, 0.17], ['cola', 0.31, 0.97, 11, 0.115], ['chips', 1.8, 0.97, 5, 0.26],
+    ['schoko', -1.165, 1.47, 9, 0.14], ['kaugummi', 0.31, 1.47, 11, 0.115], ['zeitung', 1.8, 1.47, 3, 0.4]
   ];
   for (const [id, x, y, anzahl, abstand] of regal) {
-    for (let reihe = 0; reihe < 2; reihe++) {
+    for (let reihe = 0; reihe < (HOCH ? 2 : 1); reihe++) {
+      if (id === 'zeitung' && reihe) continue;
       const n = anzahl - reihe;
       for (let i = 0; i < n; i++) {
         const w = wareModell(id);
-        w.position.set(x + (i - (n - 1) / 2) * abstand + (id === 'zeitung' ? (reihe ? 0.1 : 0) : 0), y, reihe ? 2.36 : 2.2);
-        w.rotation.y = zufall(-0.35, 0.35) + (id === 'zeitung' ? 0 : Math.PI);
-        if (id === 'zeitung' && reihe) { w.visible = false; continue; }
+        w.position.set(x + (i - (n - 1) / 2) * abstand + reihe * abstand * 0.5 * (i < n - 1 ? 1 : 0), y, reihe ? 2.36 : 2.2);
+        w.rotation.y = zufall(-0.3, 0.3) + (id === 'zeitung' ? 0 : Math.PI);
         scene.add(w);
       }
     }
-    const treffer = kiste(1.6, 0.46, 0.5, M.unsichtbar, x, y + 0.2, 2.2);
+    const treffer = kiste(1.4, 0.46, 0.5, M.unsichtbar, x, y + 0.2, 2.2);
     treffer.userData = { typ: 'regal', ware: id }; klickbar.push(treffer);
     const preis = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.16), new THREE.MeshBasicMaterial({ map: preisSchild(WARE[id]) }));
     preis.position.set(x, y - 0.06, 2.03); preis.rotation.y = Math.PI; scene.add(preis);
   }
-  // Kartons und Wasserkisten
+  // Kartons oben und Wasserkisten unten
   const karton = std(0xa88456, { roughness: 0.85 });
-  for (const [x, y, b, h, t] of [[-2.2, 2.12, 0.55, 0.3, 0.38], [-1.3, 2.12, 0.45, 0.26, 0.35], [0.4, 2.14, 0.6, 0.32, 0.4], [2.0, 2.1, 0.5, 0.24, 0.36]]) {
+  for (const [x, y, b, h, t] of [[-1.35, 2.12, 0.55, 0.3, 0.38], [-0.4, 2.12, 0.45, 0.26, 0.35], [0.7, 2.14, 0.6, 0.32, 0.4], [2.0, 2.1, 0.5, 0.24, 0.36]]) {
     const k = rundkiste(b, h, t, 0.01, karton, x, y, 2.28); k.rotation.y = zufall(-0.08, 0.08);
     kiste(b * 0.18, 0.002, t + 0.01, std(0xc8b48a, { roughness: 0.4 }), x, y + h / 2 + 0.001, 2.28);
   }
-  for (let i = 0; i < 3; i++) rundkiste(0.5, 0.28, 0.34, 0.015, std(0x2a5ea0, { roughness: 0.5 }), -2.2 + i * 0.6, 0.6, 2.25);
+  for (let i = 0; i < 3; i++) rundkiste(0.45, 0.28, 0.34, 0.015, std(0x2a5ea0, { roughness: 0.5 }), -1.4 + i * 0.5, 0.6, 2.25);
 
-  // Kühlschrank mit leuchtender Glastür
-  rundkiste(0.9, 2.0, 0.7, 0.03, std(0xd8dde3, { roughness: 0.28, metalness: 0.3, envMapIntensity: 1 }), -2.5, 1.0, 1.4);
-  const kuehl = leinwand(128, 256, (g, w, h) => {
-    g.fillStyle = '#cfe8f6'; g.fillRect(0, 0, w, h);
-    const farben = ['#d62a2a', '#2f7fd0', '#e8b020', '#3fa860', '#d62a2a', '#6a4a2a'];
-    for (let r = 0; r < 5; r++) {
-      g.fillStyle = '#8aa4b4'; g.fillRect(0, 48 * r + 44, w, 4);
-      for (let i = 0; i < 6; i++) { g.fillStyle = farben[(i + r * 2) % 6]; g.fillRect(8 + i * 19, 48 * r + 10, 13, 34); g.fillStyle = '#fff'; g.fillRect(10 + i * 19, 48 * r + 6, 9, 5); }
-    }
-  });
-  W.kuehlGlas = new THREE.MeshStandardMaterial({ color: 0x223038, emissive: 0xffffff, emissiveMap: kuehl, emissiveIntensity: 0.75, roughness: 0.05, envMap: ENV, envMapIntensity: 1.4 });
-  const glas = new THREE.Mesh(new THREE.PlaneGeometry(0.76, 1.6), W.kuehlGlas);
-  glas.position.set(-2.5, 1.1, 1.04); glas.rotation.y = Math.PI; scene.add(glas);
-  hindernis(-2.98, -2.02, 1.03, 1.78);
+  // Getränke-Kühlschrank hinten links in der Ecke: Glastür, Licht, echte Flaschen und Dosen
+  {
+    const kx = -2.47, kz = 2.14, kb = 1.0, kt = 0.72, kh = 2.0;
+    const gehaeuse = std(0xe3e6ea, { roughness: 0.25, metalness: 0.35, envMapIntensity: 1 });
+    const innen = new THREE.MeshStandardMaterial({ color: 0xdfeaf2, emissive: 0xcfe8ff, emissiveIntensity: 0.18, roughness: 0.4 });
+    kiste(0.04, kh, kt, gehaeuse, kx - kb / 2 + 0.02, kh / 2, kz);
+    kiste(0.04, kh, kt, gehaeuse, kx + kb / 2 - 0.02, kh / 2, kz);
+    kiste(kb, 0.05, kt, gehaeuse, kx, kh - 0.025, kz);
+    kiste(kb, 0.2, kt, std(0x2a2d33, { roughness: 0.6 }), kx, 0.1, kz);
+    kiste(kb - 0.08, kh - 0.25, 0.02, innen, kx, 1.1, kz + kt / 2 - 0.03);
+    // Kopfteil mit Leuchtschrift
+    const kopf = new THREE.Mesh(new THREE.PlaneGeometry(kb - 0.06, 0.2), new THREE.MeshBasicMaterial({ map: leinwand(256, 52, (g, w, h) => {
+      const gr = g.createLinearGradient(0, 0, w, 0); gr.addColorStop(0, '#0b5fa8'); gr.addColorStop(1, '#1789d8');
+      g.fillStyle = gr; g.fillRect(0, 0, w, h);
+      g.fillStyle = '#fff'; g.font = 'bold 30px Inter, Arial, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('EISKALT', w / 2, h / 2 + 1);
+    }) }));
+    kopf.position.set(kx, kh - 0.16, kz - kt / 2 - 0.005); kopf.rotation.y = Math.PI; scene.add(kopf);
+    // Licht-Leiste innen
+    kiste(kb - 0.1, 0.02, 0.02, std(0xffffff, { emissive: 0xdff0ff, emissiveIntensity: 0.9 }), kx, kh - 0.3, kz - kt / 2 + 0.08).castShadow = false;
+    if (HOCH) { const l = new THREE.PointLight(0xdcefff, 1.1, 2.0, 1.8); l.position.set(kx, 1.4, kz - 0.1); scene.add(l); }
+    // Gitterböden mit Getränken
+    const boeden = [0.3, 0.7, 1.1, 1.5];
+    boeden.forEach((y, r) => {
+      kiste(kb - 0.1, 0.012, kt - 0.1, M.metall, kx, y, kz).castShadow = false;
+      const id = r < 2 ? 'cola' : 'wasser';
+      const abstand = id === 'cola' ? 0.1 : 0.12, n = id === 'cola' ? 8 : 7;
+      for (let reihe = 0; reihe < (HOCH ? 2 : 1); reihe++) {
+        for (let i = 0; i < n - reihe; i++) {
+          const w = wareModell(id);
+          w.position.set(kx + (i - (n - 1 - reihe) / 2) * abstand, y + 0.006, kz - 0.18 + reihe * 0.2);
+          w.rotation.y = Math.PI + zufall(-0.25, 0.25);
+          w.traverse(o => { if (o.isMesh) o.castShadow = false; });
+          scene.add(w);
+        }
+      }
+    });
+    // Glastür mit Rahmen und Griff
+    const tuerZ = kz - kt / 2 - 0.012;
+    const glas = new THREE.Mesh(new THREE.PlaneGeometry(kb - 0.08, kh - 0.42), new THREE.MeshPhysicalMaterial({
+      color: 0xffffff, transparent: true, opacity: 0.1, roughness: 0.03, envMap: ENV, envMapIntensity: 1.8, depthWrite: false
+    }));
+    glas.position.set(kx, 1.03, tuerZ); glas.rotation.y = Math.PI; glas.renderOrder = 3; scene.add(glas);
+    const rahmen = std(0xcfd3d8, { roughness: 0.3, metalness: 0.6 });
+    kiste(kb, 0.04, 0.03, rahmen, kx, 0.22, tuerZ);
+    kiste(kb, 0.04, 0.03, rahmen, kx, 1.84, tuerZ);
+    kiste(0.04, 1.62, 0.03, rahmen, kx - kb / 2 + 0.02, 1.03, tuerZ);
+    kiste(0.04, 1.62, 0.03, rahmen, kx + kb / 2 - 0.02, 1.03, tuerZ);
+    kiste(0.03, 0.5, 0.04, M.metall, kx + kb / 2 - 0.08, 1.1, tuerZ - 0.03);
+    // Antippen: oben Wasser, unten Cola
+    const oben = kiste(kb, 0.8, 0.5, M.unsichtbar, kx, 1.45, kz - 0.15); oben.userData = { typ: 'regal', ware: 'wasser' }; klickbar.push(oben);
+    const unten = kiste(kb, 0.8, 0.5, M.unsichtbar, kx, 0.6, kz - 0.15); unten.userData = { typ: 'regal', ware: 'cola' }; klickbar.push(unten);
+    hindernis(kx - kb / 2 - 0.02, kx + kb / 2, kz - kt / 2 - 0.03, 2.55);
+  }
 
   // Kasse mit Bildschirm
   W.kasse = new THREE.Group(); W.kasse.position.set(1.55, 1.06, -2.2); scene.add(W.kasse);
@@ -762,6 +813,7 @@ function baueWelt() {
 
   baueBus();
   baueRegen();
+  baueKamera();
 }
 
 // ---------- Bus ----------
@@ -823,23 +875,221 @@ function baueBus() {
 const BUS_HALT = -11.5;   // Tür bei x = −8
 const BUS_TUER = new THREE.Vector3(-8, 0, -7.7);
 
-// ---------- Regen als Streifen ----------
-const REGEN_N = 1300, REGEN_W = 32;
+// ---------- Regen: feine Streifen, die im Licht glitzern ----------
+const REGEN_N = HOCH ? 2600 : 1200, TRAUFE_N = 90, REGEN_W = 30;
+const LAMPEN_REGEN = [new THREE.Vector3(-6, 3.6, -6.6), new THREE.Vector3(7, 3.6, -6.6), new THREE.Vector3(-15, 3.6, 4), new THREE.Vector3(0, 3.3, -3.4), new THREE.Vector3(3.9, 2.3, 1), new THREE.Vector3(-11.5, 1.6, -4.6)];
 function baueRegen() {
-  const pos = new Float32Array(REGEN_N * 6);
-  W.regenV = new Float32Array(REGEN_N);
-  W.regenL = new Float32Array(REGEN_N);
-  for (let i = 0; i < REGEN_N; i++) {
-    W.regenV[i] = zufall(11, 16); W.regenL[i] = zufall(0.25, 0.55);
-    const x = zufall(-REGEN_W / 2, REGEN_W / 2), y = zufall(0, 14), z = zufall(-REGEN_W / 2, REGEN_W / 2);
-    pos.set([x, y, z, x, y + W.regenL[i], z], i * 6);
+  const n = REGEN_N + TRAUFE_N;
+  const pos = new Float32Array(n * 12), alpha = new Float32Array(n * 4), seite = new Float32Array(n * 4), index = [];
+  W.regenV = new Float32Array(n); W.regenL = new Float32Array(n);
+  W.regenX = new Float32Array(n); W.regenY = new Float32Array(n); W.regenZ = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const traufe = i >= REGEN_N;
+    W.regenV[i] = traufe ? zufall(5.5, 7.5) : zufall(9, 13);
+    W.regenL[i] = traufe ? zufall(0.08, 0.16) : zufall(0.35, 0.7);
+    W.regenX[i] = traufe ? zufall(-3.4, 3.4) : zufall(-REGEN_W / 2, REGEN_W / 2);
+    W.regenY[i] = traufe ? zufall(0, 3.1) : zufall(0, 14);
+    W.regenZ[i] = traufe ? zufall(-3.02, -2.95) : zufall(-REGEN_W / 2, REGEN_W / 2);
+    // vier Ecken: Kopf links/rechts (hell), Schwanz links/rechts (durchsichtig)
+    alpha.set([1, 1, 0, 0], i * 4); seite.set([-1, 1, -1, 1], i * 4);
+    const v = i * 4; index.push(v, v + 2, v + 1, v + 1, v + 2, v + 3);
   }
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  W.regen = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: 0xa8bce0, transparent: true, opacity: 0.2, depthWrite: false }));
-  W.regen.frustumCulled = false;
+  geo.setAttribute('alpha', new THREE.BufferAttribute(alpha, 1));
+  geo.setAttribute('seite', new THREE.BufferAttribute(seite, 1));
+  geo.setIndex(index);
+  W.regenMat = new THREE.ShaderMaterial({
+    uniforms: { lampen: { value: LAMPEN_REGEN }, blitz: { value: 0 }, dichte: { value: scene.fog.density } },
+    vertexShader: `
+      attribute float alpha; attribute float seite;
+      varying float vA; varying vec3 vW; varying float vD;
+      void main(){
+        vA = alpha;
+        vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz;
+        vec4 mv = viewMatrix * w;
+        vD = -mv.z;
+        mv.x += seite * max(0.0022, vD * 0.0011);
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: `
+      uniform vec3 lampen[6]; uniform float blitz; uniform float dichte;
+      varying float vA; varying vec3 vW; varying float vD;
+      void main(){
+        float licht = 0.12 + blitz * 1.2;
+        for (int i = 0; i < 6; i++) { vec3 d = vW - lampen[i]; licht += 1.1 * exp(-dot(d, d) / 7.0); }
+        float nebel = exp(-pow(vD * dichte, 2.0));
+        float a = vA * clamp(licht, 0.0, 1.4) * 0.55 * nebel;
+        gl_FragColor = vec4(vec3(0.78, 0.84, 0.95) * (0.7 + licht * 0.5), a);
+      }`,
+    transparent: true, depthWrite: false
+  });
+  W.regen = new THREE.Mesh(geo, W.regenMat);
+  W.regen.frustumCulled = false; W.regen.renderOrder = 6;
   scene.add(W.regen);
+
+  // Ringe und Spritzer am Boden
+  W.ringe = [];
+  const ringGeo = new THREE.RingGeometry(0.7, 1, 24);
+  ringGeo.rotateX(-Math.PI / 2);
+  for (let i = 0; i < (HOCH ? 90 : 40); i++) {
+    const m = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0xc8d8f0, transparent: true, opacity: 0, depthWrite: false }));
+    m.visible = false; m.renderOrder = 4; scene.add(m);
+    W.ringe.push({ m, t: 1, dauer: 0.5 });
+  }
+  W.ringIndex = 0;
 }
+function spritzer(x, z, gross = 1) {
+  const r = W.ringe[W.ringIndex = (W.ringIndex + 1) % W.ringe.length];
+  r.m.position.set(x, 0.012, z); r.t = 0; r.dauer = zufall(0.35, 0.6); r.gross = gross * zufall(0.12, 0.22);
+  r.m.visible = true;
+}
+function updateRegen(dt) {
+  const pos = W.regen.geometry.attributes.position.array, cx = camera.position.x, cz = camera.position.z;
+  const wind = 0.9;
+  const imKiosk = (x, z) => x > -3.4 && x < 3.4 && z > -2.9 && z < 2.95;
+  for (let i = 0; i < REGEN_N + TRAUFE_N; i++) {
+    const traufe = i >= REGEN_N;
+    let x = W.regenX[i], y = W.regenY[i] - W.regenV[i] * dt, z = W.regenZ[i];
+    if (!traufe) {
+      x += wind * dt * 0.35;
+      if (x - cx > REGEN_W / 2) x -= REGEN_W; else if (x - cx < -REGEN_W / 2) x += REGEN_W;
+      if (z - cz > REGEN_W / 2) z -= REGEN_W; else if (z - cz < -REGEN_W / 2) z += REGEN_W;
+    }
+    if (y < 0 || (!traufe && imKiosk(x, z) && y < 3.35)) {
+      if (y < 0 && (traufe || Math.random() < 0.06) && Math.hypot(x - cx, z - cz) < 11 && !imKiosk(x, z)) spritzer(x, z, traufe ? 1.3 : 1);
+      if (traufe) { y = 3.1; x = zufall(-3.4, 3.4); }
+      else {
+        y = zufall(11, 14);
+        x = cx + zufall(-REGEN_W / 2, REGEN_W / 2); z = cz + zufall(-REGEN_W / 2, REGEN_W / 2);
+      }
+    }
+    W.regenX[i] = x; W.regenY[i] = y; W.regenZ[i] = z;
+    const l = W.regenL[i], sx = traufe ? 0 : wind * 0.035 * l, j = i * 12;
+    pos[j] = x; pos[j + 1] = y; pos[j + 2] = z;
+    pos[j + 3] = x; pos[j + 4] = y; pos[j + 5] = z;
+    pos[j + 6] = x - sx; pos[j + 7] = y + l; pos[j + 8] = z;
+    pos[j + 9] = x - sx; pos[j + 10] = y + l; pos[j + 11] = z;
+  }
+  W.regen.geometry.attributes.position.needsUpdate = true;
+  // zusätzliche Ringe in Pfützen und auf dem Platz
+  const anzahl = Math.random() < dt * (HOCH ? 70 : 30) ? 1 : 0;
+  for (let i = 0; i < anzahl; i++) {
+    const x = cx + zufall(-8, 8), z = cz + zufall(-8, 8);
+    if (!imKiosk(x, z)) spritzer(x, z);
+  }
+  for (const r of W.ringe) {
+    if (!r.m.visible) continue;
+    r.t += dt;
+    const a = r.t / r.dauer;
+    if (a >= 1) { r.m.visible = false; continue; }
+    r.m.scale.setScalar(r.gross * (0.3 + a * 1.4));
+    r.m.material.opacity = (1 - a) * 0.45;
+  }
+}
+
+// ---------- Überwachungskamera ----------
+const CAMS = [
+  { name: 'VORNE', pos: [0.6, 3.25, -3.2], ziel: [0.2, 0.9, -8.5], fov: 72 },
+  { name: 'HINTERTÜR', pos: [3.55, 3.05, -1.4], ziel: [5.2, 0.4, 1.4], fov: 74 },
+  { name: 'HALTESTELLE', pos: [-3.45, 3.25, -3.0], ziel: [-10.5, 0.8, -6.4], fov: 68 }
+];
+const CCTV = { nr: 0, an: true, t: 1, cam: new THREE.PerspectiveCamera(70, 16 / 9, 0.1, 140) };
+const CCTV_SHADER = {
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: `
+    uniform sampler2D tex; uniform float zeit; uniform float linear; uniform float alarm; varying vec2 vUv;
+    float h(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233)) + zeit) * 43758.5453); }
+    void main(){
+      vec2 uv = vUv;
+      uv.x += (h(vec2(floor(uv.y * 70.0), floor(zeit * 8.0))) - 0.5) * 0.004;
+      vec3 c = texture2D(tex, uv).rgb;
+      float L = dot(c, vec3(0.299, 0.587, 0.114));
+      float v = 1.0 - exp(-L * 9.0);
+      v *= 0.86 + 0.14 * sin(uv.y * 520.0 + zeit * 4.0);
+      v += (h(uv * 500.0) - 0.5) * 0.14;
+      v *= smoothstep(1.15, 0.35, length(uv - 0.5) * 1.45);
+      vec3 col = mix(vec3(0.6, 1.0, 0.66), vec3(1.0, 0.55, 0.5), alarm) * v;
+      if (linear > 0.5) col = pow(max(col, 0.0), vec3(2.2));
+      gl_FragColor = vec4(col, 1.0);
+    }`
+};
+function baueKamera() {
+  CCTV.rt = new THREE.WebGLRenderTarget(HOCH ? 480 : 320, HOCH ? 270 : 180, { type: THREE.HalfFloatType });
+  const uni = () => ({ tex: { value: CCTV.rt.texture }, zeit: { value: 0 }, linear: { value: 0 }, alarm: { value: 0 } });
+  CCTV.matSchirm = new THREE.ShaderMaterial({ uniforms: uni(), ...CCTV_SHADER, depthTest: false, depthWrite: false });
+  CCTV.matMonitor = new THREE.ShaderMaterial({ uniforms: uni(), ...CCTV_SHADER });
+  CCTV.matMonitor.uniforms.linear.value = 1;
+  CCTV.szene = new THREE.Scene();
+  const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), CCTV.matSchirm); quad.frustumCulled = false;
+  CCTV.szene.add(quad);
+  CCTV.ortho = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  // kleine Kameras außen am Kiosk
+  for (const c of CAMS) {
+    const g = new THREE.Group(); g.position.set(...c.pos); scene.add(g);
+    rundkiste(0.12, 0.1, 0.2, 0.02, std(0xdcdcd8, { roughness: 0.4 }), 0, 0, 0, g);
+    const led = new THREE.Mesh(new THREE.SphereGeometry(0.01, 6, 4), new THREE.MeshBasicMaterial({ color: new THREE.Color(4, 0.1, 0.1) }));
+    led.position.set(0.03, 0.04, 0.08); g.add(led);
+    g.lookAt(...c.ziel);
+  }
+  // Monitor auf der Theke
+  const m = new THREE.Group(); m.position.set(-1.8, 1.06, -2.3); scene.add(m);
+  rundkiste(0.14, 0.02, 0.1, 0.008, M.dunkel, 0, 0.01, 0, m);
+  kiste(0.03, 0.12, 0.03, M.dunkel, 0, 0.07, 0, m);
+  const gehaeuse = rundkiste(0.48, 0.3, 0.05, 0.015, std(0x1b1d22, { roughness: 0.5 }), 0, 0.27, 0, m);
+  gehaeuse.rotation.x = -0.12;
+  const bild = new THREE.Mesh(new THREE.PlaneGeometry(0.43, 0.242), CCTV.matMonitor);
+  bild.position.set(0, 0.272, 0.027); bild.rotation.x = -0.12; m.add(bild);
+  m.rotation.y = 0.25;
+}
+function updateKamera(dt) {
+  if (!['schicht', 'kasse', 'jagd', 'schreck'].includes(S.modus)) return;
+  const k = S.kunde || J.k;
+  const alarm = k && k.monster && ['lauern', 'schleichen', 'tuerKlopfen', 'jagt'].includes(k.zustand) ? 1 : 0;
+  const zeit = performance.now() / 1000;
+  for (const m of [CCTV.matSchirm, CCTV.matMonitor]) { m.uniforms.zeit.value = zeit % 100; m.uniforms.alarm.value = alarm * (0.5 + 0.5 * Math.sin(zeit * 8)) * 0.6; }
+  $('kamera').classList.toggle('alarm', !!alarm);
+  $('kamZeit').textContent = uhrText(S.zeit);
+  CCTV.t += dt;
+  if (CCTV.t < (HOCH ? 0.07 : 0.16)) return;
+  CCTV.t = 0;
+  const c = CAMS[CCTV.nr];
+  CCTV.cam.fov = c.fov; CCTV.cam.updateProjectionMatrix();
+  CCTV.cam.position.set(...c.pos); CCTV.cam.lookAt(...c.ziel);
+  const vorher = renderer.shadowMap.autoUpdate;
+  renderer.shadowMap.autoUpdate = false;     // Schatten vom Hauptbild wiederverwenden
+  renderer.setRenderTarget(CCTV.rt);
+  renderer.render(scene, CCTV.cam);
+  renderer.setRenderTarget(null);
+  renderer.shadowMap.autoUpdate = vorher;
+}
+function zeichneKameraBild() {
+  if (!CCTV.an || !['schicht', 'kasse', 'jagd'].includes(S.modus)) return;
+  const r = $('kamera').getBoundingClientRect();
+  if (!r.width) return;
+  const x = r.left + 2, y = innerHeight - r.bottom + 2, w = r.width - 4, h = r.height - 4;
+  renderer.autoClear = false;
+  renderer.setScissorTest(true);
+  renderer.setViewport(x, y, w, h); renderer.setScissor(x, y, w, h);
+  renderer.render(CCTV.szene, CCTV.ortho);
+  renderer.setScissorTest(false);
+  renderer.setViewport(0, 0, innerWidth, innerHeight);
+  renderer.autoClear = true;
+}
+function kameraWechseln() {
+  CCTV.nr = (CCTV.nr + 1) % CAMS.length;
+  $('kamName').textContent = `CAM ${CCTV.nr + 1} · ${CAMS[CCTV.nr].name}`;
+  CCTV.t = 1;
+  Ton.klick();
+}
+document.querySelector('#bRollladen .rl-ik').innerHTML = IKONEN.rollladen;
+$('kamera').addEventListener('pointerdown', e => { e.stopPropagation(); kameraWechseln(); });
+$('bKamera').addEventListener('pointerdown', e => {
+  e.stopPropagation();
+  CCTV.an = !CCTV.an;
+  $('kamera').classList.toggle('weg2', !CCTV.an);
+  Ton.klick();
+});
 
 // ======================================================================
 //  Figuren (Kunden und Monster)
@@ -897,7 +1147,7 @@ function zeichneTragen() {
   hud.tragen.innerHTML = '';
   S.tragen.forEach((id, i) => {
     const b = document.createElement('button');
-    b.innerHTML = `<span>${WARE[id].emoji}</span>${WARE[id].name}<small>✕</small>`;
+    b.innerHTML = `${ikone(id)}${WARE[id].name}<small>✕</small>`;
     b.title = 'Zurücklegen';
     b.addEventListener('pointerdown', e => { e.stopPropagation(); S.tragen.splice(i, 1); Ton.ablegen(); zeichneTragen(); });
     hud.tragen.appendChild(b);
@@ -907,7 +1157,8 @@ function zeichneInfos() {
   hud.uhr.textContent = uhrText(S.zeit);
   hud.nacht.textContent = 'Nacht ' + (S.nacht + 1);
   hud.geld.textContent = euro(S.geld);
-  hud.herzen.textContent = '❤️'.repeat(Math.max(0, S.herzen)) + '🖤'.repeat(Math.max(0, 3 - S.herzen));
+  const herzHtml = ikone('herz').repeat(Math.max(0, S.herzen)) + ikone('herzLeer').repeat(Math.max(0, 3 - S.herzen));
+  if (hud.herzen.dataset.h !== herzHtml) { hud.herzen.innerHTML = herzHtml; hud.herzen.dataset.h = herzHtml; }
 }
 
 // ======================================================================
@@ -936,6 +1187,7 @@ function neuerKunde() {
     wunsch: monster && zeichen.has('wunsch') ? wuerfel(SELTSAM) : null,
     pos: BUS_TUER.clone(), zustand: 'aussteigen', t: 0,
     pfad: [], geduld: N.geduld, geduldMax: N.geduld,
+    angriff: monster && Math.random() < [0, 0.35, 0.5][S.nacht] ? 'hinten' : 'fenster',
     lauern: N.lauern, gang: 0, zuckT: zufall(1, 2.5), sagt: '', sagtT: 0, sagtRot: false,
     fensterX: zufall(-1.2, 0.9)
   };
@@ -976,7 +1228,7 @@ function updateKunde(k, dt) {
   if (k.monster && k.zeichen.has('augen')) k.f.augen.forEach(a => a.scale.setScalar(1.1 + Math.sin(k.t * 6) * 0.3));
 
   // Monster: Rollladen zu → abgewehrt
-  if (k.monster && zu && ['aussteigen', 'laufen', 'lauern'].includes(k.zustand)) {
+  if (k.monster && zu && k.angriff === 'fenster' && ['aussteigen', 'laufen', 'lauern'].includes(k.zustand)) {
     const amFenster = k.zustand === 'lauern';
     k.zustand = 'abgewehrt'; k.t = 0;
     sag(k, 'LASS MICH REIN!', 3, true);
@@ -1016,9 +1268,32 @@ function updateKunde(k, dt) {
         kundeGeht(k, 'Das dauert mir zu lange!');
       }
       break;
-    case 'lauern':
+    case 'lauern': {
       k.lauern -= dt;
-      if (k.lauern <= 0) starteJagd(k);
+      // je näher der Angriff, desto wilder flippt es aus
+      const wut = clamp(1 - k.lauern / N.lauern, 0, 1);
+      if (wut > 0.45) {
+        const w = (wut - 0.45) / 0.55;
+        k.f.g.position.set(k.pos.x + zufall(-1, 1) * 0.03 * w, 0, k.pos.z + zufall(-1, 1) * 0.02 * w);
+        k.f.g.rotation.y = zufall(-1, 1) * 0.12 * w;
+        k.zuckZ = Math.sin(k.t * 23) * 0.5 * w;
+        k.f.armL.rotation.x = -1.2 - Math.sin(k.t * 15) * 0.6 * w; k.f.armR.rotation.x = -1.2 - Math.cos(k.t * 13) * 0.6 * w;
+        k.f.augen.forEach(a => a.scale.setScalar(1 + w * 0.6));
+      }
+      if (k.angriff === 'hinten' && k.t > 2.5) {
+        k.zustand = 'schleichen'; k.t = 0; k.sagtT = 0;
+        k.pfad = [new THREE.Vector3(3.95, 0, -3.5), new THREE.Vector3(4.1, 0, -0.6), new THREE.Vector3(4.05, 0, 1.0)];
+      } else if (k.lauern <= 0) starteJagd(k, 'fenster');
+      break;
+    }
+    case 'schleichen':
+      if (gehePfad(k, dt, 2.1)) { k.zustand = 'tuerKlopfen'; k.t = 0; k.klopfen = 0; k.lauern = N.lauern * 0.75; k.f.g.rotation.y = -Math.PI / 2; }
+      break;
+    case 'tuerKlopfen':
+      k.lauern -= dt; k.klopfen -= dt;
+      k.f.armL.rotation.x = k.f.armR.rotation.x = -1.4 - Math.max(0, Math.sin(k.t * 9)) * 0.6;
+      if (k.klopfen <= 0) { k.klopfen = zufall(0.45, 0.8); Ton.schlag(); W.tuerZittern = 0.12; }
+      if (k.lauern <= 0) starteJagd(k, 'tuer');
       break;
     case 'abgewehrt':
       k.f.g.visible = k.t < 1.4 || Math.floor(k.t * 14) % 2 === 0;
@@ -1039,8 +1314,10 @@ function updateKunde(k, dt) {
       break;
   }
   // Haltung und Blick: Wer wartet, steht ruhig, atmet, blinzelt und schaut dich an
-  if (['bestellen', 'zahlen', 'lauern', 'klopfen', 'abgewehrt'].includes(k.zustand)) {
+  if (['bestellen', 'zahlen', 'klopfen', 'abgewehrt'].includes(k.zustand)) {
     Fig.ruhe(k.f, k.t);
+    Fig.blicken(k.f, dt, camera.position, k.zuckZ);
+  } else if (['lauern', 'tuerKlopfen'].includes(k.zustand)) {
     Fig.blicken(k.f, dt, camera.position, k.zuckZ);
   } else if (k.zustand !== 'jagt') {
     Fig.blicken(k.f, dt, null, k.zuckZ);
@@ -1075,12 +1352,12 @@ function updateBlase() {
   else if (zu) html = '';
   else if (k.zustand === 'bestellen' || (k.zustand === 'lauern' && !k.wunsch)) {
     const anteil = k.zustand === 'lauern' ? k.lauern / N.lauern : k.geduld / k.geduldMax;
-    const waren = k.bestellung.map(id => `<span class="ware ${S.theke.some(t => t.id === id) ? 'ok' : ''}">${WARE[id].emoji} ${WARE[id].name}</span>`).join('');
+    const waren = k.bestellung.map(id => `<span class="ware ${S.theke.some(t => t.id === id) ? 'ok' : ''}">${ikone(id)}${WARE[id].name}</span>`).join('');
     html = `Ich hätte gern:<div class="waren">${waren}</div>${geduldBalken(anteil)}`;
   } else if (k.zustand === 'lauern') {
     html = `Ich will …<div class="seltsam">${k.wunsch}</div>${geduldBalken(k.lauern / N.lauern)}`;
   } else if (k.zustand === 'zahlen') {
-    html = `Macht ${euro(k.summe)}?<br>Hier, bitte: <b>💶 ${euro(k.zahlt)}</b>${geduldBalken(k.geduld / k.geduldMax)}`;
+    html = `Macht ${euro(k.summe)}?<br>Hier, bitte: <b class="geldschein">${ikone('schein')}${euro(k.zahlt)}</b>${geduldBalken(k.geduld / k.geduldMax)}`;
   }
   if (!html) { b.classList.add('weg'); return; }
   _kopfPos.set(k.pos.x, 2.25 * k.f.g.scale.y, k.pos.z).project(camera);
@@ -1101,7 +1378,7 @@ function geduldBalken(a) {
 function nimmWare(id) {
   if (S.tragen.length >= 4) { toast('Hände voll!', '#ffd27a'); Ton.fehler(); return; }
   S.tragen.push(id); Ton.nehmen(); zeichneTragen();
-  toast(WARE[id].emoji + ' ' + WARE[id].name, '#fff');
+  toast(WARE[id].name, '#fff');
 }
 
 function legeAufTheke() {
@@ -1149,7 +1426,7 @@ function kasseAuf() {
     return;
   }
   rueck = 0;
-  $('kListe').innerHTML = k.bestellung.map(id => `<div><span>${WARE[id].emoji} ${WARE[id].name}</span><span>${euro(WARE[id].preis)}</span></div>`).join('');
+  $('kListe').innerHTML = k.bestellung.map(id => `<div><span>${ikone(id)} ${WARE[id].name}</span><span>${euro(WARE[id].preis)}</span></div>`).join('');
   $('kSumme').textContent = euro(k.summe);
   $('kGegeben').textContent = euro(k.zahlt);
   $('kRueck').textContent = euro(0);
@@ -1204,7 +1481,7 @@ function rollladen() {
   if (!['schicht', 'kasse'].includes(S.modus)) return;
   W.rollZiel = W.rollZiel ? 0 : 1;
   Ton.rollladen();
-  $('bRollladen').textContent = W.rollZiel ? '⬆ ROLLLADEN AUF' : '⬇ ROLLLADEN';
+  $('rlText').textContent = W.rollZiel ? 'HOCH' : 'RUNTER';
   $('bRollladen').classList.toggle('zu', !!W.rollZiel);
 }
 $('bRollladen').addEventListener('pointerdown', e => { e.stopPropagation(); Ton.start(); rollladen(); });
@@ -1216,10 +1493,12 @@ const J = { phase: '', t: 0, k: null, start: new THREE.Vector3() };
 const TUER_INNEN = new THREE.Vector3(2.4, 0, 1.0), TUER_AUSSEN = new THREE.Vector3(3.95, 0, 1.0);
 const ECKEN = [new THREE.Vector3(-3.95, 0, -3.45), new THREE.Vector3(3.95, 0, -3.45), new THREE.Vector3(3.95, 0, 3.45), new THREE.Vector3(-3.95, 0, 3.45)];
 
-function starteJagd(k) {
+function starteJagd(k, ort = 'fenster') {
   if (S.modus === 'kasse') kasseZu();
   S.modus = 'jagd';
-  J.phase = 'klettern'; J.t = 0; J.k = k;
+  J.phase = 'klettern'; J.t = 0; J.k = k; J.ort = ort;
+  W.fensterFrei = ort === 'tuer';
+  if (ort === 'tuer') { k.pos.set(4.05, 0, 1.0); Ton.schlag(); }
   k.zustand = 'jagt';
   k.f.g.visible = true;
   verwandeln(k.f);
@@ -1235,7 +1514,7 @@ function starteJagd(k) {
   $('ausdauer').classList.add('an');
   $('rot').style.opacity = 0.6;
   hud.blase.classList.add('weg');
-  ziel('LAUF! Hinten rechts raus zum Bus!', true);
+  ziel(ort === 'tuer' ? 'Es kommt durch die Hintertür! LAUF – über die Theke aus dem Fenster!' : 'LAUF! Hinten rechts raus zum Bus!', true);
 }
 
 function monsterZiel(m, p) {
@@ -1264,7 +1543,15 @@ function updateJagd(dt) {
   W.notlicht.intensity = 7 + Math.sin(J.t * 9) * 3;
   W.monsterLicht.position.set(k.pos.x, 1.9, k.pos.z + 0.3);
   W.monsterLicht.intensity = 6 + Math.sin(J.t * 14) * 2;
-  if (J.phase === 'klettern') {
+  if (J.phase === 'klettern' && J.ort === 'tuer') {
+    // stürmt durch die Hintertür herein
+    const a = clamp(J.t / 1.0, 0, 1);
+    k.pos.set(4.05 - a * 1.6, 0, 1.0);
+    k.f.g.position.set(k.pos.x, 0, k.pos.z);
+    k.f.g.rotation.y = -Math.PI / 2;
+    k.f.armL.rotation.x = k.f.armR.rotation.x = -1.8;
+    if (a >= 1) { J.phase = 'bruellen'; J.t0 = J.t; Ton.schrei(); }
+  } else if (J.phase === 'klettern') {
     const a = clamp(J.t / 1.3, 0, 1);
     k.pos.x = J.start.x * (1 - a * 0.5);
     k.pos.z = -3.35 + a * 1.95;
@@ -1299,7 +1586,7 @@ function updateJagd(dt) {
     if (abstand < 0.85) { erwischt(); return; }
   }
   const zumBus = Math.hypot(spieler.pos.x - BUS_TUER.x, spieler.pos.z - BUS_TUER.z);
-  ziel(zumBus < 6 ? 'Rein in den Bus!' : drinnen(spieler.pos) ? 'LAUF! Hinten rechts raus (grünes Schild)!' : 'LAUF zum Bus vorne links!', true);
+  ziel(zumBus < 6 ? 'Rein in den Bus!' : drinnen(spieler.pos) ? (J.ort === 'tuer' ? 'LAUF! Über die Theke durchs Fenster!' : 'LAUF! Hinten rechts raus (grünes Schild)!') : 'LAUF zum Bus vorne links!', true);
   if (zumBus < 1.7) entkommen();
 }
 
@@ -1361,11 +1648,11 @@ function updateSchreck(dt) {
 }
 
 function kioskZuruecksetzen() {
-  W.tuerOffen = false;
+  W.tuerOffen = false; W.fensterFrei = false;
   W.licht.intensity = 34; M.roehre.emissiveIntensity = 2.2;
   W.notlicht.intensity = 0;
   W.rollZiel = 0; W.rollStand = 0;
-  $('bRollladen').textContent = '⬇ ROLLLADEN'; $('bRollladen').classList.remove('zu');
+  $('rlText').textContent = 'RUNTER'; $('bRollladen').classList.remove('zu');
   W.bus.zustand = 'weg'; W.bus.x = -90; W.busTuer.emissiveIntensity = 0;
   spieler.pos.set(0, 0, -0.9); spieler.yaw = 0; spieler.pitch = -0.05; spieler.ausdauer = 1;
   S.naechsterIn = 4;
@@ -1412,6 +1699,7 @@ let rennKnopf = false;
 addEventListener('keydown', e => {
   tasten[e.code] = true;
   if (e.code === 'KeyR' || e.code === 'KeyQ') rollladen();
+  if (e.code === 'KeyC') kameraWechseln();
   if (e.code === 'KeyE' || e.code === 'Space') { e.preventDefault(); tippen(innerWidth / 2, innerHeight / 2); }
   if (e.code === 'Escape') { if (S.modus === 'kasse') kasseZu(); else pause(); }
 });
@@ -1538,7 +1826,9 @@ function updateSchicht(dt) {
 
   // Hinweise oben
   const k = S.kunde;
-  if (W.rollZiel && (!k || !k.monster)) ziel('Der Rollladen ist unten. Mach ihn wieder auf!', true);
+  if (k && k.zustand === 'schleichen') ziel('Es geht ums Haus herum! Schau auf die Kamera!', true);
+  else if (k && k.zustand === 'tuerKlopfen') ziel(W.rollZiel ? 'Es hämmert an der Hintertür! Rollladen hoch – raus durchs Fenster!' : 'Es hämmert an der Hintertür! Gleich ist es drin!', true);
+  else if (W.rollZiel && (!k || !k.monster)) ziel('Der Rollladen ist unten. Mach ihn wieder auf!', true);
   else if (!k) ziel(W.bus.zustand === 'kommt' ? 'Ein Bus kommt …' : 'Warte auf den nächsten Bus …');
   else if (k.zustand === 'laufen' || k.zustand === 'aussteigen') ziel('Ein Kunde kommt. Mensch … oder Monster?');
   else if (k.zustand === 'bestellen' || (k.zustand === 'lauern' && !k.wunsch)) {
@@ -1551,26 +1841,20 @@ function updateSchicht(dt) {
 
 function updateWelt(dt) {
   const t = performance.now() / 1000;
-  // Regen: Tropfen fallen und wandern mit dem Spieler mit
-  {
-    const pos = W.regen.geometry.attributes.position.array, cx = camera.position.x, cz = camera.position.z, schraeg = 0.25;
-    for (let i = 0; i < REGEN_N; i++) {
-      const j = i * 6;
-      let x = pos[j], y = pos[j + 1] - W.regenV[i] * dt, z = pos[j + 2];
-      x += schraeg * W.regenV[i] * dt * 0.2;
-      if (x - cx > REGEN_W / 2) x -= REGEN_W; else if (x - cx < -REGEN_W / 2) x += REGEN_W;
-      if (z - cz > REGEN_W / 2) z -= REGEN_W; else if (z - cz < -REGEN_W / 2) z += REGEN_W;
-      const imKiosk = x > -3.4 && x < 3.4 && z > -3.0 && z < 3.0;
-      if (y < 0 || (imKiosk && y < 3.3)) {
-        y = zufall(10, 14);
-        x = cx + zufall(-REGEN_W / 2, REGEN_W / 2); z = cz + zufall(-REGEN_W / 2, REGEN_W / 2);
-        if (x > -3.4 && x < 3.4 && z > -3.0 && z < 3.0) x += 7;
-      }
-      pos[j] = x; pos[j + 1] = y; pos[j + 2] = z;
-      pos[j + 3] = x - schraeg * W.regenL[i] * 0.2; pos[j + 4] = y + W.regenL[i]; pos[j + 5] = z;
-    }
-    W.regen.geometry.attributes.position.needsUpdate = true;
+  updateRegen(dt);
+  // Blitz und Donner ab und zu
+  W.blitzIn = (W.blitzIn ?? zufall(20, 40)) - dt;
+  if (W.blitzIn < 0 && ['titel', 'schicht', 'kasse'].includes(S.modus)) {
+    W.blitzIn = zufall(25, 55); W.blitz = 1; W.blitzZweiter = Math.random() < 0.6 ? 0.18 : -1;
+    setTimeout(() => Ton.donner(), zufall(500, 2200));
   }
+  if (W.blitz > 0 || W.blitzZweiter > 0) {
+    if (W.blitzZweiter > 0) { W.blitzZweiter -= dt; if (W.blitzZweiter <= 0) W.blitz = 0.8; }
+    W.blitz = Math.max(0, W.blitz - dt * 5);
+    W.himmelLicht.intensity = 0.5 + W.blitz * 6;
+    scene.background.setRGB(0.012 + W.blitz * 0.25, 0.02 + W.blitz * 0.27, 0.04 + W.blitz * 0.35);
+  }
+  W.regenMat.uniforms.blitz.value = W.blitz || 0;
   // Staub im Licht
   {
     const p = W.staub.geometry.attributes.position.array;
@@ -1586,13 +1870,14 @@ function updateWelt(dt) {
   // Leuchtschild: ab und zu ein kurzes Flackern
   W.schildMat.color.setScalar(Math.sin(t * 17) + Math.sin(t * 5.3) > 1.8 ? 0.35 : 1);
   // Rollladen
-  W.rollStand += clamp(W.rollZiel - W.rollStand, -dt * 1.4, dt * 1.4);
+  W.rollStand += clamp(W.rollZiel - W.rollStand, -dt * 2.6, dt * 2.6);
   const h = Math.max(0.02, W.rollStand * 1.32);
   W.rollladen.scale.y = h; W.rollladen.position.y = 2.32 - h / 2;
   W.schalterKnopf.material.emissive.setHex(W.rollZiel ? 0x00a000 : 0x600000);
   // Tür
   W.tuerWinkel += ((W.tuerOffen ? Math.PI * 0.55 : 0) - W.tuerWinkel) * Math.min(1, dt * 5);
-  W.tuer.rotation.y = W.tuerWinkel;
+  W.tuerZittern = Math.max(0, (W.tuerZittern || 0) - dt * 0.5);
+  W.tuer.rotation.y = W.tuerWinkel + (W.tuerZittern ? zufall(-1, 1) * W.tuerZittern : 0);
   // Flackern der Röhre
   if (S.flackern > 0 && S.modus !== 'jagd') {
     S.flackern -= dt;
@@ -1600,6 +1885,9 @@ function updateWelt(dt) {
     W.licht.intensity = an ? 34 : 3; M.roehre.emissiveIntensity = an ? 2.2 : 0.1;
   }
   W.zeichneUhr(S.zeit);
+  const kw = S.kunde;
+  $('bRollladen').classList.toggle('warnen', !!(kw && kw.monster && kw.angriff === 'fenster' && kw.zustand === 'lauern' && !W.rollZiel)
+    || !!(kw && kw.zustand === 'tuerKlopfen' && W.rollZiel));
   Ton.atmosphaere(S.modus === 'titel' ? 0.6 : 1, drinnen(spieler.pos) && ['schicht', 'kasse'].includes(S.modus) ? 1 : 0);
 }
 
@@ -1640,6 +1928,7 @@ function starteNacht(n) {
   ['titel', 'ende', 'intro', 'pause'].forEach(id => $(id).classList.add('weg'));
   $('hud').classList.remove('weg');
   $('touch').classList.toggle('weg', !isTouch);
+  document.body.classList.toggle('touch', isTouch);
   $('fadenkreuz').classList.toggle('weg', isTouch);
   document.body.classList.add('spielt');
   zeichneInfos();
@@ -1837,6 +2126,8 @@ function schleife(jetzt) {
   if (['schicht', 'kasse', 'jagd'].includes(S.modus)) zeichneInfos();
   updateBlase();
   zeichne(dt);
+  updateKamera(dt);
+  zeichneKameraBild();
 }
 requestAnimationFrame(schleife);
 

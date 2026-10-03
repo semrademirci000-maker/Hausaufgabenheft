@@ -269,3 +269,53 @@ body.spielt #ton { left: auto; right: calc(14px + env(safe-area-inset-right, 0))
   #introText { font-size: 18px; }
   #notiz { font-size: 13px; padding: 10px 16px; }
 }
+
+/* eigene Symbole statt Emojis */
+.ik { display: inline-block; width: 1.3em; height: 1.3em; vertical-align: -0.3em; margin-right: 3px; }
+.ik svg { width: 100%; height: 100%; display: block; }
+#tragen button .ik { width: 28px; height: 28px; }
+#herzen { display: flex; gap: 2px; }
+#herzen .ik { width: 20px; height: 20px; margin: 0; }
+#blase .ware .ik { width: 22px; height: 22px; vertical-align: -6px; }
+.geldschein .ik { width: 30px; height: 30px; vertical-align: -9px; }
+
+/* großer Rollladen-Knopf – gut mit dem Daumen erreichbar */
+#bRollladen {
+  top: auto; bottom: calc(150px + env(safe-area-inset-bottom, 0)); right: calc(22px + env(safe-area-inset-right, 0));
+  width: 104px; height: 104px; border-radius: 22px; padding: 6px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  font-size: 13px; font-weight: 800; letter-spacing: .5px;
+  background: rgba(160, 20, 20, .88); border: 2px solid #ff8a80; box-shadow: 0 6px 18px rgba(0, 0, 0, .45);
+}
+#bRollladen .rl-ik { width: 46px; height: 46px; }
+#bRollladen .rl-ik svg { width: 100%; height: 100%; }
+#bRollladen.zu { background: rgba(30, 120, 45, .9); border-color: #9be3a6; }
+#bRollladen.warnen { animation: rlWarnen .45s infinite alternate; }
+@keyframes rlWarnen { to { transform: scale(1.09); box-shadow: 0 0 28px rgba(255, 60, 40, .9); } }
+#bRollladen:active { transform: scale(.94); }
+body:not(.touch) #bRollladen { bottom: calc(24px + env(safe-area-inset-bottom, 0)); }
+
+/* Überwachungskamera */
+#kamera {
+  position: absolute; left: calc(12px + env(safe-area-inset-left, 0)); top: calc(96px + env(safe-area-inset-top, 0));
+  width: min(250px, 30vw); aspect-ratio: 16 / 9; pointer-events: auto; cursor: pointer;
+  border: 2px solid #3a4a3c; border-radius: 6px; box-shadow: 0 4px 16px rgba(0, 0, 0, .6);
+}
+#kamera.weg2 { display: none; }
+#kamera.alarm { border-color: #ff4a3d; animation: kamAlarm .5s infinite alternate; }
+@keyframes kamAlarm { to { box-shadow: 0 0 22px rgba(255, 60, 40, .85); } }
+#kamKopf { position: absolute; left: 6px; right: 6px; top: 4px; display: flex; gap: 6px; align-items: center; font: 15px/1 'VT323', monospace; color: #d6ffd8; text-shadow: 0 0 3px #000; }
+#kamZeit { margin-left: auto; }
+#kamera .rec { width: 8px; height: 8px; border-radius: 50%; background: #ff3a2a; animation: rec 1s steps(2) infinite; }
+@keyframes rec { 50% { opacity: 0; } }
+#kamera small { position: absolute; left: 6px; bottom: 3px; font: 12px/1 'VT323', monospace; color: rgba(214, 255, 216, .7); }
+#bKamera { position: absolute; right: calc(14px + env(safe-area-inset-right, 0)); top: calc(10px + env(safe-area-inset-top, 0)); }
+#bPause { top: calc(56px + env(safe-area-inset-top, 0)); }
+body.spielt #ton { top: calc(102px + env(safe-area-inset-top, 0)); }
+@media (max-height: 460px) {
+  #bRollladen { width: 88px; height: 88px; bottom: calc(126px + env(safe-area-inset-bottom, 0)); }
+  #bRollladen .rl-ik { width: 38px; height: 38px; }
+  #kamera { top: calc(78px + env(safe-area-inset-top, 0)); width: min(200px, 28vw); }
+}
+#kamKopf span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#kamName { min-width: 0; }
