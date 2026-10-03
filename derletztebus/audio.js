@@ -59,6 +59,13 @@ export const Ton = {
     const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 1000;
     regenGain = ctx.createGain(); regenGain.gain.value = 0;
     r.connect(hp).connect(regenGain).connect(out); r.start();
+    const r2 = ctx.createBufferSource(); r2.buffer = rauschBuffer(3); r2.loop = true;
+    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 420; bp.Q.value = 0.6;
+    const g2 = ctx.createGain(); g2.gain.value = 0.9;
+    const wogen = ctx.createOscillator(); wogen.frequency.value = 0.13;
+    const wogenG = ctx.createGain(); wogenG.gain.value = 0.35;
+    wogen.connect(wogenG).connect(g2.gain); wogen.start();
+    r2.connect(bp).connect(g2).connect(regenGain); r2.start();
 
     // Summen der Neonröhre
     summenGain = ctx.createGain(); summenGain.gain.value = 0;
@@ -103,6 +110,7 @@ export const Ton = {
     rauschen(0.12, 3000, 1, 0.12);
     ton(1568, 'triangle', 0.2, 0.5, 0.08); ton(2093, 'triangle', 0.18, 0.7, 0.16);
   },
+  klick() { ton(1900, 'square', 0.03, 0.04); },
   muenze() { ton(2400 + Math.random() * 600, 'triangle', 0.12, 0.18); ton(3800, 'sine', 0.05, 0.1, 0.02); },
   nehmen() { ton(520, 'triangle', 0.1, 0.08); ton(780, 'triangle', 0.08, 0.1, 0.05); },
   ablegen() { ton(200, 'sine', 0.2, 0.12); rauschen(0.08, 1200, 1, 0.05); },
@@ -140,6 +148,17 @@ export const Ton = {
     ton(45, 'sine', 0.9, 1.6);
     ton(622, 'sawtooth', 0.12, 1.2); ton(659, 'sawtooth', 0.12, 1.2); ton(740, 'sawtooth', 0.1, 1.3);
     rauschen(1.4, 2500, 0.5, 0.35);
+  },
+  donner() {
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    const s = ctx.createBufferSource(); s.buffer = rauschBuffer(5);
+    const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.setValueAtTime(900, t); f.frequency.exponentialRampToValueAtTime(90, t + 4);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.7, t + 0.08);
+    g.gain.exponentialRampToValueAtTime(0.25, t + 0.9); g.gain.exponentialRampToValueAtTime(0.0001, t + 4.8);
+    s.connect(f).connect(g).connect(out); s.start(t); s.stop(t + 5);
+    ton(38, 'sine', 0.4, 2.5, 0.05);
   },
   verschwinden() { ton(800, 'sine', 0.12, 1.2, 0, 60); rauschen(1, 4000, 2, 0.06); },
   sieg() { [523, 659, 784, 1046].forEach((f, i) => ton(f, 'triangle', 0.15, 0.6, i * 0.12)); },

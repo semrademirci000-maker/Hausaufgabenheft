@@ -56,8 +56,31 @@ const kugel = (r, mat, eltern, x = 0, y = 0, z = 0, sx = 1, sy = 1, sz = 1) => {
   return m;
 };
 
+function kopfGeometrie() {
+  const geo = new THREE.SphereGeometry(0.1, 48, 36);
+  const p = geo.attributes.position;
+  for (let i = 0; i < p.count; i++) {
+    let x = p.getX(i), y = p.getY(i), z = p.getZ(i);
+    const yn = y / 0.1;
+    y *= 1.2;
+    if (yn < 0) {                                     // Kiefer und Kinn
+      const k = Math.pow(-yn, 1.6);
+      x *= 1 - 0.32 * k;
+      z *= 1 - 0.12 * k;
+      if (z > 0) z += 0.012 * k;                       // Kinn leicht nach vorn
+    }
+    if (yn > -0.35 && yn < 0.25) x *= 1.03;            // Wangenknochen
+    if (z > 0) z *= 0.9 + 0.08 * (1 - Math.abs(yn));   // Gesicht flacher
+    else z *= 1.08;                                    // Hinterkopf
+    x *= 0.9;
+    p.setXYZ(i, x, y, z);
+  }
+  geo.computeVertexNormals();
+  return geo;
+}
+
 function hand(haut, eltern, seite) {
-  const h = new THREE.Group(); eltern.add(h);
+  const h = new THREE.Group(); eltern.add(h); h.scale.setScalar(0.86);
   const handflaeche = mesh(new RoundedBoxGeometry(0.078, 0.095, 0.026, 3, 0.011), haut, h, 0, -0.045, 0);
   const finger = [];
   for (let i = 0; i < 4; i++) {
@@ -67,7 +90,7 @@ function hand(haut, eltern, seite) {
     const gelenk = new THREE.Group(); gelenk.position.y = -laenge * 0.55; f.add(gelenk);
     const oben = zylinder(0.0088, 0.0072, laenge * 0.5, haut, gelenk);
     kugel(0.0072, haut, gelenk, 0, -laenge * 0.5, 0);
-    f.rotation.x = -0.28 - i * 0.03; gelenk.rotation.x = -0.45;
+    f.rotation.x = -0.32 - i * 0.04; gelenk.rotation.x = -0.6; f.position.z = 0.004;
     finger.push({ f, gelenk, unten, oben });
   }
   const daumen = new THREE.Group(); daumen.position.set(seite * 0.042, -0.04, 0.004); h.add(daumen);
@@ -121,17 +144,17 @@ export function baueFigur(monster, zeichen) {
 
   // ----- Kopf -----
   const kopf = new THREE.Group(); kopf.position.set(0, 0.8, 0.005); rumpf.add(kopf);
-  kugel(0.105, haut, kopf, 0, 0, 0, 0.92, 1.14, 1.02);
-  kugel(0.078, haut, kopf, 0, -0.068, 0.025, 1, 0.9, 0.92);                     // Kinn
-  kugel(0.018, haut, kopf, 0, -0.012, 0.108, 0.85, 1.25, 1.35);                 // Nase
-  kugel(0.011, haut, kopf, -0.012, -0.03, 0.105, 0.9, 0.7, 0.9);
-  kugel(0.011, haut, kopf, 0.012, -0.03, 0.105, 0.9, 0.7, 0.9);
+  mesh(kopfGeometrie(), haut, kopf);
+  const nase = kugel(0.014, haut, kopf, 0, -0.01, 0.094, 0.8, 1.55, 1.1);       // Nasenrücken
+  nase.rotation.x = 0.25;
+  kugel(0.0125, haut, kopf, 0, -0.031, 0.1, 1.15, 0.8, 0.9);                    // Nasenspitze
+  kugel(0.0085, haut, kopf, -0.0115, -0.033, 0.094, 1, 0.75, 0.8);
+  kugel(0.0085, haut, kopf, 0.0115, -0.033, 0.094, 1, 0.75, 0.8);
   for (const s of [-1, 1]) {
-    const ohr = kugel(0.026, haut, kopf, s * 0.097, -0.005, -0.004, 0.45, 1, 0.75);
+    const ohr = kugel(0.024, haut, kopf, s * 0.088, -0.005, -0.008, 0.42, 1, 0.72);
     ohr.rotation.z = s * 0.15;
-    const braue = mesh(new RoundedBoxGeometry(0.046, 0.009, 0.014, 2, 0.004), haarMat, kopf, s * 0.04, 0.047, 0.098);
-    braue.rotation.z = -s * 0.12;
-    kugel(0.028, haut, kopf, s * 0.04, 0.02, 0.09, 1.05, 0.7, 0.6);              // Augenhöhle
+    const braue = mesh(new RoundedBoxGeometry(0.04, 0.008, 0.012, 2, 0.0035), haarMat, kopf, s * 0.036, 0.042, 0.088);
+    braue.rotation.z = -s * 0.08; braue.rotation.y = s * 0.25;
   }
   // Augen
   const augenGruppe = new THREE.Group(); kopf.add(augenGruppe);
@@ -141,8 +164,12 @@ export function baueFigur(monster, zeichen) {
   const weissMat = new THREE.MeshStandardMaterial({ color: 0xf2efe8, roughness: 0.25, envMap: ENV, envMapIntensity: 0.5 });
   const hornhaut = new THREE.MeshPhysicalMaterial({ color: 0xffffff, transparent: true, opacity: 0.18, roughness: 0.02, envMap: ENV, envMapIntensity: 2.2 });
   for (const s of [-1, 1]) {
-    const aug = new THREE.Group(); aug.position.set(s * 0.039, 0.02, 0.09); augenGruppe.add(aug);
+    const aug = new THREE.Group(); aug.position.set(s * 0.035, 0.018, 0.074); augenGruppe.add(aug);
+    aug.scale.setScalar(0.8);
     const ball = kugel(0.0185, weissMat, aug); augenWeiss.push(ball);
+    // Lider: decken das Auge oben und unten ab – kein Glotzblick
+    const lidO = mesh(new THREE.SphereGeometry(0.0205, 20, 10, 0, Math.PI * 2, 0, Math.PI * 0.42), haut, aug); lidO.rotation.x = -0.35;
+    const lidU = mesh(new THREE.SphereGeometry(0.0202, 20, 10, 0, Math.PI * 2, Math.PI * 0.68, Math.PI * 0.32), haut, aug); lidU.rotation.x = 0.2;
     const ir = new THREE.Mesh(new THREE.CircleGeometry(0.0115, 24), leuchten
       ? new THREE.MeshBasicMaterial({ color: new THREE.Color(5, 0.25, 0.1) })
       : new THREE.MeshStandardMaterial({ map: irisTextur, roughness: 0.3 }));
@@ -151,10 +178,10 @@ export function baueFigur(monster, zeichen) {
   }
   // Mund (menschlich)
   const lippen = new THREE.Group(); kopf.add(lippen);
-  kugel(0.021, lippenMat, lippen, 0, -0.058, 0.098, 1.7, 0.36, 0.55);
-  kugel(0.02, lippenMat, lippen, 0, -0.068, 0.097, 1.5, 0.4, 0.55);
+  kugel(0.017, lippenMat, lippen, 0, -0.058, 0.09, 1.55, 0.28, 0.5);
+  kugel(0.016, lippenMat, lippen, 0, -0.066, 0.089, 1.35, 0.34, 0.5);
   // Maul (Monster): dunkler Rachen, Zähne, Kiefer
-  const maul = new THREE.Group(); maul.position.set(0, -0.065, 0.085); maul.visible = false; kopf.add(maul);
+  const maul = new THREE.Group(); maul.position.set(0, -0.065, 0.078); maul.visible = false; kopf.add(maul);
   const rachen = kugel(0.04, new THREE.MeshBasicMaterial({ color: 0x180000 }), maul, 0, -0.01, 0.005, 1.15, 0.8, 0.6);
   const kiefer = new THREE.Group(); maul.add(kiefer);
   const zahnMat = new THREE.MeshStandardMaterial({ color: 0xe8e2cc, roughness: 0.4 });
@@ -188,7 +215,7 @@ export function baueFigur(monster, zeichen) {
     schirm.rotation.x = 0.15;
     kugel(0.1, haarMat, haare, 0, -0.01, -0.075, 1, 1.1, 0.5);
   }
-  if (Math.random() < 0.22) kugel(0.062, haarMat, kopf, 0, -0.1, 0.03, 1.1, 0.7, 0.85);   // Bart
+  if (Math.random() < 0.18) kugel(0.058, haarMat, kopf, 0, -0.092, 0.03, 1.05, 0.62, 0.82);   // Bart
 
   // ----- Arme -----
   const arme = [], ellbogen = [], haende = [];
@@ -258,11 +285,11 @@ export function gehen(f, gang, amp, gleiten = false) {
   f.beinR.rotation.x = s * 0.55 * amp;
   f.knieL.rotation.x = Math.max(0, c) * 0.95 * amp;
   f.knieR.rotation.x = Math.max(0, -c) * 0.95 * amp;
-  f.armL.rotation.x = s * 0.5 * amp;
-  f.armR.rotation.x = -s * 0.5 * amp;
+  f.armL.rotation.x = s * 0.32 * amp;
+  f.armR.rotation.x = -s * 0.32 * amp;
   f.ellL.rotation.x = -0.16 - Math.max(0, -s) * 0.45 * amp;
   f.ellR.rotation.x = -0.16 - Math.max(0, s) * 0.45 * amp;
-  f.rumpf.rotation.y = s * 0.12 * amp;
+  f.rumpf.rotation.y = s * 0.06 * amp;
   f.rumpf.rotation.z = c * 0.025 * amp;
   if (!f.monsterForm) f.rumpf.rotation.x = 0.04 * amp;
 }
