@@ -366,3 +366,28 @@ body:not(.touch) #bTuer { bottom: calc(130px + env(safe-area-inset-bottom, 0)); 
 }
 @media (max-height: 460px) { #aufgabe { top: calc(78px + env(safe-area-inset-top, 0)); font-size: 12px; } }
 body.kameraAn #hud, body.kameraAn #touch, body.kameraAn #ton, body.kameraAn #vignette { display: none !important; }
+
+/* Sicherungskasten-Rätsel */
+#sicherung { position: fixed; inset: 0; z-index: 26; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, .55); padding: 10px; }
+.sbox { width: min(620px, 100%); max-height: 100%; overflow: auto; background: linear-gradient(#9aa1a9, #6f767e); border: 3px solid #4b5158; border-radius: 14px; padding: 12px 16px 16px; box-shadow: 0 20px 60px rgba(0, 0, 0, .7); color: #111; }
+.skopf { display: flex; justify-content: space-between; align-items: center; font-weight: 900; letter-spacing: 2px; }
+.skopf .x { color: #222; }
+.shinweis { margin: 4px 0 10px; font-size: 13px; font-weight: 600; }
+.sfeld { position: relative; display: flex; justify-content: space-between; background: #2a2d33; border-radius: 10px; padding: 14px 0; touch-action: none; }
+.sfeld.funken { animation: funken .35s; }
+@keyframes funken { 25%, 75% { box-shadow: inset 0 0 40px #ffe066; background: #4a4020; } }
+#sLinien { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.sspalte { display: flex; flex-direction: column; gap: 16px; z-index: 1; }
+.skabel { display: flex; align-items: center; cursor: pointer; padding: 4px 0; }
+.skabel i { width: 70px; height: 14px; border-radius: 0 7px 7px 0; box-shadow: inset 0 -3px 0 rgba(0, 0, 0, .3); }
+.skabel b { width: 26px; height: 26px; border-radius: 6px; margin-left: -4px; border: 3px solid #ccc; box-shadow: 0 0 0 3px #444; }
+.skabel.gewaehlt b { box-shadow: 0 0 0 3px #fff, 0 0 14px #fff; }
+.skabel.fertig, .sbuchse.fertig { opacity: .8; pointer-events: none; }
+.sbuchse { display: flex; align-items: center; cursor: pointer; padding: 4px 0; }
+.sbuchse b { width: 30px; height: 30px; border-radius: 50%; border: 6px solid; background: #111; }
+.sbuchse i { width: 40px; height: 10px; border-radius: 4px 0 0 4px; margin-left: 4px; }
+.hebel { margin-top: 12px; width: 100%; padding: 12px; border-radius: 10px; border: 3px solid #333; background: #3a3d44; color: #eee; font-weight: 900; letter-spacing: 2px; display: flex; align-items: center; justify-content: center; gap: 12px; }
+.hebel span { width: 16px; height: 34px; background: #c22; border-radius: 4px; transform: rotate(25deg); transition: transform .4s; }
+.hebel.oben span { transform: rotate(-25deg); background: #2c2; }
+.hebel:disabled { opacity: .55; }
+.hebel:not(:disabled) { background: #1f7a35; border-color: #9be3a6; animation: rlWarnen .5s infinite alternate; }

@@ -56,27 +56,112 @@ const kugel = (r, mat, eltern, x = 0, y = 0, z = 0, sx = 1, sy = 1, sz = 1) => {
   return m;
 };
 
-function kopfGeometrie() {
-  const geo = new THREE.SphereGeometry(0.1, 48, 36);
+// Gauß-Hügel für das Formen des Gesichts
+const huegel = (x, y, cx, cy, sx, sy) => Math.exp(-(((x - cx) / sx) ** 2 + ((y - cy) / sy) ** 2));
+
+/** Kopf aus einem Stück: Schädel, Kiefer, Nase, Augenhöhlen, Brauen, Wangen, Lippen, Kinn. */
+function kopfGeometrie(weiblich) {
+  const geo = new THREE.SphereGeometry(0.1, 96, 72);
   const p = geo.attributes.position;
   for (let i = 0; i < p.count; i++) {
+    const nx = p.getX(i) / 0.1, ny = p.getY(i) / 0.1, nz = p.getZ(i) / 0.1;
     let x = p.getX(i), y = p.getY(i), z = p.getZ(i);
-    const yn = y / 0.1;
-    y *= 1.2;
-    if (yn < 0) {                                     // Kiefer und Kinn
-      const k = Math.pow(-yn, 1.6);
-      x *= 1 - 0.32 * k;
-      z *= 1 - 0.12 * k;
-      if (z > 0) z += 0.012 * k;                       // Kinn leicht nach vorn
+    if (nz > 0) {
+      const v = Math.min(1, nz * 1.6);                                                   // nur vorne wirken
+      z += v * 0.026 * huegel(nx, ny, 0, -0.1, 0.075, 0.22);                              // Nasenrücken
+      z += v * 0.018 * huegel(nx, ny, 0, -0.27, 0.1, 0.08);                              // Nasenspitze
+      z += v * 0.005 * (huegel(nx, ny, -0.1, -0.3, 0.06, 0.05) + huegel(nx, ny, 0.1, -0.3, 0.06, 0.05)); // Nasenflügel
+      z -= v * 0.011 * (huegel(nx, ny, -0.35, 0.14, 0.15, 0.09) + huegel(nx, ny, 0.35, 0.14, 0.15, 0.09)); // Augenhöhlen
+      z += v * (weiblich ? 0.003 : 0.007) * huegel(nx, ny, 0, 0.29, 0.5, 0.07);         // Brauenbogen
+      z += v * 0.005 * (huegel(nx, ny, -0.45, -0.12, 0.16, 0.12) + huegel(nx, ny, 0.45, -0.12, 0.16, 0.12)); // Wangen
+      z += v * 0.007 * huegel(nx, ny, 0, -0.44, 0.17, 0.045);                            // Oberlippe
+      z += v * 0.006 * huegel(nx, ny, 0, -0.54, 0.15, 0.045);                            // Unterlippe
+      z -= v * 0.003 * huegel(nx, ny, 0, -0.49, 0.2, 0.02);                              // Mundspalte
+      z += v * 0.006 * huegel(nx, ny, 0, -0.75, 0.2, 0.1);                               // Kinn
     }
-    if (yn > -0.35 && yn < 0.25) x *= 1.03;            // Wangenknochen
-    if (z > 0) z *= 0.9 + 0.08 * (1 - Math.abs(yn));   // Gesicht flacher
-    else z *= 1.08;                                    // Hinterkopf
+    const yn = ny;
+    y *= 1.2;
+    if (yn < 0) {                                     // Kiefer
+      const k = Math.pow(-yn, 1.6);
+      x *= 1 - (weiblich ? 0.36 : 0.3) * k;
+      z *= 1 - 0.12 * k;
+      if (z > 0) z += 0.01 * k;
+    }
+    if (yn > -0.35 && yn < 0.25) x *= 1.03;
+    if (z > 0) z *= 0.9 + 0.08 * (1 - Math.abs(yn));
+    else z *= 1.08;
     x *= 0.9;
     p.setXYZ(i, x, y, z);
   }
   geo.computeVertexNormals();
   return geo;
+}
+
+/** Gemalte Hauttextur fürs Gesicht (Augenbrauen, Lippen, Wangen, Schatten, Bartschatten). */
+function gesichtTextur(haut, haar, weiblich, bart) {
+  const W = 1024, H = 512;
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const g = c.getContext('2d');
+  const farbe = new THREE.Color(haut), hex = '#' + farbe.getHexString();
+  // Punkt auf der Kopfkugel (nx, ny vorne) → Bildpunkt
+  const pt = (nx, ny) => {
+    const nz = Math.sqrt(Math.max(0, 1 - nx * nx - ny * ny));
+    const theta = Math.acos(ny), phi = Math.atan2(nz, -nx);
+    return [((phi / (Math.PI * 2)) + 1) % 1 * W, theta / Math.PI * H];
+  };
+  const fleck = (nx, ny, r, farbeS, alpha) => {
+    const [x, y] = pt(nx, ny), rr = r * W / 6;
+    const gr = g.createRadialGradient(x, y, 0, x, y, rr);
+    gr.addColorStop(0, farbeS.replace('A', alpha)); gr.addColorStop(1, farbeS.replace('A', 0));
+    g.fillStyle = gr; g.fillRect(x - rr, y - rr, rr * 2, rr * 2);
+  };
+  g.fillStyle = hex; g.fillRect(0, 0, W, H);
+  // feine Hautunruhe
+  for (let i = 0; i < 9000; i++) {
+    g.fillStyle = `rgba(${Math.random() < 0.5 ? '90,40,30' : '255,230,210'},${Math.random() * 0.05})`;
+    g.fillRect(Math.random() * W, Math.random() * H, 2, 2);
+  }
+  // Wangen und Nase leicht rötlich, Augen leicht dunkel
+  fleck(-0.45, -0.15, 0.5, 'rgba(200,70,60,A)', weiblich ? 0.22 : 0.13);
+  fleck(0.45, -0.15, 0.5, 'rgba(200,70,60,A)', weiblich ? 0.22 : 0.13);
+  fleck(0, -0.25, 0.25, 'rgba(190,80,70,A)', 0.12);
+  fleck(-0.36, 0.15, 0.32, 'rgba(60,30,30,A)', 0.22);
+  fleck(0.36, 0.15, 0.32, 'rgba(60,30,30,A)', 0.22);
+  fleck(0, -0.38, 0.2, 'rgba(60,30,25,A)', 0.18);           // Schatten unter der Nase
+  // Bartschatten
+  if (bart) {
+    for (let i = 0; i < 2600; i++) {
+      const nx = (Math.random() * 2 - 1) * 0.6, ny = -0.4 - Math.random() * 0.5;
+      if (Math.abs(nx) < 0.17 && ny > -0.58) continue;
+      const [x, y] = pt(nx, ny);
+      g.fillStyle = `rgba(30,22,18,${0.18 + Math.random() * 0.2})`; g.fillRect(x, y, 2, 2);
+    }
+  }
+  // Nasenlöcher
+  for (const sx of [-1, 1]) { const [x, y] = pt(sx * 0.08, -0.33); g.fillStyle = 'rgba(40,15,12,0.55)'; g.beginPath(); g.ellipse(x, y, 7, 4, 0, 0, Math.PI * 2); g.fill(); }
+  // Lippen
+  const lippe = weiblich ? '#b0505a' : '#a86a62';
+  g.fillStyle = lippe;
+  g.beginPath();
+  for (let i = 0; i <= 20; i++) { const t = i / 20, nx = -0.17 + t * 0.34; const [x, y] = pt(nx, -0.47 + Math.sin(t * Math.PI) * 0.012 - (Math.abs(nx) < 0.04 ? 0.006 : 0)); i ? g.lineTo(x, y) : g.moveTo(x, y); }
+  for (let i = 20; i >= 0; i--) { const t = i / 20, nx = -0.17 + t * 0.34; const [x, y] = pt(nx, -0.555 - Math.sin(t * Math.PI) * 0.035); g.lineTo(x, y); }
+  g.fill();
+  g.strokeStyle = 'rgba(70,25,25,0.75)'; g.lineWidth = 3; g.beginPath();
+  for (let i = 0; i <= 20; i++) { const t = i / 20; const [x, y] = pt(-0.18 + t * 0.36, -0.5 - Math.sin(t * Math.PI) * 0.006); i ? g.lineTo(x, y) : g.moveTo(x, y); }
+  g.stroke();
+  // Augenbrauen aus vielen Härchen
+  const haarFarbe = '#' + new THREE.Color(haar).getHexString();
+  for (const sx of [-1, 1]) {
+    for (let i = 0; i < 70; i++) {
+      const t = Math.random(), nx = sx * (0.14 + t * 0.4), ny = 0.27 + Math.sin(t * Math.PI) * 0.035 - t * 0.02 + (Math.random() - 0.5) * (weiblich ? 0.02 : 0.035);
+      const [x, y] = pt(nx, ny);
+      g.strokeStyle = haarFarbe; g.globalAlpha = 0.55; g.lineWidth = weiblich ? 2 : 3;
+      g.beginPath(); g.moveTo(x, y); g.lineTo(x + sx * 8, y - 3); g.stroke();
+    }
+    g.globalAlpha = 1;
+  }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
+  return t;
 }
 
 function hand(haut, eltern, seite) {
@@ -144,17 +229,15 @@ export function baueFigur(monster, zeichen) {
 
   // ----- Kopf -----
   const kopf = new THREE.Group(); kopf.position.set(0, 0.8, 0.005); rumpf.add(kopf);
-  mesh(kopfGeometrie(), haut, kopf);
-  const nase = kugel(0.014, haut, kopf, 0, -0.01, 0.094, 0.8, 1.55, 1.1);       // Nasenrücken
-  nase.rotation.x = 0.25;
-  kugel(0.0125, haut, kopf, 0, -0.031, 0.1, 1.15, 0.8, 0.9);                    // Nasenspitze
-  kugel(0.0085, haut, kopf, -0.0115, -0.033, 0.094, 1, 0.75, 0.8);
-  kugel(0.0085, haut, kopf, 0.0115, -0.033, 0.094, 1, 0.75, 0.8);
+  const weiblich = Math.random() < 0.45;
+  const bart = !weiblich && Math.random() < 0.45;
+  const kopfMat = haut.clone();
+  kopfMat.map = gesichtTextur(hautFarbe, haarFarbe, weiblich, bart);
+  kopfMat.color.set(0xffffff);
+  mesh(kopfGeometrie(weiblich), kopfMat, kopf);
   for (const s of [-1, 1]) {
     const ohr = kugel(0.024, haut, kopf, s * 0.088, -0.005, -0.008, 0.42, 1, 0.72);
     ohr.rotation.z = s * 0.15;
-    const braue = mesh(new RoundedBoxGeometry(0.04, 0.008, 0.012, 2, 0.0035), haarMat, kopf, s * 0.036, 0.042, 0.088);
-    braue.rotation.z = -s * 0.08; braue.rotation.y = s * 0.25;
   }
   // Augen
   const augenGruppe = new THREE.Group(); kopf.add(augenGruppe);
@@ -168,9 +251,9 @@ export function baueFigur(monster, zeichen) {
     aug.scale.setScalar(0.8);
     const ball = kugel(0.0185, weissMat, aug); augenWeiss.push(ball);
     // Lider: decken das Auge oben und unten ab – kein Glotzblick
-    const lidO = mesh(new THREE.SphereGeometry(0.0205, 20, 10, 0, Math.PI * 2, 0, Math.PI * 0.42), haut, aug); lidO.rotation.x = -0.35;
-    const lidU = mesh(new THREE.SphereGeometry(0.0202, 20, 10, 0, Math.PI * 2, Math.PI * 0.68, Math.PI * 0.32), haut, aug); lidU.rotation.x = 0.2;
-    const ir = new THREE.Mesh(new THREE.CircleGeometry(0.0115, 24), leuchten
+    const lidO = mesh(new THREE.SphereGeometry(0.0205, 20, 10, 0, Math.PI * 2, 0, Math.PI * 0.46), haut, aug); lidO.rotation.x = -0.32;
+    const lidU = mesh(new THREE.SphereGeometry(0.0202, 20, 10, 0, Math.PI * 2, Math.PI * 0.64, Math.PI * 0.36), haut, aug); lidU.rotation.x = 0.2;
+    const ir = new THREE.Mesh(new THREE.CircleGeometry(0.0135, 24), leuchten
       ? new THREE.MeshBasicMaterial({ color: new THREE.Color(5, 0.25, 0.1) })
       : new THREE.MeshStandardMaterial({ map: irisTextur, roughness: 0.3 }));
     ir.position.z = 0.0176; aug.add(ir); augen.push(ir);
@@ -178,8 +261,7 @@ export function baueFigur(monster, zeichen) {
   }
   // Mund (menschlich)
   const lippen = new THREE.Group(); kopf.add(lippen);
-  kugel(0.017, lippenMat, lippen, 0, -0.058, 0.09, 1.55, 0.28, 0.5);
-  kugel(0.016, lippenMat, lippen, 0, -0.066, 0.089, 1.35, 0.34, 0.5);
+  void lippenMat;
   // Maul (Monster): dunkler Rachen, Zähne, Kiefer
   const maul = new THREE.Group(); maul.position.set(0, -0.065, 0.078); maul.visible = false; kopf.add(maul);
   const rachen = kugel(0.04, new THREE.MeshBasicMaterial({ color: 0x180000 }), maul, 0, -0.01, 0.005, 1.15, 0.8, 0.6);
@@ -194,7 +276,7 @@ export function baueFigur(monster, zeichen) {
   const stil = Math.floor(Math.random() * 4);
   const haare = new THREE.Group(); kopf.add(haare);
   if (stil === 0 || stil === 1) {
-    const kappe = mesh(new THREE.SphereGeometry(0.112, 28, 18, 0, Math.PI * 2, 0, Math.PI * 0.56), haarMat, haare, 0, 0.004, -0.008);
+    const kappe = mesh(new THREE.SphereGeometry(0.112, 28, 18, 0, Math.PI * 2, 0, Math.PI * 0.5), haarMat, haare, 0, 0.012, -0.01);
     kappe.scale.set(0.93, 1.16, 1.06); kappe.rotation.x = -0.22;
     if (stil === 1) {
       const hinten = kugel(0.1, haarMat, haare, 0, -0.12, -0.07, 1, 2.1, 0.5);
@@ -205,9 +287,9 @@ export function baueFigur(monster, zeichen) {
   } else if (stil === 2) {
     const farbe = wuerfel(MANTEL);
     const m = stoffMaterial(farbe, 0.95);
-    const muetze = mesh(new THREE.SphereGeometry(0.122, 28, 18, 0, Math.PI * 2, 0, Math.PI * 0.55), m, haare, 0, 0.02, -0.005);
+    const muetze = mesh(new THREE.SphereGeometry(0.122, 28, 18, 0, Math.PI * 2, 0, Math.PI * 0.43), m, haare, 0, 0.03, -0.008);
     muetze.scale.set(0.95, 1.12, 1.08);
-    mesh(new THREE.TorusGeometry(0.108, 0.018, 10, 28), m, haare, 0, 0.045, 0).rotation.x = Math.PI / 2 - 0.1;
+    mesh(new THREE.TorusGeometry(0.104, 0.017, 10, 28), m, haare, 0, 0.068, -0.004).rotation.x = Math.PI / 2 - 0.12;
   } else {
     const kappe = mesh(new THREE.CylinderGeometry(0.108, 0.112, 0.07, 24), stoffMaterial(wuerfel(MANTEL), 0.8), haare, 0, 0.082, -0.005);
     kappe.scale.z = 1.05;
@@ -215,7 +297,6 @@ export function baueFigur(monster, zeichen) {
     schirm.rotation.x = 0.15;
     kugel(0.1, haarMat, haare, 0, -0.01, -0.075, 1, 1.1, 0.5);
   }
-  if (Math.random() < 0.18) kugel(0.058, haarMat, kopf, 0, -0.092, 0.03, 1.05, 0.62, 0.82);   // Bart
 
   // ----- Arme -----
   const arme = [], ellbogen = [], haende = [];
@@ -246,7 +327,7 @@ export function baueFigur(monster, zeichen) {
     g, kopf, rumpf, hals, augen, augenGruppe, maul, rachen, kiefer, lippen,
     beinL: beine[0], beinR: beine[1], knieL: knie[0], knieR: knie[1],
     armL: arme[0], armR: arme[1], ellL: ellbogen[0], ellR: ellbogen[1], haende,
-    mantelMat: mantel, hautMat: haut, wirftSchatten, blinzeln: zufall(2, 5), t: 0, monsterForm: false
+    mantelMat: mantel, hautMat: haut, kopfMat, wirftSchatten, blinzeln: zufall(2, 5), t: 0, monsterForm: false
   };
 }
 
@@ -255,6 +336,7 @@ export function verwandeln(f) {
   f.monsterForm = true;
   f.g.scale.set(0.98, 1.3, 0.98);
   f.mantelMat.color.set(0x0b0b0d); f.mantelMat.roughness = 1;
+  f.kopfMat.color.set(0x8a9a86); f.kopfMat.roughness = 0.85; f.kopfMat.sheen = 0;
   f.hautMat.color.set(0x74806f); f.hautMat.roughness = 0.82; f.hautMat.sheen = 0; f.hautMat.normalScale.set(1.3, 1.3);
   f.augen.forEach(a => { a.material = new THREE.MeshBasicMaterial({ color: new THREE.Color(6, 0.25, 0.1) }); a.scale.setScalar(1.55); });
   f.augenGruppe.scale.setScalar(1.35);

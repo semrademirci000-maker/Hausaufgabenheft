@@ -71,6 +71,8 @@ Der Bus N13 setzt dich an der Endstation ab, und du übernimmst die Nachtschicht
   SCHOCKEN (3 Schüsse pro Nacht). Bei einer Jagd betäubt der Taser das Monster für ein paar Sekunden.
 - **Aufgaben:** Müll rausbringen – Sack aus dem Eimer holen und hinten in den Container werfen.
   Hinter dem Zaun lauern Kreaturen …
+- **Stromausfall:** Das Licht flackert und geht aus – Kasse, Rollladen und Kameras sind tot.
+  Am Sicherungskasten (linke Wand) die Kabel Farbe zu Farbe verbinden und den Hauptschalter hoch.
 - **3 Nächte** (22 Uhr bis 6 Uhr), 3 Herzen, jede Nacht mehr Monster. Vorne gibt es eine kurze Geschichte.
 - Steuerung am Handy: links Stick, Wischen zum Umsehen, Antippen zum Benutzen.
   Am Rechner: WASD, Maus ziehen, Klick/E, Shift rennen, R Rollladen.

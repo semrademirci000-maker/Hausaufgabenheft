@@ -162,6 +162,10 @@ export const Ton = {
     o.connect(f).connect(g).connect(out); o.start(t); am.start(t); o.stop(t + 2.1); am.stop(t + 2.1);
     rauschen(1.6, 300, 1.5, 0.12, 0.1, 0.3);
   },
+  stromAus() { ton(120, 'sawtooth', 0.25, 1.2, 0, 30); rauschen(0.4, 2000, 1, 0.2); },
+  flackern() { for (let i = 0; i < 6; i++) rauschen(0.05, 3000, 2, 0.1, i * 0.12); },
+  funke() { for (let i = 0; i < 5; i++) rauschen(0.04, 4000 + Math.random() * 2000, 2, 0.3, i * 0.05); },
+  hebel() { ton(90, 'square', 0.3, 0.15); rauschen(0.12, 800, 1, 0.3); ton(220, 'sine', 0.2, 1.2, 0.1, 440); },
   klick() { ton(1900, 'square', 0.03, 0.04); },
   muenze() { ton(2400 + Math.random() * 600, 'triangle', 0.12, 0.18); ton(3800, 'sine', 0.05, 0.1, 0.02); },
   nehmen() { ton(520, 'triangle', 0.1, 0.08); ton(780, 'triangle', 0.08, 0.1, 0.05); },
