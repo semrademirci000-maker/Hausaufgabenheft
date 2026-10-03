@@ -16,6 +16,16 @@
 </head>
 <body>
 <div id="spiel"></div>
+<div id="kameraSchirm" class="weg">
+  <div class="kgitter">
+    <div class="zelle" data-nr="0"><span>CAM 1 · VORNE</span><b>BEWEGUNG</b></div>
+    <div class="zelle" data-nr="1"><span>CAM 2 · HINTEN</span><b>BEWEGUNG</b></div>
+    <div class="zelle" data-nr="2"><span>CAM 3 · LINKS</span><b>BEWEGUNG</b></div>
+    <div class="zelle" data-nr="3"><span>CAM 4 · RECHTS</span><b>BEWEGUNG</b></div>
+  </div>
+  <div class="kleiste"><i class="rec"></i><span>LIVE</span><span id="kamZeit"></span>
+    <button id="kRollladen" class="knopf">ROLLLADEN</button><button id="kZurueck" class="knopf">ZURÜCK</button></div>
+</div>
 <div id="vignette"></div>
 <div id="rot"></div>
 <div id="schwarz"></div>
@@ -28,6 +38,7 @@
     <div id="geld">0,00 €</div>
     <div id="herzen"></div>
   </div>
+  <div id="aufgabe" class="weg"></div>
   <div id="ziel"></div>
   <div id="fadenkreuz"></div>
   <div id="tragen"></div>
@@ -35,8 +46,7 @@
   <div id="toast"></div>
   <div id="blase" class="weg"></div>
   <button id="bRollladen" class="knopf"><span class="rl-ik"></span><span id="rlText">RUNTER</span></button>
-  <div id="kamera"><div id="kamKopf"><i class="rec"></i><span id="kamName">CAM 1 · VORNE</span><span id="kamZeit"></span></div><small>Antippen: Kamera wechseln</small></div>
-  <button id="bKamera" class="knopf klein">KAMERA</button>
+  <button id="bKameraAn" class="knopf weg">KAMERA ANSEHEN</button>
   <button id="bTaser" class="knopf weg"><span class="blitz"></span>SCHOCKEN<small id="taserLadung">3/3</small></button>
   <button id="bTuer" class="knopf">TÜR <span id="tuerText">AUF</span></button>
   <button id="bPause" class="knopf klein">II</button>

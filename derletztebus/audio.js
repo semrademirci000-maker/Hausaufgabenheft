@@ -150,6 +150,18 @@ export const Ton = {
     if (!ctx) return;
     for (let i = 0; i < 9; i++) { rauschen(0.05, 3000 + Math.random() * 3000, 2, 0.25, i * 0.045); ton(60 + Math.random() * 40, 'square', 0.12, 0.05, i * 0.045); }
   },
+  knurren() {
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.setValueAtTime(62, t); o.frequency.linearRampToValueAtTime(48, t + 1.8);
+    const am = ctx.createOscillator(); am.frequency.value = 23;
+    const amG = ctx.createGain(); amG.gain.value = 0.5;
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.35, t + 0.3); g.gain.linearRampToValueAtTime(0.0001, t + 2);
+    const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 420;
+    am.connect(amG).connect(g.gain);
+    o.connect(f).connect(g).connect(out); o.start(t); am.start(t); o.stop(t + 2.1); am.stop(t + 2.1);
+    rauschen(1.6, 300, 1.5, 0.12, 0.1, 0.3);
+  },
   klick() { ton(1900, 'square', 0.03, 0.04); },
   muenze() { ton(2400 + Math.random() * 600, 'triangle', 0.12, 0.18); ton(3800, 'sine', 0.05, 0.1, 0.02); },
   nehmen() { ton(520, 'triangle', 0.1, 0.08); ton(780, 'triangle', 0.08, 0.1, 0.05); },

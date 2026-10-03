@@ -830,6 +830,8 @@ function baueWelt() {
   baueBus();
   baueRegen();
   baueKamera();
+  baueMuell();
+  baueKreaturen();
 }
 
 // ---------- Bus ----------
@@ -1074,9 +1076,18 @@ function schocken() {
     sag(k, 'AAAARGH!', 1.5, true);
   } else {
     S.geld = Math.max(0, S.geld - 300);
-    toast('Das war ein Mensch! −3,00 €', '#ff8a7a'); Ton.fehler();
-    kundeGeht(k, 'AUA! Spinnst du?!');
+    toast('Unschuldigen getasert! −3,00 €', '#ff8a7a'); Ton.fehler();
+    if (S.modus === 'kasse') kasseZu();
+    raeumeTheke();
+    k.zustand = 'ohnmacht'; k.t = 0; k.sagtT = 0;
   }
+}
+function updateNaehe() {
+  const frei = S.modus === 'schicht' && !CCTV.offen;
+  const tuerNah = frei && Math.hypot(spieler.pos.x - 3.1, spieler.pos.z - 1.0) < 2.3;
+  $('bTuer').classList.toggle('weg', !tuerNah);
+  const pcNah = frei && Math.hypot(spieler.pos.x + 1.8, spieler.pos.z + 2.0) < 1.9;
+  $('bKameraAn').classList.toggle('weg', !pcNah);
 }
 function updateTaser(dt) {
   if (W.blitzZeit > 0) {
@@ -1103,13 +1114,120 @@ function tuerUmschalten() {
   if (W.tuerOffen && k && k.monster && k.zustand === 'tuerKlopfen') { k.lauern = Math.min(k.lauern, 1.6); sag(k, 'ENDLICH …', 1.5, true); }
 }
 
-// ---------- Überwachungskamera ----------
+// ---------- Aufgabe: Müll rausbringen ----------
+const handSack = new THREE.Mesh(new THREE.SphereGeometry(0.16, 14, 10), std(0x0c0c0e, { roughness: 0.25, envMapIntensity: 1.2 }));
+handSack.scale.set(1, 1.15, 0.9); handSack.position.set(-0.28, -0.32, -0.5); handSack.visible = false; camera.add(handSack);
+function baueMuell() {
+  // voller Sack im Eimer neben der Hintertür
+  W.muellVoll = new THREE.Mesh(new THREE.SphereGeometry(0.2, 14, 10), std(0x0c0c0e, { roughness: 0.25, envMapIntensity: 1.2 }));
+  W.muellVoll.scale.set(1, 0.8, 1); W.muellVoll.position.set(2.72, 0.58, 2.2); W.muellVoll.visible = false; scene.add(W.muellVoll);
+  const eimerTreffer = kiste(0.6, 0.9, 0.6, M.unsichtbar, 2.72, 0.45, 2.2);
+  eimerTreffer.userData = { typ: 'muelleimer' }; klickbar.push(eimerTreffer);
+  // großer Container hinter dem Kiosk
+  const c = new THREE.Group(); c.position.set(-1.6, 0, 5.4); scene.add(c);
+  const gruen = std(0x264a32, { roughness: 0.55, metalness: 0.3 });
+  rundkiste(1.9, 1.1, 1.15, 0.04, gruen, 0, 0.6, 0, c);
+  W.containerDeckel = new THREE.Group(); W.containerDeckel.position.set(0, 1.16, 0.58); c.add(W.containerDeckel);
+  rundkiste(1.95, 0.06, 1.2, 0.02, std(0x1d3a27, { roughness: 0.5, metalness: 0.3 }), 0, 0, -0.6, W.containerDeckel);
+  for (const x of [-0.75, 0.75]) for (const z of [-0.45, 0.45]) {
+    const r = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.05, 10), M.dunkel); r.rotation.z = Math.PI / 2; r.position.set(x, 0.06, z); c.add(r);
+  }
+  const ct = kiste(2.2, 1.4, 1.5, M.unsichtbar, 0, 0.7, 0, c);
+  ct.userData = { typ: 'container' }; klickbar.push(ct);
+  hindernis(-2.6, -0.6, 4.8, 6.0);
+  // schwache Lampe an der Rückwand
+  rundkiste(0.3, 0.12, 0.18, 0.03, M.dunkel, -1.6, 2.55, 2.86);
+  kiste(0.24, 0.03, 0.1, M.roehre, -1.6, 2.48, 2.9).castShadow = false;
+  W.hofLicht = HOCH ? new THREE.PointLight(0xffd7a0, 3.2, 8, 1.6) : KEIN_LICHT();
+  if (HOCH) { W.hofLicht.position.set(-1.6, 2.4, 3.2); scene.add(W.hofLicht); }
+}
+function neueAufgabe() {
+  S.aufgabe = 'voll';
+  W.muellVoll.visible = true;
+  toast('Neue Aufgabe: Müll rausbringen!', '#ffd27a'); Ton.klingel();
+}
+function zeigeAufgabe() {
+  const el = $('aufgabe');
+  if (!S.aufgabe || !['schicht', 'kasse'].includes(S.modus)) { el.classList.add('weg'); return; }
+  el.classList.remove('weg');
+  const text = S.aufgabe === 'voll' ? 'Aufgabe: Müllsack aus dem Eimer neben der Hintertür holen (+3 €)' : 'Aufgabe: Müllsack in den Container hinter dem Kiosk werfen';
+  if (el.dataset.t !== text) { el.textContent = text; el.dataset.t = text; }
+}
+function muellNehmen() {
+  if (S.aufgabe !== 'voll') { toast('Der Eimer ist noch nicht voll.', '#ccc'); return; }
+  S.aufgabe = 'tragen'; W.muellVoll.visible = false; handSack.visible = true;
+  Ton.nehmen(); toast('Müllsack genommen – raus damit!', '#fff');
+}
+function muellWegwerfen() {
+  if (S.aufgabe !== 'tragen') { toast('Hier kommt der Müll rein.', '#ccc'); return; }
+  S.aufgabe = null; handSack.visible = false;
+  W.containerDeckel.rotation.x = -1.1; setTimeout(() => { W.containerDeckel.rotation.x = 0; Ton.schlag(); }, 700);
+  S.geld += 300; Ton.gut(); toast('Aufgabe erledigt! +3,00 €', '#9be37a');
+}
+
+// ---------- Kreaturen hinter dem Zaun (nur zu sehen, wenn man hinten draußen ist) ----------
+const Kreaturen = [];
+function baueKreaturen() {
+  for (let i = 0; i < 7; i++) {
+    const g = new THREE.Group();
+    const mat = new THREE.MeshBasicMaterial({ color: new THREE.Color(4, 0.3, 0.12), transparent: true, opacity: 0, fog: false });
+    for (const sx of [-1, 1]) { const e = new THREE.Mesh(new THREE.SphereGeometry(0.022, 8, 6), mat); e.position.x = sx * 0.06; e.scale.y = 0.6; g.add(e); }
+    g.position.set(zufall(-8, 5), zufall(0.4, 1.9), zufall(9.2, 13.5)); g.visible = false; scene.add(g);
+    Kreaturen.push({ typ: 'augen', g, mat, pos: g.position, sichtbar: false, alpha: 0, blink: zufall(1, 4) });
+  }
+  const f = Fig.baueFigur(true, new Set(['augen']));
+  Fig.verwandeln(f); f.g.scale.set(1.05, 1.45, 1.05); f.g.visible = false; scene.add(f.g);
+  Kreaturen.push({ typ: 'gestalt', f, g: f.g, pos: f.g.position, sichtbar: false, t: 0, zustand: 'weg', pause: 3, angeschaut: 0 });
+}
+const _blickVor = new THREE.Vector3();
+function updateKreaturen(dt) {
+  const aktiv = S.modus === 'schicht' && !CCTV.offen && (S.aufgabe === 'tragen' || spieler.pos.z > 3.2);
+  for (const k of Kreaturen) {
+    if (k.typ === 'augen') {
+      const nah = Math.hypot(spieler.pos.x - k.pos.x, spieler.pos.z - k.pos.z) < 4.5;
+      const soll = aktiv && !nah ? 1 : 0;
+      k.alpha += (soll - k.alpha) * Math.min(1, dt * (soll ? 0.8 : 5));
+      k.blink -= dt; if (k.blink < 0) k.blink = zufall(1.5, 5);
+      k.mat.opacity = k.blink < 0.14 ? 0 : k.alpha;
+      k.g.visible = k.mat.opacity > 0.02;
+      k.sichtbar = k.g.visible;
+      if (k.g.visible) k.g.lookAt(camera.position.x, k.pos.y, camera.position.z);
+      if (!aktiv && k.alpha < 0.01 && Math.random() < dt * 0.2) k.pos.set(zufall(-8, 5), zufall(0.4, 1.9), zufall(9.2, 13.5));
+      continue;
+    }
+    // die große Gestalt zwischen den Bäumen
+    k.t += dt;
+    if (k.zustand === 'weg') {
+      k.pause -= dt;
+      if (aktiv && k.pause <= 0) {
+        k.zustand = 'steht'; k.t = 0; k.angeschaut = 0;
+        k.pos.set(zufall(-5, 2), 0, zufall(10.2, 12)); k.g.rotation.y = Math.PI; k.g.visible = true;
+        Ton.knurren();
+      }
+    } else if (k.zustand === 'steht') {
+      Fig.ruhe(k.f, k.t);
+      Fig.blicken(k.f, dt, camera.position, k.t > 2 ? Math.sin(k.t * 9) * 0.35 : 0);
+      _blickVor.set(k.pos.x - camera.position.x, 1.6 - camera.position.y, k.pos.z - camera.position.z).normalize();
+      const vor = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+      if (vor.dot(_blickVor) > 0.94) k.angeschaut += dt;
+      if (k.angeschaut > 1.3 || k.t > 9 || !aktiv) { k.zustand = 'geht'; k.t = 0; k.g.rotation.y = 0; }
+    } else if (k.zustand === 'geht') {
+      k.pos.z += 2.2 * dt;
+      Fig.gehen(k.f, k.t * 9, 1);
+      if (k.pos.z > 18) { k.zustand = 'weg'; k.g.visible = false; k.pause = zufall(8, 18); }
+    }
+    k.sichtbar = k.g.visible;
+  }
+}
+
+// ---------- Überwachungskamera: vier Ansichten am PC ----------
 const CAMS = [
   { name: 'VORNE', pos: [0.6, 3.25, -3.2], ziel: [0.2, 0.9, -8.5], fov: 72 },
-  { name: 'HINTERTÜR', pos: [3.55, 3.05, -1.4], ziel: [5.2, 0.4, 1.4], fov: 74 },
-  { name: 'HALTESTELLE', pos: [-3.45, 3.25, -3.0], ziel: [-10.5, 0.8, -6.4], fov: 68 }
+  { name: 'HINTEN', pos: [0.2, 3.1, 2.95], ziel: [-0.6, 0.3, 7.8], fov: 80 },
+  { name: 'LINKS', pos: [-3.45, 3.2, -2.95], ziel: [-6.8, 0.3, 2.8], fov: 78 },
+  { name: 'RECHTS', pos: [3.45, 3.1, -2.95], ziel: [6.4, 0.3, 2.2], fov: 78 }
 ];
-const CCTV = { nr: 0, an: true, t: 1, cam: new THREE.PerspectiveCamera(70, 16 / 9, 0.1, 140) };
+const CCTV = { offen: false, rts: [], mats: [], bewegung: [0, 0, 0, 0], naechste: 0, monitorNr: 0, monitorT: 0, t: 1, cam: new THREE.PerspectiveCamera(70, 16 / 9, 0.1, 140) };
 const CCTV_SHADER = {
   vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
   fragmentShader: `
@@ -1130,14 +1248,14 @@ const CCTV_SHADER = {
     }`
 };
 function baueKamera() {
-  CCTV.rt = new THREE.WebGLRenderTarget(HOCH ? 480 : 320, HOCH ? 270 : 180, { type: THREE.HalfFloatType });
-  const uni = () => ({ tex: { value: CCTV.rt.texture }, zeit: { value: 0 }, linear: { value: 0 }, alarm: { value: 0 } });
-  CCTV.matSchirm = new THREE.ShaderMaterial({ uniforms: uni(), ...CCTV_SHADER, depthTest: false, depthWrite: false });
-  CCTV.matMonitor = new THREE.ShaderMaterial({ uniforms: uni(), ...CCTV_SHADER });
-  CCTV.matMonitor.uniforms.linear.value = 1;
+  for (let i = 0; i < CAMS.length; i++) {
+    CCTV.rts.push(new THREE.WebGLRenderTarget(HOCH ? 480 : 320, HOCH ? 270 : 180, { type: THREE.HalfFloatType }));
+    CCTV.mats.push(new THREE.ShaderMaterial({ uniforms: { tex: { value: CCTV.rts[i].texture }, zeit: { value: 0 }, linear: { value: 0 }, alarm: { value: 0 } }, ...CCTV_SHADER, depthTest: false, depthWrite: false }));
+  }
+  CCTV.matMonitor = new THREE.ShaderMaterial({ uniforms: { tex: { value: CCTV.rts[0].texture }, zeit: { value: 0 }, linear: { value: 1 }, alarm: { value: 0 } }, ...CCTV_SHADER });
   CCTV.szene = new THREE.Scene();
-  const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), CCTV.matSchirm); quad.frustumCulled = false;
-  CCTV.szene.add(quad);
+  CCTV.quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), CCTV.mats[0]); CCTV.quad.frustumCulled = false;
+  CCTV.szene.add(CCTV.quad);
   CCTV.ortho = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
   // kleine Kameras außen am Kiosk
   for (const c of CAMS) {
@@ -1147,7 +1265,7 @@ function baueKamera() {
     led.position.set(0.03, 0.04, 0.08); g.add(led);
     g.lookAt(...c.ziel);
   }
-  // Monitor auf der Theke
+  // PC mit Monitor auf der Theke
   const m = new THREE.Group(); m.position.set(-1.8, 1.06, -2.3); scene.add(m);
   rundkiste(0.14, 0.02, 0.1, 0.008, M.dunkel, 0, 0.01, 0, m);
   kiste(0.03, 0.12, 0.03, M.dunkel, 0, 0.07, 0, m);
@@ -1155,59 +1273,90 @@ function baueKamera() {
   gehaeuse.rotation.x = -0.12;
   const bild = new THREE.Mesh(new THREE.PlaneGeometry(0.43, 0.242), CCTV.matMonitor);
   bild.position.set(0, 0.272, 0.027); bild.rotation.x = -0.12; m.add(bild);
+  rundkiste(0.36, 0.015, 0.12, 0.005, std(0x2a2c32, { roughness: 0.5 }), 0, 0.008, 0.16, m);   // Tastatur
+  const treffer = kiste(0.6, 0.5, 0.4, M.unsichtbar, 0, 0.25, 0.05, m);
+  treffer.userData = { typ: 'monitor' }; klickbar.push(treffer);
   m.rotation.y = 0.25;
 }
-function updateKamera(dt) {
-  if (!['schicht', 'kasse', 'jagd', 'schreck'].includes(S.modus)) return;
-  const k = S.kunde || J.k;
-  const alarm = k && k.monster && ['lauern', 'schleichen', 'tuerKlopfen', 'jagt'].includes(k.zustand) ? 1 : 0;
-  const zeit = performance.now() / 1000;
-  for (const m of [CCTV.matSchirm, CCTV.matMonitor]) { m.uniforms.zeit.value = zeit % 100; m.uniforms.alarm.value = alarm * (0.5 + 0.5 * Math.sin(zeit * 8)) * 0.6; }
-  $('kamera').classList.toggle('alarm', !!alarm);
-  $('kamZeit').textContent = uhrText(S.zeit);
-  CCTV.t += dt;
-  if (CCTV.t < (HOCH ? 0.07 : 0.16)) return;
-  CCTV.t = 0;
-  const c = CAMS[CCTV.nr];
+const _np = new THREE.Vector3();
+function renderCam(i) {
+  const c = CAMS[i];
   CCTV.cam.fov = c.fov; CCTV.cam.updateProjectionMatrix();
-  CCTV.cam.position.set(...c.pos); CCTV.cam.lookAt(...c.ziel);
+  CCTV.cam.position.set(...c.pos); CCTV.cam.lookAt(...c.ziel); CCTV.cam.updateMatrixWorld();
   const vorher = renderer.shadowMap.autoUpdate;
   renderer.shadowMap.autoUpdate = false;     // Schatten vom Hauptbild wiederverwenden
-  renderer.setRenderTarget(CCTV.rt);
+  renderer.setRenderTarget(CCTV.rts[i]);
   renderer.render(scene, CCTV.cam);
   renderer.setRenderTarget(null);
   renderer.shadowMap.autoUpdate = vorher;
+  // Bewegung: ist ein Monster im Bild dieser Kamera?
+  const k = J.k || S.kunde;
+  let im = 0;
+  if (k && k.monster && k.f.g.visible) {
+    _np.set(k.pos.x, 1.2, k.pos.z).project(CCTV.cam);
+    if (_np.z < 1 && Math.abs(_np.x) < 1 && Math.abs(_np.y) < 1 && CCTV.cam.position.distanceTo(k.pos) < 22) im = 1;
+  }
+  for (const w of Kreaturen) if (w.sichtbar) { _np.copy(w.pos).project(CCTV.cam); if (_np.z < 1 && Math.abs(_np.x) < 1 && Math.abs(_np.y) < 1) im = 1; }
+  CCTV.bewegung[i] = im;
 }
-function zeichneKameraBild() {
-  if (!CCTV.an || !['schicht', 'kasse', 'jagd'].includes(S.modus)) return;
-  const r = $('kamera').getBoundingClientRect();
-  if (!r.width) return;
-  const x = r.left + 2, y = innerHeight - r.bottom + 2, w = r.width - 4, h = r.height - 4;
+function updateKamera(dt) {
+  if (!['schicht', 'kasse', 'jagd', 'schreck'].includes(S.modus)) { if (CCTV.offen) kameraZu(); return; }
+  const zeit = performance.now() / 1000;
+  CCTV.mats.forEach((m, i) => { m.uniforms.zeit.value = zeit % 100; m.uniforms.alarm.value = CCTV.bewegung[i] * (0.5 + 0.5 * Math.sin(zeit * 8)) * 0.6; });
+  CCTV.matMonitor.uniforms.zeit.value = zeit % 100;
+  if (CCTV.offen) {
+    // jedes Bild eine andere Kamera auffrischen
+    renderCam(CCTV.naechste); CCTV.naechste = (CCTV.naechste + 1) % CAMS.length;
+    $('kamZeit').textContent = uhrText(S.zeit);
+    document.querySelectorAll('#kameraSchirm .zelle').forEach((z, i) => z.classList.toggle('alarm', !!CCTV.bewegung[i]));
+    return;
+  }
+  // Monitor auf der Theke: zeigt die Kameras nacheinander
+  CCTV.monitorT += dt;
+  if (CCTV.monitorT > 3) { CCTV.monitorT = 0; CCTV.monitorNr = (CCTV.monitorNr + 1) % CAMS.length; CCTV.matMonitor.uniforms.tex.value = CCTV.rts[CCTV.monitorNr].texture; }
+  CCTV.t += dt;
+  if (CCTV.t < (HOCH ? 0.12 : 0.25)) return;
+  CCTV.t = 0;
+  renderCam(CCTV.monitorNr);
+  CCTV.matMonitor.uniforms.alarm.value = CCTV.bewegung[CCTV.monitorNr] * 0.5;
+}
+// Vollbild mit vier Kameras: statt der Spielwelt werden nur die Kamerabilder gezeichnet
+function zeichneKameraSchirm() {
+  renderer.setClearColor(0x050607, 1); renderer.clear();
   renderer.autoClear = false;
   renderer.setScissorTest(true);
-  renderer.setViewport(x, y, w, h); renderer.setScissor(x, y, w, h);
-  renderer.render(CCTV.szene, CCTV.ortho);
+  document.querySelectorAll('#kameraSchirm .zelle').forEach((z, i) => {
+    const r = z.getBoundingClientRect();
+    const x = r.left + 2, y = innerHeight - r.bottom + 2, w = r.width - 4, h = r.height - 4;
+    renderer.setViewport(x, y, w, h); renderer.setScissor(x, y, w, h);
+    CCTV.quad.material = CCTV.mats[i];
+    renderer.render(CCTV.szene, CCTV.ortho);
+  });
   renderer.setScissorTest(false);
   renderer.setViewport(0, 0, innerWidth, innerHeight);
   renderer.autoClear = true;
+  renderer.setClearColor(0x000000, 1);
 }
-function kameraWechseln() {
-  CCTV.nr = (CCTV.nr + 1) % CAMS.length;
-  $('kamName').textContent = `CAM ${CCTV.nr + 1} · ${CAMS[CCTV.nr].name}`;
-  CCTV.t = 1;
+function kameraAuf() {
+  if (S.modus !== 'schicht') return;
+  CCTV.offen = true; CCTV.naechste = 0;
+  for (let i = 0; i < CAMS.length; i++) renderCam(i);
+  $('kameraSchirm').classList.remove('weg');
+  document.body.classList.add('kameraAn');
   Ton.klick();
+}
+function kameraZu() {
+  CCTV.offen = false;
+  $('kameraSchirm').classList.add('weg');
+  document.body.classList.remove('kameraAn');
 }
 document.querySelector('#bRollladen .rl-ik').innerHTML = IKONEN.rollladen;
 document.querySelector('#bTaser .blitz').innerHTML = IKONEN.blitz;
 $('bTaser').addEventListener('pointerdown', e => { e.stopPropagation(); Ton.start(); schocken(); });
 $('bTuer').addEventListener('pointerdown', e => { e.stopPropagation(); Ton.start(); tuerUmschalten(); });
-$('kamera').addEventListener('pointerdown', e => { e.stopPropagation(); kameraWechseln(); });
-$('bKamera').addEventListener('pointerdown', e => {
-  e.stopPropagation();
-  CCTV.an = !CCTV.an;
-  $('kamera').classList.toggle('weg2', !CCTV.an);
-  Ton.klick();
-});
+$('bKameraAn').addEventListener('pointerdown', e => { e.stopPropagation(); Ton.start(); kameraAuf(); });
+$('kZurueck').addEventListener('click', () => { kameraZu(); Ton.klick(); });
+$('kRollladen').addEventListener('click', () => { rollladen(); });
 
 // ======================================================================
 //  Figuren (Kunden und Monster)
@@ -1413,12 +1562,24 @@ function updateKunde(k, dt) {
       if (k.klopfen <= 0) { k.klopfen = zufall(0.45, 0.8); Ton.schlag(); W.tuerZittern = 0.12; }
       if (k.lauern <= 0) starteJagd(k, 'tuer');
       break;
+    case 'ohnmacht': {
+      // Mensch unter Strom: zittert, kippt um, bleibt liegen, steht wieder auf
+      const t = k.t;
+      k.f.g.rotation.order = 'YXZ';
+      if (t < 1.3) zittern(k, 1);
+      else if (t < 1.9) { const a = (t - 1.3) / 0.6; k.f.g.rotation.x = -a * a * 1.52; k.f.g.position.set(k.pos.x, a * 0.12, k.pos.z); k.f.armL.rotation.x = k.f.armR.rotation.x = -a * 2.4; }
+      else if (t < 5.2) { k.f.g.rotation.x = -1.52; if (Math.random() < dt * 4) zittern(k, 0.4); else { k.f.g.position.set(k.pos.x, 0.12, k.pos.z); k.zuckZ = 0; } }
+      else if (t < 6.4) { const a = 1 - (t - 5.2) / 1.2; k.f.g.rotation.x = -a * 1.52; k.f.g.position.set(k.pos.x, a * 0.12, k.pos.z); k.f.armL.rotation.x = k.f.armR.rotation.x = -a * 1.2; }
+      else { k.f.g.rotation.x = 0; k.zuckZ = 0; kundeGeht(k, wuerfel(['Was … was war das?!', 'Mein Kopf …', 'Ich komm nie wieder!', 'Ich ruf die Polizei!'])); }
+      break;
+    }
     case 'geschockt':
-      // zappelt unter Strom und löst sich dann auf
-      k.f.g.position.set(k.pos.x + zufall(-0.04, 0.04), zufall(0, 0.04), k.pos.z + zufall(-0.04, 0.04));
-      k.f.armL.rotation.x = zufall(-2.5, 0); k.f.armR.rotation.x = zufall(-2.5, 0); k.zuckZ = zufall(-0.8, 0.8);
-      k.f.g.visible = k.t < 1.2 || Math.floor(k.t * 16) % 2 === 0;
-      if (k.t > 1.9) {
+      // Monster unter Strom: zappelt, bricht zusammen und löst sich auf
+      k.f.g.rotation.order = 'YXZ';
+      if (k.t < 1.2) zittern(k, 1.3);
+      else { const a = Math.min(1, (k.t - 1.2) / 0.5); k.f.g.rotation.x = -a * 1.4; k.f.g.position.set(k.pos.x, a * 0.15, k.pos.z); if (Math.random() < 0.3) zittern(k, 0.3); }
+      k.f.g.visible = k.t < 1.8 || Math.floor(k.t * 16) % 2 === 0;
+      if (k.t > 2.5) {
         Ton.verschwinden(); Ton.gut();
         S.stat.monster++; S.geld += 700;
         toast('Monster weggeschockt! +7,00 €', '#8fd4ff');
@@ -1453,6 +1614,16 @@ function updateKunde(k, dt) {
   } else if (k.zustand !== 'jagt') {
     Fig.blicken(k.f, dt, null, k.zuckZ);
   }
+}
+
+function zittern(k, staerke) {
+  const f = k.f;
+  f.g.position.set(k.pos.x + zufall(-0.035, 0.035) * staerke, f.g.position.y, k.pos.z + zufall(-0.035, 0.035) * staerke);
+  f.armL.rotation.x = zufall(-2.4, -0.2) * staerke; f.armR.rotation.x = zufall(-2.4, -0.2) * staerke;
+  f.armL.rotation.z = zufall(-0.6, 0) * staerke; f.armR.rotation.z = zufall(0, 0.6) * staerke;
+  f.knieL.rotation.x = zufall(0, 0.5) * staerke; f.knieR.rotation.x = zufall(0, 0.5) * staerke;
+  k.zuckZ = zufall(-0.6, 0.6) * staerke;
+  f.kopf.rotation.x = zufall(-0.4, 0.3) * staerke;
 }
 
 function gehePfad(k, dt, tempo) {
@@ -1626,6 +1797,7 @@ const ECKEN = [new THREE.Vector3(-3.95, 0, -3.45), new THREE.Vector3(3.95, 0, -3
 
 function starteJagd(k, ort = 'fenster') {
   if (S.modus === 'kasse') kasseZu();
+  kameraZu();
   S.modus = 'jagd';
   J.phase = 'klettern'; J.t = 0; J.k = k; J.ort = ort;
   W.fensterFrei = ort === 'tuer';
@@ -1842,7 +2014,7 @@ let rennKnopf = false;
 addEventListener('keydown', e => {
   tasten[e.code] = true;
   if (e.code === 'KeyR' || e.code === 'KeyQ') rollladen();
-  if (e.code === 'KeyC') kameraWechseln();
+  if (e.code === 'KeyC') { if (CCTV.offen) kameraZu(); else kameraAuf(); }
   if (e.code === 'KeyF') schocken();
   if (e.code === 'KeyT') tuerUmschalten();
   if (e.code === 'KeyE' || e.code === 'Space') { e.preventDefault(); tippen(innerWidth / 2, innerHeight / 2); }
@@ -1908,7 +2080,7 @@ addEventListener('keyup', e => { tasten[e.code] = false; });
 const strahl = new THREE.Raycaster();
 const _ndc = new THREE.Vector2();
 function tippen(x, y) {
-  if (S.modus !== 'schicht') return;
+  if (S.modus !== 'schicht' || CCTV.offen) return;
   _ndc.set(x / innerWidth * 2 - 1, -(y / innerHeight) * 2 + 1);
   strahl.setFromCamera(_ndc, camera);
   const treffer = strahl.intersectObjects(klickbar, false)[0];
@@ -1921,6 +2093,9 @@ function tippen(x, y) {
   else if (d.typ === 'rollladen') rollladen();
   else if (d.typ === 'taser') taserNehmen();
   else if (d.typ === 'tuer') tuerUmschalten();
+  else if (d.typ === 'monitor') kameraAuf();
+  else if (d.typ === 'muelleimer') muellNehmen();
+  else if (d.typ === 'container') muellWegwerfen();
 }
 
 function updateSpieler(dt) {
@@ -1969,6 +2144,8 @@ function updateSchicht(dt) {
     if (S.naechsterIn <= 0 && S.zeit < NACHT_LAENGE - 15) { W.bus.zustand = 'kommt'; W.bus.x = -90; W.bus.t = 0; Ton.bus(true); }
   }
   if (S.kunde) updateKunde(S.kunde, dt);
+  if (!S.aufgabe && S.aufgabenZeiten && S.aufgabenZeiten.length && S.zeit >= S.aufgabenZeiten[0]) { S.aufgabenZeiten.shift(); neueAufgabe(); }
+  zeigeAufgabe();
   if (S.modus === 'jagd') return;
 
   // Hinweise oben
@@ -2072,6 +2249,7 @@ function starteNacht(n) {
   S.naechsterIn = 3; S.seitMonster = 0; S.kundenGesamt = 0;
   S.stat = { bedient: 0, monster: 0, entkommen: 0, verjagt: 0 };
   S.taser = false; S.ladung = 0; handTaser.visible = false;
+  S.aufgabe = null; S.aufgabenZeiten = [40, 160, 290]; W.muellVoll.visible = false; handSack.visible = false;
   W.taserWand.visible = true; W.taserLampe.material.color.setRGB(0.2, 3, 0.4); zeichneTaser();
   kioskZuruecksetzen();
   ['titel', 'ende', 'intro', 'pause'].forEach(id => $(id).classList.add('weg'));
@@ -2245,6 +2423,7 @@ function pruefeLeistung(roh) {
 }
 
 function zeichne(dt) {
+  if (CCTV.offen) { zeichneKameraSchirm(); return; }
   if (post) {
     const u = post.film.uniforms;
     u.zeit.value = (performance.now() / 1000) % 100;
@@ -2267,7 +2446,7 @@ function schleife(jetzt) {
   switch (S.modus) {
     case 'titel': updateTitel(dt); break;
     case 'intro': updateIntro(dt); break;
-    case 'schicht': updateSpieler(dt); updateSchicht(dt); break;
+    case 'schicht': if (CCTV.offen) kameraAufSpieler(); else updateSpieler(dt); updateSchicht(dt); break;
     case 'kasse': kameraAufSpieler(); updateSchicht(dt); break;
     case 'jagd': updateSpieler(dt); updateJagd(dt); S.zeit += dt * MIN_PRO_SEK; break;
     case 'schreck': updateSchreck(dt); break;
@@ -2277,7 +2456,8 @@ function schleife(jetzt) {
   zeichne(dt);
   updateKamera(dt);
   updateTaser(dt);
-  zeichneKameraBild();
+  updateNaehe();
+  if (['schicht', 'kasse'].includes(S.modus)) updateKreaturen(dt);
 }
 requestAnimationFrame(schleife);
 
