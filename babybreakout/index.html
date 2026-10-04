@@ -97,7 +97,17 @@
   #tbtns { position: absolute; right: calc(14px + env(safe-area-inset-right, 0px)); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); display: grid; grid-template-columns: repeat(3, 62px); gap: 10px; pointer-events: auto; }
   #tbtns button { font-family: var(--ui); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink); height: 62px; border-radius: 50%; background: rgba(10,6,8,.55); border: 1px solid rgba(236,228,214,.3); }
   #tbtns button.on { border-color: var(--blood); background: rgba(120,10,30,.6); }
-  #bShake { grid-column: 2 / span 2; border-radius: 31px !important; font-size: 15px !important; }
+  #bShake { grid-column: 1 / span 3; border-radius: 31px !important; font-size: 15px !important; }
+  #prompt { position: absolute; left: 50%; bottom: calc(110px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); font-size: 18px; letter-spacing: .08em; padding: 6px 14px; background: rgba(0,0,0,.6); border: 1px solid rgba(236,228,214,.3); white-space: nowrap; }
+  #powerFx { position: absolute; inset: 0; box-shadow: inset 0 0 160px rgba(110,180,255,.55); }
+  #powerFx b { position: absolute; left: 50%; top: calc(16px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); font-family: var(--heavy); font-weight: 400; font-size: 26px; letter-spacing: .12em; color: #bfe0ff; text-shadow: 0 0 14px rgba(110,180,255,.8); }
+  #choice { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(3,2,3,.85); padding: 16px; overflow-y: auto; }
+  #choice .box { display: grid; gap: 14px; width: min(100%, 780px); }
+  #choice .opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+  .opt { text-align: left; font-family: var(--ui); color: var(--ink); background: rgba(20,12,16,.92); border: 1px solid rgba(236,228,214,.25); padding: 16px; cursor: pointer; display: grid; gap: 6px; }
+  .opt:hover, .opt:focus-visible { border-color: var(--blood); outline: none; background: rgba(60,10,22,.9); }
+  .opt b { font-family: var(--heavy); font-weight: 400; font-size: 24px; letter-spacing: .06em; }
+  .opt span { color: var(--dim); font-size: 16px; line-height: 1.35; }
   #bPause { position: absolute; top: calc(10px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); pointer-events: auto; font-family: var(--ui); letter-spacing: .15em; text-transform: uppercase; font-size: 13px; color: var(--ink); background: rgba(10,6,8,.55); border: 1px solid rgba(236,228,214,.3); padding: 6px 14px; }
   @media (prefers-reduced-motion: reduce) { .mi, .mi::before { transition: none; } }
 </style>
@@ -122,6 +132,8 @@
   </div>
   <canvas id="mini" width="300" height="300"></canvas>
   <div id="msgs"></div>
+  <div id="prompt" hidden></div>
+  <div id="powerFx" hidden><b id="powerTxt"></b></div>
   <div id="cross"></div>
   <div id="card" hidden><div><p id="cardKicker"></p><h2 id="cardTitle"></h2></div></div>
 </div>
@@ -133,6 +145,8 @@
     <button id="bI2" type="button">Schnuller</button>
     <button id="bI3" type="button">iPad</button>
     <button id="bRun" type="button">Rennen</button>
+    <button id="bGun" type="button">Schuss</button>
+    <button id="bUse" type="button">Reden</button>
     <button id="bShake" type="button">Schütteln</button>
   </div>
   <button id="bPause" type="button">Pause</button>
@@ -156,10 +170,12 @@
         <dt>Shift</dt><dd>rennen (laut)</dd>
         <dt>Leertaste</dt><dd>Baby schütteln: zeigt die Kreaturen</dd>
         <dt>1 · 2 · 3</dt><dd>Rassel · Schnuller · iPad</dd>
+        <dt>F / Klick</dt><dd>Babypistole abfeuern</dd>
+        <dt>E</dt><dd>mit Freunden reden</dd>
         <dt>P / Esc</dt><dd>Pause</dd>
         <dt>Touch</dt><dd>links bewegen, rechts wischen zum Umsehen</dd>
       </dl>
-      <p class="stat">Ziel: Auf jeder Etage alle Milchtropfen sammeln, dann öffnet sich die Leiter nach oben. Fünf Etagen bis zur Oberfläche. Kopfhörer empfohlen.</p>
+      <p class="stat">Ziel: Auf jeder Etage alle Milchtropfen sammeln, dann öffnet sich die Leiter nach oben. Riesen-Milchflaschen drehen den Spieß um: Dann haben die Kreaturen Angst und du kannst sie wegpusten. Freunde wie Socki geben dir neue Fähigkeiten. Kopfhörer empfohlen.</p>
       <button class="mi" type="button" data-back>Zurück</button>
     </div>
   </div>
@@ -175,6 +191,15 @@
       <button class="mi primary" id="againBtn" type="button">Nochmal</button>
       <button class="mi" id="menuBtn" type="button">Hauptmenü</button>
     </nav>
+  </div>
+</div>
+
+<div id="choice" hidden>
+  <div class="box">
+    <p class="chapter">Ein neuer Freund</p>
+    <h2 class="big" style="font-size:clamp(40px,7vw,76px)">Socki will <em>helfen</em></h2>
+    <p class="stat">„Ich bin auch hier unten gefangen. Nimm eins davon, für diesen Lauf.“</p>
+    <div class="opts" id="choiceOpts"></div>
   </div>
 </div>
 
@@ -368,6 +393,19 @@ const M = {
   gift: new THREE.MeshStandardMaterial({ color: 0xa8456a, roughness: .5 }),
   ribbon: new THREE.MeshStandardMaterial({ color: 0xe8cf70, roughness: .35, metalness: .3 }),
   milk: new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xbfdcff, emissiveIntensity: 1.6, roughness: .2 }),
+  jelly: new THREE.MeshPhysicalMaterial({ color: 0xbfe3a6, emissive: 0x18260e, roughness: .12, clearcoat: 1, clearcoatRoughness: .08, transparent: true, opacity: .9, sheen: 1, sheenColor: new THREE.Color(0xffd6e6) }),
+  jellyBelly: new THREE.MeshPhysicalMaterial({ color: 0xf2d6c4, roughness: .2, clearcoat: 1, transparent: true, opacity: .92 }),
+  gun: new THREE.MeshStandardMaterial({ color: 0xff7a1a, roughness: .35 }),
+  gunTip: new THREE.MeshStandardMaterial({ color: 0x2fc26b, roughness: .4 }),
+  sock: new THREE.MeshStandardMaterial({ map: tex(mkCanvas(64, 64, g => { for (let y = 0; y < 64; y += 16) { g.fillStyle = "#c8383c"; g.fillRect(0, y, 64, 9); g.fillStyle = "#efe6d6"; g.fillRect(0, y + 9, 64, 7); } }), 1), roughness: .95 }),
+  button: new THREE.MeshStandardMaterial({ color: 0xf2efe6, roughness: .4 }),
+  dark: new THREE.MeshStandardMaterial({ color: 0x111014, roughness: .4 }),
+  teddy: new THREE.MeshStandardMaterial({ color: 0x7a5236, roughness: 1 }),
+  teddyLight: new THREE.MeshStandardMaterial({ color: 0xb08a66, roughness: 1 }),
+  blocks: [0xb84a4a, 0x4a78b8, 0xd8b04a, 0x5aa86a].map(c => new THREE.MeshStandardMaterial({ color: c, roughness: .7 })),
+  bottle: new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: .08, clearcoat: 1, transparent: true, opacity: .45 }),
+  milkIn: new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xcfe6ff, emissiveIntensity: 1.8 }),
+  nipple: new THREE.MeshStandardMaterial({ color: 0xe8a060, roughness: .5, transparent: true, opacity: .9 }),
   ghost: new THREE.MeshBasicMaterial({ color: 0xff1a3a, transparent: true, opacity: .45, depthTest: false, depthWrite: false, fog: false }),
 };
 const S = (r, w = 24, h = 18) => new THREE.SphereGeometry(r, w, h);
@@ -382,27 +420,52 @@ function limb(parent, mat, ax, ay, az, bx, by, bz, r) {
 }
 function override(group, mat) { group.traverse(o => { if (o.isMesh) { o.material = mat; o.castShadow = false; o.renderOrder = 999; } }); return group; }
 
-// ---------- Baby (komplett schwarze Augen wie im Spiel) ----------
+// ---------- Baby: Wackelpudding-Raupe mit schwarzen Augen ----------
 function makeBaby() {
-  const g = new THREE.Group();
-  const body = mesh(S(.2), M.blanket, 0, -.14, 0, g); body.scale.set(1.12, 1.25, .95);
-  mesh(new THREE.TorusGeometry(.13, .045, 10, 24), M.blanket, 0, 0, .02, g).rotation.x = Math.PI / 2.4;
-  const head = new THREE.Group(); head.position.set(0, .12, 0); g.add(head);
-  mesh(S(.145, 32, 24), M.babySkin, 0, 0, 0, head).scale.set(1, .97, 1);
-  mesh(S(.04), M.babySkin, -.142, -.005, 0, head).scale.set(.5, 1, .8);
-  mesh(S(.04), M.babySkin, .142, -.005, 0, head).scale.set(.5, 1, .8);
-  mesh(S(.045), M.babyCheek, -.075, -.045, .1, head);
-  mesh(S(.045), M.babyCheek, .075, -.045, .1, head);
-  mesh(S(.02), M.babySkin, 0, -.025, .145, head);
+  const g = new THREE.Group(), segs = [];
+  [[.13, -.1, -.01], [.12, -.21, -.03], [.11, -.31, -.06], [.095, -.4, -.1]].forEach(([r, y, z], i) => {
+    const x = i % 2 ? .012 : -.012;
+    const seg = new THREE.Group(); seg.position.set(x, y, z); g.add(seg); segs.push(seg);
+    mesh(S(r, 24, 18), M.jelly, 0, 0, 0, seg).scale.set(1.15, .85, 1);
+    mesh(S(r * .55, 16, 12), M.jellyBelly, 0, 0, r * .62, seg).scale.set(1.25, .8, .45);
+    [-1, 1].forEach(sd => mesh(S(.026, 10, 8), M.jelly, sd * r * 1.08, -.01, .03, seg));
+  });
+  const head = new THREE.Group(); head.position.set(0, .1, 0); g.add(head);
+  mesh(S(.15, 32, 24), M.jelly, 0, 0, 0, head).scale.set(1.08, .95, 1);
+  [-1, 1].forEach(s => { limb(head, M.jelly, s * .05, .12, 0, s * .09, .22, .02, .012); mesh(S(.024, 10, 8), M.jellyBelly, s * .09, .225, .02, head); });
+  mesh(S(.045), M.jellyBelly, -.08, -.05, .1, head).scale.set(1, .8, .6);
+  mesh(S(.045), M.jellyBelly, .08, -.05, .1, head).scale.set(1, .8, .6);
   const lids = [];
   [-1, 1].forEach(s => {
-    mesh(S(.036), M.eye, s * .052, .01, .118, head).scale.set(1, 1.08, .7);
-    mesh(S(.0075, 8, 6), M.glint, s * .052 + .012, .024, .143, head);
-    const l = mesh(S(.039), M.babySkin, s * .052, .012, .12, head); l.scale.set(1.05, 1.1, .75); l.visible = false; lids.push(l);
+    mesh(S(.04), M.eye, s * .056, .015, .12, head).scale.set(1, 1.1, .7);
+    mesh(S(.008, 8, 6), M.glint, s * .056 + .013, .03, .147, head);
+    const l = mesh(S(.043), M.jelly, s * .056, .017, .122, head); l.scale.set(1.05, 1.1, .75); l.visible = false; lids.push(l);
   });
-  const mouth = mesh(S(.022), M.mouth, 0, -.07, .128, head); mouth.scale.set(1.5, .45, .5);
-  mesh(S(.06), M.hair, 0, .1, -.03, head).scale.set(1.6, .55, 1.7);
-  g.userData = { head, lids, mouth, body };
+  const mouth = mesh(S(.022), M.mouth, 0, -.07, .135, head); mouth.scale.set(1.6, .45, .5);
+  // Babypistole
+  const gun = new THREE.Group(); gun.position.set(.17, -.03, .1); gun.rotation.set(.15, .35, -.2); gun.visible = false; g.add(gun);
+  mesh(new THREE.BoxGeometry(.05, .045, .14), M.gun, 0, 0, -.04, gun);
+  mesh(new THREE.BoxGeometry(.035, .08, .04), M.gun, 0, -.05, .01, gun).rotation.x = -.3;
+  mesh(new THREE.CylinderGeometry(.016, .016, .06, 12), M.gunTip, 0, .005, -.13, gun).rotation.x = Math.PI / 2;
+  const muzzle = new THREE.PointLight(0xffc070, 0, 3, 2); muzzle.position.set(0, 0, -.2); gun.add(muzzle);
+  g.userData = { head, lids, mouth, segs, gun, muzzle };
+  return g;
+}
+
+// ---------- Freund Socki (Sockenpuppe) ----------
+function makeSocki() {
+  const g = new THREE.Group();
+  mesh(new THREE.CylinderGeometry(.2, .22, .9, 20), M.sock, 0, .45, 0, g);
+  const head = new THREE.Group(); head.position.set(0, .95, .05); g.add(head);
+  mesh(S(.24, 24, 18), M.sock, 0, 0, 0, head).scale.set(1, .8, 1.2);
+  mesh(S(.14), M.mouth, 0, -.08, .22, head).scale.set(1.3, .45, .5);
+  [-1, 1].forEach(s => {
+    const b = mesh(new THREE.CylinderGeometry(.05, .05, .02, 16), M.button, s * .09, .1, .2, head); b.rotation.x = Math.PI / 2 - .4;
+    mesh(S(.018, 8, 6), M.dark, s * .09, .105, .218, head);
+  });
+  mesh(new THREE.ConeGeometry(.11, .22, 16), M.blocks[2], 0, .25, -.02, head).rotation.x = -.2;
+  const lamp = new THREE.PointLight(0xffd090, 2.5, 4.5, 2); lamp.position.set(0, 1.9, .4); g.add(lamp);
+  g.userData = { head };
   return g;
 }
 
@@ -601,6 +664,9 @@ const sfx = {
   open() { noise(1.6, .25, 120, 60, 1, 0, undefined, "lowpass"); noise(.4, .12, 2600, 1800, 12, .5); sfx.coo(); },
   spotted() { noise(1.4, .2, 200, 2400, .7); noise(.6, .25, 90, 50, 1, 0, undefined, "lowpass"); },
   scare(pan) { voice({ dur: 1.1, f: [700, 980, 520], vol: .45, F: [1300, 2900, 4500], vib: 30, breath: .8, pan }); noise(1.2, .5, 900, 3600, 1.1); noise(1, .4, 80, 40, 1, 0, undefined, "lowpass"); },
+  shot() { noise(.09, .4, 1600, 500, 1.2); noise(.18, .3, 160, 60, 1, 0, undefined, "lowpass"); },
+  poof() { noise(.5, .3, 400, 3000, .8); },
+  bottle() { noise(.25, .15, 600, 1800, 2); sfx.giggle(); },
   chitter(v, pan) { for (let i = 0; i < 4; i++) noise(.03, v, 2400, 1700, 8, i * .045, pan); },
   breath(v, pan) { noise(1, v, 280, 700, .7, 0, pan); },
   creak(v, pan) { noise(.45, v, 700, 380, 14, 0, pan); },
@@ -712,6 +778,44 @@ function buildLevel(theme) {
     mesh(new THREE.TorusGeometry(.06, .02, 8, 16), M.ribbon, .05, .33, 0, o).rotation.y = -.6;
     gf.obj = o;
   });
+  // Riesen-Milchflaschen (Power)
+  powers.forEach(pw => {
+    const o = new THREE.Group(); o.position.set(pw.x * CELL, 0, pw.y * CELL); level.add(o);
+    mesh(new THREE.CylinderGeometry(.13, .13, .4, 20), M.bottle, 0, .32, 0, o);
+    mesh(new THREE.CylinderGeometry(.11, .11, .3, 20), M.milkIn, 0, .28, 0, o);
+    mesh(new THREE.CylinderGeometry(.14, .14, .06, 20), M.gunTip, 0, .55, 0, o);
+    mesh(new THREE.SphereGeometry(.07, 14, 10, 0, Math.PI * 2, 0, Math.PI / 2), M.nipple, 0, .58, 0, o).scale.y = 1.6;
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: 0x9fd0ff, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
+    sp.scale.setScalar(1.3); sp.position.y = .35; o.add(sp);
+    pw.obj = o;
+  });
+  // Freund
+  if (friend) {
+    const o = makeSocki(); o.position.set(friend.x * CELL, 0, friend.y * CELL); level.add(o);
+    let best = 0, bd = -1; [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([dx, dy], i) => { if (!isWall(Math.floor(friend.x) + dx, Math.floor(friend.y) + dy)) { best = Math.atan2(dy, dx); bd = i; } });
+    o.rotation.y = Math.PI / 2 - best; friend.obj = o;
+  }
+  // Spielzeug und Möbel in den Gängen
+  props.forEach(pr => {
+    const o = new THREE.Group(); o.position.set(pr.x * CELL, 0, pr.y * CELL); o.rotation.y = Math.PI / 2 - pr.face + rnd(-.4, .4); level.add(o);
+    if (pr.k === "teddy") {
+      mesh(S(.17), M.teddy, 0, .17, 0, o).scale.set(1, 1.1, .9);
+      mesh(S(.13), M.teddy, 0, .42, .02, o);
+      [-1, 1].forEach(s => { mesh(S(.05), M.teddy, s * .1, .53, 0, o); mesh(S(.06), M.teddy, s * .15, .1, .1, o); mesh(S(.012, 8, 6), M.dark, s * .045, .45, .13, o); });
+      mesh(S(.05), M.teddyLight, 0, .39, .12, o).scale.set(1.2, .8, .7);
+      o.rotation.z = rnd(-.3, .3);
+    } else if (pr.k === "blocks") {
+      for (let i = 0; i < 3; i++) { const b = mesh(new THREE.BoxGeometry(.22, .22, .22), M.blocks[(i + Math.floor(rnd(0, 4))) % 4], rnd(-.05, .05) + (i === 2 ? .12 : 0), .11 + (i === 1 ? .22 : 0), i === 2 ? .15 : 0, o); b.rotation.y = rnd(0, 1); }
+    } else {
+      // umgekipptes Gitterbettchen
+      const w = .9, d = .5, h = .55;
+      [[-w / 2, -d / 2], [w / 2, -d / 2], [-w / 2, d / 2], [w / 2, d / 2]].forEach(([x, z]) => mesh(new THREE.CylinderGeometry(.025, .025, h), M.teddyLight, x, h / 2, z, o));
+      for (let x = -w / 2; x <= w / 2 + .01; x += .1) mesh(new THREE.CylinderGeometry(.012, .012, h * .8), M.teddyLight, x, h * .45, d / 2, o);
+      mesh(new THREE.BoxGeometry(w, .08, d), M.blanket, 0, .18, 0, o);
+      mesh(new THREE.BoxGeometry(w + .05, .04, .04), M.teddyLight, 0, h, d / 2, o);
+      o.scale.setScalar(.8);
+    }
+  });
   // Leiter nach oben
   exitObj = new THREE.Group(); exitObj.position.set((exitC.x + .5) * CELL, 0, (exitC.y + .5) * CELL); level.add(exitObj);
   [-.25, .25].forEach(x => mesh(new THREE.CylinderGeometry(.03, .03, WALL_H + .4), M.metal, x, WALL_H / 2 + .2, 0, exitObj));
@@ -738,6 +842,7 @@ function setExitOpen(open) {
 // ================= Zustand =================
 let state = "loading", prevState = "play", T = 0;
 let run = null, F = FLOORS[0], monsters = [], decoy = null, scare = null, cardT = 0, grace = 0, huntT = 0, revealT = 0;
+let powers = [], friend = null, props = [], powerT = 0, gunFlash = 0;
 const P = { x: 1.5, y: 1.5, a: 0, pitch: 0, stamina: 100, running: false, bob: 0, stepT: 0, moving: false };
 const B = { awake: 100, fuss: 0, cry: 0, shakeT: 0, calm: 0, look: 0, fear: 0, whimT: 0, giggleT: 6, wasAsleep: false };
 const keys = {};
@@ -761,8 +866,8 @@ function resetPositions() {
   const far = []; for (let i = 0; i < N * N; i++) if (!isWall(i % N, (i / N) | 0) && distFromStart[i] > Math.max(6, distFromStart[exitC.y * N + exitC.x] * .5)) far.push(i);
   monsters.forEach(m => {
     const c = far[Math.floor(Math.random() * far.length)];
-    Object.assign(m, { x: c % N + .5, y: ((c / N) | 0) + .5, path: [], state: "wander", stun: 0, lastSeen: -99, wait: rnd(0, 2) });
-    m.obj.scale.setScalar(1);
+    Object.assign(m, { x: c % N + .5, y: ((c / N) | 0) + .5, path: [], state: "wander", stun: 0, gone: 0, lastSeen: -99, wait: rnd(0, 2) });
+    m.obj.scale.setScalar(1); m.obj.visible = true;
   });
   grace = 4;
 }
@@ -780,10 +885,30 @@ function buildFloor(previewOnly = false) {
     pellets.push({ x: x + .5, y: y + .5, on: true });
   }
   deadEnds.sort(() => Math.random() - .5);
-  const nGifts = previewOnly ? 0 : 1 + (run.floor >= 1) + (run.floor >= 3);
-  deadEnds.slice(0, nGifts).forEach(c => {
-    gifts.push({ x: c.x + .5, y: c.y + .5, k: ["rattle", "paci", "ipad"][Math.floor(Math.random() * 3)], on: true });
-    const i = pellets.findIndex(p => p.x === c.x + .5 && p.y === c.y + .5); if (i >= 0) pellets.splice(i, 1);
+  const nGifts = previewOnly ? 0 : 2 + (run.floor >= 2);
+  const takePellet = c => { const i = pellets.findIndex(p => p.x === c.x + .5 && p.y === c.y + .5); if (i >= 0) pellets.splice(i, 1); };
+  deadEnds.slice(0, nGifts).forEach((c, i) => {
+    const k = run.floor === 0 && i === 0 ? "gun" : ["rattle", "paci", "ipad", "gun", "gun"][Math.floor(Math.random() * 5)];
+    gifts.push({ x: c.x + .5, y: c.y + .5, k, on: true }); takePellet(c);
+  });
+  const rest = deadEnds.slice(nGifts);
+  powers = previewOnly ? [] : rest.slice(0, 3).map(c => { takePellet(c); return { x: c.x + .5, y: c.y + .5, on: true }; });
+  let fc = rest[3];
+  if (!fc && !previewOnly) { // keine Sackgasse mehr frei: irgendeine Zelle mit Abstand zum Start
+    const used = new Set([...gifts, ...powers].map(o => Math.floor(o.x) + "," + Math.floor(o.y)));
+    const opts = pellets.filter(p => distFromStart[Math.floor(p.y) * N + Math.floor(p.x)] > 5 && !used.has(Math.floor(p.x) + "," + Math.floor(p.y)));
+    const p = opts[Math.floor(Math.random() * opts.length)]; if (p) fc = { x: Math.floor(p.x), y: Math.floor(p.y) };
+  }
+  friend = !previewOnly && fc ? { x: fc.x + .5, y: fc.y + .5, on: true } : null;
+  if (friend) takePellet(fc);
+  props = [];
+  const cand = []; for (let y = 1; y < N - 1; y++) for (let x = 1; x < N - 1; x++) if (!isWall(x, y) && distFromStart[y * N + x] > 1 && !(x === exitC.x && y === exitC.y)) cand.push([x, y]);
+  cand.sort(() => Math.random() - .5);
+  cand.slice(0, 10 + run?.floor * 2 || 10).forEach(([x, y], i) => {
+    const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([dx, dy]) => isWall(x + dx, y + dy));
+    if (!dirs.length) return;
+    const [dx, dy] = dirs[Math.floor(Math.random() * dirs.length)];
+    props.push({ x: x + .5 + dx * .33, y: y + .5 + dy * .33, face: Math.atan2(-dy, -dx), k: i % 3 === 0 ? "teddy" : i % 3 === 1 ? "blocks" : "crib" });
   });
   total = pellets.length; got = 0;
   buildLevel(F.theme);
@@ -791,11 +916,11 @@ function buildFloor(previewOnly = false) {
   spawnMonsters();
   resetPositions();
   Object.assign(B, { awake: 100, fuss: 0, cry: 0, calm: 0, look: 0, fear: 0 });
-  decoy = null; huntT = 0; revealT = 0;
+  decoy = null; huntT = 0; revealT = 0; powerT = 0;
 }
 function newRun() {
   audio();
-  run = { floor: 0, hearts: 3 + save.upg.heart, maxHearts: 3 + save.upg.heart, stars: 0, pellets: 0, time: 0, seen: 0, inv: { rattle: save.upg.rattle, paci: 0, ipad: 0 } };
+  run = { floor: 0, hearts: 3 + save.upg.heart, maxHearts: 3 + save.upg.heart, stars: 0, pellets: 0, time: 0, seen: 0, inv: { rattle: save.upg.rattle, paci: 0, ipad: 0 }, ammo: 0, mods: {} };
   ["titleScreen", "endScreen", "pauseScreen"].forEach(id => $(id).hidden = true);
   msgBox.innerHTML = "";
   startFloor();
@@ -819,6 +944,8 @@ window.addEventListener("keydown", e => {
   if (e.code === "Digit1") useItem("rattle");
   if (e.code === "Digit2") useItem("paci");
   if (e.code === "Digit3") useItem("ipad");
+  if (e.code === "KeyF") shoot();
+  if (e.code === "KeyE") talk();
   if (e.code === "KeyP" || e.code === "Escape") togglePause();
 });
 window.addEventListener("keyup", e => { keys[e.code] = false; });
@@ -829,6 +956,7 @@ let dragging = false;
 canvas.addEventListener("mousedown", () => {
   audio();
   if (state !== "play") return;
+  if (document.pointerLockElement === canvas) { shoot(); return; }
   dragging = true;
   if (canvas.requestPointerLock && document.pointerLockElement !== canvas) { try { const p = canvas.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch {} }
 });
@@ -860,7 +988,7 @@ canvas.addEventListener("pointermove", e => {
 const endP = e => { if (e.pointerId === touch.id) { touch.id = null; touch.dx = touch.dy = 0; $("stick").hidden = true; } if (e.pointerId === touch.look) touch.look = null; };
 canvas.addEventListener("pointerup", endP); canvas.addEventListener("pointercancel", endP);
 const tb = (id, fn) => $(id).addEventListener("pointerdown", e => { e.preventDefault(); e.stopPropagation(); audio(); fn(); });
-tb("bShake", shake); tb("bI1", () => useItem("rattle")); tb("bI2", () => useItem("paci")); tb("bI3", () => useItem("ipad"));
+tb("bShake", shake); tb("bGun", shoot); tb("bUse", talk); tb("bI1", () => useItem("rattle")); tb("bI2", () => useItem("paci")); tb("bI3", () => useItem("ipad"));
 tb("bRun", () => { touch.run = !touch.run; $("bRun").classList.toggle("on", touch.run); });
 $("bPause").addEventListener("click", togglePause);
 
@@ -903,6 +1031,67 @@ function useItem(k) {
     sfx.ipad(); say("iPad abgelegt. Die Kreaturen wollen Zeichentrick sehen.", "#7fd0ff", 3);
   }
 }
+function shoot() {
+  if (state !== "play") return;
+  if (run.ammo <= 0) { say("Die Babypistole ist leer. Such Geschenke!", "#8f857a", 1.6); return; }
+  run.ammo--; gunFlash = .09; sfx.shot();
+  let hit = null, hd = 99;
+  monsters.forEach(m => {
+    if (m.gone > 0) return;
+    const d = dist(m.x, m.y, P.x, P.y), rel = wrapA(Math.atan2(m.y - P.y, m.x - P.x) - P.a);
+    if (Math.abs(rel) < Math.atan2(.5, d * CELL) + .04 && d < hd && d < 12 && los(P.x, P.y, m.x, m.y)) { hit = m; hd = d; }
+  });
+  if (hit) { hit.stun = 6; hit.path = []; hit.state = "wander"; run.stars += 2; setTimeout(() => sfx.giggle(), 200); say("Treffer! Die Kreatur ist 6 Sekunden betäubt.", "#ffb070", 2); }
+  else say("Daneben!", "#8f857a", 1.2);
+  noiseAt(P.x, P.y, 6);
+}
+const MODS = {
+  quiet: ["Leise Sohlen", "Rennen ist so leise wie Gehen."],
+  fast: ["Schnelle Füße", "Du bist 15 % schneller."],
+  lungs: ["Große Lunge", "50 % mehr Puste beim Rennen."],
+  sleepy: ["Hellwaches Baby", "Das Baby schläft nur halb so schnell ein."],
+  heart: ["Extra-Herz", "Sofort ein Herz mehr."],
+  nose: ["Milchnase", "Alle Milchtropfen erscheinen auf der Karte."],
+  ammo: ["Nachschub", "+4 Schuss für die Babypistole."],
+  power: ["Dicke Flaschen", "Riesen-Milchflaschen wirken 12 statt 8 Sekunden."],
+};
+function talk() {
+  if (state !== "play" || !friend || !friend.on || dist(friend.x, friend.y, P.x, P.y) > 1) return;
+  state = "choice"; $("touch").hidden = true; if (document.exitPointerLock) document.exitPointerLock();
+  sfx.coo();
+  const pool = Object.keys(MODS).filter(k => !run.mods[k] || k === "heart" || k === "ammo").sort(() => Math.random() - .5).slice(0, 3);
+  const box = $("choiceOpts"); box.innerHTML = "";
+  pool.forEach(k => {
+    const b = document.createElement("button"); b.type = "button"; b.className = "opt"; b.id = "opt-" + k;
+    b.innerHTML = `<b>${MODS[k][0]}</b><span>${MODS[k][1]}</span>`;
+    b.addEventListener("click", () => {
+      run.mods[k] = (run.mods[k] || 0) + 1;
+      if (k === "heart") { run.hearts++; run.maxHearts++; }
+      if (k === "ammo") run.ammo += 4;
+      friend.on = false; friend.leaveT = 1.2;
+      $("choice").hidden = true; state = "play"; $("touch").hidden = !isTouch;
+      sfx.giggle(); say(`Socki: „Viel Glück da oben!“ – ${MODS[k][0]}`, "#ffcf4a", 3);
+    });
+    box.appendChild(b);
+  });
+  $("choice").hidden = false; box.firstChild.focus({ preventScroll: true });
+}
+function maxStamina() { return (100 + save.upg.stam * 35) * (run && run.mods.lungs ? 1.5 : 1); }
+function farCell(fromX, fromY, minD = 6) {
+  let best = null, bd = -1;
+  for (let k = 0; k < 40; k++) {
+    const c = Math.floor(Math.random() * N * N), x = c % N, y = (c / N) | 0;
+    if (isWall(x, y)) continue;
+    const d = dist(x + .5, y + .5, fromX, fromY);
+    if (d > bd) { bd = d; best = [x, y]; }
+    if (d > minD + 4) break;
+  }
+  return best || [1, 1];
+}
+function banish(m) {
+  m.gone = 10; m.path = []; m.obj.visible = false; m.ghost.visible = false; run.stars += 5;
+  sfx.poof(); sfx.giggle(); say("Weggepustet! +5 Sterne", "#bfe0ff", 1.8);
+}
 function noiseAt(x, y, r, loud = false) {
   monsters.forEach(m => {
     if (m.type === "starrer" || m.stun > 0) return;
@@ -925,11 +1114,19 @@ function updateMonsters(dt) {
   const greed = 1 + .2 * (got / Math.max(1, total));
   for (const m of monsters) {
     m.anim += dt;
+    if (m.gone > 0) {
+      m.gone -= dt;
+      if (m.gone <= 0) { const [fx, fy] = farCell(P.x, P.y, 7); m.x = fx + .5; m.y = fy + .5; m.state = "wander"; m.path = []; m.obj.visible = true; }
+      continue;
+    }
     if (m.stun > 0) { m.stun -= dt; m.moving = false; continue; }
     const d = dist(m.x, m.y, P.x, P.y);
     m.repath -= dt;
     let frozen = false;
-    if (m.type === "starrer") {
+    if (powerT > 0) {
+      m.state = "flee";
+      if (m.repath <= 0 || !m.path.length) { m.repath = 1.2; const [fx, fy] = farCell(P.x, P.y); m.path = path(Math.floor(m.x), Math.floor(m.y), fx, fy); }
+    } else if (m.type === "starrer") {
       const watched = playerSees(m);
       frozen = watched || grace > 0;
       if (!frozen && m.repath <= 0) { m.repath = .5; m.path = path(Math.floor(m.x), Math.floor(m.y), Math.floor(P.x), Math.floor(P.y)); }
@@ -959,7 +1156,7 @@ function updateMonsters(dt) {
     }
     m.moving = false;
     if (!frozen) {
-      const fast = m.state === "chase" || m.state === "investigate" || m.state === "decoy" || m.type === "starrer";
+      const fast = m.state !== "flee" && (m.state === "chase" || m.state === "investigate" || m.state === "decoy" || m.type === "starrer");
       let mv = SPEED[m.type][fast ? 1 : 0] * greed * dt;
       while (mv > 0 && m.path.length) {
         const c = m.path[0], tx = c % N + .5, ty = ((c / N) | 0) + .5, dd = dist(m.x, m.y, tx, ty);
@@ -978,7 +1175,8 @@ function updateMonsters(dt) {
       else if (m.type === "lauscher") { sfx.breath(v * 1.3, pan); m.sndT = 1.7; }
       else if (m.moving) { sfx.creak(v * 1.5, pan); m.sndT = .7; } else m.sndT = .3;
     }
-    if (grace <= 0 && d < .42) return caught(m);
+    if (powerT > 0) { if (d < .6) banish(m); }
+    else if (grace <= 0 && d < .42) return caught(m);
   }
 }
 function caught(m) {
@@ -1018,10 +1216,10 @@ function update(dt) {
   if (touch.id !== null) { fwd -= touch.dy; side += touch.dx * .8; }
   const len = Math.hypot(fwd, side); if (len > 1) { fwd /= len; side /= len; }
   P.moving = len > .15;
-  const maxSt = 100 + save.upg.stam * 35;
+  const maxSt = maxStamina();
   if ((keys.ShiftLeft || keys.ShiftRight || touch.run) && P.moving && P.stamina > 0) { P.running = true; P.stamina = Math.max(0, P.stamina - 20 * dt); }
   else { P.running = false; P.stamina = Math.min(maxSt, P.stamina + (P.moving ? 16 : 28) * dt); }
-  const sp = (P.running ? 2.6 : 1.55) * dt;
+  const sp = (P.running ? 2.6 : 1.55) * (run.mods.fast ? 1.15 : 1) * dt;
   const dx = Math.cos(P.a), dy = Math.sin(P.a), r = .2;
   const mx = (dx * fwd - dy * side) * sp, my = (dy * fwd + dx * side) * sp;
   if (!isWall(Math.floor(P.x + mx + Math.sign(mx) * r), Math.floor(P.y))) P.x += mx;
@@ -1029,7 +1227,7 @@ function update(dt) {
   if (P.moving) {
     P.bob += dt * (P.running ? 11 : 7.5);
     P.stepT -= dt;
-    if (P.stepT <= 0) { P.stepT = P.running ? .32 : .5; sfx.step(P.running); noiseAt(P.x, P.y, P.running ? 8 : 2.5); }
+    if (P.stepT <= 0) { P.stepT = P.running ? .32 : .5; sfx.step(P.running && !run.mods.quiet); noiseAt(P.x, P.y, P.running && !run.mods.quiet ? 8 : 2.5); }
   }
   const pcx = Math.floor(P.x), pcy = Math.floor(P.y);
   for (let y = pcy - 2; y <= pcy + 2; y++) for (let x = pcx - 2; x <= pcx + 2; x++) if (x >= 0 && y >= 0 && x < N && y < N) seen[y * N + x] = 1;
@@ -1045,9 +1243,21 @@ function update(dt) {
   });
   gifts.forEach(g => {
     if (!g.on || dist(g.x, g.y, P.x, P.y) > .45) return;
-    g.on = false; g.obj.visible = false; run.inv[g.k]++; sfx.rustle(); sfx.coo();
-    say({ rattle: "Rassel gefunden (Taste 1): lähmt Kreaturen in der Nähe.", paci: "Schnuller gefunden (Taste 2): Baby bleibt ruhig und wach.", ipad: "iPad gefunden (Taste 3): lockt Kreaturen weg." }[g.k], "#ffcf4a", 3.5);
+    g.on = false; g.obj.visible = false; sfx.rustle(); sfx.coo();
+    if (g.k === "gun") run.ammo += 3; else run.inv[g.k]++;
+    say({ rattle: "Rassel gefunden (Taste 1): lähmt Kreaturen in der Nähe.", paci: "Schnuller gefunden (Taste 2): Baby bleibt ruhig und wach.", ipad: "iPad gefunden (Taste 3): lockt Kreaturen weg.", gun: "Das Baby hat jetzt eine Pistole! +3 Schuss (F oder Klick)." }[g.k], "#ffcf4a", 3.5);
   });
+  powers.forEach(pw => {
+    if (!pw.on || dist(pw.x, pw.y, P.x, P.y) > .45) return;
+    pw.on = false; pw.obj.visible = false; powerT = run.mods.power ? 12 : 8; sfx.bottle();
+    say("Riesen-Milchflasche! Jetzt haben SIE Angst. Fang sie!", "#bfe0ff", 3);
+  });
+  if (powerT > 0) {
+    powerT -= dt;
+    if (powerT <= 0) { powerT = 0; monsters.forEach(m => { if (m.state === "flee") { m.state = "wander"; m.path = []; } }); say("Die Milchpower ist vorbei.", "#8f857a", 2); }
+  }
+  gunFlash = Math.max(0, gunFlash - dt);
+  if (friend && friend.leaveT > 0) { friend.leaveT -= dt; friend.obj.position.y -= dt * 1.5; if (friend.leaveT <= 0) friend.obj.visible = false; }
   if (got === total && dist(exitC.x + .5, exitC.y + .5, P.x, P.y) < .45) {
     run.floor++;
     if (run.floor >= FLOORS.length) { run.floor = FLOORS.length - 1; return endRun(true); }
@@ -1059,7 +1269,7 @@ function update(dt) {
   B.fuss = Math.max(0, B.fuss - 7 * dt);
   if (B.cry > 0) B.cry -= dt;
   if (B.calm > 0) { B.calm -= dt; B.awake = 100; }
-  else B.awake = Math.max(0, B.awake - (3.4 - save.upg.sleep * .75) * dt);
+  else B.awake = Math.max(0, B.awake - (3.4 - save.upg.sleep * .75) * (run.mods.sleepy ? .5 : 1) * dt);
   if (B.awake <= 0 && !B.wasAsleep) say("Das Baby ist eingeschlafen. Schüttle es, damit es dich warnt.", "#8f857a", 3);
   B.wasAsleep = B.awake <= 0;
   let near = null, nd = 99;
@@ -1155,8 +1365,13 @@ function syncScene() {
       u.arms.forEach((a, i) => a.rotation.x = Math.sin(m.anim * 4 + i * Math.PI) * .3 * mv);
       u.head.rotation.z = Math.sin(m.anim * .9) * .25;
     } else u.head.rotation.z = m.moving ? rnd(-.08, .08) : 0;
-    m.ghost.visible = revealT > 0 && state === "play";
-    if (m.ghost.visible) { m.ghost.position.copy(o.position); m.ghost.rotation.copy(o.rotation); M.ghost.opacity = Math.min(.45, revealT / 3); }
+    m.ghost.visible = (revealT > 0 || powerT > 0) && state === "play" && !(m.gone > 0);
+    if (m.ghost.visible) {
+      m.ghost.position.copy(o.position); m.ghost.rotation.copy(o.rotation);
+      M.ghost.color.set(powerT > 0 ? 0x5aa8ff : 0xff1a3a);
+      M.ghost.opacity = powerT > 0 ? (powerT < 2 && Math.sin(T * 20) > 0 ? .1 : .4) : Math.min(.45, revealT / 3);
+    }
+    if (m.stun > 0) o.rotation.z = Math.sin(T * 30) * .05; else o.rotation.z = 0;
   });
   if (state === "scare") {
     const m = scare.m, o = m.obj, k = 1 - scare.t / 1.4;
@@ -1183,7 +1398,13 @@ function syncScene() {
   u.lids.forEach(l => l.visible = asleep);
   const mouthOpen = B.cry > 0 ? .9 + Math.sin(T * 9) * .25 : B.fear > .5 ? .7 : .35;
   u.mouth.scale.set(1.5, mouthOpen, .5);
-  u.body.scale.y = 1.25 + Math.sin(T * (asleep ? 1.4 : 2.4)) * .015;
+  const jig = B.shakeT > 0 ? .12 : .03;
+  u.segs.forEach((sg, i) => sg.scale.set(1 + Math.sin(T * (asleep ? 2 : 4) + i) * jig, 1 + Math.sin(T * (asleep ? 2 : 4) + i + 1.6) * jig, 1));
+  u.gun.visible = !!(run && run.ammo > 0);
+  u.muzzle.intensity = gunFlash > 0 ? 8 : 0;
+  u.gun.position.z = .1 + gunFlash * .4;
+  powers.forEach(pw => { if (pw.on) { pw.obj.rotation.y += .02; pw.obj.position.y = Math.sin(T * 2 + pw.x) * .05; } });
+  if (friend && friend.on && friend.obj) { friend.obj.userData.head.rotation.x = Math.sin(T * 3) * .12; friend.obj.position.y = Math.abs(Math.sin(T * 2)) * .05; }
 }
 
 function updateHUD() {
@@ -1194,22 +1415,27 @@ function updateHUD() {
   if (hs.childElementCount !== run.maxHearts || hs.dataset.v != run.hearts) {
     hs.innerHTML = ""; for (let i = 0; i < run.maxHearts; i++) { const e = document.createElement("i"); if (i >= run.hearts) e.className = "off"; hs.appendChild(e); } hs.dataset.v = run.hearts;
   }
-  const maxSt = 100 + save.upg.stam * 35;
+  const maxSt = maxStamina();
   $("mSt").style.transform = `scaleX(${P.stamina / maxSt})`; $("mSt").style.background = P.stamina < 25 ? "#b8102b" : "#ece4d6";
   $("mBaby").style.transform = `scaleX(${B.awake / 100})`; $("mBaby").style.background = B.awake < 25 ? "#b8102b" : "#d6ebff";
   $("lBaby").textContent = B.cry > 0 ? "Baby weint" : B.awake > 0 ? "Baby wach" : "Baby schläft";
   $("mFuss").style.transform = `scaleX(${B.fuss / 100})`; $("mFuss").style.background = B.fuss > 55 ? "#ff7040" : "#9a8a76";
-  const inv = $("inv"), key = JSON.stringify(run.inv);
+  const near = friend && friend.on && dist(friend.x, friend.y, P.x, P.y) < 1 && state === "play";
+  $("prompt").hidden = !near; if (near) $("prompt").textContent = isTouch ? "„Reden“ tippen: mit Socki sprechen" : "E: mit Socki sprechen";
+  $("powerFx").hidden = !(powerT > 0); if (powerT > 0) $("powerTxt").textContent = `Milchpower ${Math.ceil(powerT)}`;
+  const inv = $("inv"), key = JSON.stringify(run.inv) + run.ammo;
   if (inv.dataset.k !== key) {
     inv.dataset.k = key;
-    inv.innerHTML = [["1", "Rassel", "rattle"], ["2", "Schnuller", "paci"], ["3", "iPad", "ipad"]].map(([k, n, id]) => `<div class="${run.inv[id] ? "has" : ""}"><b>${k}</b>${n} ×${run.inv[id]}</div>`).join("");
+    inv.innerHTML = [["1", "Rassel", "rattle"], ["2", "Schnuller", "paci"], ["3", "iPad", "ipad"]].map(([k, n, id]) => `<div class="${run.inv[id] ? "has" : ""}"><b>${k}</b>${n} ×${run.inv[id]}</div>`).join("") + `<div class="${run.ammo ? "has" : ""}"><b>F</b>Pistole ×${run.ammo}</div>`;
   }
   const c = $("mini").getContext("2d"), W = 300, cell = W / N;
   c.clearRect(0, 0, W, W); c.fillStyle = "rgba(0,0,0,.5)"; c.fillRect(0, 0, W, W);
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { if (!seen[y * N + x]) continue; c.fillStyle = map[y * N + x] ? "#5a5058" : "#1a141b"; c.fillRect(x * cell, y * cell, cell + .5, cell + .5); }
-  c.fillStyle = "#d6ebff"; pellets.forEach(p => { if (p.on && seen[Math.floor(p.y) * N + Math.floor(p.x)]) c.fillRect(p.x * cell - 2, p.y * cell - 2, 4, 4); });
+  c.fillStyle = "#d6ebff"; pellets.forEach(p => { if (p.on && (run.mods.nose || seen[Math.floor(p.y) * N + Math.floor(p.x)])) c.fillRect(p.x * cell - 2, p.y * cell - 2, 4, 4); });
+  c.fillStyle = "#7fc0ff"; powers.forEach(p => { if (p.on && seen[Math.floor(p.y) * N + Math.floor(p.x)]) { c.beginPath(); c.arc(p.x * cell, p.y * cell, cell * .3, 0, 7); c.fill(); } });
+  if (friend && friend.on && seen[Math.floor(friend.y) * N + Math.floor(friend.x)]) { c.fillStyle = "#ffcf4a"; c.fillRect(friend.x * cell - 4, friend.y * cell - 4, 8, 8); }
   if (seen[exitC.y * N + exitC.x]) { c.fillStyle = got === total ? "#7dff9a" : "#ff2a44"; c.fillRect(exitC.x * cell + 3, exitC.y * cell + 3, cell - 6, cell - 6); }
-  if (revealT > 0 || decoy) monsters.forEach(m => { c.fillStyle = "#ff1a3a"; c.beginPath(); c.arc(m.x * cell, m.y * cell, cell * .4, 0, 7); c.fill(); });
+  if (revealT > 0 || decoy || powerT > 0) monsters.forEach(m => { if (m.gone > 0) return; c.fillStyle = powerT > 0 ? "#5aa8ff" : "#ff1a3a"; c.beginPath(); c.arc(m.x * cell, m.y * cell, cell * .4, 0, 7); c.fill(); });
   c.save(); c.translate(P.x * cell, P.y * cell); c.rotate(P.a); c.fillStyle = "#ece4d6"; c.beginPath(); c.moveTo(cell * .7, 0); c.lineTo(-cell * .45, -cell * .4); c.lineTo(-cell * .45, cell * .4); c.fill(); c.restore();
 }
 
@@ -1217,7 +1443,7 @@ function updateHUD() {
 let last = performance.now();
 function frame(now) {
   const dt = Math.min(.05, (now - last) / 1000); last = now;
-  if (state !== "pause") update(dt);
+  if (state !== "pause" && state !== "choice") update(dt);
   syncScene();
   renderer.render(scene, camera);
   updateHUD();
@@ -1233,7 +1459,9 @@ window.__bbDebug = {
   toExit() { P.x = exitC.x + .5; P.y = exitC.y + .5; },
   look(a, p) { P.a = a; P.pitch = p; },
   near(d = 1.6) { const m = monsters[0]; m.x = P.x + Math.cos(P.a) * d; m.y = P.y + Math.sin(P.a) * d; m.face = P.a + Math.PI; grace = 99; },
-  shake, cry: () => sfx.cry(), mama: () => sfx.mama(),
+  shake, shoot, talk, cry: () => sfx.cry(),
+  power() { powerT = 8; }, gun() { run.ammo += 3; },
+  toFriend() { if (!friend) return 'kein Freund'; P.x = friend.x; P.y = friend.y; return 'ok'; }, mama: () => sfx.mama(),
   meter() { const an = ac.createAnalyser(); an.fftSize = 2048; master.connect(an); const buf = new Float32Array(2048); let peak = 0; const iv = setInterval(() => { an.getFloatTimeDomainData(buf); for (const v of buf) peak = Math.max(peak, Math.abs(v)); }, 20); return () => { clearInterval(iv); return peak; }; },
   state: () => ({ state, floor: run && run.floor, got, total, hearts: run && run.hearts, monsters: monsters.map(m => [m.type, m.state]) }),
 };
