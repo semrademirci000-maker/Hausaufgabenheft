@@ -6,6 +6,12 @@ Die App gibt es zweimal:
   „Zum Home-Bildschirm“ wie eine App aufs iPad legen.
 * **Native SwiftUI-App** in [`ios/`](ios/README.md) – zum Öffnen in Xcode auf einem Mac.
 
+> **Neu: Emo, der Roboter** – [`emo/`](emo/) macht dein Handy zu Emos Gesicht
+> (wie EMO Go Home). Einfach im Browser öffnen:
+> https://semrademirci000-maker.github.io/Hausaufgabenheft/emo/
+> Einmal antippen, Kamera und Mikrofon erlauben – danach steuerst du Emo nur mit
+> Stimme und Handzeichen. Von oben nach unten wischen öffnet die Einstellungen.
+
 Eine App fürs iPad: Erst wählst du **Stundenplan** oder **Hausaufgabenheft**.
 Das Heft öffnet sich wie ein echtes Buch mit weißen Seiten und schwarzen Linien –
 und du blätterst mit einem Wisch in 3-D zum nächsten Tag.

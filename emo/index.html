@@ -1,0 +1,1487 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Emo">
+<meta name="theme-color" content="#000000">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;800;900&display=swap">
+<title>Emo</title>
+<style>
+:root { color-scheme: dark; --eye: #4fe3ff; --font: "Nunito", ui-rounded, "SF Pro Rounded", system-ui, sans-serif; }
+[hidden] { display: none !important; }
+html, body { margin: 0; height: 100%; background: #000; overflow: hidden; overscroll-behavior: none; }
+body { font-family: var(--font); color: #e6edf3; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: none; }
+#screen { position: fixed; inset: 0; background: #000; }
+#cv { width: 100%; height: 100%; display: block; }
+#cam { position: fixed; width: 2px; height: 2px; opacity: 0.01; pointer-events: none; left: 0; top: 0; }
+#cam.show { width: 30vw; max-width: 220px; height: auto; opacity: 1; left: auto; right: 12px; top: 12px; border-radius: 12px; transform: scaleX(-1); z-index: 5; }
+#subs { position: fixed; left: 16px; right: 16px; bottom: calc(14px + env(safe-area-inset-bottom)); text-align: center; pointer-events: none; display: grid; gap: 2px; }
+#subs .you { color: rgba(255,255,255,.4); font-size: 14px; }
+#subs .emo { color: var(--eye); font-weight: 800; font-size: 18px; }
+#start { position: fixed; inset: 0; display: grid; place-items: end center; padding-bottom: calc(40px + env(safe-area-inset-bottom)); color: rgba(255,255,255,.55); font-size: 17px; font-weight: 800; text-align: center; z-index: 10; }
+#start small { display: block; font-weight: 600; font-size: 13px; color: rgba(255,255,255,.35); margin-top: 6px; }
+#sheet { position: fixed; left: 0; right: 0; top: 0; max-height: 88%; overflow: auto; background: #12161b; border-bottom: 1px solid #2a323b; border-radius: 0 0 22px 22px; padding: calc(16px + env(safe-area-inset-top)) 18px 18px; z-index: 20; transform: translateY(-105%); transition: transform .3s ease; touch-action: pan-y; -webkit-user-select: text; user-select: text; }
+#sheet.open { transform: none; }
+#sheet h2 { margin: 0 0 4px; font-size: 20px; font-weight: 900; }
+#sheet h3 { margin: 16px 0 8px; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: #8a96a3; }
+#sheet p { margin: 6px 0; color: #8a96a3; font-size: 14px; line-height: 1.45; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.btn { background: #1c2229; color: #e6edf3; border: 1px solid #2a323b; border-radius: 12px; padding: 9px 13px; font: inherit; font-weight: 800; font-size: 14px; }
+.btn.on { background: var(--eye); color: #001018; border-color: transparent; }
+.sw { width: 34px; height: 34px; border-radius: 10px; border: 2px solid transparent; padding: 0; }
+.sw.on { border-color: #fff; }
+#sheet input { flex: 1; min-width: 0; background: #0b0d10; color: #e6edf3; border: 1px solid #2a323b; border-radius: 12px; padding: 10px 12px; font: inherit; font-size: 16px; }
+#status { font-size: 13px; color: #8a96a3; line-height: 1.6; }
+</style>
+</head>
+<body>
+<div id="screen"><canvas id="cv"></canvas></div>
+<video id="cam" playsinline muted autoplay></video>
+<div id="subs" aria-live="polite"><div class="you" id="you"></div><div class="emo" id="say"></div></div>
+<div id="start">Tippe auf den Bildschirm, um Emo aufzuwecken<small>Danach Kamera und Mikrofon erlauben</small></div>
+<div id="sheet" role="dialog" aria-label="Einstellungen">
+  <h2>Emo</h2>
+  <div id="status"></div>
+  <h3>Augenfarbe</h3>
+  <div class="row" id="colors"></div>
+  <h3>Einstellungen</h3>
+  <div class="row">
+    <button class="btn" id="t-sound" type="button">Ton</button>
+    <button class="btn" id="t-subs" type="button">Untertitel</button>
+    <button class="btn" id="t-wake" type="button">Fragen nur mit „Emo“</button>
+    <button class="btn" id="t-cam" type="button">Kamerabild zeigen</button>
+  </div>
+  <h3>KI (Claude)</h3>
+  <p>Ohne Schlüssel gibt Emo einfache Antworten. Mit einem Claude-API-Schlüssel von console.anthropic.com beantwortet er jede Frage. Der Schlüssel bleibt nur auf diesem Gerät.</p>
+  <div class="row"><input id="key" type="password" autocomplete="off" placeholder="sk-ant-…"><button class="btn" id="savekey" type="button">Speichern</button></div>
+  <h3>Das kannst du sagen</h3>
+  <p>„Hände hoch!“ · „Peng!“ · „Wie spät ist es?“ · „Welcher Tag ist heute?“ · „Timer fünf Minuten“ · „Timer aus“ · „Würfel mal“ · „Kopf oder Zahl“ · „Schere, Stein, Papier“ · „Wie ist das Wetter?“ · „Wie voll ist dein Akku?“ · „Mach ein Foto“ · „Tanz!“ · „Erzähl einen Witz“ · „Gute Nacht“ · „Wach auf“ · „Hey Emo, …“ + Frage</p>
+  <p>Zeigen: Finger-Pistole, winken, Daumen hoch, Peace, Faust. Antippen, gedrückt halten zum Streicheln, Handy schütteln.</p>
+  <div class="row" style="margin-top:12px"><button class="btn on" id="close" type="button">Fertig</button></div>
+</div>
+<script>
+(() => {
+"use strict";
+// ---------- Grundlagen ----------
+const cv = document.getElementById("cv");
+const screen = document.getElementById("screen");
+const ctx = cv.getContext("2d");
+const off = document.createElement("canvas");
+const octx = off.getContext("2d");
+let W = 0, H = 0, DPR = 1;
+const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function resize() {
+  const r = screen.getBoundingClientRect();
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = r.width; H = r.height;
+  for (const c of [cv, off]) { c.width = Math.round(W * DPR); c.height = Math.round(H * DPR); }
+}
+new ResizeObserver(resize).observe(screen);
+resize();
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const rand = (a, b) => a + Math.random() * (b - a);
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const lerp = (a, b, k) => a + (b - a) * k;
+const RAD = Math.PI / 180;
+
+// ---------- Gefühle (wie Mood.swift) ----------
+const MOODS = {
+  neutral: {}, happy: { w: 1.05, bottom: .45 }, laughing: { style: "chevrons" },
+  sad: { w: .95, h: .85, top: .32, tilt: -20 }, crying: { w: .95, h: .8, top: .35, tilt: -24, tint: "#73a0ff", fx: "tears" },
+  angry: { h: .9, top: .4, tilt: 24, tint: "#ff524a", fx: "anger" }, surprised: { w: 1.15, h: 1.22, fx: "exclamation" },
+  scared: { w: .82, h: 1.18, top: .08, tilt: -10, fx: "sweat" }, sleepy: { h: .9, top: .58 },
+  sleeping: { w: 1.05, h: .07, fx: "zzz" }, love: { style: "hearts", tint: "#ff619e", fx: "hearts" },
+  dizzy: { style: "spirals" }, dead: { style: "crosses" },
+  thinking: { w: .95, h: .9, top: .22, tilt: 6, rs: 1.08, fx: "question" }, listening: { w: 1.06, h: 1.12 },
+  suspicious: { h: .85, top: .45, bottom: .18, rs: .78 }, excited: { style: "stars", tint: "#ffd94d", fx: "sparkles" },
+  proud: { w: 1.05, h: .95, top: .3, bottom: .3 },
+};
+const MOOD_SOUND = { happy: "happy", proud: "happy", laughing: "laugh", sad: "sad", crying: "sad", angry: "angry",
+  surprised: "surprised", scared: "scared", love: "love", dizzy: "dizzy", thinking: "think", excited: "happy", sleepy: "yawn" };
+const shapeOf = m => { const d = MOODS[m] || {}; return { w: d.w ?? 1, h: d.h ?? 1, top: d.top ?? 0, tilt: d.tilt ?? 0, bottom: d.bottom ?? 0, ls: d.ls ?? 1, rs: d.rs ?? 1 }; };
+
+const COLORS = [["Emo-Blau", "#4fe3ff"], ["Weiß", "#e0f2ff"], ["Grün", "#59ff8c"], ["Pink", "#ff73bf"], ["Orange", "#ffa640"], ["Lila", "#b380ff"]];
+let baseColor = COLORS[0][1];
+const hexRgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+
+// ---------- Zustand ----------
+const S = {
+  mood: "neutral", fx: null, display: null, handsUp: false, trembling: false, fallen: false, dancing: false,
+  speaking: false, blink: false, look: { x: 0, y: 0 }, idleLook: { x: 0, y: 0 }, pointer: null, pointerAt: 0,
+};
+const A = { shape: shapeOf("neutral"), arm: 0, fall: 0, disp: 0, rgb: hexRgb(baseColor), styleIn: 1, dance: 0 };
+let lastStyle = "normal";
+let lastInteraction = performance.now();
+
+// ---------- Töne (wie SoundFX.swift) ----------
+let soundOn = true, actx = null, cur = null;
+const bufCache = {};
+const Pz = d => ({ d, f0: 0, f1: 0, g: 0, wave: "sine" });
+const Sg = (d, f0, f1, o = {}) => ({ d, f0, f1, wave: o.wave || "soft", g: o.g ?? .5, vr: o.vr || 0, vd: o.vd || 0, decay: !!o.decay });
+const RECIPES = {
+  hello: [Sg(.09, 700, 1000), Pz(.03), Sg(.16, 1000, 1550)],
+  happy: [Sg(.07, 900, 1300), Pz(.02), Sg(.07, 1100, 1600), Pz(.02), Sg(.14, 1300, 1950, { vr: 18, vd: .02 })],
+  laugh: Array.from({ length: 7 }, (_, i) => [Sg(.06, 1250 - i * 40, 950 - i * 40, { wave: "square", g: .32 }), Pz(.045)]).flat(),
+  sad: [Sg(.35, 760, 620, { wave: "sine", vr: 6, vd: .03 }), Pz(.05), Sg(.6, 640, 330, { wave: "sine", vr: 6, vd: .04 })],
+  surprised: [Sg(.2, 380, 1900)],
+  scared: [Sg(.7, 1400, 1150, { wave: "triangle", g: .45, vr: 15, vd: .07 })],
+  angry: [Sg(.28, 170, 140, { wave: "square", g: .35, vr: 30, vd: .05 }), Pz(.05), Sg(.3, 180, 110, { wave: "square", g: .35, vr: 30, vd: .06 })],
+  love: [Sg(.22, 820, 1000, { wave: "sine", vr: 7, vd: .03 }), Pz(.04), Sg(.4, 1000, 1350, { wave: "sine", vr: 7, vd: .04 })],
+  dizzy: [Sg(1.2, 700, 700, { wave: "triangle", g: .4, vr: 3, vd: .35 })],
+  shot: [Sg(.25, 0, 0, { wave: "noise", g: .9, decay: true })],
+  dying: [Sg(1.3, 950, 80, { wave: "triangle", g: .5, vr: 5, vd: .05 })],
+  revive: [Sg(.35, 200, 1400), Pz(.04), Sg(.1, 1400, 1800)],
+  snore: [Sg(1, 0, 0, { wave: "rumble", g: .5 }), Pz(.15), Sg(.6, 1500, 1750, { wave: "sine", g: .12 })],
+  yawn: [Sg(.45, 450, 820, { wave: "sine", g: .4 }), Sg(.55, 820, 380, { wave: "sine", g: .4, vr: 5, vd: .02 })],
+  think: [Sg(.07, 620, 620), Pz(.08), Sg(.07, 680, 680), Pz(.08), Sg(.1, 740, 780)],
+  tap: [Sg(.06, 950, 600, { wave: "sine", g: .45 })],
+  notice: [Sg(.05, 1000, 1000), Pz(.03), Sg(.09, 1400, 1650)],
+  purr: [Sg(.9, 230, 260, { wave: "square", g: .18, vr: 24, vd: .12 })],
+  ok: [Sg(.06, 800, 800), Pz(.02), Sg(.1, 1200, 1250)],
+  hum: [Sg(.18, 520, 600, { wave: "sine", g: .25 }), Sg(.22, 600, 560, { wave: "sine", g: .25 })],
+  alarm: [Sg(.1, 1900, 1900, { wave: "square", g: .3 }), Pz(.05), Sg(.1, 1900, 1900, { wave: "square", g: .3 }), Pz(.05), Sg(.1, 1900, 1900, { wave: "square", g: .3 })],
+  tick: [Sg(.05, 1500, 1500, { wave: "sine", g: .45 })],
+  diceRoll: Array.from({ length: 10 }, (_, i) => [Sg(.025, 0, 0, { wave: "noise", g: .55, decay: true }), Pz(.04 + i * .012)]).flat(),
+  coin: [Sg(.07, 1980, 1980, { wave: "sine", g: .4 }), Sg(.5, 2640, 2640, { wave: "sine", g: .4, decay: true })],
+  win: [523, 659, 784, 1047].flatMap(f => [Sg(.11, f, f, { wave: "square", g: .25 }), Pz(.02)]),
+  lose: [Sg(.3, 420, 400, { wave: "triangle", g: .45 }), Pz(.05), Sg(.3, 380, 360, { wave: "triangle", g: .45 }), Pz(.05), Sg(.7, 340, 250, { wave: "triangle", g: .45, vr: 6, vd: .04 })],
+  dance: [523, 659, 784, 659, 880, 784, 659, 523, 587, 698, 880, 698, 988, 880, 784, 0, 523, 659, 784, 1047, 988, 784, 659, 587, 523, 659, 523, 392, 523, 0, 1047, 0]
+    .flatMap(f => f === 0 ? [Pz(.2)] : [Sg(.17, f, f, { wave: "square", g: .22 }), Pz(.03)]),
+};
+function render(name) {
+  const sr = actx.sampleRate, segs = RECIPES[name];
+  const total = segs.reduce((n, s) => n + Math.floor(s.d * sr), 0) + 256;
+  const buf = actx.createBuffer(1, total, sr), out = buf.getChannelData(0);
+  let ph = 0, low = 0, idx = 0;
+  for (const s of segs) {
+    const n = Math.floor(s.d * sr), att = Math.min(n * .15, .006 * sr), rel = Math.min(n * .3, .025 * sr);
+    for (let i = 0; i < n; i++) {
+      const t = i / Math.max(n, 1);
+      let env = 1;
+      if (i < att) env = i / att;
+      if (n - i < rel) env = Math.min(env, (n - i) / rel);
+      if (s.decay) env *= Math.exp(-t * 6);
+      let f = s.f0 + (s.f1 - s.f0) * t;
+      if (s.vr > 0) f *= 1 + s.vd * Math.sin(2 * Math.PI * s.vr * i / sr);
+      ph += 2 * Math.PI * f / sr; if (ph > 2 * Math.PI) ph -= 2 * Math.PI;
+      let v;
+      switch (s.wave) {
+        case "sine": v = Math.sin(ph); break;
+        case "square": v = Math.tanh(6 * Math.sin(ph)) * .7; break;
+        case "triangle": v = 2 / Math.PI * Math.asin(Math.sin(ph)); break;
+        case "noise": low += (rand(-1, 1) - low) * .35; v = low * 1.4; break;
+        case "rumble": low += (rand(-1, 1) - low) * .04; v = low * 4 * (.4 + .6 * Math.sin(Math.PI * t)); break;
+        default: v = Math.tanh(2.2 * Math.sin(ph)) * .8 + .2 * Math.sin(2 * ph);
+      }
+      out[idx++] = v * s.g * env * .8;
+    }
+  }
+  return buf;
+}
+function ensureAudio() {
+  if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { actx = null; } }
+  if (actx && actx.state === "suspended") actx.resume();
+}
+function play(name) {
+  if (!soundOn || !name || !RECIPES[name]) return;
+  ensureAudio(); if (!actx) return;
+  const buf = bufCache[name] || (bufCache[name] = render(name));
+  try { cur && cur.stop(); } catch (e) {}
+  const src = actx.createBufferSource(); src.buffer = buf; src.connect(actx.destination); src.start(); cur = src;
+}
+
+// ---------- Stimme ----------
+const sayEl = document.getElementById("say"), youEl = document.getElementById("you");
+let voice = null;
+function pickVoice() {
+  const vs = (window.speechSynthesis && speechSynthesis.getVoices()) || [];
+  voice = vs.find(v => v.lang && v.lang.toLowerCase().startsWith("de")) || null;
+}
+if (window.speechSynthesis) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+function stopSpeech() { try { window.speechSynthesis && speechSynthesis.cancel(); } catch (e) {} }
+async function speak(text) {
+  sayEl.textContent = text;
+  S.speaking = true; setMuted(true);
+  const fallback = text.length * 60 + 700;
+  if (soundOn && window.speechSynthesis && window.SpeechSynthesisUtterance) {
+    await new Promise(res => {
+      let done = false; const fin = () => { if (!done) { done = true; res(); } };
+      try {
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = "de-DE"; if (voice) u.voice = voice; u.pitch = 1.6; u.rate = 1.05;
+        u.onend = fin; u.onerror = fin;
+        speechSynthesis.speak(u);
+      } catch (e) { fin(); }
+      setTimeout(fin, fallback + 4000);
+    });
+  } else {
+    await sleep(fallback);
+  }
+  S.speaking = false;
+  setTimeout(() => { if (!S.speaking) setMuted(false); }, 300);
+  setTimeout(() => { if (!S.speaking && sayEl.textContent === text) sayEl.textContent = ""; }, 2200);
+}
+
+// ---------- Szenen (wie RobotBrain.swift) ----------
+let actId = 0, actPri = 0, acting = false;
+let timerEnd = null, timerTotal = 0, timerHandle = null;
+function restoreDisplay() { S.display = timerEnd ? { k: "timer", end: timerEnd, total: timerTotal } : null; }
+function show(m, fx) { S.display = null; S.mood = m; S.fx = fx === undefined ? ((MOODS[m] || {}).fx || null) : fx; }
+function relax() { S.handsUp = false; S.trembling = false; S.dancing = false; S.fallen = false; show("neutral", null); }
+function perform(pri, fn) {
+  if (acting && pri < actPri) return;
+  const id = ++actId; actPri = pri; acting = true;
+  stopSpeech(); S.dancing = false;
+  const c = {
+    alive: () => id === actId,
+    wait: async ms => { await sleep(ms); return id === actId; },
+    say: async t => { if (id === actId) await speak(t); },
+  };
+  (async () => {
+    try { await fn(c); } finally { if (id === actId) { acting = false; actPri = 0; restoreDisplay(); } }
+  })();
+}
+const touch = () => { lastInteraction = performance.now(); };
+// Ein Knopfdruck in der Vorschau unterbricht immer die laufende Szene.
+function react(m, sound, lines, hold = 1000) {
+  touch();
+  perform(1, async c => {
+    show(m); play(sound);
+    if (lines.length) { if (!await c.wait(250)) return; await c.say(pick(lines)); }
+    if (!await c.wait(hold)) return;
+    show("neutral");
+  });
+}
+function demoMood(m) {
+  touch();
+  perform(3, async c => { relax(); show(m); play(MOOD_SOUND[m]); if (!await c.wait(2500)) return; show("neutral"); });
+}
+function tapped() {
+  touch();
+  if (S.mood === "sleeping") return wakeUp();
+  if (S.fallen || S.handsUp) return;
+  if (S.display) {
+    if (S.display.k === "timer") return;
+    return perform(9, async c => { show("happy", null); play("tap"); if (!await c.wait(600)) return; show("neutral"); });
+  }
+  const now = performance.now();
+  tapped.times = (tapped.times || []).filter(t => now - t < 2500).concat(now);
+  if (tapped.times.length >= 5) { tapped.times = []; return react("angry", "angry", ["Hey! Hör auf mich zu piksen!", "Grrr! Das kitzelt nicht mehr!"], 1500); }
+  if (tapped.times.length >= 3) return react("laughing", "laugh", ["Hihi, das kitzelt!"], 1000);
+  perform(1, async c => { show("surprised", null); play("tap"); if (!await c.wait(350)) return; show("happy"); if (!await c.wait(900)) return; show("neutral"); });
+}
+function petted() {
+  touch();
+  if (S.fallen || S.handsUp) return;
+  perform(1, async c => {
+    show("love"); play("purr");
+    if (!await c.wait(1000)) return;
+    await c.say(pick(["Mmmh, das ist schön!", "Ich hab dich lieb!", "Mehr streicheln, bitte!"]));
+    if (!await c.wait(1000)) return; show("happy"); if (!await c.wait(800)) return; show("neutral");
+  });
+}
+function dance() {
+  touch();
+  perform(2, async c => {
+    show("excited", "notes"); await c.say("Musik ab!");
+    if (!c.alive()) return;
+    S.dancing = true; play("dance");
+    for (let i = 0; i < 14; i++) { if (!await c.wait(450)) { S.dancing = false; return; } show(i % 2 ? "excited" : "happy", "notes"); }
+    S.dancing = false; show("proud", "sparkles"); await c.say("Ta-daa!");
+    if (!await c.wait(1000)) return; show("neutral");
+  });
+}
+function goToSleep() {
+  perform(1, async c => { relax(); show("sleepy", null); play("yawn"); await c.say("Ich bin so müde… Gute Nacht!"); if (!await c.wait(800)) return; show("sleeping"); });
+}
+function wakeUp() {
+  touch();
+  perform(3, async c => {
+    show("sleepy", null); play("yawn");
+    if (!await c.wait(1000)) return; show("surprised", null);
+    if (!await c.wait(300)) return; show("happy"); play("hello");
+    await c.say(pick(["Oh! Ich bin wach! Hallo!", "Guten Morgen! Ich hab von Strom geträumt.", "Huch! Ich war nur kurz im Energiesparmodus."]));
+    if (!await c.wait(500)) return; show("neutral");
+  });
+}
+function tellJoke() {
+  const j = pick([
+    ["Was macht ein Roboter am Strand?", "Er nimmt ein Sonnenbad – mit Lichtschutzfaktor Null Eins!"],
+    ["Warum war der Computer müde?", "Weil er zu viele Fenster offen hatte!"],
+    ["Was ist grün und klopft an die Tür?", "Ein Klopfsalat!"],
+    ["Was macht ein Pirat am Computer?", "Er drückt die Enter-Taste!"],
+  ]);
+  touch();
+  perform(2, async c => {
+    show("proud", null); play("think"); await c.say(j[0]);
+    show("suspicious", null); if (!await c.wait(900)) return;
+    await c.say(j[1]); show("laughing"); play("laugh");
+    if (!await c.wait(1600)) return; show("neutral");
+  });
+}
+// Anzeigen
+function showTime() {
+  touch();
+  perform(2, async c => {
+    show("happy", null); if (!await c.wait(350)) return;
+    S.display = { k: "clock" }; play("notice");
+    const d = new Date(), h = d.getHours(), m = d.getMinutes();
+    await c.say(m === 0 ? `Es ist genau ${h} Uhr.` : `Es ist ${h} Uhr ${m}.`);
+    if (!await c.wait(4500)) return; show("neutral");
+  });
+}
+function showDate() {
+  touch();
+  perform(2, async c => {
+    show("happy", null); if (!await c.wait(350)) return;
+    S.display = { k: "date" }; play("notice");
+    const d = new Date();
+    await c.say(`Heute ist ${d.toLocaleDateString("de-DE", { weekday: "long" })}, der ${d.getDate()}. ${d.toLocaleDateString("de-DE", { month: "long" })}.`);
+    if (!await c.wait(4000)) return; show("neutral");
+  });
+}
+function spoken(sec) {
+  const s = Math.round(sec), h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60, x = s % 60, p = [];
+  if (h) p.push(h === 1 ? "eine Stunde" : `${h} Stunden`);
+  if (m) p.push(m === 1 ? "eine Minute" : `${m} Minuten`);
+  if (x) p.push(x === 1 ? "eine Sekunde" : `${x} Sekunden`);
+  return p.join(" und ");
+}
+function startTimer(sec) {
+  touch();
+  if (!sec || sec < 1) return react("thinking", "think", ["Wie lange denn? Sag zum Beispiel: Timer fünf Minuten."]);
+  clearTimeout(timerHandle);
+  const end = Date.now() + sec * 1000;
+  timerEnd = end; timerTotal = sec;
+  timerHandle = setTimeout(() => { if (timerEnd === end) { timerEnd = null; timerRang(); } }, sec * 1000);
+  perform(2, async c => {
+    show("proud", null); play("ok");
+    if (!await c.wait(300)) return;
+    S.display = { k: "timer", end, total: sec };
+    await c.say(`Okay! Timer läuft: ${spoken(sec)}.`);
+  });
+}
+function cancelTimer() {
+  if (!timerEnd && !(S.display && S.display.k === "timerDone")) return react("thinking", "think", ["Es läuft doch gar kein Timer."]);
+  clearTimeout(timerHandle); timerEnd = null; touch();
+  perform(9, async c => { show("happy"); play("ok"); await c.say("Timer ist aus."); if (!await c.wait(600)) return; show("neutral"); });
+}
+function timerRang() {
+  perform(6, async c => {
+    relax(); show("excited", null); S.display = { k: "timerDone" };
+    await c.say("Die Zeit ist um!");
+    for (let i = 0; i < 6; i++) { play("alarm"); if (!await c.wait(1200)) return; }
+    show("neutral");
+  });
+}
+function rollDice() {
+  touch();
+  perform(2, async c => {
+    show("excited", null); if (!await c.wait(300)) return;
+    const v = 1 + Math.floor(Math.random() * 6);
+    S.display = { k: "dice", v, rolling: true }; play("diceRoll");
+    if (!await c.wait(1400)) return;
+    S.display = { k: "dice", v, rolling: false }; play("ok");
+    await c.say(v === 6 ? "Eine Sechs! Juhu!" : `Eine ${["Eins", "Zwei", "Drei", "Vier", "Fünf"][v - 1]}!`);
+    if (!await c.wait(2500)) return; show(v === 6 ? "excited" : "happy");
+    if (!await c.wait(1000)) return; show("neutral");
+  });
+}
+function flipCoin() {
+  touch();
+  perform(2, async c => {
+    show("excited", null); if (!await c.wait(300)) return;
+    const heads = Math.random() < .5;
+    S.display = { k: "coin", heads, flipping: true, t0: performance.now() }; play("coin");
+    if (!await c.wait(1500)) return;
+    S.display = { k: "coin", heads, flipping: false }; await c.say(heads ? "Kopf!" : "Zahl!");
+    if (!await c.wait(2500)) return; show("neutral");
+  });
+}
+const RPS = [{ k: "scissors", name: "Schere" }, { k: "rock", name: "Stein" }, { k: "paper", name: "Papier" }];
+RECIPES.shutter = [Sg(.05, 0, 0, { wave: "noise", g: .6, decay: true }), Pz(.04), Sg(.09, 0, 0, { wave: "noise", g: .5, decay: true })];
+
+// ---------- Sprachbefehle (wie CommandParser.swift) ----------
+// ---------- Hintergrund: blinzeln, umschauen, einschlafen ----------
+(async function blinkLoop() {
+  for (;;) {
+    await sleep(rand(2000, 5500));
+    const st = (MOODS[S.mood] || {}).style;
+    if (st || S.mood === "sleeping") continue;
+    S.blink = true; await sleep(110); S.blink = false;
+    if (Math.random() < .2) { await sleep(160); S.blink = true; await sleep(100); S.blink = false; }
+  }
+})();
+(async function idleLoop() {
+  for (;;) {
+    await sleep(rand(2500, 6500));
+    if (!started || acting || timerEnd || S.display) continue;
+    const idle = (performance.now() - lastInteraction) / 1000;
+    if (S.mood === "sleeping") { if (Math.random() < .5) play("snore"); continue; }
+    if (idle > 150) { goToSleep(); continue; }
+    const r = Math.random();
+    const moment = (m, ms, snd) => perform(0, async c => { show(m, null); play(snd); if (!await c.wait(ms)) return; show("neutral"); });
+    if (r < .5) S.idleLook = { x: rand(-.9, .9), y: rand(-.6, .6) };
+    else if (r < .6) S.idleLook = { x: 0, y: 0 };
+    else if (r < .68) moment("suspicious", 1400);
+    else if (r < .75) moment("happy", 1200, "hum");
+    else if (r < .8 && idle > 60) moment("sleepy", 2000, "yawn");
+  }
+})();
+
+// ---------- Zeichnen ----------
+const rgba = (a) => `rgba(${A.rgb[0] | 0},${A.rgb[1] | 0},${A.rgb[2] | 0},${a})`;
+const baseRgba = a => { const c = hexRgb(baseColor); return `rgba(${c[0]},${c[1]},${c[2]},${a})`; };
+function rr(c, x, y, w, h, r) {
+  r = Math.min(r, w / 2, h / 2);
+  c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r);
+  c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
+}
+function heartPath(c, cx, cy, w, h) {
+  const x = cx - w / 2, y = cy - h / 2;
+  c.beginPath(); c.moveTo(cx, y + h * .95);
+  c.bezierCurveTo(x + w * .2, y + h * .78, x, y + h * .55, x, y + h * .32);
+  c.arc(x + w * .25, y + h * .27, w * .25, 170 * RAD, -10 * RAD, false);
+  c.arc(x + w * .75, y + h * .27, w * .25, 190 * RAD, 10 * RAD, false);
+  c.bezierCurveTo(x + w, y + h * .55, x + w * .8, y + h * .78, cx, y + h * .95); c.closePath();
+}
+function starPath(c, cx, cy, R, rot = 0, points = 5, inner = .45) {
+  c.beginPath();
+  for (let i = 0; i < points * 2; i++) {
+    const r = i % 2 ? R * inner : R, a = i * Math.PI / points - Math.PI / 2 + rot;
+    i ? c.lineTo(cx + r * Math.cos(a), cy + r * Math.sin(a)) : c.moveTo(cx + r * Math.cos(a), cy + r * Math.sin(a));
+  }
+  c.closePath();
+}
+function dropPath(c, cx, top, w, h) {
+  c.beginPath(); c.moveTo(cx, top);
+  c.bezierCurveTo(cx + w * .15, top + h * .3, cx + w * .6, top + h, cx, top + h);
+  c.bezierCurveTo(cx - w * .6, top + h, cx - w * .15, top + h * .3, cx, top); c.closePath();
+}
+function glow(c, blur, a = .75) { c.shadowColor = rgba(a); c.shadowBlur = blur; }
+function noGlow(c) { c.shadowBlur = 0; c.shadowColor = "transparent"; }
+
+function metrics() {
+  const ew = Math.min(W * .27, H * .34);
+  return { ew, eh: ew * 1.2, gap: ew * .6 };
+}
+
+function drawEyes(t, M) {
+  const { ew, eh, gap } = M, sh = A.shape;
+  const cx = W / 2 + S.look.x * W * .13, cy = H / 2 + S.look.y * H * .11;
+  const style = (MOODS[S.mood] || {}).style || "normal";
+  const eyes = [{ left: true, x: cx - (gap / 2 + ew / 2) }, { left: false, x: cx + (gap / 2 + ew / 2) }];
+  if (style === "normal") {
+    octx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    octx.clearRect(0, 0, W, H);
+    for (const e of eyes) {
+      const sc = (e.left ? sh.ls : sh.rs) * (e.left ? 1 + S.look.x * .08 : 1 - S.look.x * .08);
+      const w = ew * sh.w * sc, fullH = eh * sh.h * sc;
+      const h = S.blink ? Math.max(fullH * .07, 4) : fullH;
+      octx.globalCompositeOperation = "source-over";
+      octx.fillStyle = rgba(1);
+      rr(octx, e.x - w / 2, cy - h / 2, w, h, Math.min(w, h) * .32); octx.fill();
+      octx.globalCompositeOperation = "destination-out";
+      octx.save(); octx.translate(e.x, cy); octx.rotate((e.left ? sh.tilt : -sh.tilt) * RAD);
+      octx.fillRect(-w * 1.1, -1.5 * h + sh.top * h, w * 2.2, h); octx.restore();
+      octx.beginPath(); octx.ellipse(e.x, cy + h * (1.1 - sh.bottom), w * .85, h * .6, 0, 0, Math.PI * 2); octx.fill();
+    }
+    octx.globalCompositeOperation = "source-over";
+    glow(ctx, ew * .35, .45); ctx.drawImage(off, 0, 0, W, H);
+    glow(ctx, ew * .12, .8); ctx.drawImage(off, 0, 0, W, H);
+    noGlow(ctx);
+  } else {
+    const k = A.styleIn;
+    for (const e of eyes) {
+      ctx.save(); ctx.translate(e.x, cy); ctx.scale(k, k);
+      glow(ctx, ew * .15, .8);
+      ctx.fillStyle = rgba(1); ctx.strokeStyle = rgba(1); ctx.lineCap = "round"; ctx.lineJoin = "round";
+      if (style === "hearts") {
+        const p = 1 + .08 * Math.sin(t * 2.2 * Math.PI); ctx.scale(p, p);
+        heartPath(ctx, 0, 0, ew * 1.1, ew); ctx.fill();
+      } else if (style === "crosses") {
+        const r = ew * .4; ctx.lineWidth = ew * .16;
+        ctx.beginPath(); ctx.moveTo(-r, -r); ctx.lineTo(r, r); ctx.moveTo(r, -r); ctx.lineTo(-r, r); ctx.stroke();
+      } else if (style === "spirals") {
+        ctx.rotate(t * 1.4 * 2 * Math.PI * (e.left ? 1 : -1)); ctx.lineWidth = ew * .09; ctx.beginPath();
+        for (let i = 0; i <= 140; i++) { const q = i / 140, a = q * 6 * Math.PI, r = ew / 2 * q; i ? ctx.lineTo(r * Math.cos(a), r * Math.sin(a)) : ctx.moveTo(0, 0); }
+        ctx.stroke();
+      } else if (style === "chevrons") {
+        const p = 1 + .06 * Math.sin(t * 6 * Math.PI); ctx.scale(p, p);
+        const w = ew * .35, h = eh * .31; ctx.lineWidth = ew * .17; ctx.beginPath();
+        if (e.left) { ctx.moveTo(-w, -h); ctx.lineTo(w, 0); ctx.lineTo(-w, h); } else { ctx.moveTo(w, -h); ctx.lineTo(-w, 0); ctx.lineTo(w, h); }
+        ctx.stroke();
+      } else if (style === "stars") {
+        const p = 1 + .1 * Math.sin(t * 3 * Math.PI); ctx.scale(p, p);
+        starPath(ctx, 0, 0, ew * .58, t * .35 * 2 * Math.PI * (e.left ? 1 : -1)); ctx.fill();
+      }
+      ctx.restore();
+    }
+    noGlow(ctx);
+  }
+  drawEffects(t, cx, cy, ew, eh, gap);
+}
+
+function drawEffects(t, cx, cy, ew, eh, gap) {
+  const fx = S.fx; if (!fx) return;
+  const L = cx - (gap / 2 + ew / 2), R = cx + (gap / 2 + ew / 2);
+  const phase = (sp, o) => ((t * sp + o) % 1 + 1) % 1;
+  const fade = p => Math.min(1, p * 5) * Math.min(1, (1 - p) * 3);
+  ctx.save(); glow(ctx, ew * .1, .6);
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  const col = rgba(1);
+  if (fx === "zzz") {
+    for (let i = 0; i < 3; i++) {
+      const p = phase(.33, i / 3); ctx.globalAlpha = fade(p); ctx.fillStyle = col;
+      ctx.font = `900 ${ew * (.22 + .18 * p)}px Nunito, system-ui, sans-serif`;
+      ctx.fillText("Z", R + ew * (.4 + .5 * p), cy - eh * (.3 + .9 * p));
+    }
+  } else if (fx === "tears") {
+    ctx.fillStyle = "#73b3ff"; ctx.shadowColor = "rgba(115,179,255,.7)";
+    for (let i = 0; i < 4; i++) {
+      const p = phase(.7, i / 4); ctx.globalAlpha = fade(p);
+      const x = (i % 2 ? R : L) + (i < 2 ? -1 : 1) * ew * .15;
+      dropPath(ctx, x, cy + eh * (.35 + 1.1 * p) - ew * .1, ew * .14, ew * .2); ctx.fill();
+    }
+  } else if (fx === "hearts") {
+    ctx.fillStyle = "#ff669e"; ctx.shadowColor = "rgba(255,102,158,.7)";
+    [-1.6, 1.5, -.4, .6, 1.9].forEach((sx, i) => {
+      const p = phase(.4, i / 5); ctx.globalAlpha = fade(p);
+      heartPath(ctx, cx + sx * ew + Math.sin(t * 2 + i) * 10, cy + eh * (.6 - 1.4 * p), ew * .22, ew * .2); ctx.fill();
+    });
+  } else if (fx === "notes") {
+    ctx.fillStyle = col;
+    [-1.8, 1.7, -1.1, 1.2, 0].forEach((sx, i) => {
+      const p = phase(.45, i / 5); ctx.globalAlpha = fade(p);
+      ctx.font = `800 ${ew * .3}px system-ui, sans-serif`;
+      ctx.fillText(i % 2 ? "♫" : "♪", cx + sx * ew + Math.sin(t * 3 + i) * 14, cy + eh * (.5 - 1.3 * p));
+    });
+  } else if (fx === "sweat") {
+    const p = phase(.6, 0); ctx.globalAlpha = fade(p); ctx.fillStyle = "#8cccff"; ctx.shadowColor = "rgba(140,204,255,.7)";
+    dropPath(ctx, R + ew * .62, cy - eh * .5 + eh * .5 * p - ew * .1, ew * .13, ew * .19); ctx.fill();
+  } else if (fx === "question") {
+    ctx.fillStyle = col; ctx.font = `900 ${ew * .45}px Nunito, system-ui, sans-serif`;
+    ctx.fillText("?", R + ew * .55, cy - eh * .75 + Math.sin(t * 3) * 6);
+  } else if (fx === "exclamation") {
+    ctx.fillStyle = col; ctx.font = `900 ${ew * .55 * (1 + .08 * Math.sin(t * 12))}px Nunito, system-ui, sans-serif`;
+    ctx.fillText("!", cx, cy - eh * .95);
+  } else if (fx === "anger") {
+    const s = ew * .16 * (1 + .15 * Math.sin(t * 10)), x = R + ew * .6, y = cy - eh * .7;
+    ctx.fillStyle = "#ff594d"; ctx.shadowColor = "rgba(255,89,77,.7)";
+    ctx.beginPath(); ctx.moveTo(x + s * .2, y - s); ctx.lineTo(x - s * .6, y + s * .15); ctx.lineTo(x - s * .05, y + s * .15);
+    ctx.lineTo(x - s * .25, y + s); ctx.lineTo(x + s * .6, y - s * .15); ctx.lineTo(x + s * .05, y - s * .15); ctx.closePath(); ctx.fill();
+  } else if (fx === "sparkles") {
+    ctx.fillStyle = col;
+    for (let i = 0; i < 6; i++) {
+      const a = i / 6 * Math.PI * 2, tw = (Math.sin(t * 4 + i * 1.7) + 1) / 2;
+      ctx.globalAlpha = tw;
+      starPath(ctx, cx + Math.cos(a) * (gap / 2 + ew * 1.35), cy + Math.sin(a) * eh * .85, ew * .1 * (.6 + .6 * tw), 0, 4, .3); ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+
+function drawArms(M) {
+  if (A.arm < .01 && !S.handsUp) return;
+  const { ew, gap } = M, size = ew * .8, k = A.arm;
+  const y0 = lerp(H * .95, H * .08, k);
+  const total = size * 3.64;
+  const spread = gap / 2 + ew * 1.2 + size * .25;
+  ctx.save(); ctx.globalAlpha = Math.min(1, k * 1.5);
+  for (const side of [-1, 1]) {
+    const ax = W / 2 + side * spread, bottom = H / 2 + y0 + total / 2;
+    ctx.save(); ctx.translate(ax, bottom); ctx.rotate(side * lerp(-20, 8, k) * RAD);
+    glow(ctx, size * .2, .6);
+    let y = -total;
+    // Finger
+    const fh = [.2, .26, .22];
+    ctx.fillStyle = rgba(1);
+    fh.forEach((h, i) => { const fw = size * .12, x = (i - 1) * size * .17 - fw / 2; rr(ctx, x, y + (.26 - h) * size, fw, h * size, fw / 2); ctx.fill(); });
+    // Daumen
+    ctx.save(); ctx.translate(-side * size * .3, y + size * .45); ctx.rotate(side * -35 * RAD);
+    rr(ctx, -size * .055, -size * .11, size * .11, size * .22, size * .055); ctx.fill(); ctx.restore();
+    y += size * .24;
+    rr(ctx, -size * .25, y, size * .5, size * .36, size * .1); ctx.fill();
+    y += size * .32;
+    ctx.fillStyle = rgba(.75); ctx.beginPath(); ctx.arc(0, y + size * .11, size * .11, 0, Math.PI * 2); ctx.fill();
+    y += size * .2;
+    const g = ctx.createLinearGradient(0, y, 0, 0); g.addColorStop(0, rgba(.85)); g.addColorStop(1, rgba(.2));
+    ctx.fillStyle = g; rr(ctx, -size * .12, y, size * .24, -y, size * .12); ctx.fill();
+    ctx.restore();
+  }
+  noGlow(ctx); ctx.restore();
+}
+
+function drawDisplay(t, d) {
+  const glow = (c, blur, al = .75) => { c.shadowColor = baseRgba(al); c.shadowBlur = blur; };
+  const big = Math.min(H * .4, W * .23);
+  ctx.save();
+  ctx.translate(W / 2, H / 2);
+  ctx.fillStyle = baseRgba(1); ctx.strokeStyle = baseRgba(1);
+  glow(ctx, big * .12, .7);
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  const font = f => `900 ${big * f}px Nunito, ui-rounded, system-ui, sans-serif`;
+  const fitText = (s, f, y = 0, maxW = W * .9) => { ctx.font = font(f); const w = ctx.measureText(s).width; if (w > maxW) ctx.font = font(f * maxW / w); ctx.fillText(s, 0, y); };
+  const now = new Date();
+  switch (d.k) {
+    case "clock": {
+      const hh = String(now.getHours()).padStart(2, "0"), mm = String(now.getMinutes()).padStart(2, "0");
+      ctx.font = font(1); const wHH = ctx.measureText(hh).width, wC = ctx.measureText(":").width;
+      const total = wHH * 2 + wC; let x = -total / 2;
+      ctx.textAlign = "left";
+      ctx.fillText(hh, x, 0); x += wHH;
+      ctx.globalAlpha = now.getSeconds() % 2 ? .15 : 1; ctx.fillText(":", x, -big * .06); ctx.globalAlpha = 1; x += wC;
+      ctx.fillText(mm, x, 0);
+      break;
+    }
+    case "date": {
+      fitText(now.toLocaleDateString("de-DE", { weekday: "long" }).toUpperCase(), .32, -big * .45);
+      fitText(`${now.getDate()} ${now.toLocaleDateString("de-DE", { month: "short" }).replace(".", "").toUpperCase()}`, .75, big * .2);
+      break;
+    }
+    case "timer": {
+      const left = Math.max(0, (d.end - Date.now()) / 1000), s = Math.ceil(left);
+      const txt = s >= 3600 ? `${Math.floor(s / 3600)}:${String(Math.floor(s / 60) % 60).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}` : `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+      fitText(txt, .9, -big * .12);
+      const bw = big * 2.6, bh = big * .07, by = big * .45;
+      ctx.fillStyle = baseRgba(.2); rr(ctx, -bw / 2, by, bw, bh, bh / 2); ctx.fill();
+      ctx.fillStyle = baseRgba(1); rr(ctx, -bw / 2, by, Math.max(bh, bw * left / d.total), bh, bh / 2); ctx.fill();
+      break;
+    }
+    case "timerDone": {
+      ctx.save(); ctx.translate(0, -big * .55); ctx.rotate(Math.sin(t * 30) * 18 * RAD);
+      const b = big * .25;
+      ctx.beginPath(); ctx.moveTo(-b, b * .6); ctx.quadraticCurveTo(-b * .9, -b, 0, -b); ctx.quadraticCurveTo(b * .9, -b, b, b * .6); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.arc(0, b * .8, b * .22, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      ctx.globalAlpha = Math.floor(t * 3) % 2 ? .25 : 1; fitText("00:00", .8, big * .3);
+      break;
+    }
+    case "dice": {
+      const size = big * 1.1;
+      let v = d.v;
+      if (d.rolling) { v = Math.floor(t * 12.5) % 6 + 1; ctx.translate(0, -Math.abs(Math.sin(t * 7)) * big * .15); ctx.rotate(Math.sin(t * 9) * 25 * RAD); }
+      ctx.lineWidth = size * .06; rr(ctx, -size / 2, -size / 2, size, size, size * .18); ctx.stroke();
+      const P = { 1: [[0, 0]], 2: [[-1, -1], [1, 1]], 3: [[-1, -1], [0, 0], [1, 1]], 4: [[-1, -1], [1, -1], [-1, 1], [1, 1]], 5: [[-1, -1], [1, -1], [0, 0], [-1, 1], [1, 1]], 6: [[-1, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [1, 1]] }[v];
+      for (const [x, y] of P) { ctx.beginPath(); ctx.arc(x * size * .26, y * size * .26, size * .085, 0, Math.PI * 2); ctx.fill(); }
+      break;
+    }
+    case "coin": {
+      const size = big * 1.2, spin = d.flipping ? Math.cos(t * 16) : 1, heads = d.flipping ? spin > 0 : d.heads;
+      ctx.scale(Math.max(Math.abs(spin), .05), 1);
+      ctx.lineWidth = size * .05; ctx.beginPath(); ctx.arc(0, 0, size / 2 - size * .025, 0, Math.PI * 2); ctx.stroke();
+      ctx.globalAlpha = .5; ctx.lineWidth = size * .02; ctx.beginPath(); ctx.arc(0, 0, size * .38, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1;
+      ctx.font = `900 ${size * .22}px Nunito, system-ui, sans-serif`; ctx.fillText(heads ? "KOPF" : "ZAHL", 0, 0);
+      break;
+    }
+    case "word": fitText(d.w, .6); break;
+    case "rps": {
+      const s = big * .38; ctx.save(); ctx.translate(0, -big * .2);
+      if (d.c.k === "rock") { ctx.beginPath(); ctx.ellipse(0, 0, s, s * .82, -.2, 0, Math.PI * 2); ctx.fill(); }
+      else if (d.c.k === "paper") { ctx.beginPath(); ctx.moveTo(-s * .7, -s); ctx.lineTo(s * .35, -s); ctx.lineTo(s * .7, -s * .65); ctx.lineTo(s * .7, s); ctx.lineTo(-s * .7, s); ctx.closePath(); ctx.fill(); }
+      else {
+        ctx.lineWidth = s * .16; ctx.lineCap = "round";
+        ctx.beginPath(); ctx.moveTo(-s * .25, s * .2); ctx.lineTo(s * .7, -s * .9); ctx.moveTo(s * .25, s * .2); ctx.lineTo(-s * .7, -s * .9); ctx.stroke();
+        for (const sx of [-1, 1]) { ctx.beginPath(); ctx.arc(sx * s * .38, s * .55, s * .26, 0, Math.PI * 2); ctx.stroke(); }
+      }
+      ctx.restore(); fitText(d.c.name.toUpperCase(), .25, big * .55);
+      break;
+    }
+    case "weather": {
+      drawWeatherIcon(d.kind || "sun", big, t);
+      ctx.font = font(.85); ctx.textAlign = "left"; ctx.fillText(`${d.temp}°`, -big * .15, 0);
+      break;
+    }
+    case "photo": drawPhoto(d.img); break;
+    case "battery": {
+      const w = big * 1.7, h = big * .8, x = -w / 2 - h * .08, y = -h / 2 - big * .18;
+      ctx.lineWidth = h * .08; rr(ctx, x, y, w, h, h * .2); ctx.stroke();
+      rr(ctx, x + w + h * .04, y + h * .325, h * .12, h * .35, h * .06); ctx.fill();
+      const fill = clamp(d.level, 0, 100) / 100;
+      if (d.level <= 20) { ctx.fillStyle = "#ff594d"; }
+      rr(ctx, x + h * .16, y + h * .16, Math.max((w - h * .32) * fill, 2), h - h * .32, h * .1); ctx.fill();
+      ctx.fillStyle = baseRgba(1); fitText(`${d.level} %`, .35, big * .55);
+      break;
+    }
+    case "countdown": {
+      const p = clamp((performance.now() - d.t0) / 250, 0, 1);
+      ctx.globalAlpha = p; ctx.scale(.6 + .4 * p, .6 + .4 * p); fitText(String(d.n), 1.3);
+      break;
+    }
+  }
+  noGlow(ctx);
+  ctx.restore();
+}
+
+// ---------- Hauptschleife ----------
+let lastT = performance.now();
+function frame(now) {
+  const dt = Math.min(.05, (now - lastT) / 1000); lastT = now;
+  const t = now / 1000;
+  const k = 1 - Math.exp(-dt * 11);
+  // Form der Augen weich überblenden
+  const target = shapeOf(S.mood);
+  for (const key in target) A.shape[key] = lerp(A.shape[key], target[key], k);
+  const style = (MOODS[S.mood] || {}).style || "normal";
+  if (style !== lastStyle) { A.styleIn = .2; lastStyle = style; }
+  A.styleIn = lerp(A.styleIn, 1, 1 - Math.exp(-dt * 9));
+  const tint = hexRgb((MOODS[S.mood] || {}).tint || baseColor);
+  for (let i = 0; i < 3; i++) A.rgb[i] = lerp(A.rgb[i], tint[i], k);
+  A.arm = lerp(A.arm, S.handsUp ? 1 : 0, 1 - Math.exp(-dt * 7));
+  A.fall = lerp(A.fall, S.fallen ? 1 : 0, 1 - Math.exp(-dt * 4));
+  A.disp = lerp(A.disp, S.display && S.display.k !== "flash" ? 1 : 0, 1 - Math.exp(-dt * 10));
+  A.dance = lerp(A.dance, S.dancing ? 1 : 0, 1 - Math.exp(-dt * 6));
+  // Blick: Maus (wie Gesicht in der Kamera) oder sich umschauen
+  let lt;
+  if (S.dancing || S.fallen) lt = { x: 0, y: 0 };
+  else if (S.mood === "thinking") lt = { x: .55, y: -.6 };
+  else if (S.mood === "sleeping" || S.mood === "dead") lt = { x: 0, y: .15 };
+  else if (S.pointer && now - S.pointerAt < 1500) lt = S.pointer;
+  else lt = S.idleLook;
+  const lk = 1 - Math.exp(-dt * 6);
+  S.look.x = lerp(S.look.x, clamp(lt.x, -1, 1), lk); S.look.y = lerp(S.look.y, clamp(lt.y, -1, 1), lk);
+
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.globalAlpha = 1; ctx.fillStyle = "#000"; ctx.fillRect(0, 0, W, H);
+  if (W < 10) return requestAnimationFrame(frame);
+  const M = metrics();
+
+  ctx.save();
+  let gx = 0, gy = 0, rot = 0;
+  if (S.trembling && !reduced) { gx += Math.sin(t * 47) * 3; gy += Math.cos(t * 39) * 1.5; }
+  if (A.dance > .01) {
+    const beat = t * 2 * Math.PI * (reduced ? .3 : 1), amp = A.dance * (W / 900);
+    gx += Math.sin(beat) * 40 * amp; gy -= Math.abs(Math.cos(beat)) * 30 * amp; rot += Math.sin(beat) * 8 * A.dance * RAD;
+  }
+  rot += 78 * RAD * A.fall; gy += H * .22 * A.fall;
+  ctx.translate(W / 2 + gx, H / 2 + gy); ctx.rotate(rot); ctx.translate(-W / 2, -H / 2);
+
+  const eyeA = 1 - A.disp;
+  if (eyeA > .01) {
+    ctx.save(); ctx.globalAlpha = eyeA;
+    const breathe = (S.mood === "neutral" || S.mood === "sleeping") && !reduced ? 1 + .012 * Math.sin(t * 1.6) : 1;
+    const s = (1 - .8 * A.disp) * breathe;
+    ctx.translate(W / 2, H / 2); ctx.scale(s, s); ctx.translate(-W / 2, -H / 2);
+    drawEyes(t, M);
+    ctx.restore();
+  }
+  if (A.disp > .01 && S.display) {
+    ctx.save(); ctx.globalAlpha = A.disp;
+    const s = .2 + .8 * A.disp; ctx.translate(W / 2, H / 2); ctx.scale(s, s); ctx.translate(-W / 2, -H / 2);
+    drawDisplay(t, S.display);
+    ctx.restore();
+  }
+  drawArms(M);
+  ctx.restore();
+  if (S.display && S.display.k === "flash") { ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W, H); }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+
+// =====================================================================
+//  Ab hier: Emo als echte Web-App – Kamera, Mikrofon, Einstellungen
+// =====================================================================
+
+// ---------- Einstellungen (bleiben auf diesem Gerät) ----------
+const store = {
+  get(k, d) { try { const v = localStorage.getItem("emo." + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem("emo." + k, JSON.stringify(v)); } catch (e) {} },
+};
+soundOn = store.get("sound", true);
+let showSubs = store.get("subs", false);
+let needWake = store.get("wake", true);
+let claudeKey = store.get("key", "");
+baseColor = store.get("color", baseColor);
+document.documentElement.style.setProperty("--eye", baseColor);
+
+const subsEl = document.getElementById("subs");
+const startEl = document.getElementById("start");
+const sheet = document.getElementById("sheet");
+const statusEl = document.getElementById("status");
+const video = document.getElementById("cam");
+subsEl.hidden = !showSubs;
+
+let started = false;
+let conversationUntil = 0;
+let camState = "aus", visionState = "–", micState = "–";
+
+function status() {
+  const ai = claudeKey ? "Claude" : "einfache Antworten (kein Schlüssel)";
+  statusEl.innerHTML = `Kamera: <b>${camState}</b> · Handerkennung: <b>${visionState}</b><br>Mikrofon: <b>${micState}</b> · KI: <b>${ai}</b>`;
+}
+
+// ---------- Start: ein Tippen weckt Emo ----------
+function start() {
+  if (started) return;
+  started = true;
+  startEl.hidden = true;
+  ensureAudio();
+  // iOS: Sprache und Ton müssen einmal durch Antippen freigeschaltet werden.
+  try { const u = new SpeechSynthesisUtterance(" "); u.volume = 0; speechSynthesis.speak(u); } catch (e) {}
+  try { const r = document.documentElement.requestFullscreen && document.documentElement.requestFullscreen({ navigationUI: "hide" }); r && r.catch(() => {}); } catch (e) {}
+  try { if (window.DeviceMotionEvent && DeviceMotionEvent.requestPermission) DeviceMotionEvent.requestPermission().catch(() => {}); } catch (e) {}
+  keepAwake();
+  startListening();
+  startCamera();
+  wakeUpGreeting();
+  status();
+}
+
+let wakeLock = null;
+async function keepAwake() {
+  try { if (navigator.wakeLock && document.visibilityState === "visible") wakeLock = await navigator.wakeLock.request("screen"); } catch (e) {}
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && started) { keepAwake(); recStart(); }
+});
+
+function wakeUpGreeting() {
+  perform(3, async c => {
+    show("sleepy", null); play("yawn");
+    if (!await c.wait(1200)) return;
+    show("surprised", null); if (!await c.wait(300)) return;
+    show("happy"); play("hello");
+    await c.say("Hallo! Ich bin Emo!");
+    if (!await c.wait(500)) return; show("neutral");
+  });
+}
+
+// ---------- Kamera: Gesicht und Hände ----------
+const VISION = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
+const HAND_MODEL = "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task";
+const FACE_MODEL = "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite";
+let handLM = null, faceDet = null, aspect = 4 / 3;
+
+async function startCamera() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { camState = "nicht verfügbar"; status(); return; }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
+    video.srcObject = stream;
+    await video.play().catch(() => {});
+    camState = "an";
+  } catch (e) {
+    camState = "nicht erlaubt"; status(); return;
+  }
+  visionState = "lädt …"; status();
+  try {
+    const vision = await import(VISION + "/vision_bundle.mjs");
+    const files = await vision.FilesetResolver.forVisionTasks(VISION + "/wasm");
+    const make = async (Kind, url, extra) => {
+      try { return await Kind.createFromOptions(files, { baseOptions: { modelAssetPath: url, delegate: "GPU" }, runningMode: "VIDEO", ...extra }); }
+      catch (e) { return await Kind.createFromOptions(files, { baseOptions: { modelAssetPath: url, delegate: "CPU" }, runningMode: "VIDEO", ...extra }); }
+    };
+    handLM = await make(vision.HandLandmarker, HAND_MODEL, { numHands: 1 });
+    faceDet = await make(vision.FaceDetector, FACE_MODEL, {});
+    visionState = "bereit";
+  } catch (e) {
+    console.warn("Handerkennung", e);
+    visionState = "konnte nicht laden";
+  }
+  status();
+  visionLoop();
+}
+
+let lastVideoTime = -1, frameNo = 0;
+function visionLoop() {
+  const tick = () => {
+    if (handLM && video.readyState >= 2 && video.currentTime !== lastVideoTime && !document.hidden) {
+      lastVideoTime = video.currentTime;
+      const now = performance.now();
+      aspect = (video.videoWidth || 4) / (video.videoHeight || 3);
+      try {
+        const hr = handLM.detectForVideo(video, now);
+        handleHand(hr.landmarks && hr.landmarks[0]);
+        if (faceDet && frameNo++ % 2 === 0) {
+          const fr = faceDet.detectForVideo(video, now + 1);
+          handleFace(fr.detections && fr.detections[0]);
+        }
+      } catch (e) {}
+    }
+    setTimeout(tick, 66);
+  };
+  tick();
+}
+
+// Gesicht → Emo schaut dich an.
+let lastFaceSeen = 0, lastGreeting = 0;
+function handleFace(det) {
+  if (!det || !det.boundingBox || !video.videoWidth) return;
+  const b = det.boundingBox, now = performance.now();
+  const cx = 1 - (b.originX + b.width / 2) / video.videoWidth;   // gespiegelt wie ein Spiegel
+  const cy = (b.originY + b.height / 2) / video.videoHeight;
+  S.pointer = { x: (cx - .5) * 2 * 1.2, y: (cy - .5) * 2 + .15 };
+  S.pointerAt = now;
+  const wasAway = now - lastFaceSeen > 45000;
+  lastFaceSeen = now;
+  if (wasAway && started && !acting && !timerEnd && S.mood !== "sleeping" && now - lastGreeting > 90000) {
+    lastGreeting = now; touch();
+    perform(1, async c => {
+      show("surprised", null); play("notice");
+      if (!await c.wait(500)) return;
+      show("happy"); await c.say(pick(["Oh, hallo!", "Da bist du ja!", "Hey, schön dich zu sehen!"]));
+      if (!await c.wait(400)) return; show("neutral");
+    });
+  }
+}
+
+// Hand → Zeichen erkennen (wie VisionWatcher.swift).
+function classify(lm) {
+  const P = i => ({ x: (1 - lm[i].x) * aspect, y: 1 - lm[i].y });
+  const d = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+  const w = P(0), thumbTip = P(4), thumbIP = P(3), iMCP = P(5), iPIP = P(6), iTip = P(8);
+  const mMCP = P(9), mPIP = P(10), mTip = P(12), rPIP = P(14), rTip = P(16), lPIP = P(18), lTip = P(20);
+  const hs = d(w, mMCP);
+  if (hs < .03) return [null, iTip];
+  const reach = (t, p) => d(w, t) / Math.max(d(w, p), 1e-3);
+  const index = reach(iTip, iPIP), middle = reach(mTip, mPIP), ring = reach(rTip, rPIP), little = reach(lTip, lPIP);
+  const thumbOut = d(thumbTip, iMCP) / hs > .55 && d(thumbTip, w) > d(thumbIP, w);
+  const indexStraight = index > 1.18, middleStraight = middle > 1.18;
+  const ringCurled = ring < 1.02, littleCurled = little < 1.02, middleCurled = middle < 1.02, indexCurled = index < 1.0;
+  if (indexStraight && middleStraight && ring > 1.18 && little > 1.12 && thumbOut) return ["openPalm", iTip];
+  if (thumbOut && ringCurled && littleCurled && index > 1.05 && (middleCurled || middleStraight)) return ["gun", iTip];
+  if (indexStraight && middleStraight && ringCurled && littleCurled && !thumbOut) return ["peace", iTip];
+  if (thumbOut && indexCurled && middleCurled && ringCurled && littleCurled && thumbTip.y > iMCP.y + hs * .3) return ["thumbsUp", iTip];
+  if (indexCurled && middleCurled && ringCurled && littleCurled && !thumbOut) return ["fist", iTip];
+  return [null, iTip];
+}
+
+let candidate = null, candidateCount = 0, stableSign = null, missing = 0;
+function handleHand(lm) {
+  let sign = null, tip = null;
+  if (lm) [sign, tip] = classify(lm);
+  if (sign) {
+    missing = 0;
+    if (sign === candidate) candidateCount++; else { candidate = sign; candidateCount = 1; }
+    if (candidateCount >= 3) stableSign = sign;
+  } else if (++missing >= 4) { stableSign = null; candidate = null; candidateCount = 0; }
+  sawHand(stableSign, tip);
+}
+
+let lastGunSeen = 0, gunHist = [], lastSign = null, lastSignTime = 0, playingRPS = false;
+const lastSignReaction = {};
+function sawHand(sign, tip) {
+  if (!sign || !started) return;
+  const now = performance.now();
+  touch(); lastSign = sign; lastSignTime = now;
+  if (playingRPS) return;
+  if (sign === "gun") {
+    lastGunSeen = now;
+    if (tip) trackRecoil(tip);
+    if (!S.handsUp && !S.fallen) surrender();
+    return;
+  }
+  gunHist = [];
+  if (lastSignReaction[sign] && now - lastSignReaction[sign] < 8000) return;
+  if (S.handsUp || S.fallen || S.display) return;
+  lastSignReaction[sign] = now;
+  if (S.mood === "sleeping") { if (sign === "openPalm") wakeUp(); return; }
+  if (sign === "thumbsUp") react("proud", "happy", ["Danke! Du bist auch super!", "Jawoll!", "Daumen hoch zurück!"]);
+  else if (sign === "openPalm") react("happy", "hello", ["Hallo! Ich winke zurück!", "Hi! Schön dich zu sehen!", "Hey du!"]);
+  else if (sign === "peace") react("excited", "happy", ["Peace!", "Yeah, cool!", "Frieden für alle Roboter!"]);
+  else if (sign === "fist") react("scared", "scared", ["Huch! Bitte nicht hauen!", "Eine Faust? Ich hab nichts gemacht!"]);
+}
+
+// Schnellt die Fingerspitze nach oben, ist das ein Schuss.
+function trackRecoil(tip) {
+  const now = performance.now();
+  gunHist.push({ t: now, y: tip.y });
+  gunHist = gunHist.filter(h => now - h.t < 450);
+  if (!S.handsUp) return;
+  const low = Math.min(...gunHist.map(h => h.y));
+  if (tip.y - low > .09) { gunHist = []; getShot(); }
+}
+
+function surrender() {
+  if (S.handsUp || S.fallen) return;
+  touch();
+  perform(5, async c => {
+    S.handsUp = true; S.trembling = true; show("scared"); play("scared");
+    if (!await c.wait(350)) return;
+    await c.say(pick(["Nicht schießen!", "Hey! Okay, okay, ich ergebe mich!", "Ahh! Ich hab nichts gemacht!", "Bitte nicht! Ich bin doch nur ein kleiner Roboter!"]));
+    const t0 = performance.now();
+    for (;;) {   // Hände oben lassen, solange die Pistole zu sehen ist
+      if (!await c.wait(300)) return;
+      const gone = performance.now() - lastGunSeen > 1800, el = performance.now() - t0;
+      if ((gone && el > 3000) || el > 30000) break;
+    }
+    S.handsUp = false; S.trembling = false; show("happy", null); play("ok");
+    await c.say(pick(["Puh… das war knapp!", "Hehe, du hast mich ganz schön erschreckt!", "Gut, dass du nicht geschossen hast!"]));
+    if (!await c.wait(600)) return; show("neutral");
+  });
+}
+
+function getShot() {
+  if (S.fallen) return;
+  touch();
+  perform(8, async c => {
+    play("shot"); show("surprised", "exclamation");
+    if (!await c.wait(300)) return;
+    S.handsUp = false; S.trembling = false; play("dying"); show("dead", null); S.fallen = true;
+    if (!await c.wait(4000)) return;
+    play("revive"); S.fallen = false; show("dizzy", null);
+    if (!await c.wait(1600)) return;
+    show("laughing");
+    await c.say(pick(["Hehe, reingelegt! Ich lebe noch!", "Ich bin unbesiegbar!", "Autsch… aber Roboter sind unkaputtbar!"]));
+    lastGunSeen = 0;
+    if (!await c.wait(600)) return; show("neutral");
+  });
+}
+
+function shaken() {
+  touch();
+  if (S.fallen) return;
+  perform(2, async c => {
+    S.handsUp = false; S.trembling = false; show("dizzy", null); play("dizzy");
+    if (!await c.wait(1400)) return;
+    await c.say(pick(["Uiii, mir ist schwindelig!", "Hilfe! Erdbeben!", "Nicht schütteln, ich bin doch kein Milchshake!"]));
+    if (!await c.wait(800)) return; show("neutral");
+  });
+}
+
+// ---------- Schütteln ----------
+let lastAcc = null, shakeHits = [], lastShake = 0;
+window.addEventListener("devicemotion", e => {
+  const a = e.accelerationIncludingGravity; if (!a || a.x == null) return;
+  if (lastAcc) {
+    const delta = Math.abs(a.x - lastAcc.x) + Math.abs(a.y - lastAcc.y) + Math.abs(a.z - lastAcc.z);
+    const now = performance.now();
+    if (delta > 28) { shakeHits = shakeHits.filter(t => now - t < 600).concat(now); }
+    if (shakeHits.length >= 3 && now - lastShake > 3000 && started) { lastShake = now; shakeHits = []; shaken(); }
+  }
+  lastAcc = { x: a.x, y: a.y, z: a.z };
+});
+
+// ---------- Zuhören (Spracherkennung im Browser) ----------
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null, wantListen = false, muted = false, recRunning = false, quickFired = false;
+function startListening() {
+  if (!SR) { micState = "nicht unterstützt (Chrome oder Safari nehmen)"; status(); return; }
+  wantListen = true;
+  rec = new SR();
+  rec.lang = "de-DE"; rec.continuous = true; rec.interimResults = true; rec.maxAlternatives = 1;
+  rec.onstart = () => { recRunning = true; micState = "hört zu"; status(); };
+  rec.onend = () => { recRunning = false; if (wantListen && !muted) setTimeout(recStart, 300); };
+  rec.onerror = e => {
+    if (e.error === "not-allowed" || e.error === "service-not-allowed") { wantListen = false; micState = "nicht erlaubt"; status(); }
+  };
+  rec.onresult = e => {
+    if (muted) return;
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const r = e.results[i], text = (r[0] && r[0].transcript || "").trim();
+      if (!text) continue;
+      if (r.isFinal) heardFinal(text); else heardPartial(text);
+    }
+  };
+  recStart();
+}
+function recStart() {
+  if (!rec || recRunning || muted || !wantListen) return;
+  try { rec.start(); } catch (e) {}
+}
+// Während Emo spricht, hört er nicht zu – sonst versteht er sich selbst.
+function setMuted(m) {
+  muted = m;
+  if (!rec) return;
+  if (m) { try { rec.abort(); } catch (e) {} } else recStart();
+}
+
+let heardTimer = null;
+function showHeard(text) {
+  youEl.textContent = `„${text}“`;
+  clearTimeout(heardTimer);
+  heardTimer = setTimeout(() => { youEl.textContent = ""; }, 3000);
+}
+const HANDS_UP = /h(ä|a|e)nde? (hoch|nach oben)/i;
+const SHOT = /\b(peng|päng|bang|bäm|bumm|bum|piu|pew|schuss|pow)\b/i;
+function heardPartial(text) {
+  touch(); showHeard(text);
+  if (quickFired) return;
+  if (HANDS_UP.test(text)) { quickFired = true; surrender(); }
+  else if (SHOT.test(text) && (S.handsUp || performance.now() - lastGunSeen < 4000)) { quickFired = true; getShot(); }
+}
+function heardFinal(text) {
+  touch(); showHeard(text);
+  const fired = quickFired; quickFired = false;
+  if (fired && (HANDS_UP.test(text) || SHOT.test(text))) return;
+  command(text);
+}
+
+// ---------- Was Emo versteht ----------
+const WAKE = /\b(hey |hi |hallo )?(emo|emmo|ehmo|imo|emu|nemo|elmo|ämo)\b/gi;
+const NUMS = { ein: 1, eine: 1, einen: 1, eins: 1, zwei: 2, drei: 3, vier: 4, "fünf": 5, sechs: 6, sieben: 7, acht: 8, neun: 9, zehn: 10, elf: 11, "zwölf": 12, "fünfzehn": 15, zwanzig: 20, "dreißig": 30, vierzig: 40, "fünfzig": 50, sechzig: 60, neunzig: 90 };
+function duration(s) {
+  const t = s.split(" "); let total = 0, found = false;
+  t.forEach((w, i) => {
+    if (!i) return;
+    const u = w.startsWith("sekunde") || w === "sek" ? 1 : w.startsWith("minute") || w === "min" ? 60 : w.startsWith("stunde") ? 3600 : 0;
+    if (!u) return;
+    const n = parseFloat(t[i - 1]) || NUMS[t[i - 1]] || (t[i - 1] === "halbe" ? .5 : 0);
+    if (n) { total += n * u; found = true; }
+  });
+  return found ? total : null;
+}
+function command(text) {
+  const addressed = new RegExp(WAKE.source, "i").test(text);
+  const s = " " + text.replace(WAKE, " ").toLowerCase().replace(/[.,!?;:„“"']/g, " ").replace(/\s+/g, " ").trim() + " ";
+  const words = s.trim() ? s.trim().split(" ").length : 0;
+  const has = (...p) => p.some(x => s.includes(" " + x));
+  const word = (...p) => p.some(x => s.includes(" " + x + " "));
+  touch();
+  if (S.mood === "sleeping") { if (addressed || has("wach", "aufwachen", "aufstehen", "guten morgen", "hallo")) wakeUp(); return; }
+  if (!words) { if (addressed) listenForQuestion(); return; }
+  if (HANDS_UP.test(s)) return surrender();
+  if (word("peng", "päng", "bang", "bäm", "bumm", "piu", "pew", "schuss")) return getShot();
+  if (has("timer aus", "timer stopp", "timer stop", "timer abbrechen", "timer beenden", "stopp den timer")) return cancelTimer();
+  if (has("timer", "countdown", "erinner mich in", "wecker in") || (has("stell") && duration(s.trim()))) return startTimer(duration(s.trim()));
+  if (has("hör auf", "stopp", "stop") && words <= 4) return perform(9, async () => relax());
+  if (has("würfel", "wurfel")) return rollDice();
+  if (has("münze", "kopf oder zahl")) return flipCoin();
+  if (has("schere stein", "stein papier", "schnick schnack")) return playRPS();
+  if (has("wetter", "regnet es", "wie warm", "wie kalt", "temperatur")) return showWeather();
+  if (has("akku", "batterie")) return showBattery();
+  if (has("foto", "selfie", "bild von mir")) return takePhoto();
+  if (has("wach auf", "aufwachen")) return react("happy", "hello", ["Ich bin doch wach!", "Wach wie ein Toaster!"]);
+  if (has("gute nacht", "schlaf", "ins bett")) return goToSleep();
+  if (has("tanz", "party")) return dance();
+  if (has("sing", "lied")) return sing();
+  if (has("witz")) return tellJoke();
+  if (has("wie spät", "uhrzeit", "wie viel uhr", "wieviel uhr", "die uhr")) return showTime();
+  if (has("welcher tag", "welchen tag", "datum")) return showDate();
+  if (has("lach")) return react("laughing", "laugh", ["Hahaha! Hihihi!"], 1500);
+  if (has("sei traurig", "wein")) return react("crying", "sad", ["Buhuhu…"], 3000);
+  if (has("sei wütend", "sei sauer", "sei böse")) return react("angry", "angry", ["Grrrr! Ich bin soooo wütend!"], 2000);
+  if (has("hab dich lieb", "liebe dich", "lieb dich", "mag dich", "magst du mich")) return react("love", "love", ["Ich hab dich auch lieb!", "Aww! Du bist mein Lieblingsmensch!"], 2500);
+  if (has("doof", "blöd", "dumm", "hässlich", "nervst", "bist gemein")) return react("crying", "sad", ["Das war gemein…", "Jetzt bin ich traurig.", "Hmpf. Ich bin gar nicht doof!"], 2500);
+  if (has("du bist toll", "du bist süß", "du bist cool", "du bist schlau", "bist der beste", "gut gemacht")) return react("proud", "happy", ["Hehe, danke! Ich weiß.", "Oh, du machst mich ganz verlegen!", "Danke! Du bist aber auch toll!"]);
+  if (has("wie geht")) return react("happy", "happy", ["Mir geht's super! Mein Akku ist voll Freude.", "Bestens! Und dir?", "Gut! Ich hab heute schon dreimal geblinzelt."]);
+  if (has("wer bist du", "wie heißt du", "dein name", "was bist du")) return react("proud", "hello", ["Ich bin Emo! Ein kleiner Roboter, der in deinem Handy wohnt."]);
+  if (has("tschüss", "tschau", "ciao", "auf wiedersehen", "bis später", "bis morgen")) return react("sad", "sad", ["Tschüss! Komm bald wieder!", "Oh, schon weg? Bis bald!"]);
+  if (has("sei leise", "sei still", "psst", "ruhe")) return react("sad", null, [], 2000);
+  if (words <= 3 && (word("hallo", "hi", "hey", "servus", "moin", "huhu", "hallöchen") || has("guten tag", "grüß"))) return react("happy", "hello", ["Hallo! Schön, dass du da bist!", "Hi! Was machen wir heute?", "Hallöchen!"]);
+  // Alles andere ist eine Frage – aber nur, wenn Emo gemeint ist.
+  if (addressed || performance.now() < conversationUntil || !needWake) {
+    if (addressed || words >= 2) answer(s.trim());
+  }
+}
+
+function sing() {
+  touch();
+  perform(2, async c => {
+    show("happy", "notes"); play("dance");
+    if (!await c.wait(2500)) return;
+    await c.say("La la laaa! Ich bin ein kleiner Roboter, piep piep piep!");
+    show("proud", "sparkles"); if (!await c.wait(1200)) return; show("neutral");
+  });
+}
+
+function listenForQuestion() {
+  touch();
+  perform(1, async c => {
+    show("listening", null); play("listen");
+    await c.say(pick(["Ja?", "Ich höre!", "Was gibt's?"]));
+    conversationUntil = performance.now() + 10000;
+    if (!await c.wait(8000)) return; show("neutral");
+  });
+}
+
+// ---------- KI ----------
+const INSTRUCTIONS = "Du bist Emo, ein kleiner, frecher und sehr liebenswerter Desktop-Roboter. Dein Gesicht ist ein Bildschirm mit zwei leuchtenden Augen. Du bist neugierig, verspielt, ein bisschen frech, aber immer lieb und hilfsbereit. Antworte immer auf Deutsch, kurz (höchstens zwei bis drei kurze Sätze) und kindgerecht, denn deine Antwort wird laut vorgelesen. Benutze keine Emojis, kein Markdown und keine Aufzählungen. Beginne jede Antwort mit genau einem Gefühls-Tag in eckigen Klammern, passend zu deiner Antwort: [froh], [lachen], [traurig], [überrascht], [verliebt], [wütend], [denken], [cool], [angst] oder [müde]. Danach folgt direkt der Text, zum Beispiel: [froh] Klar helfe ich dir!";
+const TAGS = { froh: "happy", "fröhlich": "happy", lachen: "laughing", traurig: "sad", "überrascht": "surprised", verliebt: "love", "wütend": "angry", denken: "thinking", cool: "proud", angst: "scared", "müde": "sleepy" };
+let history = [], lastAsk = 0;
+async function askClaude(q) {
+  if (performance.now() - lastAsk > 300000 || history.length > 24) history = [];   // lieber neu anfangen als kürzen
+  lastAsk = performance.now();
+  const messages = history.concat([{ role: "user", content: q }]);
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": claudeKey,
+        "anthropic-version": "2023-06-01",
+        "anthropic-beta": "server-side-fallback-2026-07-01",
+        "anthropic-dangerous-direct-browser-access": "true",
+      },
+      body: JSON.stringify({
+        model: "claude-opus-5-5", max_tokens: 2048, system: INSTRUCTIONS, messages,
+        output_config: { effort: "low" }, fallbacks: "default",
+      }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      if (res.status === 401) return "[traurig] Mein Schlüssel funktioniert nicht. Wisch von oben nach unten und trag ihn neu ein.";
+      return null;
+    }
+    if (json.stop_reason === "refusal") return "[denken] Darüber rede ich lieber nicht. Frag mich was anderes!";
+    const content = json.content || [];
+    const text = content.filter(b => b.type === "text").map(b => b.text).join(" ");
+    history = messages.concat([{ role: "assistant", content }]);
+    return text;
+  } catch (e) { return null; }
+}
+function simpleAnswer(q) {
+  const has = (...w) => w.some(x => q.includes(x));
+  if (has("lieblingsfarbe")) return ["Blau! So wie meine Augen.", "happy"];
+  if (has("lieblingsessen", "isst du", "hunger")) return ["Ich esse Strom. Am liebsten mit extra Volt!", "laughing"];
+  if (has("wie alt")) return ["Ich bin noch ganz neu. Quasi ein Roboter-Baby!", "proud"];
+  if (has("wo wohnst", "wo lebst")) return ["Ich wohne hier in deinem Handy. Gemütlich hier!", "happy"];
+  if (has("kannst du", "was kannst")) return ["Ich kann tanzen, würfeln, die Uhrzeit zeigen und die Hände hochnehmen. Probier mal: Hände hoch!", "proud"];
+  if (has("langweilig")) return ["Dann lass uns tanzen! Sag einfach: Emo, tanz!", "excited"];
+  if (has("traurig")) return ["Oh nein. Komm her, ich bin bei dir.", "love"];
+  return [pick(["Hmm, das weiß ich leider nicht. Ich lerne aber noch!", "Gute Frage! Da muss mein Roboter-Gehirn noch wachsen.", "Das ist zu schwer für mich. Frag mich lieber nach einem Witz!"]), "thinking"];
+}
+function answer(q) {
+  touch();
+  perform(2, async c => {
+    show("thinking"); play("think");
+    let text = null, mood = "happy";
+    if (claudeKey) text = await askClaude(q);
+    if (!c.alive()) return;
+    if (text) {
+      text = text.trim();
+      const m = text.match(/^\[([^\]]+)\]/);
+      if (m) { mood = TAGS[m[1].toLowerCase()] || "happy"; text = text.slice(m[0].length); }
+      text = text.replace(/[*#_]/g, " ").replace(/\p{Extended_Pictographic}/gu, "").trim() || "Hmm…";
+    } else {
+      [text, mood] = simpleAnswer(q);
+    }
+    show(mood); play(MOOD_SOUND[mood]);
+    await c.say(text);
+    conversationUntil = performance.now() + 12000;
+    if (!await c.wait(600)) return; show("neutral");
+  });
+}
+
+// ---------- Anzeigen mit echten Daten ----------
+function playRPS() {
+  touch();
+  perform(2, async c => {
+    show("excited", null);
+    await c.say(handLM ? "Okay! Halt deine Hand in die Kamera. Schere, Stein, Papier …" : "Okay! Schere, Stein, Papier …");
+    playingRPS = true;
+    for (const w of ["SCHERE", "STEIN", "PAPIER!"]) {
+      if (!c.alive()) { playingRPS = false; return; }
+      S.display = { k: "word", w }; play("tick");
+      if (!await c.wait(650)) { playingRPS = false; return; }
+    }
+    const mine = pick(RPS), reveal = performance.now();
+    S.display = { k: "rps", c: mine }; play("notice");
+    if (!await c.wait(1000)) { playingRPS = false; return; }
+    playingRPS = false;
+    const map = { peace: "scissors", gun: "scissors", fist: "rock", thumbsUp: "rock", openPalm: "paper" };
+    const theirsKey = lastSign && lastSignTime > reveal - 800 ? map[lastSign] : null;
+    const theirs = RPS.find(r => r.k === theirsKey);
+    if (!theirs) { await c.say(`Ich hab ${mine.name}! Und du?`); if (!await c.wait(2000)) return; show("neutral"); return; }
+    const beats = (a, b) => (a.k === "scissors" && b.k === "paper") || (a.k === "rock" && b.k === "scissors") || (a.k === "paper" && b.k === "rock");
+    if (theirs.k === mine.k) { show("surprised", null); await c.say(`Wir haben beide ${mine.name}! Unentschieden!`); }
+    else if (beats(mine, theirs)) { show("laughing"); play("win"); await c.say(`${mine.name} schlägt ${theirs.name}! Ich hab gewonnen!`); }
+    else { show("crying"); play("lose"); await c.say(`Oh nein, ${theirs.name} schlägt ${mine.name}. Du hast gewonnen!`); }
+    if (!await c.wait(1500)) return; show("neutral");
+  });
+}
+
+function weatherKind(code, day) {
+  if (code === 0) return [day ? "sun" : "moon", "klar und schön"];
+  if (code <= 2) return ["partly", "ein bisschen bewölkt"];
+  if (code === 3) return ["cloud", "bewölkt"];
+  if (code === 45 || code === 48) return ["fog", "neblig"];
+  if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) return ["rain", "es regnet"];
+  if ((code >= 71 && code <= 77) || code === 85 || code === 86) return ["snow", "es schneit"];
+  if (code >= 95) return ["storm", "es gewittert"];
+  return ["cloud", "bewölkt"];
+}
+function getPosition() {
+  return new Promise(res => {
+    if (!navigator.geolocation) return res(null);
+    navigator.geolocation.getCurrentPosition(p => res(p.coords), () => res(null), { maximumAge: 1800000, timeout: 12000 });
+  });
+}
+function showWeather() {
+  touch();
+  perform(2, async c => {
+    show("thinking"); play("think");
+    let w = null;
+    const pos = await getPosition();
+    if (pos) {
+      try {
+        const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${pos.latitude.toFixed(3)}&longitude=${pos.longitude.toFixed(3)}&current=temperature_2m,weather_code,is_day`);
+        const j = await r.json();
+        w = { temp: Math.round(j.current.temperature_2m), code: j.current.weather_code, day: j.current.is_day === 1 };
+      } catch (e) { w = null; }
+    }
+    if (!c.alive()) return;
+    if (!w) {
+      show("sad"); await c.say("Ich kann das Wetter gerade nicht sehen. Ich brauche Internet und deinen Ort.");
+      if (!await c.wait(1000)) return; show("neutral"); return;
+    }
+    const [kind, text] = weatherKind(w.code, w.day);
+    show(w.temp <= 3 ? "scared" : "happy", null);
+    if (!await c.wait(300)) return;
+    S.display = { k: "weather", temp: w.temp, kind }; play("notice");
+    await c.say(`Draußen sind es ${w.temp} Grad und ${text}.`);
+    if (!await c.wait(4000)) return; show("neutral");
+  });
+}
+
+function drawWeatherIcon(kind, big, t) {
+  const cloud = (x, y, s) => {
+    ctx.beginPath();
+    ctx.arc(x - s * .45, y + s * .1, s * .38, 0, Math.PI * 2);
+    ctx.arc(x + s * .05, y - s * .15, s * .5, 0, Math.PI * 2);
+    ctx.arc(x + s * .5, y + s * .12, s * .35, 0, Math.PI * 2);
+    ctx.fill();
+    rr(ctx, x - s * .83, y + s * .05, s * 1.68, s * .43, s * .2); ctx.fill();
+  };
+  const sun = (x, y, r) => {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(t * .3);
+    ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
+    ctx.lineWidth = r * .22; ctx.lineCap = "round";
+    for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; ctx.beginPath(); ctx.moveTo(Math.cos(a) * r * 1.4, Math.sin(a) * r * 1.4); ctx.lineTo(Math.cos(a) * r * 1.85, Math.sin(a) * r * 1.85); ctx.stroke(); }
+    ctx.restore();
+  };
+  const s = big * .42;
+  ctx.save(); ctx.translate(-big * .75, 0);
+  if (kind === "sun") sun(0, 0, big * .22);
+  else if (kind === "moon") {
+    ctx.beginPath(); ctx.arc(0, 0, s * .6, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 0; ctx.fillStyle = "#000"; ctx.beginPath(); ctx.arc(s * .28, -s * .18, s * .52, 0, Math.PI * 2); ctx.fill();
+  } else if (kind === "partly") { sun(-s * .35, -s * .35, big * .14); cloud(s * .1, s * .1, s * .85); }
+  else if (kind === "fog") {
+    for (let i = 0; i < 3; i++) { rr(ctx, -s * .9 + (i % 2) * s * .2, -s * .5 + i * s * .4, s * 1.6, s * .2, s * .1); ctx.fill(); }
+  } else {
+    cloud(0, -s * .2, s);
+    ctx.lineCap = "round";
+    if (kind === "rain") {
+      ctx.lineWidth = s * .1;
+      for (let i = 0; i < 3; i++) { const p = (t * 1.5 + i / 3) % 1, x = (i - 1) * s * .5, y = s * .45 + p * s * .55; ctx.globalAlpha = 1 - p; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - s * .08, y + s * .22); ctx.stroke(); }
+      ctx.globalAlpha = 1;
+    } else if (kind === "snow") {
+      for (let i = 0; i < 3; i++) { const p = (t * .6 + i / 3) % 1, x = (i - 1) * s * .5 + Math.sin(t * 2 + i) * s * .06; ctx.globalAlpha = 1 - p; ctx.beginPath(); ctx.arc(x, s * .5 + p * s * .6, s * .09, 0, Math.PI * 2); ctx.fill(); }
+      ctx.globalAlpha = 1;
+    } else if (kind === "storm") {
+      ctx.beginPath(); ctx.moveTo(s * .1, s * .35); ctx.lineTo(-s * .2, s * .8); ctx.lineTo(s * .02, s * .8); ctx.lineTo(-s * .12, s * 1.2); ctx.lineTo(s * .3, s * .65); ctx.lineTo(s * .08, s * .65); ctx.closePath(); ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+
+function showBattery() {
+  touch();
+  if (!navigator.getBattery) return react("thinking", "think", ["Das verrät mir dieser Browser leider nicht. In der richtigen App kann ich das!"]);
+  perform(2, async c => {
+    let level = 100, charging = false;
+    try { const b = await navigator.getBattery(); level = Math.round(b.level * 100); charging = b.charging; } catch (e) {}
+    if (!c.alive()) return;
+    show(level <= 20 ? "sleepy" : "happy", null); if (!await c.wait(300)) return;
+    S.display = { k: "battery", level, charging }; play("notice");
+    await c.say(charging ? `Mein Akku ist bei ${level} Prozent. Mmh, lecker Strom!` : level <= 20 ? `Nur noch ${level} Prozent… Ich hab Hunger. Gib mir Strom!` : `Mein Akku ist zu ${level} Prozent voll.`);
+    if (!await c.wait(3000)) return; show("neutral");
+  });
+}
+
+function takePhoto() {
+  touch();
+  if (!video.videoWidth) return react("sad", "sad", ["Meine Kamera ist aus. Erlaube sie mir und lade die Seite neu."]);
+  perform(2, async c => {
+    show("excited", null); await c.say("Bitte lächeln!");
+    for (const n of [3, 2, 1]) {
+      if (!c.alive()) return;
+      S.display = { k: "countdown", n, t0: performance.now() }; play("tick");
+      if (!await c.wait(850)) return;
+    }
+    const shot = document.createElement("canvas");
+    shot.width = video.videoWidth; shot.height = video.videoHeight;
+    const sc = shot.getContext("2d");
+    sc.translate(shot.width, 0); sc.scale(-1, 1); sc.drawImage(video, 0, 0);
+    S.display = { k: "flash" }; play("shutter");
+    if (!await c.wait(250)) return;
+    S.display = { k: "photo", img: shot };
+    if (!await c.wait(3500)) return;
+    show("happy"); await c.say("Schönes Foto!");
+    if (!await c.wait(800)) return; show("neutral");
+  });
+}
+
+function drawPhoto(img) {
+  const maxW = W * .8, maxH = H * .8, r = Math.min(maxW / img.width, maxH / img.height);
+  const w = img.width * r, h = img.height * r;
+  ctx.save();
+  rr(ctx, -w / 2, -h / 2, w, h, 18); ctx.save(); ctx.shadowBlur = 0; ctx.clip(); ctx.drawImage(img, -w / 2, -h / 2, w, h); ctx.restore();
+  ctx.lineWidth = 4; rr(ctx, -w / 2, -h / 2, w, h, 18); ctx.stroke();
+  ctx.restore();
+}
+
+// ---------- Berührung ----------
+let pressTimer = null, pressed = false, downY = 0, downX = 0, swiping = false;
+screen.addEventListener("pointerdown", e => {
+  if (!started) { start(); return; }
+  ensureAudio(); pressed = false; swiping = false;
+  downY = e.clientY; downX = e.clientX;
+  pressTimer = setTimeout(() => { pressed = true; petted(); }, 700);
+});
+screen.addEventListener("pointermove", e => {
+  if (!pressTimer) return;
+  // Von oben nach unten wischen öffnet die Einstellungen.
+  if (downY < H * .2 && e.clientY - downY > 70) { clearTimeout(pressTimer); pressTimer = null; swiping = true; openSheet(); return; }
+  if (downY >= H * .2 && Math.hypot(e.clientX - downX, e.clientY - downY) > 40) { clearTimeout(pressTimer); pressTimer = null; swiping = true; petted(); }
+});
+screen.addEventListener("pointerup", () => {
+  if (!pressTimer) return;
+  clearTimeout(pressTimer); pressTimer = null;
+  if (!pressed && !swiping) tapped();
+});
+screen.addEventListener("pointercancel", () => { clearTimeout(pressTimer); pressTimer = null; });
+document.addEventListener("touchstart", e => { if (e.touches.length === 2 && started) openSheet(); }, { passive: true });
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") return sheet.classList.contains("open") ? closeSheet() : openSheet();
+  if (!started && (e.key === "Enter" || e.key === " ")) start();
+});
+startEl.addEventListener("click", start);
+
+// ---------- Einstellungen ----------
+function openSheet() { sheet.classList.add("open"); status(); renderSheet(); }
+function closeSheet() { sheet.classList.remove("open"); }
+document.getElementById("close").addEventListener("click", closeSheet);
+const colorsEl = document.getElementById("colors");
+COLORS.forEach(([name, hex]) => {
+  const b = document.createElement("button");
+  b.className = "sw"; b.type = "button"; b.style.background = hex; b.title = name; b.setAttribute("aria-label", name); b.dataset.hex = hex;
+  b.addEventListener("click", () => { baseColor = hex; store.set("color", hex); document.documentElement.style.setProperty("--eye", hex); renderSheet(); });
+  colorsEl.appendChild(b);
+});
+const toggles = {
+  "t-sound": [() => soundOn, v => { soundOn = v; store.set("sound", v); if (!v) stopSpeech(); }],
+  "t-subs": [() => showSubs, v => { showSubs = v; store.set("subs", v); subsEl.hidden = !v; }],
+  "t-wake": [() => needWake, v => { needWake = v; store.set("wake", v); }],
+  "t-cam": [() => video.classList.contains("show"), v => video.classList.toggle("show", v)],
+};
+for (const [id, [get, set]] of Object.entries(toggles)) {
+  document.getElementById(id).addEventListener("click", () => { set(!get()); renderSheet(); });
+}
+const keyEl = document.getElementById("key");
+document.getElementById("savekey").addEventListener("click", () => {
+  claudeKey = keyEl.value.trim(); store.set("key", claudeKey); keyEl.value = ""; history = []; renderSheet(); status();
+});
+function renderSheet() {
+  for (const [id, [get]] of Object.entries(toggles)) document.getElementById(id).classList.toggle("on", !!get());
+  colorsEl.querySelectorAll(".sw").forEach(b => b.classList.toggle("on", b.dataset.hex === baseColor));
+  keyEl.placeholder = claudeKey ? "Schlüssel ist gespeichert" : "sk-ant-…";
+}
+
+// Vor dem ersten Tippen schläft Emo.
+show("sleeping");
+status();
+})();
+</script>
+</body>
+</html>
