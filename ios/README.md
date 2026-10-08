@@ -1,7 +1,8 @@
 # Hausaufgabenheft – native iOS-App (SwiftUI)
 
 > Im Nachbarordner [`DerLetzteBus`](DerLetzteBus/README.md) liegt außerdem das
-> Gruselspiel „Der letzte Bus“ als eigene SwiftUI-App.
+> Gruselspiel „Der letzte Bus“ als eigene SwiftUI-App, und in [`Emo`](Emo/README.md)
+> der kleine Roboter Emo (wie EMO Go Home – das Handy ist sein Gesicht).
 
 Dieselbe App wie die Web-Version, aber nativ in **SwiftUI** für iPad und iPhone:
 Startseite, Stundenplan, Hausaufgabenheft mit 3-D-Blättern und Lo-Fi-Musik.
