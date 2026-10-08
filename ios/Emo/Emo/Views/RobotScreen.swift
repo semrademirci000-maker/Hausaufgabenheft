@@ -12,7 +12,6 @@ struct RobotScreen: View {
 
     @State private var showGear = true
     @State private var showSettings = false
-    @State private var showHint = true
     @State private var gearTimer: Task<Void, Never>?
 
     var body: some View {
@@ -31,10 +30,6 @@ struct RobotScreen: View {
             .padding(.bottom, 18)
             .padding(.horizontal, 24)
             .allowsHitTesting(false)
-
-            if showHint {
-                hint
-            }
         }
         .contentShape(Rectangle())
         .onTapGesture { brain.tapped(); flashGear() }
@@ -54,10 +49,6 @@ struct RobotScreen: View {
             UIApplication.shared.isIdleTimerDisabled = true
             brain.start()
             flashGear()
-            Task {
-                try? await Task.sleep(nanoseconds: 9_000_000_000)
-                withAnimation(.easeOut(duration: 0.8)) { showHint = false }
-            }
         }
         .onChange(of: scenePhase) { _, phase in
             switch phase {
@@ -93,20 +84,6 @@ struct RobotScreen: View {
         }
         .animation(.easeInOut(duration: 0.25), value: brain.subtitle)
         .animation(.easeInOut(duration: 0.25), value: brain.heard)
-    }
-
-    private var hint: some View {
-        VStack(spacing: 6) {
-            Text("Sag „Hey Emo …“, „Hände hoch!“ oder „Emo, tanz!“")
-            Text("Mach eine Finger-Pistole vor der Kamera · Streicheln · Schütteln")
-        }
-        .font(.system(size: 13, weight: .medium, design: .rounded))
-        .foregroundStyle(.white.opacity(0.4))
-        .multilineTextAlignment(.center)
-        .frame(maxHeight: .infinity, alignment: .top)
-        .padding(.top, 14)
-        .allowsHitTesting(false)
-        .transition(.opacity)
     }
 
     private var gearButton: some View {

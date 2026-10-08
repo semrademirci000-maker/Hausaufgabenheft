@@ -25,6 +25,8 @@ targets:
         INFOPLIST_KEY_CFBundleDisplayName: Emo
         INFOPLIST_KEY_NSCameraUsageDescription: "Emo schaut dich mit der Kamera an und erkennt deine Handzeichen."
         INFOPLIST_KEY_NSMicrophoneUsageDescription: "Emo hört dir zu, damit du mit ihm sprechen kannst."
+        INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "Emo braucht deinen ungefähren Ort, um dir das Wetter zu zeigen."
+        INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription: "Emo speichert Fotos, die er von dir macht, in deinen Fotos."
         INFOPLIST_KEY_NSSpeechRecognitionUsageDescription: "Emo versteht, was du sagst (z. B. „Hände hoch!“)."
         INFOPLIST_KEY_UIStatusBarHidden: YES
         INFOPLIST_KEY_UIRequiresFullScreen: YES

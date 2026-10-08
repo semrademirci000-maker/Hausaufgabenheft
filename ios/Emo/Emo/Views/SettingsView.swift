@@ -94,6 +94,21 @@ struct SettingsView: View {
                     Text("Ohne Schlüssel nutzt Emo Apple Intelligence (ab iOS 26 auf passenden Geräten). Mit einem Claude-Schlüssel von console.anthropic.com antwortet Emo über das Internet. Der Schlüssel liegt sicher im Schlüsselbund.")
                 }
 
+                Section("Bildschirm-Anzeigen ausprobieren") {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 96))], spacing: 10) {
+                        Button("Uhrzeit") { dismiss(); brain.showTime() }
+                        Button("Datum") { dismiss(); brain.showDate() }
+                        Button("Timer 10 s") { dismiss(); brain.startTimer(10) }
+                        Button("Würfeln") { dismiss(); brain.rollDice() }
+                        Button("Münze") { dismiss(); brain.flipCoin() }
+                        Button("Schere-Stein-Papier") { dismiss(); brain.playRPS() }
+                        Button("Wetter") { dismiss(); brain.showWeather() }
+                        Button("Akku") { dismiss(); brain.showBattery() }
+                        Button("Foto") { dismiss(); brain.takePhoto() }
+                    }
+                    .buttonStyle(.bordered)
+                }
+
                 Section("Gefühle ausprobieren") {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 96))], spacing: 10) {
                         ForEach(demoMoods.indices, id: \.self) { i in

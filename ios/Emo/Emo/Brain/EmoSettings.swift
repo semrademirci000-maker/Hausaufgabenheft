@@ -52,7 +52,7 @@ final class EmoSettings: ObservableObject {
         d.register(defaults: [
             "eyeColor": 0, "voicePitch": 1.6, "volume": 0.8,
             "useCamera": true, "useMicrophone": true, "needsWakeWord": true,
-            "showSubtitles": true, "showTalkBars": true, "followFace": true,
+            "showSubtitles": false, "showTalkBars": false, "followFace": true,
             "aiMode": AIMode.automatic.rawValue,
         ])
         eyeColorIndex = d.integer(forKey: "eyeColor")

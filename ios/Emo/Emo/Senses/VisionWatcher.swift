@@ -7,6 +7,7 @@
 import AVFoundation
 import Vision
 import UIKit
+import CoreImage
 
 /// Handzeichen, die Emo erkennt.
 enum HandSign: String {
@@ -32,6 +33,8 @@ final class VisionWatcher: NSObject, AVCaptureVideoDataOutputSampleBufferDelegat
     private var rotationObservation: NSKeyValueObservation?
     private var configured = false
     private var frame = 0
+    private var lastBuffer: CVPixelBuffer?
+    private let ciContext = CIContext()
 
     private let faceRequest = VNDetectFaceRectanglesRequest()
     private let handRequest: VNDetectHumanHandPoseRequest = {
@@ -62,6 +65,21 @@ final class VisionWatcher: NSObject, AVCaptureVideoDataOutputSampleBufferDelegat
     func stop() {
         queue.async {
             if self.session.isRunning { self.session.stopRunning() }
+        }
+    }
+
+    /// Macht ein Foto aus dem aktuellen Kamerabild.
+    func snapshot() async -> UIImage? {
+        await withCheckedContinuation { (c: CheckedContinuation<UIImage?, Never>) in
+            queue.async {
+                guard let buffer = self.lastBuffer else { c.resume(returning: nil); return }
+                let image = CIImage(cvPixelBuffer: buffer)
+                guard let cg = self.ciContext.createCGImage(image, from: image.extent) else {
+                    c.resume(returning: nil)
+                    return
+                }
+                c.resume(returning: UIImage(cgImage: cg))
+            }
         }
     }
 
@@ -114,7 +132,10 @@ final class VisionWatcher: NSObject, AVCaptureVideoDataOutputSampleBufferDelegat
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer,
                        from connection: AVCaptureConnection) {
         frame += 1
-        guard frame % 2 == 0, let pixels = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
+        guard let pixels = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
+        // Für Fotos nur alle paar Bilder merken – so bleibt der Kamera-Speicher frei.
+        if frame % 6 == 0 { lastBuffer = pixels }
+        guard frame % 2 == 0 else { return }
 
         let handler = VNImageRequestHandler(cvPixelBuffer: pixels, orientation: .up, options: [:])
         do {

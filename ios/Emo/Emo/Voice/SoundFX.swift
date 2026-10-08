@@ -25,6 +25,7 @@ final class SoundFX {
     enum Sound: CaseIterable {
         case hello, happy, laugh, sad, surprised, scared, angry, love, dizzy
         case shot, dying, revive, snore, yawn, think, listen, tap, notice, purr, ok, dance, hum
+        case alarm, tick, shutter, diceRoll, coin, win, lose
     }
 
     var volume: Float = 0.8 { didSet { player.volume = volume } }
@@ -148,6 +149,33 @@ final class SoundFX {
         case .hum:
             return [Seg(duration: 0.18, from: 520, to: 600, wave: .sine, gain: 0.25),
                     Seg(duration: 0.22, from: 600, to: 560, wave: .sine, gain: 0.25)]
+        case .alarm:
+            return [Seg(duration: 0.1, from: 1900, to: 1900, wave: .square, gain: 0.3), p(0.05),
+                    Seg(duration: 0.1, from: 1900, to: 1900, wave: .square, gain: 0.3), p(0.05),
+                    Seg(duration: 0.1, from: 1900, to: 1900, wave: .square, gain: 0.3)]
+        case .tick:
+            return [Seg(duration: 0.05, from: 1500, to: 1500, wave: .sine, gain: 0.45)]
+        case .shutter:
+            return [Seg(duration: 0.05, from: 0, to: 0, wave: .noise, gain: 0.6, decay: true), p(0.04),
+                    Seg(duration: 0.09, from: 0, to: 0, wave: .noise, gain: 0.5, decay: true)]
+        case .diceRoll:
+            var s: [Seg] = []
+            for i in 0..<10 {
+                s += [Seg(duration: 0.025, from: 0, to: 0, wave: .noise, gain: 0.55, decay: true),
+                      p(0.04 + Double(i) * 0.012)]
+            }
+            return s
+        case .coin:
+            return [Seg(duration: 0.07, from: 1980, to: 1980, wave: .sine, gain: 0.4),
+                    Seg(duration: 0.5, from: 2640, to: 2640, wave: .sine, gain: 0.4, decay: true)]
+        case .win:
+            return [523.0, 659, 784, 1047].flatMap { (f: Double) -> [Seg] in
+                [Seg(duration: 0.11, from: f, to: f, wave: .square, gain: 0.25), p(0.02)]
+            }
+        case .lose:
+            return [Seg(duration: 0.3, from: 420, to: 400, wave: .triangle, gain: 0.45), p(0.05),
+                    Seg(duration: 0.3, from: 380, to: 360, wave: .triangle, gain: 0.45), p(0.05),
+                    Seg(duration: 0.7, from: 340, to: 250, wave: .triangle, gain: 0.45, vibRate: 6, vibDepth: 0.04)]
         case .dance:
             // Ein kleines, fröhliches 8-Bit-Liedchen.
             let melody: [Double] = [523, 659, 784, 659, 880, 784, 659, 523,

@@ -11,6 +11,8 @@ enum Command: Equatable {
     case time, date, joke, love, compliment, insult
     case howAreYou, whoAreYou, laugh, sing, beQuiet, stop
     case beSad, beAngry, beSurprised
+    /// Dinge, die Emo auf seinem Bildschirm anzeigt.
+    case timer(Double?), cancelTimer, dice, coin, rps, weather, battery, photo
     /// Nur „Emo“ gesagt – Emo hört jetzt zu.
     case wakeWordOnly
     /// Alles andere: eine Frage an die KI. `addressed` = Emo wurde mit Namen angesprochen.
@@ -58,14 +60,24 @@ enum CommandParser {
         if s.isEmpty { return addressed ? .wakeWordOnly : .question("", addressed: false) }
         if has(s, handsUpWords) { return .handsUp }
         if hasWord(s, shootWords) { return .shoot }
+        if has(s, ["timer aus", "timer stopp", "timer stop", "timer abbrechen", "timer beenden",
+                   "timer löschen", "stopp den timer", "stoppe den timer", "timer ausmachen"]) { return .cancelTimer }
+        if has(s, ["timer", "countdown", "erinner mich in", "wecker in"])
+            || (has(s, ["stell", "stelle"]) && duration(in: s) != nil) { return .timer(duration(in: s)) }
         if has(s, ["hör auf", "stopp", "stop"]) && words <= 4 { return .stop }
+        if has(s, ["würfel", "wurfel"]) { return .dice }
+        if has(s, ["münze", "kopf oder zahl"]) { return .coin }
+        if has(s, ["schere stein papier", "stein papier", "schnick schnack"]) { return .rps }
+        if has(s, ["wetter", "regnet es", "wie warm", "wie kalt", "temperatur"]) { return .weather }
+        if has(s, ["akku", "batterie"]) { return .battery }
+        if has(s, ["foto", "selfie", "bild von mir", "mach ein bild"]) { return .photo }
         if has(s, ["sei leise", "sei still", "psst", "pscht", "ruhe", "halt die klappe"]) { return .beQuiet }
         if has(s, ["wach auf", "aufwachen", "aufstehen", "guten morgen"]) { return .wakeUp }
         if has(s, ["gute nacht", "schlaf", "schlafen", "ins bett"]) { return .sleep }
         if has(s, ["tanz", "tanzen", "party"]) { return .dance }
         if has(s, ["sing", "lied"]) { return .sing }
         if has(s, ["witz", "lustiges"]) { return .joke }
-        if has(s, ["wie spät", "uhrzeit", "wie viel uhr", "wieviel uhr"]) { return .time }
+        if has(s, ["wie spät", "uhrzeit", "wie viel uhr", "wieviel uhr", "die uhr", "zeit an"]) { return .time }
         if has(s, ["welcher tag", "welches datum", "datum", "welchen tag"]) { return .date }
         if has(s, ["lach"]) { return .laugh }
         if has(s, ["sei traurig", "wein mal", "weine"]) { return .beSad }
@@ -81,6 +93,41 @@ enum CommandParser {
         if words <= 3 && (hasWord(s, ["hallo", "hi", "hey", "servus", "moin", "huhu", "hallöchen"])
                           || has(s, ["guten tag", "grüß"])) { return .hello }
         return .question(s, addressed: addressed)
+    }
+
+    // MARK: Zeitangaben („Timer fünf Minuten“, „30 Sekunden“, „1 Stunde“)
+
+    static func duration(in s: String) -> Double? {
+        let tokens = s.split(separator: " ").map(String.init)
+        var total = 0.0
+        var found = false
+        for (i, t) in tokens.enumerated() where i > 0 {
+            let unit: Double
+            if t.hasPrefix("sekunde") || t == "sek" { unit = 1 }
+            else if t.hasPrefix("minute") || t == "min" { unit = 60 }
+            else if t.hasPrefix("stunde") { unit = 3600 }
+            else { continue }
+            if let n = number(tokens[i - 1]) {
+                total += n * unit
+                found = true
+            } else if tokens[i - 1] == "halbe" {
+                total += 0.5 * unit
+                found = true
+            }
+        }
+        return found && total > 0 ? total : nil
+    }
+
+    private static let numberWords: [String: Double] = [
+        "ein": 1, "eine": 1, "einen": 1, "eins": 1, "zwei": 2, "drei": 3, "vier": 4, "fünf": 5,
+        "sechs": 6, "sieben": 7, "acht": 8, "neun": 9, "zehn": 10, "elf": 11, "zwölf": 12,
+        "fünfzehn": 15, "zwanzig": 20, "fünfundzwanzig": 25, "dreißig": 30, "vierzig": 40,
+        "fünfundvierzig": 45, "fünfzig": 50, "sechzig": 60, "neunzig": 90,
+    ]
+
+    private static func number(_ t: String) -> Double? {
+        if let d = Double(t) { return d }
+        return numberWords[t]
     }
 
     // MARK: Wortlisten

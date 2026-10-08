@@ -33,6 +33,7 @@ struct FaceView: View {
         .animation(.easeInOut(duration: 0.07), value: brain.blink)
         .animation(.easeOut(duration: 0.25), value: brain.look)
         .animation(.easeInOut(duration: 0.3), value: brain.isSpeaking)
+        .animation(.spring(response: 0.4, dampingFraction: 0.75), value: brain.display)
     }
 
     private var color: Color { brain.mood.tint(settings.eyeColor) }
@@ -40,8 +41,15 @@ struct FaceView: View {
     private func face(_ m: FaceMetrics) -> some View {
         let dropY: CGFloat = brain.fallen ? m.screen.height * 0.22 : 0
         return ZStack {
-            eyes(m)
-                .modifier(Breathing(active: brain.mood == .neutral || brain.mood == .sleeping))
+            if let display = brain.display {
+                // Wie beim echten EMO: Augen weg, Anzeige da.
+                DisplayView(display: display, color: settings.eyeColor, screen: m.screen)
+                    .transition(.scale(scale: 0.2).combined(with: .opacity))
+            } else {
+                eyes(m)
+                    .modifier(Breathing(active: brain.mood == .neutral || brain.mood == .sleeping))
+                    .transition(.scale(scale: 0.2).combined(with: .opacity))
+            }
             arms(m)
         }
         .frame(width: m.screen.width, height: m.screen.height)

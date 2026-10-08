@@ -8,7 +8,27 @@ gelehnt), und Emo schaut dich an, blinzelt, spricht, piept und reagiert auf dich
 > kein Xcode. Er ist deshalb **nicht kompiliert getestet**. Falls Xcode beim ersten
 > Bauen eine Kleinigkeit anmeckert, zeigt es dir die Stelle direkt an.
 
-## Was Emo kann
+Der Bildschirm ist einfach **schwarz mit Emos Augen** – sonst nichts. Wenn du Emo
+etwas fragst, verschwinden die Augen kurz und der Bildschirm zeigt die Antwort an,
+genau wie beim echten EMO.
+
+## Was Emo auf seinem Bildschirm anzeigt
+
+| Sag … | Emo zeigt … |
+|---|---|
+| „Wie spät ist es?“ / „Zeig mir die Uhrzeit“ | Große leuchtende Uhr mit blinkendem Doppelpunkt |
+| „Welcher Tag ist heute?“ | Wochentag und Datum |
+| „Timer fünf Minuten“ / „Stell einen Timer auf 30 Sekunden“ | Countdown mit Fortschrittsbalken, am Ende klingelt eine Glocke („Timer aus“ beendet ihn) |
+| „Würfel mal“ | Rollender Würfel, dann die Zahl |
+| „Kopf oder Zahl“ / „Wirf eine Münze“ | Münze dreht sich |
+| „Schere, Stein, Papier“ | Zählt runter, zeigt seine Wahl und erkennt deine Hand in der Kamera – wer hat gewonnen? |
+| „Wie ist das Wetter?“ | Wettersymbol und Temperatur für deinen Ort |
+| „Wie voll ist dein Akku?“ | Batterie-Anzeige |
+| „Mach ein Foto“ | 3 – 2 – 1, Blitz, zeigt das Foto und speichert es in deinen Fotos |
+
+Antippen beendet eine Anzeige sofort.
+
+## Was Emo sonst noch kann
 
 | Du machst … | Emo macht … |
 |---|---|
@@ -16,7 +36,7 @@ gelehnt), und Emo schaut dich an, blinzelt, spricht, piept und reagiert auf dich
 | Während der Hände-hoch-Szene **„Peng!“** sagen oder die Pistole **nach oben schnellen** lassen | Kippt mit X-Augen um, spielt tot … und steht wieder auf: „Reingelegt!“ |
 | „**Hey Emo**, …“ + eine Frage | Denkt nach (Augen nach oben, „?“) und antwortet mit KI und passendem Gesicht |
 | „Emo, **tanz**!“ | Musik, Noten, wippt im Takt |
-| „Erzähl einen **Witz**“, „**Sing** was“, „Wie **spät** ist es?“ | Witz mit Pointe, Liedchen, Uhrzeit |
+| „Erzähl einen **Witz**“, „**Sing** was“ | Witz mit Pointe, Liedchen |
 | „**Gute Nacht**“ / „**Wach auf**“ | Gähnt, schläft mit Zzz und schnarcht, wacht wieder auf |
 | „Ich hab dich lieb“ / „Du bist doof“ | Herzaugen / Tränen |
 | Antippen, oft antippen | Kichert … wird irgendwann sauer |
@@ -26,9 +46,9 @@ gelehnt), und Emo schaut dich an, blinzelt, spricht, piept und reagiert auf dich
 | In die Kamera schauen | Emo folgt dir mit den Augen und begrüßt dich |
 | Lange nichts | Schaut sich um, gähnt, schläft irgendwann ein |
 
-Über das unauffällige ⚙️ oben rechts (erscheint beim Antippen) gibt es Einstellungen:
-Augenfarbe, Stimmhöhe, Lautstärke, Kamera/Mikrofon an/aus, KI-Wahl und ein
-Knopf-Menü zum Ausprobieren aller Gefühle.
+Über das unauffällige ⚙️ oben rechts (erscheint nur kurz beim Antippen) gibt es
+Einstellungen: Augenfarbe, Stimmhöhe, Lautstärke, Kamera/Mikrofon an/aus, KI-Wahl,
+Untertitel (standardmäßig aus) und Knöpfe zum Ausprobieren aller Anzeigen und Gefühle.
 
 ## KI-Assistent
 
@@ -52,7 +72,8 @@ ein paar Sekunden ohne „Emo“ weiterreden. Kurze Befehle wie „Hände hoch�
 2. `Emo.xcodeproj` doppelklicken (Xcode 16 oder neuer, für Apple Intelligence Xcode 26).
 3. Unter **Signing & Capabilities** dein Team auswählen (Bundle-ID ggf. ändern).
 4. Ein **echtes Gerät** wählen – im Simulator gibt es keine Frontkamera.
-5. ▶ drücken und Kamera, Mikrofon und Spracherkennung erlauben.
+5. ▶ drücken und Kamera, Mikrofon und Spracherkennung erlauben (Ort und Fotos
+   fragt Emo erst, wenn du nach dem Wetter fragst bzw. ein Foto machst).
 
 Falls die Projektdatei nicht öffnet: `brew install xcodegen`, dann in `ios/Emo`
 `xcodegen generate`.
@@ -68,11 +89,13 @@ Mindestversion: **iOS 17**.
 | `Face/EyeView.swift` | Ein leuchtendes Auge mit Lidern, plus Herz-, X-, Spiral-, Stern-Augen |
 | `Face/Effects.swift` | Zzz, Tränen, Herzchen, Noten, Schweiß, „?“, „!“, Roboterarme, Zittern, Tanzen |
 | `Face/FaceView.swift` | Setzt das Gesicht zusammen, Blickrichtung, Umfallen |
+| `Face/DisplayView.swift` | Bildschirm-Anzeigen: Uhr, Datum, Timer, Würfel, Münze, Schere-Stein-Papier, Wetter, Akku, Foto |
 | `Brain/RobotBrain.swift` | Emos Persönlichkeit: alle Reaktionen und Szenen |
 | `Brain/CommandParser.swift` | Versteht deutsche Sprachbefehle |
 | `Brain/AIAssistant.swift` | KI: Apple Intelligence, Claude oder einfache Antworten |
 | `Brain/EmoSettings.swift` | Einstellungen (API-Schlüssel im Schlüsselbund) |
 | `Senses/VisionWatcher.swift` | Frontkamera + Vision: Gesicht und Handzeichen (Finger-Pistole …) |
+| `Senses/WeatherService.swift` | Wetter von Open-Meteo (kostenlos, ohne Schlüssel) für deinen Ort |
 | `Senses/SpeechListener.swift` | Dauerhafte deutsche Spracherkennung auf dem Gerät |
 | `Voice/RobotVoice.swift` | Sprachausgabe mit hoher Roboterstimme |
 | `Voice/SoundFX.swift` | Piep- und Zwitschergeräusche, live berechnet |
