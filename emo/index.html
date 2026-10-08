@@ -37,6 +37,9 @@ body { font-family: var(--font); color: #e6edf3; -webkit-user-select: none; user
 .sw { width: 34px; height: 34px; border-radius: 10px; border: 2px solid transparent; padding: 0; }
 .sw.on { border-color: #fff; }
 #sheet input { flex: 1; min-width: 0; background: #0b0d10; color: #e6edf3; border: 1px solid #2a323b; border-radius: 12px; padding: 10px 12px; font: inherit; font-size: 16px; }
+#ear { position: fixed; left: 50%; bottom: calc(10px + env(safe-area-inset-bottom)); transform: translateX(-50%); pointer-events: none; font-size: 13px; font-weight: 800; color: rgba(255,255,255,.45); white-space: nowrap; }
+#ear.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--eye); opacity: .25; transition: opacity .15s, transform .15s; }
+#ear.dot.hear { opacity: 1; transform: translateX(-50%) scale(1.6); box-shadow: 0 0 10px var(--eye); }
 #status { font-size: 13px; color: #8a96a3; line-height: 1.6; }
 </style>
 </head>
@@ -44,6 +47,7 @@ body { font-family: var(--font); color: #e6edf3; -webkit-user-select: none; user
 <div id="screen"><canvas id="cv"></canvas></div>
 <video id="cam" playsinline muted autoplay></video>
 <div id="subs" aria-live="polite"><div class="you" id="you"></div><div class="emo" id="say"></div></div>
+<div id="ear" hidden></div>
 <div id="start">Tippe auf den Bildschirm, um Emo aufzuwecken<small>Danach Kamera und Mikrofon erlauben</small></div>
 <div id="sheet" role="dialog" aria-label="Einstellungen">
   <h2>Emo</h2>
@@ -207,30 +211,6 @@ function pickVoice() {
   voice = vs.find(v => v.lang && v.lang.toLowerCase().startsWith("de")) || null;
 }
 if (window.speechSynthesis) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
-function stopSpeech() { try { window.speechSynthesis && speechSynthesis.cancel(); } catch (e) {} }
-async function speak(text) {
-  sayEl.textContent = text;
-  S.speaking = true; setMuted(true);
-  const fallback = text.length * 60 + 700;
-  if (soundOn && window.speechSynthesis && window.SpeechSynthesisUtterance) {
-    await new Promise(res => {
-      let done = false; const fin = () => { if (!done) { done = true; res(); } };
-      try {
-        const u = new SpeechSynthesisUtterance(text);
-        u.lang = "de-DE"; if (voice) u.voice = voice; u.pitch = 1.6; u.rate = 1.05;
-        u.onend = fin; u.onerror = fin;
-        speechSynthesis.speak(u);
-      } catch (e) { fin(); }
-      setTimeout(fin, fallback + 4000);
-    });
-  } else {
-    await sleep(fallback);
-  }
-  S.speaking = false;
-  setTimeout(() => { if (!S.speaking) setMuted(false); }, 300);
-  setTimeout(() => { if (!S.speaking && sayEl.textContent === text) sayEl.textContent = ""; }, 2200);
-}
-
 // ---------- Szenen (wie RobotBrain.swift) ----------
 let actId = 0, actPri = 0, acting = false;
 let timerEnd = null, timerTotal = 0, timerHandle = null;
@@ -799,7 +779,7 @@ const store = {
 };
 soundOn = store.get("sound", true);
 let showSubs = store.get("subs", false);
-let needWake = store.get("wake", true);
+let needWake = store.get("wake", false);
 let claudeKey = store.get("key", "");
 baseColor = store.get("color", baseColor);
 document.documentElement.style.setProperty("--eye", baseColor);
@@ -827,13 +807,13 @@ function start() {
   startEl.hidden = true;
   ensureAudio();
   // iOS: Sprache und Ton müssen einmal durch Antippen freigeschaltet werden.
-  try { const u = new SpeechSynthesisUtterance(" "); u.volume = 0; speechSynthesis.speak(u); } catch (e) {}
+  wakeUpGreeting();
+  try { const u = new SpeechSynthesisUtterance("."); u.lang = "de-DE"; u.volume = 0.01; utts.push(u); speechSynthesis.speak(u); } catch (e) {}
   try { const r = document.documentElement.requestFullscreen && document.documentElement.requestFullscreen({ navigationUI: "hide" }); r && r.catch(() => {}); } catch (e) {}
   try { if (window.DeviceMotionEvent && DeviceMotionEvent.requestPermission) DeviceMotionEvent.requestPermission().catch(() => {}); } catch (e) {}
   keepAwake();
   startListening();
   startCamera();
-  wakeUpGreeting();
   status();
 }
 
@@ -844,17 +824,6 @@ async function keepAwake() {
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible" && started) { keepAwake(); recStart(); }
 });
-
-function wakeUpGreeting() {
-  perform(3, async c => {
-    show("sleepy", null); play("yawn");
-    if (!await c.wait(1200)) return;
-    show("surprised", null); if (!await c.wait(300)) return;
-    show("happy"); play("hello");
-    await c.say("Hallo! Ich bin Emo!");
-    if (!await c.wait(500)) return; show("neutral");
-  });
-}
 
 // ---------- Kamera: Gesicht und Hände ----------
 const VISION = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
@@ -1064,37 +1033,7 @@ window.addEventListener("devicemotion", e => {
 // ---------- Zuhören (Spracherkennung im Browser) ----------
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let rec = null, wantListen = false, muted = false, recRunning = false, quickFired = false;
-function startListening() {
-  if (!SR) { micState = "nicht unterstützt (Chrome oder Safari nehmen)"; status(); return; }
-  wantListen = true;
-  rec = new SR();
-  rec.lang = "de-DE"; rec.continuous = true; rec.interimResults = true; rec.maxAlternatives = 1;
-  rec.onstart = () => { recRunning = true; micState = "hört zu"; status(); };
-  rec.onend = () => { recRunning = false; if (wantListen && !muted) setTimeout(recStart, 300); };
-  rec.onerror = e => {
-    if (e.error === "not-allowed" || e.error === "service-not-allowed") { wantListen = false; micState = "nicht erlaubt"; status(); }
-  };
-  rec.onresult = e => {
-    if (muted) return;
-    for (let i = e.resultIndex; i < e.results.length; i++) {
-      const r = e.results[i], text = (r[0] && r[0].transcript || "").trim();
-      if (!text) continue;
-      if (r.isFinal) heardFinal(text); else heardPartial(text);
-    }
-  };
-  recStart();
-}
-function recStart() {
-  if (!rec || recRunning || muted || !wantListen) return;
-  try { rec.start(); } catch (e) {}
-}
 // Während Emo spricht, hört er nicht zu – sonst versteht er sich selbst.
-function setMuted(m) {
-  muted = m;
-  if (!rec) return;
-  if (m) { try { rec.abort(); } catch (e) {} } else recStart();
-}
-
 let heardTimer = null;
 function showHeard(text) {
   youEl.textContent = `„${text}“`;
@@ -1103,12 +1042,6 @@ function showHeard(text) {
 }
 const HANDS_UP = /h(ä|a|e)nde? (hoch|nach oben)/i;
 const SHOT = /\b(peng|päng|bang|bäm|bumm|bum|piu|pew|schuss|pow)\b/i;
-function heardPartial(text) {
-  touch(); showHeard(text);
-  if (quickFired) return;
-  if (HANDS_UP.test(text)) { quickFired = true; surrender(); }
-  else if (SHOT.test(text) && (S.handsUp || performance.now() - lastGunSeen < 4000)) { quickFired = true; getShot(); }
-}
 function heardFinal(text) {
   touch(); showHeard(text);
   const fired = quickFired; quickFired = false;
@@ -1425,6 +1358,7 @@ function drawPhoto(img) {
 let pressTimer = null, pressed = false, downY = 0, downX = 0, swiping = false;
 screen.addEventListener("pointerdown", e => {
   if (!started) { start(); return; }
+  if (rec && !recRunning) { needTap = false; recStart(); }
   ensureAudio(); pressed = false; swiping = false;
   downY = e.clientY; downX = e.clientX;
   pressTimer = setTimeout(() => { pressed = true; petted(); }, 700);
@@ -1476,6 +1410,134 @@ function renderSheet() {
   for (const [id, [get]] of Object.entries(toggles)) document.getElementById(id).classList.toggle("on", !!get());
   colorsEl.querySelectorAll(".sw").forEach(b => b.classList.toggle("on", b.dataset.hex === baseColor));
   keyEl.placeholder = claudeKey ? "Schlüssel ist gespeichert" : "sk-ant-…";
+}
+
+
+// ---------- Sprechen (robust für iPhone und Android) ----------
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const utts = [];          // Chrome vergisst sonst Sätze mittendrin
+let ttsWorked = false, ttsFails = 0;
+function stopSpeech() {
+  try { if (window.speechSynthesis && (speechSynthesis.speaking || speechSynthesis.pending)) speechSynthesis.cancel(); } catch (e) {}
+}
+async function speak(text) {
+  sayEl.textContent = text;
+  S.speaking = true;
+  const readTime = text.length * 65 + 900;
+  if (soundOn && window.speechSynthesis && window.SpeechSynthesisUtterance) {
+    // Erst das Mikrofon loslassen – auf dem iPhone ist Emo sonst stumm.
+    setMuted(true);
+    await sleep(isIOS ? 350 : 60);
+    await new Promise(res => {
+      let done = false, talking = false;
+      const fin = () => { if (!done) { done = true; res(); } };
+      try {
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = "de-DE"; if (voice) u.voice = voice;
+        u.pitch = 1.5; u.rate = 1; u.volume = 1;
+        u.onstart = () => { talking = true; ttsWorked = true; ttsFails = 0; };
+        u.onend = fin; u.onerror = fin;
+        utts.push(u); if (utts.length > 6) utts.shift();
+        if (speechSynthesis.paused) speechSynthesis.resume();
+        speechSynthesis.speak(u);
+      } catch (e) { fin(); }
+      // Kommt kein Ton, zeigt Emo seine Sätze wenigstens als Text.
+      setTimeout(() => { if (!talking && ++ttsFails >= 2 && !showSubs) { showSubs = true; subsEl.hidden = false; } }, 3000);
+      setTimeout(fin, readTime + 4000);
+    });
+  } else {
+    await sleep(readTime);
+  }
+  S.speaking = false;
+  setTimeout(() => { if (!S.speaking) setMuted(false); }, 400);
+  setTimeout(() => { if (!S.speaking && sayEl.textContent === text) sayEl.textContent = ""; }, 2200);
+}
+
+function wakeUpGreeting() {
+  perform(3, async c => {
+    show("sleepy", null); play("yawn");
+    if (!await c.wait(1200)) return;
+    show("surprised", null); if (!await c.wait(300)) return;
+    show("happy"); play("hello");
+    await c.say("Hallo! Ich bin Emo!");
+    if (!c.alive()) return;
+    if (!SR) {
+      show("sad");
+      await c.say(isIOS ? "In diesem Browser kann ich dich nicht hören. Öffne mich bitte in Safari." : "In diesem Browser kann ich dich nicht hören. Öffne mich bitte in Chrome.");
+    }
+    if (!await c.wait(500)) return; show("neutral");
+  });
+}
+
+// ---------- Zuhören ----------
+let needTap = false, ignoreUntil = 0, toldProblem = false;
+const earEl = document.getElementById("ear");
+function ear(state) {
+  if (!started) return;
+  earEl.hidden = false;
+  if (state === "off") { earEl.className = ""; earEl.textContent = "Tippe mich an, dann höre ich zu"; }
+  else { earEl.textContent = ""; earEl.className = state === "hear" ? "dot hear" : "dot"; }
+}
+function startListening() {
+  if (!SR) { micState = "dieser Browser kann nicht zuhören"; status(); return; }
+  wantListen = true;
+  rec = new SR();
+  rec.lang = "de-DE";
+  rec.continuous = !isIOS;        // iPhone: lieber Satz für Satz neu starten
+  rec.interimResults = true;
+  rec.maxAlternatives = 1;
+  rec.onstart = () => { recRunning = true; micState = "hört zu"; ear("on"); status(); };
+  rec.onend = () => {
+    recRunning = false;
+    if (wantListen && !muted && !needTap) setTimeout(recStart, 250);
+    else if (needTap) ear("off");
+  };
+  rec.onerror = e => {
+    if (e.error === "not-allowed" || e.error === "service-not-allowed") {
+      needTap = true; micState = "nicht erlaubt – Emo antippen"; status(); ear("off");
+      if (e.error === "service-not-allowed" && isIOS && !toldProblem) {
+        toldProblem = true;
+        setTimeout(() => react("sad", "sad", ["Ich kann dich nicht hören. Schalte am iPhone die Diktierfunktion ein: Einstellungen, Allgemein, Tastatur."]), 500);
+      }
+    } else if (e.error === "audio-capture") {
+      micState = "Mikrofon ist belegt"; status();
+    }
+  };
+  rec.onresult = e => {
+    if (muted || performance.now() < ignoreUntil) return;
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const r = e.results[i], text = (r[0] && r[0].transcript || "").trim();
+      if (!text) continue;
+      if (r.isFinal) heardFinal(text); else heardPartial(text);
+    }
+  };
+  recStart();
+}
+function recStart() {
+  if (!rec || recRunning || muted || !wantListen) return;
+  try { rec.start(); } catch (e) {}
+}
+// Während Emo spricht, hört er nicht zu – sonst versteht er sich selbst.
+function setMuted(m) {
+  muted = m;
+  if (!rec) return;
+  if (m) { if (recRunning) { try { rec.abort(); } catch (e) {} } }
+  else { ignoreUntil = performance.now() + 500; recStart(); }
+}
+
+let hearingShown = 0, earTimer = null;
+function heardPartial(text) {
+  touch(); showHeard(text);
+  // Zeigen, dass Emo zuhört: Ohr-Punkt leuchtet, Augen werden groß.
+  ear("hear"); clearTimeout(earTimer); earTimer = setTimeout(() => ear(recRunning || muted || !needTap ? "on" : "off"), 900);
+  const now = performance.now();
+  if (!acting && !S.display && S.mood === "neutral" && now - hearingShown > 4000) {
+    hearingShown = now;
+    perform(0, async c => { show("listening", null); play("listen"); if (!await c.wait(1800)) return; show("neutral"); });
+  }
+  if (quickFired) return;
+  if (HANDS_UP.test(text)) { quickFired = true; surrender(); }
+  else if (SHOT.test(text) && (S.handsUp || performance.now() - lastGunSeen < 4000)) { quickFired = true; getShot(); }
 }
 
 // Vor dem ersten Tippen schläft Emo.
