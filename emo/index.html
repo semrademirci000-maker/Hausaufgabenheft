@@ -707,8 +707,8 @@ function frame(now) {
   ctx.save();
   let gx = 0, gy = 0, rot = 0;
   if (S.trembling && !reduced) { gx += Math.sin(t * 47) * 3; gy += Math.cos(t * 39) * 1.5; }
-  updateShake(dt);
-  gx += shake.hx; gy += shake.hy; rot += shake.rot;
+  updateShake(dt); updateShot(dt);
+  gx += shake.hx + shot.jx; gy += shake.hy + shot.jy; rot += shake.rot;
   if (A.dance > .01) {
     const beat = t * 2 * Math.PI * (reduced ? .3 : 1), amp = A.dance * (W / 900);
     gx += Math.sin(beat) * 40 * amp; gy -= Math.abs(Math.cos(beat)) * 30 * amp; rot += Math.sin(beat) * 8 * A.dance * RAD;
@@ -1612,7 +1612,7 @@ function vadFeed(input) {
   }
   vadChunks.push(chunk); vadTotalMs += ms; if (rms > vadPeak) vadPeak = rms;
   if (rms > thr * 0.7) { vadSpeechMs += ms; vadSilenceMs = 0; } else vadSilenceMs += ms;
-  if (vadSilenceMs > (S.handsUp ? 300 : 750) || vadTotalMs > 8000) {
+  if (vadSilenceMs > (S.handsUp ? 300 : 450) || vadTotalMs > 6000) {
     vadOn = false;
     const chunks = vadChunks; vadChunks = [];
     if (vadSpeechMs < 180) { ear("on"); return; }
@@ -1784,100 +1784,198 @@ function drawHands(t, M) {
 // =====================================================================
 //  Piu! Ein Schuss fliegt rein, der Bildschirm zerspringt, Emo kippt um
 // =====================================================================
-const shot = { phase: "none", t0: 0, x: 0, y: 0, cracks: null };
-function makeCracks(x, y) {
-  const lines = [], rays = 11 + Math.floor(Math.random() * 5), maxR = Math.hypot(W, H) * .55;
-  const rayPts = [];
-  for (let i = 0; i < rays; i++) {
-    let a = i / rays * Math.PI * 2 + rand(-.2, .2), r = 0, px = x, py = y;
-    const pts = [[px, py]];
-    const len = rand(.45, 1) * maxR;
-    while (r < len) {
-      r += rand(18, 45); a += rand(-.25, .25);
-      px = x + Math.cos(a) * r; py = y + Math.sin(a) * r;
-      pts.push([px, py]);
-    }
-    lines.push(pts); rayPts.push(pts);
+const shot = { phase: "none", t0: 0, x: 0, y: 0, glass: null, sparks: [], smoke: [], jolt: 0, jx: 0, jy: 0, glitchUntil: 0, heal: 1 };
+
+// Echtes Glasbruch-Muster: gerade Risse, Verzweigungen, Spinnennetz-Ringe, Scherben
+function makeGlass(x, y) {
+  const maxR = Math.hypot(W, H) * .75, n = 20 + Math.floor(Math.random() * 8);
+  const rays = [];
+  for (let i = 0; i < n; i++) {
+    let a = i / n * Math.PI * 2 + rand(-.12, .12);
+    const len = rand(.35, 1) * maxR, pts = [[x, y]];
+    let r = 0;
+    while (r < len) { r += rand(25, 70); a += rand(-.06, .06); pts.push([x + Math.cos(a) * r, y + Math.sin(a) * r]); }
+    rays.push({ a, pts, len });
   }
-  // Querrisse zwischen den Strahlen (Spinnennetz)
-  for (const ring of [.12, .25, .42]) {
-    for (let i = 0; i < rays; i++) {
-      if (Math.random() < .35) continue;
-      const A1 = rayPts[i], B1 = rayPts[(i + 1) % rays];
-      const ia = Math.min(A1.length - 1, Math.max(1, Math.round(A1.length * ring))), ib = Math.min(B1.length - 1, Math.max(1, Math.round(B1.length * ring)));
-      const a = A1[ia], b = B1[ib];
-      lines.push([a, [(a[0] + b[0]) / 2 + rand(-8, 8), (a[1] + b[1]) / 2 + rand(-8, 8)], b]);
+  const rayAt = (ray, r) => {               // Punkt auf einem Riss in Abstand r
+    const pts = ray.pts;
+    for (let i = 1; i < pts.length; i++) {
+      const d0 = Math.hypot(pts[i - 1][0] - x, pts[i - 1][1] - y), d1 = Math.hypot(pts[i][0] - x, pts[i][1] - y);
+      if (d1 >= r) { const f = (r - d0) / Math.max(1, d1 - d0); return [lerp(pts[i - 1][0], pts[i][0], f), lerp(pts[i - 1][1], pts[i][1], f)]; }
+    }
+    return null;
+  };
+  const branches = [];
+  rays.forEach(ray => {
+    if (Math.random() < .55 && ray.pts.length > 3) {
+      const k = 1 + Math.floor(Math.random() * (ray.pts.length - 2));
+      const [bx, by] = ray.pts[k], ba = ray.a + rand(.35, .7) * (Math.random() < .5 ? -1 : 1), bl = rand(40, 140);
+      branches.push([[bx, by], [bx + Math.cos(ba) * bl * .5 + rand(-6, 6), by + Math.sin(ba) * bl * .5 + rand(-6, 6)], [bx + Math.cos(ba) * bl, by + Math.sin(ba) * bl]]);
+    }
+  });
+  const rings = [];
+  for (const R of [rand(22, 30), rand(55, 75), rand(110, 150), rand(190, 250), rand(300, 380)]) {
+    for (let i = 0; i < n; i++) {
+      if (Math.random() < (R < 80 ? .1 : .45)) continue;
+      const p1 = rayAt(rays[i], R * rand(.92, 1.08)), p2 = rayAt(rays[(i + 1) % n], R * rand(.92, 1.08));
+      if (p1 && p2) rings.push([p1, [(p1[0] + p2[0]) / 2 + rand(-5, 5), (p1[1] + p2[1]) / 2 + rand(-5, 5)], p2]);
     }
   }
-  return lines;
+  // Scherben nahe am Einschlag (leicht verschoben, glitzernd)
+  const shards = [];
+  for (let i = 0; i < n; i++) {
+    const r1 = rand(14, 24), r2 = rand(50, 85);
+    const a1 = rays[i].a, a2 = rays[(i + 1) % n].a + (i === n - 1 ? Math.PI * 2 : 0);
+    shards.push({ pts: [[x + Math.cos(a1) * r1, y + Math.sin(a1) * r1], [x + Math.cos(a1) * r2, y + Math.sin(a1) * r2], [x + Math.cos(a2) * r2, y + Math.sin(a2) * r2], [x + Math.cos(a2) * r1, y + Math.sin(a2) * r1]],
+                  dx: rand(-3, 3), dy: rand(-3, 3), shine: rand(.04, .22), phase: rand(0, 6) });
+  }
+  return { rays, branches, rings, shards };
 }
+
+function polyline(pts, grow) {
+  const n = Math.max(2, Math.ceil(pts.length * grow));
+  ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i < n && i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+  ctx.stroke();
+}
+
+// Wackeln beim Einschlag (wird in jedem Bild aufgerufen)
+function updateShot(dt) {
+  shot.jolt = Math.max(0, shot.jolt - dt * 3.2);
+  shot.jx = (Math.random() - .5) * 36 * shot.jolt;
+  shot.jy = (Math.random() - .5) * 26 * shot.jolt;
+}
+
 function drawShot(t) {
-  if (shot.phase === "none") return;
   const now = performance.now(), dt = (now - shot.t0) / 1000;
+  // Bildfehler: Emos Bildschirm flackert kaputt
+  if (now < shot.glitchUntil) {
+    const k = (shot.glitchUntil - now) / 900;
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
+    for (let i = 0; i < 7; i++) {
+      const y = Math.random() * cv.height, h = (4 + Math.random() * 26) * DPR, dx = (Math.random() - .5) * 60 * DPR * k;
+      ctx.drawImage(cv, 0, y, cv.width, h, dx, y, cv.width, h);
+    }
+    ctx.globalCompositeOperation = "lighter";
+    ctx.fillStyle = `rgba(255,40,80,${.08 * k})`; ctx.fillRect(Math.random() * 10 * DPR, 0, cv.width, cv.height);
+    ctx.restore();
+    ctx.save();
+    ctx.fillStyle = `rgba(0,0,0,${.25 * k})`;
+    for (let y = 0; y < H; y += 4) ctx.fillRect(0, y, W, 1.5);        // Streifen
+    ctx.restore();
+  }
+  if (shot.phase === "none") return;
   ctx.save();
   if (shot.phase === "fly") {
-    // Kugel kommt von weit weg auf den Bildschirm zu (wird größer)
-    const p = Math.min(1, dt / .28);
-    const r = 3 + p * p * 26;
-    const sx = lerp(W * .5, shot.x, p), sy = lerp(H * .55, shot.y, p);
-    const g = ctx.createRadialGradient(sx, sy, 0, sx, sy, r * 2.2);
-    g.addColorStop(0, "rgba(255,255,230,1)"); g.addColorStop(.35, "rgba(255,200,90,.9)"); g.addColorStop(1, "rgba(255,120,40,0)");
-    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(sx, sy, r * 2.2, 0, Math.PI * 2); ctx.fill();
-  } else if (shot.phase === "hit") {
-    const fade = clamp(1 - (dt - 3.4) / .8, 0, 1);    // Risse verschwinden, wenn Emo aufsteht
+    // Leuchtspur: zischt von rechts unten auf den Einschlagpunkt zu
+    const p = Math.min(1, dt / .18), sx = W * 1.08, sy = H * 1.15;
+    const hx = lerp(sx, shot.x, p), hy = lerp(sy, shot.y, p);
+    const tx = lerp(sx, shot.x, Math.max(0, p - .45)), ty = lerp(sy, shot.y, Math.max(0, p - .45));
+    const g = ctx.createLinearGradient(tx, ty, hx, hy);
+    g.addColorStop(0, "rgba(255,160,40,0)"); g.addColorStop(.7, "rgba(255,200,90,.8)"); g.addColorStop(1, "rgba(255,255,240,1)");
+    ctx.strokeStyle = g; ctx.lineCap = "round"; ctx.lineWidth = 3 + p * 9;
+    ctx.shadowColor = "rgba(255,170,60,.9)"; ctx.shadowBlur = 18;
+    ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(hx, hy); ctx.stroke();
+    ctx.fillStyle = "#fffbe8"; ctx.beginPath(); ctx.arc(hx, hy, 3 + p * 6, 0, Math.PI * 2); ctx.fill();
+  } else {
+    const G = shot.glass, grow = clamp(dt / .16, 0, 1), heal = shot.heal;
+    ctx.globalAlpha = heal;
     // Einschlag-Blitz
-    if (dt < .18) { ctx.fillStyle = `rgba(255,255,255,${.85 * (1 - dt / .18)})`; ctx.fillRect(0, 0, W, H); }
-    ctx.globalAlpha = fade;
-    // Einschussloch
-    ctx.fillStyle = "rgba(0,0,0,.9)"; ctx.beginPath(); ctx.arc(shot.x, shot.y, 11, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = "rgba(255,255,255,.9)"; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(shot.x, shot.y, 13, 0, Math.PI * 2); ctx.stroke();
-    // Risse wachsen schnell nach außen
-    const grow = clamp(dt / .22, 0, 1);
-    ctx.lineCap = "round"; ctx.lineJoin = "round";
-    ctx.shadowColor = "rgba(180,220,255,.6)"; ctx.shadowBlur = 4;
-    shot.cracks.forEach((pts, li) => {
-      const n = Math.max(2, Math.ceil(pts.length * grow));
-      ctx.strokeStyle = li < 16 ? "rgba(235,245,255,.85)" : "rgba(220,235,255,.55)";
-      ctx.lineWidth = li < 16 ? 1.6 : 1.1;
-      ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
-      for (let i = 1; i < n && i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
-      ctx.stroke();
+    if (dt < .1) { ctx.fillStyle = `rgba(255,255,255,${.9 * (1 - dt / .1)})`; ctx.fillRect(0, 0, W, H); }
+    // Beim Neustart schrumpfen die Risse zum Loch zurück
+    ctx.translate(shot.x, shot.y); ctx.scale(heal, heal); ctx.translate(-shot.x, -shot.y);
+    // Scherben
+    G.shards.forEach(sh => {
+      ctx.save(); ctx.translate(sh.dx * grow, sh.dy * grow);
+      ctx.beginPath(); sh.pts.forEach(([px, py], i) => i ? ctx.lineTo(px, py) : ctx.moveTo(px, py)); ctx.closePath();
+      ctx.fillStyle = `rgba(200,225,255,${sh.shine * (0.6 + 0.4 * Math.sin(t * 3 + sh.phase))})`; ctx.fill();
+      ctx.strokeStyle = "rgba(240,248,255,.7)"; ctx.lineWidth = 1; ctx.stroke();
+      ctx.restore();
     });
-    if (fade <= 0) shot.phase = "none";
+    ctx.lineCap = "round"; ctx.lineJoin = "round";
+    // Schatten-Linie, dann helle Linie – wirkt wie echte Tiefe im Glas
+    for (const pass of [0, 1]) {
+      ctx.save();
+      if (!pass) { ctx.translate(1.2, 1.4); ctx.strokeStyle = "rgba(0,0,0,.65)"; }
+      ctx.lineWidth = pass ? 1.3 : 2.6; if (pass) ctx.strokeStyle = "rgba(235,244,255,.92)";
+      G.rays.forEach(r => polyline(r.pts, grow));
+      ctx.lineWidth = pass ? 1 : 2; if (pass) ctx.strokeStyle = "rgba(225,238,255,.75)";
+      G.branches.forEach(b => polyline(b, grow));
+      ctx.lineWidth = pass ? .9 : 1.8; if (pass) ctx.strokeStyle = "rgba(215,232,255,.6)";
+      if (grow > .5) G.rings.forEach(r => polyline(r, 1));
+      ctx.restore();
+    }
+    // Glitzern auf den Rissen
+    for (let i = 0; i < 6; i++) {
+      const ray = G.rays[(i * 5 + Math.floor(t * 2)) % G.rays.length], pt = ray.pts[Math.min(ray.pts.length - 1, 2 + i % 3)];
+      const a = .5 + .5 * Math.sin(t * 9 + i * 2);
+      ctx.strokeStyle = `rgba(255,255,255,${a})`; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(pt[0] - 6, pt[1]); ctx.lineTo(pt[0] + 6, pt[1]); ctx.moveTo(pt[0], pt[1] - 6); ctx.lineTo(pt[0], pt[1] + 6); ctx.stroke();
+    }
+    // Einschussloch
+    const hole = ctx.createRadialGradient(shot.x, shot.y, 2, shot.x, shot.y, 16);
+    hole.addColorStop(0, "rgba(0,0,0,1)"); hole.addColorStop(.6, "rgba(20,20,25,.95)"); hole.addColorStop(1, "rgba(255,255,255,.0)");
+    ctx.fillStyle = hole; ctx.beginPath(); ctx.arc(shot.x, shot.y, 16, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,.85)"; ctx.lineWidth = 1.5;
+    for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2 + .2; ctx.beginPath(); ctx.moveTo(shot.x + Math.cos(a) * 9, shot.y + Math.sin(a) * 9); ctx.lineTo(shot.x + Math.cos(a) * rand(14, 20), shot.y + Math.sin(a) * rand(14, 20)); ctx.stroke(); }
+    ctx.restore();
+    ctx.save();
+    // Funken
+    shot.sparks = shot.sparks.filter(sp => dt - sp.t0 < sp.life);
+    shot.sparks.forEach(sp => {
+      const k = (dt - sp.t0) / sp.life, x = shot.x + sp.vx * (dt - sp.t0), y = shot.y + sp.vy * (dt - sp.t0) + 300 * (dt - sp.t0) ** 2;
+      ctx.strokeStyle = `rgba(255,${180 + 70 * (1 - k) | 0},80,${1 - k})`; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - sp.vx * .025, y - sp.vy * .025); ctx.stroke();
+    });
+    // Rauch aus dem Loch
+    shot.smoke.forEach(sm => {
+      const k = (dt - sm.t0) / 2.4; if (k < 0 || k > 1) return;
+      ctx.fillStyle = `rgba(160,160,170,${.28 * (1 - k) * heal})`;
+      ctx.beginPath(); ctx.arc(shot.x + sm.dx * k * 40 + Math.sin(t * 2 + sm.dx) * 6, shot.y - k * 110, 6 + k * 26, 0, Math.PI * 2); ctx.fill();
+    });
   }
   ctx.restore();
 }
+
 function getShot() {
   if (S.fallen || shot.phase !== "none") return;
   touch();
   perform(8, async c => {
-    // Ziel: irgendwo zwischen den Augen
-    shot.x = W / 2 + rand(-W * .12, W * .12); shot.y = H / 2 + rand(-H * .15, H * .1);
-    shot.phase = "fly"; shot.t0 = performance.now();
+    shot.x = W / 2 + rand(-W * .12, W * .12); shot.y = H / 2 + rand(-H * .15, H * .08);
+    shot.phase = "fly"; shot.t0 = performance.now(); shot.heal = 1;
     play("whoosh");
     show("surprised", null);
-    if (!await c.wait(280)) { shot.phase = "none"; return; }
-    shot.cracks = makeCracks(shot.x, shot.y);
+    if (!await c.wait(180)) { shot.phase = "none"; return; }
+    // Einschlag!
+    shot.glass = makeGlass(shot.x, shot.y);
     shot.phase = "hit"; shot.t0 = performance.now();
+    shot.jolt = 1; shot.glitchUntil = performance.now() + 900;
+    shot.sparks = Array.from({ length: 26 }, () => { const a = rand(0, Math.PI * 2), v = rand(150, 520); return { vx: Math.cos(a) * v, vy: Math.sin(a) * v - 120, t0: rand(0, .05), life: rand(.25, .6) }; });
+    shot.smoke = Array.from({ length: 7 }, (_, i) => ({ dx: rand(-1, 1), t0: .2 + i * .3 }));
     play("shatter");
     S.handsUp = false; S.trembling = false;
     show("dead", null);
-    if (!await c.wait(250)) return;
+    if (!await c.wait(450)) return;
     play("dying");
-    S.fallen = true;                      // kippt um …
-    if (!await c.wait(2000 + 900)) return; // … und bleibt zwei Sekunden liegen
-    play("revive"); S.fallen = false; show("dizzy", null);
-    if (!await c.wait(1400)) return;
+    S.fallen = true;                       // kippt um …
+    if (!await c.wait(2700)) return;       // … und bleibt zwei Sekunden liegen
+    // Neustart: Risse heilen zum Loch zurück
+    play("revive");
+    const h0 = performance.now();
+    while (performance.now() - h0 < 700) { shot.heal = 1 - (performance.now() - h0) / 700; if (!await c.wait(30)) return; }
+    shot.heal = 0; shot.phase = "none";
+    S.fallen = false; show("dizzy", null);
+    if (!await c.wait(1200)) return;
     show("laughing");
-    await c.say(pick(["Hehe, reingelegt! Ich lebe noch!", "Autsch! Mein schöner Bildschirm!", "Ich bin unbesiegbar!", "Puh, Roboter sind unkaputtbar!"]));
+    await c.say(pick(["Hehe, reingelegt! Ich lebe noch!", "Autsch! Mein schöner Bildschirm!", "Neustart erfolgreich!", "Puh, Roboter sind unkaputtbar!"]));
     lastGunSeen = 0;
     if (!await c.wait(600)) return; show("neutral");
   });
 }
-RECIPES.whoosh = [Sg(.26, 2400, 500, { wave: "noise", g: .35 }), Sg(.05, 1800, 300, { wave: "sine", g: .25 })];
-RECIPES.shatter = [Sg(.06, 0, 0, { wave: "noise", g: 1, decay: true }),
-  ...Array.from({ length: 9 }, (_, i) => [Sg(.035, 3200 + i * 300, 2900 + i * 280, { wave: "sine", g: .25 - i * .02, decay: true }), Pz(.02 + i * .008)]).flat(),
-  Sg(.3, 0, 0, { wave: "noise", g: .35, decay: true })];
+RECIPES.whoosh = [Sg(.18, 3000, 700, { wave: "noise", g: .45 }), Sg(.05, 2200, 400, { wave: "sine", g: .2 })];
+RECIPES.shatter = [Sg(.05, 0, 0, { wave: "noise", g: 1, decay: true }), Sg(.12, 90, 40, { wave: "sine", g: .9, decay: true }),
+  ...Array.from({ length: 12 }, (_, i) => [Sg(.03, rand(2800, 5200), rand(2600, 5000), { wave: "sine", g: .28 - i * .018, decay: true }), Pz(rand(.01, .04))]).flat(),
+  Sg(.35, 0, 0, { wave: "noise", g: .3, decay: true })];
 
 // =====================================================================
 //  Gesprächs-Gehirn: Emo redet mit dir wie ein Freund (ohne Internet-KI)

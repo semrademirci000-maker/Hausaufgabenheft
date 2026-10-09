@@ -13,6 +13,8 @@ async function load(model) {
       if (p.status === "progress" && p.total) self.postMessage({ type: "progress", file: p.file, loaded: p.loaded, total: p.total });
     },
   });
+  // Aufwärmen: Der erste Durchlauf ist immer langsam – lieber jetzt als bei „Hände hoch“.
+  try { await asr(new Float32Array(16000), { language: "german", task: "transcribe", max_new_tokens: 4 }); } catch (e) {}
   self.postMessage({ type: "ready" });
 }
 
@@ -23,7 +25,7 @@ self.onmessage = async e => {
     catch (err) { self.postMessage({ type: "error", message: String(err && err.message || err) }); }
   } else if (d.type === "hear" && asr) {
     try {
-      const out = await asr(d.audio, { language: "german", task: "transcribe", max_new_tokens: 64 });
+      const out = await asr(d.audio, { language: "german", task: "transcribe", max_new_tokens: 32 });
       self.postMessage({ type: "text", text: (out && out.text || "").trim() });
     } catch (err) {
       self.postMessage({ type: "text", text: "", error: String(err && err.message || err) });
