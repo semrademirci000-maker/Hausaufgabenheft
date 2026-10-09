@@ -198,7 +198,7 @@ function ensureAudio() {
 function play(name) {
   if (!soundOn || !name || !RECIPES[name]) return;
   ensureAudio(); if (!actx) return;
-  const buf = bufCache[name] || (bufCache[name] = render(name));
+  const buf = name === "rabble" ? render(name) : (bufCache[name] || (bufCache[name] = render(name)));
   try { cur && cur.stop(); } catch (e) {}
   const src = actx.createBufferSource(); src.buffer = buf; src.connect(actx.destination); src.start(); cur = src;
 }
@@ -255,8 +255,8 @@ function tapped() {
   }
   const now = performance.now();
   tapped.times = (tapped.times || []).filter(t => now - t < 2500).concat(now);
-  if (tapped.times.length >= 5) { tapped.times = []; return react("angry", "angry", ["Hey! Hör auf mich zu piksen!", "Grrr! Das kitzelt nicht mehr!"], 1500); }
-  if (tapped.times.length >= 3) return react("laughing", "laugh", ["Hihi, das kitzelt!"], 1000);
+  if (tapped.times.length >= 7) { tapped.times = []; return react("angry", "angry", ["Hey! Hör auf mich zu piksen!", "Grrr! Das kitzelt nicht mehr!"], 1500); }
+  if (tapped.times.length >= 4) return react("laughing", "laugh", ["Hihi, das kitzelt!"], 1000);
   perform(1, async c => { show("surprised", null); play("tap"); if (!await c.wait(350)) return; show("happy"); if (!await c.wait(900)) return; show("neutral"); });
 }
 function petted() {
@@ -457,7 +457,7 @@ function metrics() {
 
 function drawEyes(t, M) {
   const { ew, eh, gap } = M, sh = A.shape;
-  const cx = W / 2 + S.look.x * W * .13, cy = H / 2 + S.look.y * H * .11;
+  const cx = W / 2 + S.look.x * W * .16 + shake.ex, cy = H / 2 + S.look.y * H * .13 + shake.ey;
   const style = (MOODS[S.mood] || {}).style || "normal";
   const eyes = [{ left: true, x: cx - (gap / 2 + ew / 2) }, { left: false, x: cx + (gap / 2 + ew / 2) }];
   if (style === "normal") {
@@ -492,7 +492,7 @@ function drawEyes(t, M) {
         const r = ew * .4; ctx.lineWidth = ew * .16;
         ctx.beginPath(); ctx.moveTo(-r, -r); ctx.lineTo(r, r); ctx.moveTo(r, -r); ctx.lineTo(-r, r); ctx.stroke();
       } else if (style === "spirals") {
-        ctx.rotate(t * 1.4 * 2 * Math.PI * (e.left ? 1 : -1)); ctx.lineWidth = ew * .09; ctx.beginPath();
+        ctx.rotate((t * 1.4 * 2 * Math.PI + shake.spin) * (e.left ? 1 : -1)); ctx.lineWidth = ew * .09; ctx.beginPath();
         for (let i = 0; i <= 140; i++) { const q = i / 140, a = q * 6 * Math.PI, r = ew / 2 * q; i ? ctx.lineTo(r * Math.cos(a), r * Math.sin(a)) : ctx.moveTo(0, 0); }
         ctx.stroke();
       } else if (style === "chevrons") {
@@ -738,6 +738,8 @@ function frame(now) {
   ctx.save();
   let gx = 0, gy = 0, rot = 0;
   if (S.trembling && !reduced) { gx += Math.sin(t * 47) * 3; gy += Math.cos(t * 39) * 1.5; }
+  updateShake(dt);
+  gx += shake.hx; gy += shake.hy; rot += shake.rot;
   if (A.dance > .01) {
     const beat = t * 2 * Math.PI * (reduced ? .3 : 1), amp = A.dance * (W / 900);
     gx += Math.sin(beat) * 40 * amp; gy -= Math.abs(Math.cos(beat)) * 30 * amp; rot += Math.sin(beat) * 8 * A.dance * RAD;
@@ -808,12 +810,11 @@ function start() {
   ensureAudio();
   // iOS: Sprache und Ton müssen einmal durch Antippen freigeschaltet werden.
   wakeUpGreeting();
-  try { const u = new SpeechSynthesisUtterance("."); u.lang = "de-DE"; u.volume = 0.01; utts.push(u); speechSynthesis.speak(u); } catch (e) {}
+  initVoice();
   try { const r = document.documentElement.requestFullscreen && document.documentElement.requestFullscreen({ navigationUI: "hide" }); r && r.catch(() => {}); } catch (e) {}
   try { if (window.DeviceMotionEvent && DeviceMotionEvent.requestPermission) DeviceMotionEvent.requestPermission().catch(() => {}); } catch (e) {}
   keepAwake();
-  startListening();
-  startCamera();
+  startSenses();
   status();
 }
 
@@ -822,7 +823,7 @@ async function keepAwake() {
   try { if (navigator.wakeLock && document.visibilityState === "visible") wakeLock = await navigator.wakeLock.request("screen"); } catch (e) {}
 }
 document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible" && started) { keepAwake(); recStart(); }
+  if (document.visibilityState === "visible" && started) { keepAwake(); recStart(); ensureAudio(); }
 });
 
 // ---------- Kamera: Gesicht und Hände ----------
@@ -830,35 +831,6 @@ const VISION = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
 const HAND_MODEL = "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task";
 const FACE_MODEL = "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite";
 let handLM = null, faceDet = null, aspect = 4 / 3;
-
-async function startCamera() {
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { camState = "nicht verfügbar"; status(); return; }
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
-    video.srcObject = stream;
-    await video.play().catch(() => {});
-    camState = "an";
-  } catch (e) {
-    camState = "nicht erlaubt"; status(); return;
-  }
-  visionState = "lädt …"; status();
-  try {
-    const vision = await import(VISION + "/vision_bundle.mjs");
-    const files = await vision.FilesetResolver.forVisionTasks(VISION + "/wasm");
-    const make = async (Kind, url, extra) => {
-      try { return await Kind.createFromOptions(files, { baseOptions: { modelAssetPath: url, delegate: "GPU" }, runningMode: "VIDEO", ...extra }); }
-      catch (e) { return await Kind.createFromOptions(files, { baseOptions: { modelAssetPath: url, delegate: "CPU" }, runningMode: "VIDEO", ...extra }); }
-    };
-    handLM = await make(vision.HandLandmarker, HAND_MODEL, { numHands: 1 });
-    faceDet = await make(vision.FaceDetector, FACE_MODEL, {});
-    visionState = "bereit";
-  } catch (e) {
-    console.warn("Handerkennung", e);
-    visionState = "konnte nicht laden";
-  }
-  status();
-  visionLoop();
-}
 
 let lastVideoTime = -1, frameNo = 0;
 function visionLoop() {
@@ -888,7 +860,7 @@ function handleFace(det) {
   const b = det.boundingBox, now = performance.now();
   const cx = 1 - (b.originX + b.width / 2) / video.videoWidth;   // gespiegelt wie ein Spiegel
   const cy = (b.originY + b.height / 2) / video.videoHeight;
-  S.pointer = { x: (cx - .5) * 2 * 1.2, y: (cy - .5) * 2 + .15 };
+  S.pointer = { x: (cx - .5) * 2.6, y: (cy - .5) * 2.2 + .2 };
   S.pointerAt = now;
   const wasAway = now - lastFaceSeen > 45000;
   lastFaceSeen = now;
@@ -1005,30 +977,6 @@ function getShot() {
     if (!await c.wait(600)) return; show("neutral");
   });
 }
-
-function shaken() {
-  touch();
-  if (S.fallen) return;
-  perform(2, async c => {
-    S.handsUp = false; S.trembling = false; show("dizzy", null); play("dizzy");
-    if (!await c.wait(1400)) return;
-    await c.say(pick(["Uiii, mir ist schwindelig!", "Hilfe! Erdbeben!", "Nicht schütteln, ich bin doch kein Milchshake!"]));
-    if (!await c.wait(800)) return; show("neutral");
-  });
-}
-
-// ---------- Schütteln ----------
-let lastAcc = null, shakeHits = [], lastShake = 0;
-window.addEventListener("devicemotion", e => {
-  const a = e.accelerationIncludingGravity; if (!a || a.x == null) return;
-  if (lastAcc) {
-    const delta = Math.abs(a.x - lastAcc.x) + Math.abs(a.y - lastAcc.y) + Math.abs(a.z - lastAcc.z);
-    const now = performance.now();
-    if (delta > 28) { shakeHits = shakeHits.filter(t => now - t < 600).concat(now); }
-    if (shakeHits.length >= 3 && now - lastShake > 3000 && started) { lastShake = now; shakeHits = []; shaken(); }
-  }
-  lastAcc = { x: a.x, y: a.y, z: a.z };
-});
 
 // ---------- Zuhören (Spracherkennung im Browser) ----------
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -1359,6 +1307,7 @@ let pressTimer = null, pressed = false, downY = 0, downX = 0, swiping = false;
 screen.addEventListener("pointerdown", e => {
   if (!started) { start(); return; }
   if (rec && !recRunning) { needTap = false; recStart(); }
+  ensureAudio();
   ensureAudio(); pressed = false; swiping = false;
   downY = e.clientY; downX = e.clientX;
   pressTimer = setTimeout(() => { pressed = true; petted(); }, 700);
@@ -1417,42 +1366,6 @@ function renderSheet() {
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 const utts = [];          // Chrome vergisst sonst Sätze mittendrin
 let ttsWorked = false, ttsFails = 0;
-function stopSpeech() {
-  try { if (window.speechSynthesis && (speechSynthesis.speaking || speechSynthesis.pending)) speechSynthesis.cancel(); } catch (e) {}
-}
-async function speak(text) {
-  sayEl.textContent = text;
-  S.speaking = true;
-  const readTime = text.length * 65 + 900;
-  if (soundOn && window.speechSynthesis && window.SpeechSynthesisUtterance) {
-    // Erst das Mikrofon loslassen – auf dem iPhone ist Emo sonst stumm.
-    setMuted(true);
-    await sleep(isIOS ? 350 : 60);
-    await new Promise(res => {
-      let done = false, talking = false;
-      const fin = () => { if (!done) { done = true; res(); } };
-      try {
-        const u = new SpeechSynthesisUtterance(text);
-        u.lang = "de-DE"; if (voice) u.voice = voice;
-        u.pitch = 1.5; u.rate = 1; u.volume = 1;
-        u.onstart = () => { talking = true; ttsWorked = true; ttsFails = 0; };
-        u.onend = fin; u.onerror = fin;
-        utts.push(u); if (utts.length > 6) utts.shift();
-        if (speechSynthesis.paused) speechSynthesis.resume();
-        speechSynthesis.speak(u);
-      } catch (e) { fin(); }
-      // Kommt kein Ton, zeigt Emo seine Sätze wenigstens als Text.
-      setTimeout(() => { if (!talking && ++ttsFails >= 2 && !showSubs) { showSubs = true; subsEl.hidden = false; } }, 3000);
-      setTimeout(fin, readTime + 4000);
-    });
-  } else {
-    await sleep(readTime);
-  }
-  S.speaking = false;
-  setTimeout(() => { if (!S.speaking) setMuted(false); }, 400);
-  setTimeout(() => { if (!S.speaking && sayEl.textContent === text) sayEl.textContent = ""; }, 2200);
-}
-
 function wakeUpGreeting() {
   perform(3, async c => {
     show("sleepy", null); play("yawn");
@@ -1478,41 +1391,6 @@ function ear(state) {
   if (state === "off") { earEl.className = ""; earEl.textContent = "Tippe mich an, dann höre ich zu"; }
   else { earEl.textContent = ""; earEl.className = state === "hear" ? "dot hear" : "dot"; }
 }
-function startListening() {
-  if (!SR) { micState = "dieser Browser kann nicht zuhören"; status(); return; }
-  wantListen = true;
-  rec = new SR();
-  rec.lang = "de-DE";
-  rec.continuous = !isIOS;        // iPhone: lieber Satz für Satz neu starten
-  rec.interimResults = true;
-  rec.maxAlternatives = 1;
-  rec.onstart = () => { recRunning = true; micState = "hört zu"; ear("on"); status(); };
-  rec.onend = () => {
-    recRunning = false;
-    if (wantListen && !muted && !needTap) setTimeout(recStart, 250);
-    else if (needTap) ear("off");
-  };
-  rec.onerror = e => {
-    if (e.error === "not-allowed" || e.error === "service-not-allowed") {
-      needTap = true; micState = "nicht erlaubt – Emo antippen"; status(); ear("off");
-      if (e.error === "service-not-allowed" && isIOS && !toldProblem) {
-        toldProblem = true;
-        setTimeout(() => react("sad", "sad", ["Ich kann dich nicht hören. Schalte am iPhone die Diktierfunktion ein: Einstellungen, Allgemein, Tastatur."]), 500);
-      }
-    } else if (e.error === "audio-capture") {
-      micState = "Mikrofon ist belegt"; status();
-    }
-  };
-  rec.onresult = e => {
-    if (muted || performance.now() < ignoreUntil) return;
-    for (let i = e.resultIndex; i < e.results.length; i++) {
-      const r = e.results[i], text = (r[0] && r[0].transcript || "").trim();
-      if (!text) continue;
-      if (r.isFinal) heardFinal(text); else heardPartial(text);
-    }
-  };
-  recStart();
-}
 function recStart() {
   if (!rec || recRunning || muted || !wantListen) return;
   try { rec.start(); } catch (e) {}
@@ -1520,6 +1398,7 @@ function recStart() {
 // Während Emo spricht, hört er nicht zu – sonst versteht er sich selbst.
 function setMuted(m) {
   muted = m;
+  if (!m) ignoreUntil = performance.now() + 500;
   if (!rec) return;
   if (m) { if (recRunning) { try { rec.abort(); } catch (e) {} } }
   else { ignoreUntil = performance.now() + 500; recStart(); }
@@ -1539,6 +1418,338 @@ function heardPartial(text) {
   if (HANDS_UP.test(text)) { quickFired = true; surrender(); }
   else if (SHOT.test(text) && (S.handsUp || performance.now() - lastGunSeen < 4000)) { quickFired = true; getShot(); }
 }
+
+
+// =====================================================================
+//  Emos eigene Stimme (funktioniert auch auf dem iPhone, auch lautlos)
+// =====================================================================
+let voiceWorker = null, voiceSeq = 0, curVoice = null, speakToken = 0;
+const voiceWait = {};
+function initVoice() {
+  if (voiceWorker) return;
+  try {
+    voiceWorker = new Worker("vendor/mespeak-worker.js");
+    voiceWorker.onmessage = e => { const d = e.data; if (d.id && voiceWait[d.id]) { voiceWait[d.id](d.wav); delete voiceWait[d.id]; } };
+  } catch (e) { voiceWorker = null; }
+}
+function synth(text) {
+  return new Promise(res => {
+    if (!voiceWorker) return res(null);
+    const id = ++voiceSeq;
+    voiceWait[id] = res;
+    voiceWorker.postMessage({ id, text, opts: { pitch: 78, speed: 160, amplitude: 120 } });
+    setTimeout(() => { if (voiceWait[id]) { delete voiceWait[id]; res(null); } }, 6000);
+  });
+}
+// WAV selbst lesen – klappt in jedem Browser.
+function wavToBuffer(ab) {
+  const v = new DataView(ab);
+  const rate = v.getUint32(24, true), bits = v.getUint16(34, true);
+  let off = 12, dataOff = 44, len = ab.byteLength - 44;
+  while (off + 8 <= ab.byteLength) {
+    const id = String.fromCharCode(v.getUint8(off), v.getUint8(off + 1), v.getUint8(off + 2), v.getUint8(off + 3));
+    const size = v.getUint32(off + 4, true);
+    if (id === "data") { dataOff = off + 8; len = Math.min(size, ab.byteLength - dataOff); break; }
+    off += 8 + size;
+  }
+  const n = bits === 16 ? len >> 1 : len;
+  const buf = actx.createBuffer(1, Math.max(n, 1), rate);
+  const out = buf.getChannelData(0);
+  for (let i = 0; i < n; i++) out[i] = bits === 16 ? v.getInt16(dataOff + i * 2, true) / 32768 : (v.getUint8(dataOff + i) - 128) / 128;
+  return buf;
+}
+function stopSpeech() {
+  speakToken++;
+  try { curVoice && curVoice.stop(); } catch (e) {}
+  curVoice = null;
+}
+async function speak(text) {
+  const token = ++speakToken;
+  sayEl.textContent = text;
+  S.speaking = true;
+  setMuted(true);
+  let played = false;
+  if (soundOn) {
+    initVoice(); ensureAudio();
+    const wav = await synth(text.replace(/[„“"«»]/g, ""));
+    if (wav && actx && token === speakToken) {
+      try {
+        const buf = wavToBuffer(wav);
+        await new Promise(res => {
+          const src = actx.createBufferSource();
+          src.buffer = buf;
+          const g = actx.createGain(); g.gain.value = 1.6;
+          src.connect(g); g.connect(actx.destination);
+          src.onended = res; curVoice = src; src.start();
+          setTimeout(res, buf.duration * 1000 + 600);
+        });
+        played = true;
+      } catch (e) {}
+    }
+  }
+  if (!played && token === speakToken) {
+    subsEl.hidden = false;          // Wenigstens lesen kann man es dann.
+    await sleep(text.length * 65 + 900);
+    subsEl.hidden = !showSubs;
+  }
+  if (token !== speakToken) return;
+  S.speaking = false;
+  setTimeout(() => { if (!S.speaking) setMuted(false); }, 400);
+  setTimeout(() => { if (!S.speaking && sayEl.textContent === text) sayEl.textContent = ""; }, 2200);
+}
+
+// =====================================================================
+//  Kamera und Mikrofon starten
+// =====================================================================
+const useWhisper = isIOS || !SR;      // iPhone: eigene Ohren statt Safari-Sprachdienst
+async function startSenses() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { camState = "nicht verfügbar"; status(); return; }
+  const VIDEO = { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } };
+  const AUDIO = { echoCancellation: true, noiseSuppression: true, autoGainControl: true };
+  let stream = null, audioStream = null;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: VIDEO, audio: useWhisper ? AUDIO : false });
+    audioStream = useWhisper ? stream : null;
+  } catch (e) {
+    try { stream = await navigator.mediaDevices.getUserMedia({ video: VIDEO, audio: false }); } catch (e2) { stream = null; }
+    if (useWhisper) { try { audioStream = await navigator.mediaDevices.getUserMedia({ audio: AUDIO }); } catch (e3) { audioStream = null; } }
+  }
+  if (useWhisper) { if (audioStream) startEars(audioStream); else { micState = "nicht erlaubt"; status(); } }
+  else startListening();
+  if (!stream) { camState = "nicht erlaubt"; status(); return; }
+  video.srcObject = new MediaStream(stream.getVideoTracks());
+  await video.play().catch(() => {});
+  camState = "an";
+  visionState = "lädt …"; status();
+  try {
+    const vision = await import(VISION + "/vision_bundle.mjs");
+    const files = await vision.FilesetResolver.forVisionTasks(VISION + "/wasm");
+    const make = async (Kind, url, extra) => {
+      try { return await Kind.createFromOptions(files, { baseOptions: { modelAssetPath: url, delegate: "GPU" }, runningMode: "VIDEO", ...extra }); }
+      catch (e) { return await Kind.createFromOptions(files, { baseOptions: { modelAssetPath: url, delegate: "CPU" }, runningMode: "VIDEO", ...extra }); }
+    };
+    handLM = await make(vision.HandLandmarker, HAND_MODEL, { numHands: 1 });
+    faceDet = await make(vision.FaceDetector, FACE_MODEL, {});
+    visionState = "bereit";
+  } catch (e) {
+    console.warn("Handerkennung", e);
+    visionState = "konnte nicht laden";
+  }
+  status();
+  visionLoop();
+}
+
+// Zuhören mit dem Sprachdienst des Browsers (Android/Chrome)
+function startListening() {
+  if (!SR) { micState = "dieser Browser kann nicht zuhören"; status(); return; }
+  wantListen = true;
+  rec = new SR();
+  rec.lang = "de-DE"; rec.continuous = true; rec.interimResults = true; rec.maxAlternatives = 1;
+  rec.onstart = () => { recRunning = true; micState = "hört zu"; ear("on"); status(); };
+  rec.onend = () => { recRunning = false; if (wantListen && !muted && !needTap) setTimeout(recStart, 250); else if (needTap) ear("off"); };
+  rec.onerror = e => {
+    if (e.error === "not-allowed" || e.error === "service-not-allowed") { needTap = true; micState = "nicht erlaubt – Emo antippen"; status(); ear("off"); }
+  };
+  rec.onresult = e => {
+    if (muted || performance.now() < ignoreUntil) return;
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const r = e.results[i], text = (r[0] && r[0].transcript || "").trim();
+      if (!text) continue;
+      if (r.isFinal) heardFinal(text); else heardPartial(text);
+    }
+  };
+  recStart();
+}
+
+// =====================================================================
+//  Emos eigene Ohren (Whisper, läuft direkt auf dem Handy)
+// =====================================================================
+const EARS_MODEL = "Xenova/whisper-base";
+let earsWorker = null, earsReady = false, earsBusy = false, earsQueue = null, earsNodes = null;
+const earsFiles = {};
+function earsLoading(text) { earEl.hidden = false; earEl.className = ""; earEl.textContent = text; }
+function startEars(stream) {
+  ensureAudio();
+  if (!actx) { micState = "kein Ton möglich"; status(); return; }
+  micState = "lädt Ohren …"; status();
+  earsLoading("Emo lernt zuhören …");
+  try { earsWorker = new Worker("ears-worker.js", { type: "module" }); }
+  catch (e) { micState = "geht in diesem Browser nicht"; status(); earsLoading(""); return; }
+  earsWorker.onmessage = e => {
+    const d = e.data;
+    if (d.type === "progress") {
+      earsFiles[d.file] = d;
+      let l = 0, t = 0; for (const f of Object.values(earsFiles)) { l += f.loaded; t += f.total; }
+      if (!earsReady) earsLoading(`Emo lernt zuhören … ${Math.min(99, Math.round(l / Math.max(t, 1) * 100))} %`);
+    } else if (d.type === "ready") {
+      earsReady = true; micState = "hört zu"; status(); ear("on");
+    } else if (d.type === "error") {
+      micState = "Ohren konnten nicht laden"; status();
+      earsLoading("Ich kann gerade nicht zuhören (Internet?)");
+    } else if (d.type === "text") {
+      earsBusy = false;
+      heardSpeech(d.text);
+      if (earsQueue) { const q = earsQueue; earsQueue = null; sendToEars(q); }
+    }
+  };
+  earsWorker.postMessage({ type: "load", model: EARS_MODEL });
+  const src = actx.createMediaStreamSource(stream);
+  const proc = actx.createScriptProcessor(4096, 1, 1);
+  const sink = actx.createGain(); sink.gain.value = 0;
+  src.connect(proc); proc.connect(sink); sink.connect(actx.destination);
+  proc.onaudioprocess = e => vadFeed(e.inputBuffer.getChannelData(0));
+  earsNodes = { src, proc, sink, stream };
+}
+
+// Erkennt, wann du sprichst (Lautstärke), und schneidet den Satz aus.
+let vadNoise = 0.006, vadOn = false, vadChunks = [], vadSpeechMs = 0, vadSilenceMs = 0, vadTotalMs = 0;
+const vadPre = [];
+function vadFeed(input) {
+  const rate = actx.sampleRate, ms = input.length / rate * 1000;
+  let sum = 0; for (let i = 0; i < input.length; i++) sum += input[i] * input[i];
+  const rms = Math.sqrt(sum / input.length);
+  if (!earsReady || S.speaking || muted || performance.now() < ignoreUntil) {
+    vadOn = false; vadChunks = []; vadPre.length = 0; return;
+  }
+  const chunk = new Float32Array(input);
+  const thr = Math.max(0.012, vadNoise * 3.2);
+  if (!vadOn) {
+    if (rms < thr) vadNoise = vadNoise * 0.97 + rms * 0.03;
+    vadPre.push(chunk); if (vadPre.length > 3) vadPre.shift();
+    if (rms > thr) {
+      vadOn = true; vadChunks = vadPre.splice(0); vadSpeechMs = ms; vadSilenceMs = 0; vadTotalMs = ms * (vadChunks.length + 1);
+      vadChunks.push(chunk);
+      onSpeechStart();
+    }
+    return;
+  }
+  vadChunks.push(chunk); vadTotalMs += ms;
+  if (rms > thr * 0.7) { vadSpeechMs += ms; vadSilenceMs = 0; } else vadSilenceMs += ms;
+  if (vadSilenceMs > 750 || vadTotalMs > 8000) {
+    vadOn = false;
+    const chunks = vadChunks; vadChunks = [];
+    if (vadSpeechMs < 300) { ear("on"); return; }
+    const audio = to16k(chunks, rate);
+    if (earsBusy) earsQueue = audio; else sendToEars(audio);
+  }
+}
+function to16k(chunks, rate) {
+  let n = 0; for (const c of chunks) n += c.length;
+  const all = new Float32Array(n); let o = 0; for (const c of chunks) { all.set(c, o); o += c.length; }
+  const ratio = rate / 16000, out = new Float32Array(Math.floor(n / ratio));
+  for (let i = 0; i < out.length; i++) {
+    const a = Math.floor(i * ratio), b = Math.min(n, Math.floor((i + 1) * ratio));
+    let s = 0; for (let j = a; j < b; j++) s += all[j];
+    out[i] = s / Math.max(1, b - a);
+  }
+  return out;
+}
+function sendToEars(audio) {
+  earsBusy = true;
+  earsWorker.postMessage({ type: "hear", audio }, [audio.buffer]);
+  setTimeout(() => { if (earsBusy) earsBusy = false; }, 15000);
+}
+function onSpeechStart() {
+  ear("hear");
+  const now = performance.now();
+  if (!acting && !S.display && S.mood === "neutral" && now - hearingShown > 4000) {
+    hearingShown = now;
+    perform(0, async c => { show("listening", null); play("listen"); if (!await c.wait(2500)) return; show("neutral"); });
+  }
+}
+// Whisper erfindet bei Geräuschen manchmal Sätze – die werden aussortiert.
+const HALLUCINATION = /untertitel|zdf|amara|vielen dank (fürs|für's|für das) zuschauen|copyright|swr|im auftrag|abonnier|bis zum nächsten mal|♪|\[musik\]|\*musik\*/i;
+function heardSpeech(text) {
+  ear(earsReady ? "on" : "off");
+  text = (text || "").replace(/\s+/g, " ").trim();
+  if (!text || text.length < 2 || HALLUCINATION.test(text) || /^[.,!?… ]+$/.test(text)) return;
+  heardFinal(text);
+}
+
+// =====================================================================
+//  Schütteln: Augen wirbeln, Kopf wackelt, Emo schimpft („Rabble rabble!“)
+// =====================================================================
+const shake = { level: 0, ax: 0, ay: 0, ex: 0, ey: 0, vx: 0, vy: 0, hx: 0, hy: 0, rot: 0, spin: 0, active: false, since: 0, lastRabble: 0 };
+let lastAcc = null;
+window.addEventListener("devicemotion", e => {
+  if (!started) return;
+  let ax = 0, ay = 0, mag = 0;
+  const a = e.acceleration;
+  if (a && a.x != null) { ax = a.x; ay = a.y; mag = Math.hypot(a.x, a.y, a.z); }
+  else {
+    const g = e.accelerationIncludingGravity; if (!g || g.x == null) return;
+    if (lastAcc) { ax = g.x - lastAcc.x; ay = g.y - lastAcc.y; mag = Math.abs(ax) + Math.abs(ay) + Math.abs(g.z - lastAcc.z); }
+    lastAcc = { x: g.x, y: g.y, z: g.z };
+  }
+  shake.ax = ax; shake.ay = ay;
+  const lvl = clamp((mag - 6) / 14, 0, 1.5);
+  if (lvl > shake.level) shake.level = lvl;
+});
+// Bildschirm-Drehung beachten, damit die Augen in die richtige Richtung schwappen.
+function screenAngle() { return ((window.screen.orientation && window.screen.orientation.angle) || window.orientation || 0) * Math.PI / 180; }
+let shakeClock = performance.now();
+function updateShake(dt) {
+  // Abklingen nach echter Zeit, nicht nach Bildern – so reagiert Emo auch auf langsamen Handys flott.
+  const nowMs = performance.now(), realDt = Math.min(.5, (nowMs - shakeClock) / 1000); shakeClock = nowMs;
+  shake.level = Math.max(0, shake.level - realDt * 2.5);
+  const ang = screenAngle(), c = Math.cos(ang), sn = Math.sin(ang);
+  const sx = shake.ax * c + shake.ay * sn, sy = -shake.ax * sn + shake.ay * c;
+  shake.ax *= 0.8; shake.ay *= 0.8;
+  // Augen hängen träge hinterher wie Wackelaugen (Feder).
+  const k = 120, damp = 9;
+  const tx = -sx * 7, ty = sy * 7;
+  shake.vx += ((tx - shake.ex) * k - shake.vx * damp) * dt;
+  shake.vy += ((ty - shake.ey) * k - shake.vy * damp) * dt;
+  shake.ex = clamp(shake.ex + shake.vx * dt, -W * .2, W * .2);
+  shake.ey = clamp(shake.ey + shake.vy * dt, -H * .2, H * .2);
+  const t = performance.now() / 1000, L = shake.level;
+  shake.hx = Math.sin(t * 31) * 14 * L; shake.hy = Math.cos(t * 27) * 9 * L;
+  shake.rot = Math.sin(t * 19) * 9 * L * RAD;
+  shake.spin += dt * (3 + L * 22);
+  // Beim Schütteln: Rabble-Szene starten.
+  if (L > .35 && !shake.active && !S.fallen) startRabble();
+  if (shake.active && L > .2) {
+    const now = performance.now();
+    if (now - shake.lastRabble > 420) { shake.lastRabble = now; play("rabble"); }
+  }
+}
+function startRabble() {
+  shake.active = true; shake.since = performance.now();
+  touch();
+  perform(7, async c => {
+    S.handsUp = false; S.trembling = false;
+    show("dizzy", null);
+    // Solange geschüttelt wird, wirbeln die Augen.
+    let calm = 0;
+    while (calm < 450) {
+      if (!await c.wait(100)) { shake.active = false; return; }
+      calm = shake.level < .2 ? calm + 100 : 0;
+    }
+    shake.active = false;
+    const long = performance.now() - shake.since > 1500;
+    play("dizzy");
+    if (!await c.wait(1300)) return;
+    show("angry");
+    play("angry");
+    await c.say(pick(long
+      ? ["Rabble rabble rabble! Hör auf mich zu schütteln!", "Grrr! Mir ist sooo schwindelig!", "Ey! Ich bin doch kein Milchshake!"]
+      : ["Hey! Was soll das?", "Huch! Nicht schütteln!", "Rabble rabble!"]));
+    if (!await c.wait(1200)) return;
+    show("neutral");
+  });
+}
+Object.defineProperty(RECIPES, "rabble", {
+  get() {
+    const segs = [];
+    const n = 4 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < n; i++) {
+      const f = rand(220, 520);
+      segs.push(Sg(rand(.05, .1), f, f * rand(.6, 1.3), { wave: "square", g: .3, vr: rand(18, 34), vd: .12 }));
+      segs.push(Pz(rand(.015, .04)));
+    }
+    return segs;
+  },
+});
 
 // Vor dem ersten Tippen schläft Emo.
 show("sleeping");
