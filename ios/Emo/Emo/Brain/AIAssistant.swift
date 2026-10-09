@@ -167,7 +167,7 @@ private final class AppleBrain {
 
 /// Spricht direkt mit der Claude-API (https://api.anthropic.com/v1/messages).
 final class ClaudeBrain {
-    static let model = "claude-opus-5-5"
+    static let model = "claude-haiku-5-5"
 
     /// Bisheriges Gespräch. Assistenten-Antworten werden unverändert (inkl. aller
     /// Inhaltsblöcke) zurückgeschickt, so wie die API es erwartet.
@@ -186,13 +186,12 @@ final class ClaudeBrain {
 
         let body: [String: Any] = [
             "model": ClaudeBrain.model,
-            "max_tokens": 2048,
+            "max_tokens": 1024,
             "system": system,
             "messages": messages,
             // Kurze Sprachantworten brauchen kein langes Nachdenken.
+            "thinking": ["type": "disabled"],
             "output_config": ["effort": "low"],
-            // Falls eine Anfrage abgelehnt wird, beantwortet ein passendes anderes Modell sie.
-            "fallbacks": "default",
         ]
 
         var req = URLRequest(url: URL(string: "https://api.anthropic.com/v1/messages")!)
@@ -201,7 +200,6 @@ final class ClaudeBrain {
         req.setValue("application/json", forHTTPHeaderField: "content-type")
         req.setValue(key, forHTTPHeaderField: "x-api-key")
         req.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
-        req.setValue("server-side-fallback-2026-07-01", forHTTPHeaderField: "anthropic-beta")
 
         do {
             req.httpBody = try JSONSerialization.data(withJSONObject: body)

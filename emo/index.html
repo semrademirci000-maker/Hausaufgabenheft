@@ -1045,12 +1045,12 @@ async function askClaude(q) {
         "content-type": "application/json",
         "x-api-key": claudeKey,
         "anthropic-version": "2023-06-01",
-        "anthropic-beta": "server-side-fallback-2026-07-01",
         "anthropic-dangerous-direct-browser-access": "true",
       },
       body: JSON.stringify({
-        model: "claude-opus-5-5", max_tokens: 2048, system: INSTRUCTIONS, messages,
-        output_config: { effort: "low" }, fallbacks: "default",
+        // Haiku 5.5: schnell und günstig – ohne Nachdenk-Pause, damit Emo flott antwortet.
+        model: "claude-haiku-5-5", max_tokens: 1024, system: INSTRUCTIONS, messages,
+        thinking: { type: "disabled" }, output_config: { effort: "low" },
       }),
     });
     const json = await res.json().catch(() => ({}));
