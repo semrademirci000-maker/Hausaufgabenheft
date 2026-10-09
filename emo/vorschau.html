@@ -1,0 +1,1236 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0d10">
+<link rel="apple-touch-icon" href="icon-180.png">
+<style>[hidden]{display:none!important} *,*::before,*::after{box-sizing:border-box} html,body{margin:0} .wrap>*,.groups>*{min-width:0} .talk{flex-wrap:wrap} .talk input{flex:1 1 200px} .chips .btn{white-space:normal}</style>
+<title>Emo Vorschau</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800;900&display=swap">
+<style>
+/* Ein dunkles Robot-Labor: das Gerät steht im Mittelpunkt, darunter ruhige Bedien-Chips. */
+:root {
+  color-scheme: dark;
+  --bg: #0b0d10;
+  --panel: #14181d;
+  --chip: #1c2229;
+  --chip-hover: #252d36;
+  --line: #2a323b;
+  --fg: #e6edf3;
+  --muted: #8a96a3;
+  --eye: #4fe3ff;
+  --bezel: #1a1d21;
+  --font: "Nunito", ui-rounded, "SF Pro Rounded", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+html, body { height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font);
+  font-size: 15px;
+  padding-inline: 16px;
+  padding-block: 20px 40px;
+}
+.wrap { max-width: 960px; margin: 0 auto; display: grid; gap: 18px; }
+header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+h1 { margin: 0; font-size: 22px; font-weight: 900; letter-spacing: 0.01em; text-wrap: balance; }
+h1 span { color: var(--eye); }
+.sub { color: var(--muted); margin: 0; font-size: 14px; }
+
+.device {
+  background: var(--bezel);
+  border-radius: 34px;
+  padding: 14px;
+  box-shadow: 0 0 0 1px #2b3037 inset, 0 20px 60px rgba(0,0,0,.6);
+}
+.screen {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 19.5 / 9;
+  max-width: 100%;
+  background: #000;
+  border-radius: 22px;
+  overflow: hidden;
+  touch-action: none;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.screen canvas { width: 100%; height: 100%; display: block; }
+.screen:focus-visible { outline: 3px solid var(--eye); outline-offset: 3px; }
+
+.caption { min-height: 48px; text-align: center; display: grid; gap: 2px; align-content: center; }
+.caption .emo { color: var(--eye); font-weight: 800; font-size: 18px; }
+.caption .you { color: var(--muted); font-size: 14px; }
+
+.talk { display: flex; gap: 8px; }
+.talk input {
+  flex: 1; min-width: 0;
+  background: var(--panel); color: var(--fg);
+  border: 1px solid var(--line); border-radius: 14px;
+  padding: 12px 14px; font: inherit; font-size: 16px;
+}
+.talk input:focus-visible { outline: 2px solid var(--eye); outline-offset: 1px; }
+.btn {
+  background: var(--chip); color: var(--fg);
+  border: 1px solid var(--line); border-radius: 12px;
+  padding: 9px 13px; font: inherit; font-weight: 700; font-size: 14px;
+  cursor: pointer; white-space: nowrap;
+}
+.btn:hover { background: var(--chip-hover); }
+.btn:focus-visible { outline: 2px solid var(--eye); outline-offset: 2px; }
+.btn.primary { background: var(--eye); color: #001018; border-color: transparent; }
+.btn[aria-pressed="false"] { color: var(--muted); }
+
+.groups { display: grid; gap: 14px; }
+.group { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 14px; display: grid; gap: 10px; }
+.group h2 { margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); font-weight: 800; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.swatch { width: 30px; height: 30px; border-radius: 9px; border: 2px solid transparent; cursor: pointer; padding: 0; }
+.swatch[aria-pressed="true"] { border-color: var(--fg); }
+.hint { color: var(--muted); font-size: 13px; margin: 0; line-height: 1.5; }
+@media (min-width: 760px) { .groups { grid-template-columns: 1fr 1fr; } .groups .wide { grid-column: 1 / -1; } }
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+  <header>
+    <h1><span>Emo</span> · Vorschau</h1>
+    <p class="sub">So sieht Emo aus – klick dich durch. <a href="./" style="color:var(--eye)">Zum echten Emo →</a></p>
+  </header>
+
+  <div class="device">
+    <div class="screen" id="screen" tabindex="0" aria-label="Emos Bildschirm. Antippen, gedrückt halten zum Streicheln.">
+      <canvas id="cv"></canvas>
+    </div>
+  </div>
+
+  <div class="caption" aria-live="polite">
+    <div class="you" id="you"></div>
+    <div class="emo" id="say"></div>
+  </div>
+
+  <form class="talk" id="talk">
+    <input id="cmd" type="text" autocomplete="off" placeholder="Sag etwas zu Emo, z. B. „Hände hoch!“ oder „Wie spät ist es?“" aria-label="Befehl an Emo">
+    <button class="btn primary" type="submit">Sagen</button>
+    <button class="btn" type="button" id="sound" aria-pressed="true">Ton an</button>
+  </form>
+
+  <div class="groups">
+    <section class="group">
+      <h2>Bildschirm-Anzeigen</h2>
+      <div class="chips" id="g-display"></div>
+    </section>
+    <section class="group">
+      <h2>Aktionen</h2>
+      <div class="chips" id="g-action"></div>
+    </section>
+    <section class="group wide">
+      <h2>Gefühle</h2>
+      <div class="chips" id="g-mood"></div>
+    </section>
+    <section class="group wide">
+      <h2>Augenfarbe</h2>
+      <div class="chips" id="g-color"></div>
+      <p class="hint">Bildschirm antippen: Emo erschrickt kurz und freut sich. Oft antippen: Er wird sauer. Gedrückt halten: streicheln. Bewegst du die Maus über den Bildschirm, folgen die Augen ihr – in der App folgen sie deinem Gesicht über die Kamera. Wetter und Schere-Stein-Papier zeigen hier Beispielwerte. In der App kommen echtes Wetter und deine Hand in der Kamera dazu.</p>
+    </section>
+  </div>
+</div>
+
+<script>
+(() => {
+"use strict";
+// ---------- Grundlagen ----------
+const cv = document.getElementById("cv");
+const screen = document.getElementById("screen");
+const ctx = cv.getContext("2d");
+const off = document.createElement("canvas");
+const octx = off.getContext("2d");
+let W = 0, H = 0, DPR = 1;
+const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function resize() {
+  const r = screen.getBoundingClientRect();
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = r.width; H = r.height;
+  for (const c of [cv, off]) { c.width = Math.round(W * DPR); c.height = Math.round(H * DPR); }
+}
+new ResizeObserver(resize).observe(screen);
+resize();
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const rand = (a, b) => a + Math.random() * (b - a);
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const lerp = (a, b, k) => a + (b - a) * k;
+const RAD = Math.PI / 180;
+
+// ---------- Gefühle (wie Mood.swift) ----------
+const MOODS = {
+  neutral: {}, happy: { w: 1.05, bottom: .45 }, laughing: { style: "chevrons" },
+  sad: { w: .95, h: .85, top: .32, tilt: -20 }, crying: { w: .95, h: .8, top: .35, tilt: -24, tint: "#73a0ff", fx: "tears" },
+  angry: { h: .9, top: .4, tilt: 24, tint: "#ff524a", fx: "anger" }, surprised: { w: 1.15, h: 1.22, fx: "exclamation" },
+  scared: { w: .82, h: 1.18, top: .08, tilt: -10, fx: "sweat" }, sleepy: { h: .9, top: .58 },
+  sleeping: { w: 1.05, h: .07, fx: "zzz" }, love: { style: "hearts", tint: "#ff619e", fx: "hearts" },
+  dizzy: { style: "spirals" }, dead: { style: "crosses" },
+  thinking: { w: .95, h: .9, top: .22, tilt: 6, rs: 1.08, fx: "question" }, listening: { w: 1.06, h: 1.12 },
+  suspicious: { h: .85, top: .45, bottom: .18, rs: .78 }, excited: { style: "stars", tint: "#ffd94d", fx: "sparkles" },
+  proud: { w: 1.05, h: .95, top: .3, bottom: .3 },
+};
+const MOOD_SOUND = { happy: "happy", proud: "happy", laughing: "laugh", sad: "sad", crying: "sad", angry: "angry",
+  surprised: "surprised", scared: "scared", love: "love", dizzy: "dizzy", thinking: "think", excited: "happy", sleepy: "yawn" };
+const shapeOf = m => { const d = MOODS[m] || {}; return { w: d.w ?? 1, h: d.h ?? 1, top: d.top ?? 0, tilt: d.tilt ?? 0, bottom: d.bottom ?? 0, ls: d.ls ?? 1, rs: d.rs ?? 1 }; };
+
+const COLORS = [["Emo-Blau", "#4fe3ff"], ["Weiß", "#e0f2ff"], ["Grün", "#59ff8c"], ["Pink", "#ff73bf"], ["Orange", "#ffa640"], ["Lila", "#b380ff"]];
+let baseColor = COLORS[0][1];
+const hexRgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+
+// ---------- Zustand ----------
+const S = {
+  mood: "neutral", fx: null, display: null, handsUp: false, trembling: false, fallen: false, dancing: false,
+  speaking: false, blink: false, look: { x: 0, y: 0 }, idleLook: { x: 0, y: 0 }, pointer: null, pointerAt: 0,
+};
+const A = { shape: shapeOf("neutral"), arm: 0, fall: 0, disp: 0, rgb: hexRgb(baseColor), styleIn: 1, dance: 0 };
+let lastStyle = "normal";
+let lastInteraction = performance.now();
+
+// ---------- Töne (wie SoundFX.swift) ----------
+let soundOn = true, actx = null, cur = null;
+const bufCache = {};
+const Pz = d => ({ d, f0: 0, f1: 0, g: 0, wave: "sine" });
+const Sg = (d, f0, f1, o = {}) => ({ d, f0, f1, wave: o.wave || "soft", g: o.g ?? .5, vr: o.vr || 0, vd: o.vd || 0, decay: !!o.decay });
+const RECIPES = {
+  hello: [Sg(.09, 700, 1000), Pz(.03), Sg(.16, 1000, 1550)],
+  happy: [Sg(.07, 900, 1300), Pz(.02), Sg(.07, 1100, 1600), Pz(.02), Sg(.14, 1300, 1950, { vr: 18, vd: .02 })],
+  laugh: Array.from({ length: 7 }, (_, i) => [Sg(.06, 1250 - i * 40, 950 - i * 40, { wave: "square", g: .32 }), Pz(.045)]).flat(),
+  sad: [Sg(.35, 760, 620, { wave: "sine", vr: 6, vd: .03 }), Pz(.05), Sg(.6, 640, 330, { wave: "sine", vr: 6, vd: .04 })],
+  surprised: [Sg(.2, 380, 1900)],
+  scared: [Sg(.7, 1400, 1150, { wave: "triangle", g: .45, vr: 15, vd: .07 })],
+  angry: [Sg(.28, 170, 140, { wave: "square", g: .35, vr: 30, vd: .05 }), Pz(.05), Sg(.3, 180, 110, { wave: "square", g: .35, vr: 30, vd: .06 })],
+  love: [Sg(.22, 820, 1000, { wave: "sine", vr: 7, vd: .03 }), Pz(.04), Sg(.4, 1000, 1350, { wave: "sine", vr: 7, vd: .04 })],
+  dizzy: [Sg(1.2, 700, 700, { wave: "triangle", g: .4, vr: 3, vd: .35 })],
+  shot: [Sg(.25, 0, 0, { wave: "noise", g: .9, decay: true })],
+  dying: [Sg(1.3, 950, 80, { wave: "triangle", g: .5, vr: 5, vd: .05 })],
+  revive: [Sg(.35, 200, 1400), Pz(.04), Sg(.1, 1400, 1800)],
+  snore: [Sg(1, 0, 0, { wave: "rumble", g: .5 }), Pz(.15), Sg(.6, 1500, 1750, { wave: "sine", g: .12 })],
+  yawn: [Sg(.45, 450, 820, { wave: "sine", g: .4 }), Sg(.55, 820, 380, { wave: "sine", g: .4, vr: 5, vd: .02 })],
+  think: [Sg(.07, 620, 620), Pz(.08), Sg(.07, 680, 680), Pz(.08), Sg(.1, 740, 780)],
+  tap: [Sg(.06, 950, 600, { wave: "sine", g: .45 })],
+  notice: [Sg(.05, 1000, 1000), Pz(.03), Sg(.09, 1400, 1650)],
+  purr: [Sg(.9, 230, 260, { wave: "square", g: .18, vr: 24, vd: .12 })],
+  ok: [Sg(.06, 800, 800), Pz(.02), Sg(.1, 1200, 1250)],
+  hum: [Sg(.18, 520, 600, { wave: "sine", g: .25 }), Sg(.22, 600, 560, { wave: "sine", g: .25 })],
+  alarm: [Sg(.1, 1900, 1900, { wave: "square", g: .3 }), Pz(.05), Sg(.1, 1900, 1900, { wave: "square", g: .3 }), Pz(.05), Sg(.1, 1900, 1900, { wave: "square", g: .3 })],
+  tick: [Sg(.05, 1500, 1500, { wave: "sine", g: .45 })],
+  diceRoll: Array.from({ length: 10 }, (_, i) => [Sg(.025, 0, 0, { wave: "noise", g: .55, decay: true }), Pz(.04 + i * .012)]).flat(),
+  coin: [Sg(.07, 1980, 1980, { wave: "sine", g: .4 }), Sg(.5, 2640, 2640, { wave: "sine", g: .4, decay: true })],
+  win: [523, 659, 784, 1047].flatMap(f => [Sg(.11, f, f, { wave: "square", g: .25 }), Pz(.02)]),
+  lose: [Sg(.3, 420, 400, { wave: "triangle", g: .45 }), Pz(.05), Sg(.3, 380, 360, { wave: "triangle", g: .45 }), Pz(.05), Sg(.7, 340, 250, { wave: "triangle", g: .45, vr: 6, vd: .04 })],
+  dance: [523, 659, 784, 659, 880, 784, 659, 523, 587, 698, 880, 698, 988, 880, 784, 0, 523, 659, 784, 1047, 988, 784, 659, 587, 523, 659, 523, 392, 523, 0, 1047, 0]
+    .flatMap(f => f === 0 ? [Pz(.2)] : [Sg(.17, f, f, { wave: "square", g: .22 }), Pz(.03)]),
+};
+function render(name) {
+  const sr = actx.sampleRate, segs = RECIPES[name];
+  const total = segs.reduce((n, s) => n + Math.floor(s.d * sr), 0) + 256;
+  const buf = actx.createBuffer(1, total, sr), out = buf.getChannelData(0);
+  let ph = 0, low = 0, idx = 0;
+  for (const s of segs) {
+    const n = Math.floor(s.d * sr), att = Math.min(n * .15, .006 * sr), rel = Math.min(n * .3, .025 * sr);
+    for (let i = 0; i < n; i++) {
+      const t = i / Math.max(n, 1);
+      let env = 1;
+      if (i < att) env = i / att;
+      if (n - i < rel) env = Math.min(env, (n - i) / rel);
+      if (s.decay) env *= Math.exp(-t * 6);
+      let f = s.f0 + (s.f1 - s.f0) * t;
+      if (s.vr > 0) f *= 1 + s.vd * Math.sin(2 * Math.PI * s.vr * i / sr);
+      ph += 2 * Math.PI * f / sr; if (ph > 2 * Math.PI) ph -= 2 * Math.PI;
+      let v;
+      switch (s.wave) {
+        case "sine": v = Math.sin(ph); break;
+        case "square": v = Math.tanh(6 * Math.sin(ph)) * .7; break;
+        case "triangle": v = 2 / Math.PI * Math.asin(Math.sin(ph)); break;
+        case "noise": low += (rand(-1, 1) - low) * .35; v = low * 1.4; break;
+        case "rumble": low += (rand(-1, 1) - low) * .04; v = low * 4 * (.4 + .6 * Math.sin(Math.PI * t)); break;
+        default: v = Math.tanh(2.2 * Math.sin(ph)) * .8 + .2 * Math.sin(2 * ph);
+      }
+      out[idx++] = v * s.g * env * .8;
+    }
+  }
+  return buf;
+}
+function ensureAudio() {
+  if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { actx = null; } }
+  if (actx && actx.state === "suspended") actx.resume();
+}
+function play(name) {
+  if (!soundOn || !name || !RECIPES[name]) return;
+  ensureAudio(); if (!actx) return;
+  const buf = name === "rabble" ? render(name) : (bufCache[name] || (bufCache[name] = render(name)));
+  try { cur && cur.stop(); } catch (e) {}
+  const src = actx.createBufferSource(); src.buffer = buf; src.connect(actx.destination); src.start(); cur = src;
+}
+
+// ---------- Stimme ----------
+const sayEl = document.getElementById("say"), youEl = document.getElementById("you");
+let voice = null;
+function pickVoice() {
+  const vs = (window.speechSynthesis && speechSynthesis.getVoices()) || [];
+  voice = vs.find(v => v.lang && v.lang.toLowerCase().startsWith("de")) || null;
+}
+if (window.speechSynthesis) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+function stopSpeech() { try { window.speechSynthesis && speechSynthesis.cancel(); } catch (e) {} }
+async function speak(text) {
+  sayEl.textContent = text;
+  S.speaking = true;
+  const fallback = text.length * 60 + 700;
+  if (soundOn && window.speechSynthesis && window.SpeechSynthesisUtterance) {
+    await new Promise(res => {
+      let done = false; const fin = () => { if (!done) { done = true; res(); } };
+      try {
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = "de-DE"; if (voice) u.voice = voice; u.pitch = 1.6; u.rate = 1.05;
+        u.onend = fin; u.onerror = fin;
+        speechSynthesis.speak(u);
+      } catch (e) { fin(); }
+      setTimeout(fin, fallback + 4000);
+    });
+  } else {
+    await sleep(fallback);
+  }
+  S.speaking = false;
+  setTimeout(() => { if (!S.speaking && sayEl.textContent === text) sayEl.textContent = ""; }, 2200);
+}
+
+// ---------- Szenen (wie RobotBrain.swift) ----------
+let actId = 0, actPri = 0, acting = false;
+let timerEnd = null, timerTotal = 0, timerHandle = null;
+function restoreDisplay() { S.display = timerEnd ? { k: "timer", end: timerEnd, total: timerTotal } : null; }
+function show(m, fx) { S.display = null; S.mood = m; S.fx = fx === undefined ? ((MOODS[m] || {}).fx || null) : fx; }
+function relax() { S.handsUp = false; S.trembling = false; S.dancing = false; S.fallen = false; show("neutral", null); }
+function perform(pri, fn) {
+  if (acting && pri < actPri) return;
+  const id = ++actId; actPri = pri; acting = true;
+  stopSpeech(); S.dancing = false;
+  const c = {
+    alive: () => id === actId,
+    wait: async ms => { await sleep(ms); return id === actId; },
+    say: async t => { if (id === actId) await speak(t); },
+  };
+  (async () => {
+    try { await fn(c); } finally { if (id === actId) { acting = false; actPri = 0; restoreDisplay(); } }
+  })();
+}
+const touch = () => { lastInteraction = performance.now(); };
+// Ein Knopfdruck in der Vorschau unterbricht immer die laufende Szene.
+function interrupt() {
+  actId++; acting = false; actPri = 0; stopSpeech();
+  S.handsUp = false; S.trembling = false; S.fallen = false; S.dancing = false;
+}
+
+function react(m, sound, lines, hold = 1000) {
+  touch();
+  perform(1, async c => {
+    show(m); play(sound);
+    if (lines.length) { if (!await c.wait(250)) return; await c.say(pick(lines)); }
+    if (!await c.wait(hold)) return;
+    show("neutral");
+  });
+}
+function demoMood(m) {
+  touch();
+  perform(3, async c => { relax(); show(m); play(MOOD_SOUND[m]); if (!await c.wait(2500)) return; show("neutral"); });
+}
+function tapped() {
+  touch();
+  if (S.mood === "sleeping") return wakeUp();
+  if (S.fallen || S.handsUp) return;
+  if (S.display) {
+    if (S.display.k === "timer") return;
+    return perform(9, async c => { show("happy", null); play("tap"); if (!await c.wait(600)) return; show("neutral"); });
+  }
+  const now = performance.now();
+  tapped.times = (tapped.times || []).filter(t => now - t < 2500).concat(now);
+  if (tapped.times.length >= 5) { tapped.times = []; return react("angry", "angry", ["Hey! Hör auf mich zu piksen!", "Grrr! Das kitzelt nicht mehr!"], 1500); }
+  if (tapped.times.length >= 3) return react("laughing", "laugh", ["Hihi, das kitzelt!"], 1000);
+  perform(1, async c => { show("surprised", null); play("tap"); if (!await c.wait(350)) return; show("happy"); if (!await c.wait(900)) return; show("neutral"); });
+}
+function petted() {
+  touch();
+  if (S.fallen || S.handsUp) return;
+  perform(1, async c => {
+    show("love"); play("purr");
+    if (!await c.wait(1000)) return;
+    await c.say(pick(["Mmmh, das ist schön!", "Ich hab dich lieb!", "Mehr streicheln, bitte!"]));
+    if (!await c.wait(1000)) return; show("happy"); if (!await c.wait(800)) return; show("neutral");
+  });
+}
+function surrender() {
+  if (S.handsUp || S.fallen) return;
+  touch();
+  perform(5, async c => {
+    S.handsUp = true; S.trembling = true; show("scared"); play("scared");
+    if (!await c.wait(350)) return;
+    await c.say(pick(["Nicht schießen!", "Hey! Okay, okay, ich ergebe mich!", "Ahh! Ich hab nichts gemacht!", "Bitte nicht! Ich bin doch nur ein kleiner Roboter!"]));
+    if (!await c.wait(3200)) return;
+    S.handsUp = false; S.trembling = false; show("happy", null); play("ok");
+    await c.say(pick(["Puh… das war knapp!", "Hehe, du hast mich ganz schön erschreckt!", "Gut, dass du nicht geschossen hast!"]));
+    if (!await c.wait(600)) return; show("neutral");
+  });
+}
+function dance() {
+  touch();
+  perform(2, async c => {
+    show("excited", "notes"); await c.say("Musik ab!");
+    if (!c.alive()) return;
+    S.dancing = true; play("dance");
+    for (let i = 0; i < 14; i++) { if (!await c.wait(450)) { S.dancing = false; return; } show(i % 2 ? "excited" : "happy", "notes"); }
+    S.dancing = false; show("proud", "sparkles"); await c.say("Ta-daa!");
+    if (!await c.wait(1000)) return; show("neutral");
+  });
+}
+function goToSleep() {
+  perform(1, async c => { relax(); show("sleepy", null); play("yawn"); await c.say("Ich bin so müde… Gute Nacht!"); if (!await c.wait(800)) return; show("sleeping"); });
+}
+function wakeUp() {
+  touch();
+  perform(3, async c => {
+    show("sleepy", null); play("yawn");
+    if (!await c.wait(1000)) return; show("surprised", null);
+    if (!await c.wait(300)) return; show("happy"); play("hello");
+    await c.say(pick(["Oh! Ich bin wach! Hallo!", "Guten Morgen! Ich hab von Strom geträumt.", "Huch! Ich war nur kurz im Energiesparmodus."]));
+    if (!await c.wait(500)) return; show("neutral");
+  });
+}
+function tellJoke() {
+  const j = pick([
+    ["Was macht ein Roboter am Strand?", "Er nimmt ein Sonnenbad – mit Lichtschutzfaktor Null Eins!"],
+    ["Warum war der Computer müde?", "Weil er zu viele Fenster offen hatte!"],
+    ["Was ist grün und klopft an die Tür?", "Ein Klopfsalat!"],
+    ["Was macht ein Pirat am Computer?", "Er drückt die Enter-Taste!"],
+  ]);
+  touch();
+  perform(2, async c => {
+    show("proud", null); play("think"); await c.say(j[0]);
+    show("suspicious", null); if (!await c.wait(900)) return;
+    await c.say(j[1]); show("laughing"); play("laugh");
+    if (!await c.wait(1600)) return; show("neutral");
+  });
+}
+// Anzeigen
+function showTime() {
+  touch();
+  perform(2, async c => {
+    show("happy", null); if (!await c.wait(350)) return;
+    S.display = { k: "clock" }; play("notice");
+    const d = new Date(), h = d.getHours(), m = d.getMinutes();
+    await c.say(m === 0 ? `Es ist genau ${h} Uhr.` : `Es ist ${h} Uhr ${m}.`);
+    if (!await c.wait(4500)) return; show("neutral");
+  });
+}
+function showDate() {
+  touch();
+  perform(2, async c => {
+    show("happy", null); if (!await c.wait(350)) return;
+    S.display = { k: "date" }; play("notice");
+    const d = new Date();
+    await c.say(`Heute ist ${d.toLocaleDateString("de-DE", { weekday: "long" })}, der ${d.getDate()}. ${d.toLocaleDateString("de-DE", { month: "long" })}.`);
+    if (!await c.wait(4000)) return; show("neutral");
+  });
+}
+function spoken(sec) {
+  const s = Math.round(sec), h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60, x = s % 60, p = [];
+  if (h) p.push(h === 1 ? "eine Stunde" : `${h} Stunden`);
+  if (m) p.push(m === 1 ? "eine Minute" : `${m} Minuten`);
+  if (x) p.push(x === 1 ? "eine Sekunde" : `${x} Sekunden`);
+  return p.join(" und ");
+}
+function startTimer(sec) {
+  touch();
+  if (!sec || sec < 1) return react("thinking", "think", ["Wie lange denn? Sag zum Beispiel: Timer fünf Minuten."]);
+  clearTimeout(timerHandle);
+  const end = Date.now() + sec * 1000;
+  timerEnd = end; timerTotal = sec;
+  timerHandle = setTimeout(() => { if (timerEnd === end) { timerEnd = null; timerRang(); } }, sec * 1000);
+  perform(2, async c => {
+    show("proud", null); play("ok");
+    if (!await c.wait(300)) return;
+    S.display = { k: "timer", end, total: sec };
+    await c.say(`Okay! Timer läuft: ${spoken(sec)}.`);
+  });
+}
+function cancelTimer() {
+  if (!timerEnd && !(S.display && S.display.k === "timerDone")) return react("thinking", "think", ["Es läuft doch gar kein Timer."]);
+  clearTimeout(timerHandle); timerEnd = null; touch();
+  perform(9, async c => { show("happy"); play("ok"); await c.say("Timer ist aus."); if (!await c.wait(600)) return; show("neutral"); });
+}
+function timerRang() {
+  perform(6, async c => {
+    relax(); show("excited", null); S.display = { k: "timerDone" };
+    await c.say("Die Zeit ist um!");
+    for (let i = 0; i < 6; i++) { play("alarm"); if (!await c.wait(1200)) return; }
+    show("neutral");
+  });
+}
+function rollDice() {
+  touch();
+  perform(2, async c => {
+    show("excited", null); if (!await c.wait(300)) return;
+    const v = 1 + Math.floor(Math.random() * 6);
+    S.display = { k: "dice", v, rolling: true }; play("diceRoll");
+    if (!await c.wait(1400)) return;
+    S.display = { k: "dice", v, rolling: false }; play("ok");
+    await c.say(v === 6 ? "Eine Sechs! Juhu!" : `Eine ${["Eins", "Zwei", "Drei", "Vier", "Fünf"][v - 1]}!`);
+    if (!await c.wait(2500)) return; show(v === 6 ? "excited" : "happy");
+    if (!await c.wait(1000)) return; show("neutral");
+  });
+}
+function flipCoin() {
+  touch();
+  perform(2, async c => {
+    show("excited", null); if (!await c.wait(300)) return;
+    const heads = Math.random() < .5;
+    S.display = { k: "coin", heads, flipping: true, t0: performance.now() }; play("coin");
+    if (!await c.wait(1500)) return;
+    S.display = { k: "coin", heads, flipping: false }; await c.say(heads ? "Kopf!" : "Zahl!");
+    if (!await c.wait(2500)) return; show("neutral");
+  });
+}
+const RPS = [{ k: "scissors", name: "Schere" }, { k: "rock", name: "Stein" }, { k: "paper", name: "Papier" }];
+function playRPS() {
+  touch();
+  perform(2, async c => {
+    show("excited", null); await c.say("Okay! Schere, Stein, Papier …");
+    for (const w of ["SCHERE", "STEIN", "PAPIER!"]) { if (!c.alive()) return; S.display = { k: "word", w }; play("tick"); if (!await c.wait(650)) return; }
+    const mine = pick(RPS); S.display = { k: "rps", c: mine }; play("notice");
+    if (!await c.wait(1000)) return;
+    await c.say(`Ich hab ${mine.name}! Und du?`);
+    if (!await c.wait(2000)) return; show("neutral");
+  });
+}
+function showWeather() {
+  touch();
+  perform(2, async c => {
+    show("thinking"); play("think");
+    if (!await c.wait(1200)) return;
+    show("happy", null); if (!await c.wait(300)) return;
+    S.display = { k: "weather", temp: 17 }; play("notice");
+    await c.say("Draußen sind es 17 Grad und klar und schön.");
+    if (!await c.wait(4000)) return; show("neutral");
+  });
+}
+function showBattery() {
+  touch();
+  perform(2, async c => {
+    let level = 80, charging = false;
+    try { if (navigator.getBattery) { const b = await navigator.getBattery(); level = Math.round(b.level * 100); charging = b.charging; } } catch (e) {}
+    if (!c.alive()) return;
+    show(level <= 20 ? "sleepy" : "happy", null); if (!await c.wait(300)) return;
+    S.display = { k: "battery", level, charging }; play("notice");
+    await c.say(charging ? `Mein Akku ist bei ${level} Prozent. Mmh, lecker Strom!` : level <= 20 ? `Nur noch ${level} Prozent… Ich hab Hunger!` : `Mein Akku ist zu ${level} Prozent voll.`);
+    if (!await c.wait(3000)) return; show("neutral");
+  });
+}
+function takePhoto() {
+  touch();
+  perform(2, async c => {
+    show("excited", null); await c.say("Bitte lächeln!");
+    for (const n of [3, 2, 1]) { if (!c.alive()) return; S.display = { k: "countdown", n, t0: performance.now() }; play("tick"); if (!await c.wait(850)) return; }
+    S.display = { k: "flash" }; play("shutter");
+    if (!await c.wait(250)) return;
+    show("happy"); await c.say("Klick! In der App wird das Foto jetzt gezeigt und gespeichert.");
+    if (!await c.wait(800)) return; show("neutral");
+  });
+}
+RECIPES.shutter = [Sg(.05, 0, 0, { wave: "noise", g: .6, decay: true }), Pz(.04), Sg(.09, 0, 0, { wave: "noise", g: .5, decay: true })];
+
+// ---------- Sprachbefehle (wie CommandParser.swift) ----------
+const NUMS = { ein: 1, eine: 1, einen: 1, eins: 1, zwei: 2, drei: 3, vier: 4, "fünf": 5, sechs: 6, sieben: 7, acht: 8, neun: 9, zehn: 10, zwanzig: 20, "dreißig": 30, "fünfzig": 50, sechzig: 60 };
+function duration(s) {
+  const t = s.split(" "); let total = 0, found = false;
+  t.forEach((w, i) => {
+    if (!i) return;
+    const u = w.startsWith("sekunde") ? 1 : w.startsWith("minute") ? 60 : w.startsWith("stunde") ? 3600 : 0;
+    if (!u) return;
+    const n = parseFloat(t[i - 1]) || NUMS[t[i - 1]];
+    if (n) { total += n * u; found = true; }
+  });
+  return found ? total : null;
+}
+function command(text) {
+  const s = " " + text.toLowerCase().replace(/[.,!?;:„“"']/g, " ").replace(/\s+/g, " ").trim() + " ";
+  const has = (...p) => p.some(x => s.includes(" " + x));
+  const word = (...p) => p.some(x => s.includes(" " + x + " "));
+  touch();
+  if (S.mood === "sleeping") { if (has("wach", "aufwachen", "hallo", "emo")) wakeUp(); return; }
+  if (has("hände hoch", "hand hoch", "hände nach oben")) return surrender();
+  if (word("peng", "päng", "bang", "bumm", "piu", "pew", "schuss")) return getShot();
+  if (has("timer aus", "timer stopp", "timer abbrechen", "stopp den timer")) return cancelTimer();
+  if (has("timer", "countdown") || (has("stell") && duration(s.trim()))) return startTimer(duration(s.trim()));
+  if (has("hör auf", "stopp", "stop")) return perform(9, async () => relax());
+  if (has("würfel")) return rollDice();
+  if (has("münze", "kopf oder zahl")) return flipCoin();
+  if (has("schere stein", "stein papier", "schnick schnack")) return playRPS();
+  if (has("wetter", "wie warm", "wie kalt", "temperatur")) return showWeather();
+  if (has("akku", "batterie")) return showBattery();
+  if (has("foto", "selfie")) return takePhoto();
+  if (has("wach auf", "aufwachen")) return react("happy", "hello", ["Ich bin doch wach!"]);
+  if (has("gute nacht", "schlaf")) return goToSleep();
+  if (has("tanz", "party")) return dance();
+  if (has("witz")) return tellJoke();
+  if (has("wie spät", "uhrzeit", "wie viel uhr", "wieviel uhr", "die uhr")) return showTime();
+  if (has("welcher tag", "datum", "welchen tag")) return showDate();
+  if (has("lach")) return react("laughing", "laugh", ["Hahaha! Hihihi!"], 1500);
+  if (has("hab dich lieb", "liebe dich", "lieb dich", "mag dich")) return react("love", "love", ["Ich hab dich auch lieb!", "Aww! Du bist mein Lieblingsmensch!"], 2500);
+  if (has("doof", "blöd", "dumm", "gemein")) return react("crying", "sad", ["Das war gemein…", "Hmpf. Ich bin gar nicht doof!"], 2500);
+  if (has("du bist toll", "du bist süß", "du bist cool", "gut gemacht")) return react("proud", "happy", ["Hehe, danke! Ich weiß.", "Oh, du machst mich ganz verlegen!"]);
+  if (has("wie geht")) return react("happy", "happy", ["Mir geht's super! Mein Akku ist voll Freude.", "Bestens! Und dir?"]);
+  if (has("wer bist du", "wie heißt du")) return react("proud", "hello", ["Ich bin Emo! Ein kleiner Roboter, der in deinem Handy wohnt."]);
+  if (has("tschüss", "ciao", "bis später")) return react("sad", "sad", ["Tschüss! Komm bald wieder!"]);
+  if (has("hallo", "hi", "hey", "servus", "moin")) return react("happy", "hello", ["Hallo! Schön, dass du da bist!", "Hi! Was machen wir heute?"]);
+  perform(2, async c => {
+    show("thinking"); play("think");
+    if (!await c.wait(1100)) return;
+    show("happy"); await c.say("Gute Frage! In der echten App beantwortet meine KI das.");
+    if (!await c.wait(600)) return; show("neutral");
+  });
+}
+
+// ---------- Hintergrund: blinzeln, umschauen, einschlafen ----------
+(async function blinkLoop() {
+  for (;;) {
+    await sleep(rand(2000, 5500));
+    const st = (MOODS[S.mood] || {}).style;
+    if (st || S.mood === "sleeping") continue;
+    S.blink = true; await sleep(110); S.blink = false;
+    if (Math.random() < .2) { await sleep(160); S.blink = true; await sleep(100); S.blink = false; }
+  }
+})();
+(async function idleLoop() {
+  for (;;) {
+    await sleep(rand(2500, 6500));
+    if (acting || timerEnd || S.display) continue;
+    const idle = (performance.now() - lastInteraction) / 1000;
+    if (S.mood === "sleeping") { if (Math.random() < .5) play("snore"); continue; }
+    if (idle > 150) { goToSleep(); continue; }
+    const r = Math.random();
+    const moment = (m, ms, snd) => perform(0, async c => { show(m, null); play(snd); if (!await c.wait(ms)) return; show("neutral"); });
+    if (r < .5) S.idleLook = { x: rand(-.9, .9), y: rand(-.6, .6) };
+    else if (r < .6) S.idleLook = { x: 0, y: 0 };
+    else if (r < .68) moment("suspicious", 1400);
+    else if (r < .75) moment("happy", 1200, "hum");
+    else if (r < .8 && idle > 60) moment("sleepy", 2000, "yawn");
+  }
+})();
+
+// ---------- Zeichnen ----------
+const rgba = (a) => `rgba(${A.rgb[0] | 0},${A.rgb[1] | 0},${A.rgb[2] | 0},${a})`;
+const baseRgba = a => { const c = hexRgb(baseColor); return `rgba(${c[0]},${c[1]},${c[2]},${a})`; };
+function rr(c, x, y, w, h, r) {
+  r = Math.min(r, w / 2, h / 2);
+  c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r);
+  c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
+}
+function heartPath(c, cx, cy, w, h) {
+  const x = cx - w / 2, y = cy - h / 2;
+  c.beginPath(); c.moveTo(cx, y + h * .95);
+  c.bezierCurveTo(x + w * .2, y + h * .78, x, y + h * .55, x, y + h * .32);
+  c.arc(x + w * .25, y + h * .27, w * .25, 170 * RAD, -10 * RAD, false);
+  c.arc(x + w * .75, y + h * .27, w * .25, 190 * RAD, 10 * RAD, false);
+  c.bezierCurveTo(x + w, y + h * .55, x + w * .8, y + h * .78, cx, y + h * .95); c.closePath();
+}
+function starPath(c, cx, cy, R, rot = 0, points = 5, inner = .45) {
+  c.beginPath();
+  for (let i = 0; i < points * 2; i++) {
+    const r = i % 2 ? R * inner : R, a = i * Math.PI / points - Math.PI / 2 + rot;
+    i ? c.lineTo(cx + r * Math.cos(a), cy + r * Math.sin(a)) : c.moveTo(cx + r * Math.cos(a), cy + r * Math.sin(a));
+  }
+  c.closePath();
+}
+function dropPath(c, cx, top, w, h) {
+  c.beginPath(); c.moveTo(cx, top);
+  c.bezierCurveTo(cx + w * .15, top + h * .3, cx + w * .6, top + h, cx, top + h);
+  c.bezierCurveTo(cx - w * .6, top + h, cx - w * .15, top + h * .3, cx, top); c.closePath();
+}
+function glow(c, blur, a = .75) { c.shadowColor = rgba(a); c.shadowBlur = blur; }
+function noGlow(c) { c.shadowBlur = 0; c.shadowColor = "transparent"; }
+
+function metrics() {
+  const ew = Math.min(W * .21, H * .34);
+  return { ew, eh: ew * 1.2, gap: ew * .6 };
+}
+
+function drawEyes(t, M) {
+  const { ew, eh, gap } = M, sh = A.shape;
+  const cx = W / 2 + S.look.x * W * .16 + shake.ex, cy = H / 2 + S.look.y * H * .13 + shake.ey;
+  const style = (MOODS[S.mood] || {}).style || "normal";
+  const eyes = [{ left: true, x: cx - (gap / 2 + ew / 2) }, { left: false, x: cx + (gap / 2 + ew / 2) }];
+  if (style === "normal") {
+    octx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    octx.clearRect(0, 0, W, H);
+    for (const e of eyes) {
+      const sc = (e.left ? sh.ls : sh.rs) * (e.left ? 1 + S.look.x * .08 : 1 - S.look.x * .08);
+      const w = ew * sh.w * sc, fullH = eh * sh.h * sc;
+      const h = S.blink ? Math.max(fullH * .07, 4) : fullH;
+      octx.globalCompositeOperation = "source-over";
+      octx.fillStyle = rgba(1);
+      rr(octx, e.x - w / 2, cy - h / 2, w, h, Math.min(w, h) * .32); octx.fill();
+      octx.globalCompositeOperation = "destination-out";
+      octx.save(); octx.translate(e.x, cy); octx.rotate((e.left ? sh.tilt : -sh.tilt) * RAD);
+      octx.fillRect(-w * 1.1, -1.5 * h + sh.top * h, w * 2.2, h); octx.restore();
+      octx.beginPath(); octx.ellipse(e.x, cy + h * (1.1 - sh.bottom), w * .85, h * .6, 0, 0, Math.PI * 2); octx.fill();
+    }
+    octx.globalCompositeOperation = "source-over";
+    glow(ctx, ew * .35, .45); ctx.drawImage(off, 0, 0, W, H);
+    glow(ctx, ew * .12, .8); ctx.drawImage(off, 0, 0, W, H);
+    noGlow(ctx);
+  } else {
+    const k = A.styleIn;
+    for (const e of eyes) {
+      ctx.save(); ctx.translate(e.x, cy); ctx.scale(k, k);
+      glow(ctx, ew * .15, .8);
+      ctx.fillStyle = rgba(1); ctx.strokeStyle = rgba(1); ctx.lineCap = "round"; ctx.lineJoin = "round";
+      if (style === "hearts") {
+        const p = 1 + .08 * Math.sin(t * 2.2 * Math.PI); ctx.scale(p, p);
+        heartPath(ctx, 0, 0, ew * 1.1, ew); ctx.fill();
+      } else if (style === "crosses") {
+        const r = ew * .4; ctx.lineWidth = ew * .16;
+        ctx.beginPath(); ctx.moveTo(-r, -r); ctx.lineTo(r, r); ctx.moveTo(r, -r); ctx.lineTo(-r, r); ctx.stroke();
+      } else if (style === "spirals") {
+        ctx.rotate((t * 1.4 * 2 * Math.PI + shake.spin) * (e.left ? 1 : -1)); ctx.lineWidth = ew * .09; ctx.beginPath();
+        for (let i = 0; i <= 140; i++) { const q = i / 140, a = q * 6 * Math.PI, r = ew / 2 * q; i ? ctx.lineTo(r * Math.cos(a), r * Math.sin(a)) : ctx.moveTo(0, 0); }
+        ctx.stroke();
+      } else if (style === "chevrons") {
+        const p = 1 + .06 * Math.sin(t * 6 * Math.PI); ctx.scale(p, p);
+        const w = ew * .35, h = eh * .31; ctx.lineWidth = ew * .17; ctx.beginPath();
+        if (e.left) { ctx.moveTo(-w, -h); ctx.lineTo(w, 0); ctx.lineTo(-w, h); } else { ctx.moveTo(w, -h); ctx.lineTo(-w, 0); ctx.lineTo(w, h); }
+        ctx.stroke();
+      } else if (style === "stars") {
+        const p = 1 + .1 * Math.sin(t * 3 * Math.PI); ctx.scale(p, p);
+        starPath(ctx, 0, 0, ew * .58, t * .35 * 2 * Math.PI * (e.left ? 1 : -1)); ctx.fill();
+      }
+      ctx.restore();
+    }
+    noGlow(ctx);
+  }
+  drawEffects(t, cx, cy, ew, eh, gap);
+}
+
+function drawEffects(t, cx, cy, ew, eh, gap) {
+  const fx = S.fx; if (!fx) return;
+  const L = cx - (gap / 2 + ew / 2), R = cx + (gap / 2 + ew / 2);
+  const phase = (sp, o) => ((t * sp + o) % 1 + 1) % 1;
+  const fade = p => Math.min(1, p * 5) * Math.min(1, (1 - p) * 3);
+  ctx.save(); glow(ctx, ew * .1, .6);
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  const col = rgba(1);
+  if (fx === "zzz") {
+    for (let i = 0; i < 3; i++) {
+      const p = phase(.33, i / 3); ctx.globalAlpha = fade(p); ctx.fillStyle = col;
+      ctx.font = `900 ${ew * (.22 + .18 * p)}px Nunito, system-ui, sans-serif`;
+      ctx.fillText("Z", R + ew * (.4 + .5 * p), cy - eh * (.3 + .9 * p));
+    }
+  } else if (fx === "tears") {
+    ctx.fillStyle = "#73b3ff"; ctx.shadowColor = "rgba(115,179,255,.7)";
+    for (let i = 0; i < 4; i++) {
+      const p = phase(.7, i / 4); ctx.globalAlpha = fade(p);
+      const x = (i % 2 ? R : L) + (i < 2 ? -1 : 1) * ew * .15;
+      dropPath(ctx, x, cy + eh * (.35 + 1.1 * p) - ew * .1, ew * .14, ew * .2); ctx.fill();
+    }
+  } else if (fx === "hearts") {
+    ctx.fillStyle = "#ff669e"; ctx.shadowColor = "rgba(255,102,158,.7)";
+    [-1.6, 1.5, -.4, .6, 1.9].forEach((sx, i) => {
+      const p = phase(.4, i / 5); ctx.globalAlpha = fade(p);
+      heartPath(ctx, cx + sx * ew + Math.sin(t * 2 + i) * 10, cy + eh * (.6 - 1.4 * p), ew * .22, ew * .2); ctx.fill();
+    });
+  } else if (fx === "notes") {
+    ctx.fillStyle = col;
+    [-1.8, 1.7, -1.1, 1.2, 0].forEach((sx, i) => {
+      const p = phase(.45, i / 5); ctx.globalAlpha = fade(p);
+      ctx.font = `800 ${ew * .3}px system-ui, sans-serif`;
+      ctx.fillText(i % 2 ? "♫" : "♪", cx + sx * ew + Math.sin(t * 3 + i) * 14, cy + eh * (.5 - 1.3 * p));
+    });
+  } else if (fx === "sweat") {
+    const p = phase(.6, 0); ctx.globalAlpha = fade(p); ctx.fillStyle = "#8cccff"; ctx.shadowColor = "rgba(140,204,255,.7)";
+    dropPath(ctx, R + ew * .62, cy - eh * .5 + eh * .5 * p - ew * .1, ew * .13, ew * .19); ctx.fill();
+  } else if (fx === "question") {
+    ctx.fillStyle = col; ctx.font = `900 ${ew * .45}px Nunito, system-ui, sans-serif`;
+    ctx.fillText("?", R + ew * .55, cy - eh * .75 + Math.sin(t * 3) * 6);
+  } else if (fx === "exclamation") {
+    ctx.fillStyle = col; ctx.font = `900 ${ew * .55 * (1 + .08 * Math.sin(t * 12))}px Nunito, system-ui, sans-serif`;
+    ctx.fillText("!", cx, cy - eh * .95);
+  } else if (fx === "anger") {
+    const s = ew * .16 * (1 + .15 * Math.sin(t * 10)), x = R + ew * .6, y = cy - eh * .7;
+    ctx.fillStyle = "#ff594d"; ctx.shadowColor = "rgba(255,89,77,.7)";
+    ctx.beginPath(); ctx.moveTo(x + s * .2, y - s); ctx.lineTo(x - s * .6, y + s * .15); ctx.lineTo(x - s * .05, y + s * .15);
+    ctx.lineTo(x - s * .25, y + s); ctx.lineTo(x + s * .6, y - s * .15); ctx.lineTo(x + s * .05, y - s * .15); ctx.closePath(); ctx.fill();
+  } else if (fx === "sparkles") {
+    ctx.fillStyle = col;
+    for (let i = 0; i < 6; i++) {
+      const a = i / 6 * Math.PI * 2, tw = (Math.sin(t * 4 + i * 1.7) + 1) / 2;
+      ctx.globalAlpha = tw;
+      starPath(ctx, cx + Math.cos(a) * (gap / 2 + ew * 1.35), cy + Math.sin(a) * eh * .85, ew * .1 * (.6 + .6 * tw), 0, 4, .3); ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+
+function drawDisplay(t, d) {
+  const glow = (c, blur, al = .75) => { c.shadowColor = baseRgba(al); c.shadowBlur = blur; };
+  const big = Math.min(H * .4, W * .23);
+  ctx.save();
+  ctx.translate(W / 2, H / 2);
+  ctx.fillStyle = baseRgba(1); ctx.strokeStyle = baseRgba(1);
+  glow(ctx, big * .12, .7);
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  const font = f => `900 ${big * f}px Nunito, ui-rounded, system-ui, sans-serif`;
+  const fitText = (s, f, y = 0, maxW = W * .9) => { ctx.font = font(f); const w = ctx.measureText(s).width; if (w > maxW) ctx.font = font(f * maxW / w); ctx.fillText(s, 0, y); };
+  const now = new Date();
+  switch (d.k) {
+    case "clock": {
+      const hh = String(now.getHours()).padStart(2, "0"), mm = String(now.getMinutes()).padStart(2, "0");
+      ctx.font = font(1); const wHH = ctx.measureText(hh).width, wC = ctx.measureText(":").width;
+      const total = wHH * 2 + wC; let x = -total / 2;
+      ctx.textAlign = "left";
+      ctx.fillText(hh, x, 0); x += wHH;
+      ctx.globalAlpha = now.getSeconds() % 2 ? .15 : 1; ctx.fillText(":", x, -big * .06); ctx.globalAlpha = 1; x += wC;
+      ctx.fillText(mm, x, 0);
+      break;
+    }
+    case "date": {
+      fitText(now.toLocaleDateString("de-DE", { weekday: "long" }).toUpperCase(), .32, -big * .45);
+      fitText(`${now.getDate()} ${now.toLocaleDateString("de-DE", { month: "short" }).replace(".", "").toUpperCase()}`, .75, big * .2);
+      break;
+    }
+    case "timer": {
+      const left = Math.max(0, (d.end - Date.now()) / 1000), s = Math.ceil(left);
+      const txt = s >= 3600 ? `${Math.floor(s / 3600)}:${String(Math.floor(s / 60) % 60).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}` : `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+      fitText(txt, .9, -big * .12);
+      const bw = big * 2.6, bh = big * .07, by = big * .45;
+      ctx.fillStyle = baseRgba(.2); rr(ctx, -bw / 2, by, bw, bh, bh / 2); ctx.fill();
+      ctx.fillStyle = baseRgba(1); rr(ctx, -bw / 2, by, Math.max(bh, bw * left / d.total), bh, bh / 2); ctx.fill();
+      break;
+    }
+    case "timerDone": {
+      ctx.save(); ctx.translate(0, -big * .55); ctx.rotate(Math.sin(t * 30) * 18 * RAD);
+      const b = big * .25;
+      ctx.beginPath(); ctx.moveTo(-b, b * .6); ctx.quadraticCurveTo(-b * .9, -b, 0, -b); ctx.quadraticCurveTo(b * .9, -b, b, b * .6); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.arc(0, b * .8, b * .22, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      ctx.globalAlpha = Math.floor(t * 3) % 2 ? .25 : 1; fitText("00:00", .8, big * .3);
+      break;
+    }
+    case "dice": {
+      const size = big * 1.1;
+      let v = d.v;
+      if (d.rolling) { v = Math.floor(t * 12.5) % 6 + 1; ctx.translate(0, -Math.abs(Math.sin(t * 7)) * big * .15); ctx.rotate(Math.sin(t * 9) * 25 * RAD); }
+      ctx.lineWidth = size * .06; rr(ctx, -size / 2, -size / 2, size, size, size * .18); ctx.stroke();
+      const P = { 1: [[0, 0]], 2: [[-1, -1], [1, 1]], 3: [[-1, -1], [0, 0], [1, 1]], 4: [[-1, -1], [1, -1], [-1, 1], [1, 1]], 5: [[-1, -1], [1, -1], [0, 0], [-1, 1], [1, 1]], 6: [[-1, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [1, 1]] }[v];
+      for (const [x, y] of P) { ctx.beginPath(); ctx.arc(x * size * .26, y * size * .26, size * .085, 0, Math.PI * 2); ctx.fill(); }
+      break;
+    }
+    case "coin": {
+      const size = big * 1.2, spin = d.flipping ? Math.cos(t * 16) : 1, heads = d.flipping ? spin > 0 : d.heads;
+      ctx.scale(Math.max(Math.abs(spin), .05), 1);
+      ctx.lineWidth = size * .05; ctx.beginPath(); ctx.arc(0, 0, size / 2 - size * .025, 0, Math.PI * 2); ctx.stroke();
+      ctx.globalAlpha = .5; ctx.lineWidth = size * .02; ctx.beginPath(); ctx.arc(0, 0, size * .38, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1;
+      ctx.font = `900 ${size * .22}px Nunito, system-ui, sans-serif`; ctx.fillText(heads ? "KOPF" : "ZAHL", 0, 0);
+      break;
+    }
+    case "word": fitText(d.w, .6); break;
+    case "rps": {
+      const s = big * .38; ctx.save(); ctx.translate(0, -big * .2);
+      if (d.c.k === "rock") { ctx.beginPath(); ctx.ellipse(0, 0, s, s * .82, -.2, 0, Math.PI * 2); ctx.fill(); }
+      else if (d.c.k === "paper") { ctx.beginPath(); ctx.moveTo(-s * .7, -s); ctx.lineTo(s * .35, -s); ctx.lineTo(s * .7, -s * .65); ctx.lineTo(s * .7, s); ctx.lineTo(-s * .7, s); ctx.closePath(); ctx.fill(); }
+      else {
+        ctx.lineWidth = s * .16; ctx.lineCap = "round";
+        ctx.beginPath(); ctx.moveTo(-s * .25, s * .2); ctx.lineTo(s * .7, -s * .9); ctx.moveTo(s * .25, s * .2); ctx.lineTo(-s * .7, -s * .9); ctx.stroke();
+        for (const sx of [-1, 1]) { ctx.beginPath(); ctx.arc(sx * s * .38, s * .55, s * .26, 0, Math.PI * 2); ctx.stroke(); }
+      }
+      ctx.restore(); fitText(d.c.name.toUpperCase(), .25, big * .55);
+      break;
+    }
+    case "weather": {
+      const r = big * .22; ctx.save(); ctx.translate(-big * .7, 0); ctx.rotate(t * .3);
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
+      ctx.lineWidth = r * .22; ctx.lineCap = "round";
+      for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; ctx.beginPath(); ctx.moveTo(Math.cos(a) * r * 1.4, Math.sin(a) * r * 1.4); ctx.lineTo(Math.cos(a) * r * 1.85, Math.sin(a) * r * 1.85); ctx.stroke(); }
+      ctx.restore(); ctx.font = font(.85); ctx.textAlign = "left"; ctx.fillText(`${d.temp}°`, -big * .15, 0);
+      break;
+    }
+    case "battery": {
+      const w = big * 1.7, h = big * .8, x = -w / 2 - h * .08, y = -h / 2 - big * .18;
+      ctx.lineWidth = h * .08; rr(ctx, x, y, w, h, h * .2); ctx.stroke();
+      rr(ctx, x + w + h * .04, y + h * .325, h * .12, h * .35, h * .06); ctx.fill();
+      const fill = clamp(d.level, 0, 100) / 100;
+      if (d.level <= 20) { ctx.fillStyle = "#ff594d"; }
+      rr(ctx, x + h * .16, y + h * .16, Math.max((w - h * .32) * fill, 2), h - h * .32, h * .1); ctx.fill();
+      ctx.fillStyle = baseRgba(1); fitText(`${d.level} %`, .35, big * .55);
+      break;
+    }
+    case "countdown": {
+      const p = clamp((performance.now() - d.t0) / 250, 0, 1);
+      ctx.globalAlpha = p; ctx.scale(.6 + .4 * p, .6 + .4 * p); fitText(String(d.n), 1.3);
+      break;
+    }
+  }
+  noGlow(ctx);
+  ctx.restore();
+}
+
+// ---------- Hauptschleife ----------
+let lastT = performance.now();
+function frame(now) {
+  const dt = Math.min(.05, (now - lastT) / 1000); lastT = now;
+  const t = now / 1000;
+  const k = 1 - Math.exp(-dt * 11);
+  // Form der Augen weich überblenden
+  const target = shapeOf(S.mood);
+  for (const key in target) A.shape[key] = lerp(A.shape[key], target[key], k);
+  const style = (MOODS[S.mood] || {}).style || "normal";
+  if (style !== lastStyle) { A.styleIn = .2; lastStyle = style; }
+  A.styleIn = lerp(A.styleIn, 1, 1 - Math.exp(-dt * 9));
+  const tint = hexRgb((MOODS[S.mood] || {}).tint || baseColor);
+  for (let i = 0; i < 3; i++) A.rgb[i] = lerp(A.rgb[i], tint[i], k);
+  A.arm = lerp(A.arm, S.handsUp ? 1 : 0, 1 - Math.exp(-dt * 7));
+  A.fall = lerp(A.fall, S.fallen ? 1 : 0, 1 - Math.exp(-dt * 4));
+  A.disp = lerp(A.disp, S.display && S.display.k !== "flash" ? 1 : 0, 1 - Math.exp(-dt * 10));
+  A.dance = lerp(A.dance, S.dancing ? 1 : 0, 1 - Math.exp(-dt * 6));
+  // Blick: Maus (wie Gesicht in der Kamera) oder sich umschauen
+  let lt;
+  if (S.dancing || S.fallen) lt = { x: 0, y: 0 };
+  else if (S.mood === "thinking") lt = { x: .55, y: -.6 };
+  else if (S.mood === "sleeping" || S.mood === "dead") lt = { x: 0, y: .15 };
+  else if (S.pointer && now - S.pointerAt < 1500) lt = S.pointer;
+  else lt = S.idleLook;
+  const lk = 1 - Math.exp(-dt * 6);
+  S.look.x = lerp(S.look.x, clamp(lt.x, -1, 1), lk); S.look.y = lerp(S.look.y, clamp(lt.y, -1, 1), lk);
+
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.globalAlpha = 1; ctx.fillStyle = "#000"; ctx.fillRect(0, 0, W, H);
+  if (W < 10) return requestAnimationFrame(frame);
+  const M = metrics();
+
+  ctx.save();
+  let gx = 0, gy = 0, rot = 0;
+  if (S.trembling && !reduced) { gx += Math.sin(t * 47) * 3; gy += Math.cos(t * 39) * 1.5; }
+  updateShake(dt);
+  gx += shake.hx; gy += shake.hy; rot += shake.rot;
+  if (A.dance > .01) {
+    const beat = t * 2 * Math.PI * (reduced ? .3 : 1), amp = A.dance * (W / 900);
+    gx += Math.sin(beat) * 40 * amp; gy -= Math.abs(Math.cos(beat)) * 30 * amp; rot += Math.sin(beat) * 8 * A.dance * RAD;
+  }
+  rot += 78 * RAD * A.fall; gy += H * .22 * A.fall;
+  ctx.translate(W / 2 + gx, H / 2 + gy); ctx.rotate(rot); ctx.translate(-W / 2, -H / 2);
+
+  const eyeA = 1 - A.disp;
+  if (eyeA > .01) {
+    ctx.save(); ctx.globalAlpha = eyeA;
+    const breathe = (S.mood === "neutral" || S.mood === "sleeping") && !reduced ? 1 + .012 * Math.sin(t * 1.6) : 1;
+    const s = (1 - .8 * A.disp) * breathe;
+    ctx.translate(W / 2, H / 2); ctx.scale(s, s); ctx.translate(-W / 2, -H / 2);
+    drawEyes(t, M);
+    ctx.restore();
+  }
+  if (A.disp > .01 && S.display) {
+    ctx.save(); ctx.globalAlpha = A.disp;
+    const s = .2 + .8 * A.disp; ctx.translate(W / 2, H / 2); ctx.scale(s, s); ctx.translate(-W / 2, -H / 2);
+    drawDisplay(t, S.display);
+    ctx.restore();
+  }
+  drawHands(t, M);
+  ctx.restore();
+  drawShot(t);
+  if (S.display && S.display.k === "flash") { ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W, H); }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+
+// ---------- Neu: Hände, Schuss mit Bildschirmriss, Schütteln ----------
+// =====================================================================
+//  Hände hoch: nur kleine Hände mit Fingern, keine Arme
+// =====================================================================
+function drawHands(t, M) {
+  if (A.arm < .01 && !S.handsUp) return;
+  const { ew, gap } = M, k = A.arm;
+  const size = ew * .62;
+  const spread = gap / 2 + ew * 1.25 + size * .3;
+  const restY = H + size * 1.2, upY = H / 2 - ew * .15;
+  ctx.save();
+  ctx.globalAlpha = Math.min(1, k * 1.6);
+  ctx.fillStyle = rgba(1);
+  glow(ctx, size * .25, .7);
+  for (const side of [-1, 1]) {
+    const x = W / 2 + side * spread;
+    const y = lerp(restY, upY, k) + (S.trembling ? Math.sin(t * 40 + side) * 3 : 0);
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(side * (8 + Math.sin(t * 9 + side) * (S.trembling ? 6 : 2)) * RAD);
+    // Handfläche
+    rr(ctx, -size * .42, -size * .1, size * .84, size * .72, size * .28); ctx.fill();
+    // vier Finger – zappeln vor Angst
+    const fingers = [[-.3, .5], [-.1, .62], [.1, .6], [.3, .48]];
+    fingers.forEach(([fx, len], i) => {
+      const wig = S.trembling ? Math.sin(t * 22 + i * 1.7) * .05 : 0;
+      const fw = size * .17, fh = size * (len + wig);
+      rr(ctx, fx * size - fw / 2, -size * .05 - fh, fw, fh + size * .1, fw / 2); ctx.fill();
+    });
+    // Daumen zur Mitte hin
+    ctx.save();
+    ctx.translate(-side * size * .42, size * .25);
+    ctx.rotate(-side * 55 * RAD);
+    rr(ctx, -size * .09, -size * .38, size * .18, size * .42, size * .09); ctx.fill();
+    ctx.restore();
+    ctx.restore();
+  }
+  noGlow(ctx);
+  ctx.restore();
+}
+
+// =====================================================================
+//  Piu! Ein Schuss fliegt rein, der Bildschirm zerspringt, Emo kippt um
+// =====================================================================
+const shot = { phase: "none", t0: 0, x: 0, y: 0, cracks: null };
+function makeCracks(x, y) {
+  const lines = [], rays = 11 + Math.floor(Math.random() * 5), maxR = Math.hypot(W, H) * .55;
+  const rayPts = [];
+  for (let i = 0; i < rays; i++) {
+    let a = i / rays * Math.PI * 2 + rand(-.2, .2), r = 0, px = x, py = y;
+    const pts = [[px, py]];
+    const len = rand(.45, 1) * maxR;
+    while (r < len) {
+      r += rand(18, 45); a += rand(-.25, .25);
+      px = x + Math.cos(a) * r; py = y + Math.sin(a) * r;
+      pts.push([px, py]);
+    }
+    lines.push(pts); rayPts.push(pts);
+  }
+  // Querrisse zwischen den Strahlen (Spinnennetz)
+  for (const ring of [.12, .25, .42]) {
+    for (let i = 0; i < rays; i++) {
+      if (Math.random() < .35) continue;
+      const A1 = rayPts[i], B1 = rayPts[(i + 1) % rays];
+      const ia = Math.min(A1.length - 1, Math.max(1, Math.round(A1.length * ring))), ib = Math.min(B1.length - 1, Math.max(1, Math.round(B1.length * ring)));
+      const a = A1[ia], b = B1[ib];
+      lines.push([a, [(a[0] + b[0]) / 2 + rand(-8, 8), (a[1] + b[1]) / 2 + rand(-8, 8)], b]);
+    }
+  }
+  return lines;
+}
+function drawShot(t) {
+  if (shot.phase === "none") return;
+  const now = performance.now(), dt = (now - shot.t0) / 1000;
+  ctx.save();
+  if (shot.phase === "fly") {
+    // Kugel kommt von weit weg auf den Bildschirm zu (wird größer)
+    const p = Math.min(1, dt / .28);
+    const r = 3 + p * p * 26;
+    const sx = lerp(W * .5, shot.x, p), sy = lerp(H * .55, shot.y, p);
+    const g = ctx.createRadialGradient(sx, sy, 0, sx, sy, r * 2.2);
+    g.addColorStop(0, "rgba(255,255,230,1)"); g.addColorStop(.35, "rgba(255,200,90,.9)"); g.addColorStop(1, "rgba(255,120,40,0)");
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(sx, sy, r * 2.2, 0, Math.PI * 2); ctx.fill();
+  } else if (shot.phase === "hit") {
+    const fade = clamp(1 - (dt - 3.4) / .8, 0, 1);    // Risse verschwinden, wenn Emo aufsteht
+    // Einschlag-Blitz
+    if (dt < .18) { ctx.fillStyle = `rgba(255,255,255,${.85 * (1 - dt / .18)})`; ctx.fillRect(0, 0, W, H); }
+    ctx.globalAlpha = fade;
+    // Einschussloch
+    ctx.fillStyle = "rgba(0,0,0,.9)"; ctx.beginPath(); ctx.arc(shot.x, shot.y, 11, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,.9)"; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(shot.x, shot.y, 13, 0, Math.PI * 2); ctx.stroke();
+    // Risse wachsen schnell nach außen
+    const grow = clamp(dt / .22, 0, 1);
+    ctx.lineCap = "round"; ctx.lineJoin = "round";
+    ctx.shadowColor = "rgba(180,220,255,.6)"; ctx.shadowBlur = 4;
+    shot.cracks.forEach((pts, li) => {
+      const n = Math.max(2, Math.ceil(pts.length * grow));
+      ctx.strokeStyle = li < 16 ? "rgba(235,245,255,.85)" : "rgba(220,235,255,.55)";
+      ctx.lineWidth = li < 16 ? 1.6 : 1.1;
+      ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
+      for (let i = 1; i < n && i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+      ctx.stroke();
+    });
+    if (fade <= 0) shot.phase = "none";
+  }
+  ctx.restore();
+}
+function getShot() {
+  if (S.fallen || shot.phase !== "none") return;
+  touch();
+  perform(8, async c => {
+    // Ziel: irgendwo zwischen den Augen
+    shot.x = W / 2 + rand(-W * .12, W * .12); shot.y = H / 2 + rand(-H * .15, H * .1);
+    shot.phase = "fly"; shot.t0 = performance.now();
+    play("whoosh");
+    show("surprised", null);
+    if (!await c.wait(280)) { shot.phase = "none"; return; }
+    shot.cracks = makeCracks(shot.x, shot.y);
+    shot.phase = "hit"; shot.t0 = performance.now();
+    play("shatter");
+    S.handsUp = false; S.trembling = false;
+    show("dead", null);
+    if (!await c.wait(250)) return;
+    play("dying");
+    S.fallen = true;                      // kippt um …
+    if (!await c.wait(2000 + 900)) return; // … und bleibt zwei Sekunden liegen
+    play("revive"); S.fallen = false; show("dizzy", null);
+    if (!await c.wait(1400)) return;
+    show("laughing");
+    await c.say(pick(["Hehe, reingelegt! Ich lebe noch!", "Autsch! Mein schöner Bildschirm!", "Ich bin unbesiegbar!", "Puh, Roboter sind unkaputtbar!"]));
+    if (!await c.wait(600)) return; show("neutral");
+  });
+}
+RECIPES.whoosh = [Sg(.26, 2400, 500, { wave: "noise", g: .35 }), Sg(.05, 1800, 300, { wave: "sine", g: .25 })];
+RECIPES.shatter = [Sg(.06, 0, 0, { wave: "noise", g: 1, decay: true }),
+  ...Array.from({ length: 9 }, (_, i) => [Sg(.035, 3200 + i * 300, 2900 + i * 280, { wave: "sine", g: .25 - i * .02, decay: true }), Pz(.02 + i * .008)]).flat(),
+  Sg(.3, 0, 0, { wave: "noise", g: .35, decay: true })];
+
+const shake = { level: 0, ax: 0, ay: 0, ex: 0, ey: 0, vx: 0, vy: 0, hx: 0, hy: 0, rot: 0, spin: 0, active: false, since: 0, lastRabble: 0 };
+let shakeClock = performance.now();
+function updateShake(dt) {
+  // Abklingen nach echter Zeit, nicht nach Bildern – so reagiert Emo auch auf langsamen Handys flott.
+  const nowMs = performance.now(), realDt = Math.min(.5, (nowMs - shakeClock) / 1000); shakeClock = nowMs;
+  shake.level = Math.max(0, shake.level - realDt * 2.5);
+  const c = 1, sn = 0;
+  const sx = shake.ax * c + shake.ay * sn, sy = -shake.ax * sn + shake.ay * c;
+  shake.ax *= 0.8; shake.ay *= 0.8;
+  // Augen hängen träge hinterher wie Wackelaugen (Feder).
+  const k = 120, damp = 9;
+  const tx = -sx * 7, ty = sy * 7;
+  shake.vx += ((tx - shake.ex) * k - shake.vx * damp) * dt;
+  shake.vy += ((ty - shake.ey) * k - shake.vy * damp) * dt;
+  shake.ex = clamp(shake.ex + shake.vx * dt, -W * .2, W * .2);
+  shake.ey = clamp(shake.ey + shake.vy * dt, -H * .2, H * .2);
+  const t = performance.now() / 1000, L = shake.level;
+  shake.hx = Math.sin(t * 31) * 14 * L; shake.hy = Math.cos(t * 27) * 9 * L;
+  shake.rot = Math.sin(t * 19) * 9 * L * RAD;
+  shake.spin += dt * (3 + L * 22);
+  // Beim Schütteln: Rabble-Szene starten.
+  if (L > .35 && !shake.active && !S.fallen) startRabble();
+  if (shake.active && L > .2) {
+    const now = performance.now();
+    if (now - shake.lastRabble > 420) { shake.lastRabble = now; play("rabble"); }
+  }
+}
+function startRabble() {
+  shake.active = true; shake.since = performance.now();
+  touch();
+  perform(7, async c => {
+    S.handsUp = false; S.trembling = false;
+    show("dizzy", null);
+    // Solange geschüttelt wird, wirbeln die Augen.
+    let calm = 0;
+    while (calm < 450) {
+      if (!await c.wait(100)) { shake.active = false; return; }
+      calm = shake.level < .2 ? calm + 100 : 0;
+    }
+    shake.active = false;
+    const long = performance.now() - shake.since > 1500;
+    play("dizzy");
+    if (!await c.wait(1300)) return;
+    show("angry");
+    play("angry");
+    await c.say(pick(long
+      ? ["Rabble rabble rabble! Hör auf mich zu schütteln!", "Grrr! Mir ist sooo schwindelig!", "Ey! Ich bin doch kein Milchshake!"]
+      : ["Hey! Was soll das?", "Huch! Nicht schütteln!", "Rabble rabble!"]));
+    if (!await c.wait(1200)) return;
+    show("neutral");
+  });
+}
+Object.defineProperty(RECIPES, "rabble", {
+  get() {
+    const segs = [];
+    const n = 4 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < n; i++) {
+      const f = rand(220, 520);
+      segs.push(Sg(rand(.05, .1), f, f * rand(.6, 1.3), { wave: "square", g: .3, vr: rand(18, 34), vd: .12 }));
+      segs.push(Pz(rand(.015, .04)));
+    }
+    return segs;
+  },
+});
+// In der Vorschau gibt es keinen Bewegungssensor – der Knopf schüttelt 1,5 Sekunden lang.
+function simulateShake() {
+  const t0 = performance.now();
+  const iv = setInterval(() => {
+    const k = performance.now() - t0;
+    if (k > 1500) return clearInterval(iv);
+    shake.ax = rand(-25, 25); shake.ay = rand(-18, 18); shake.level = 1.2;
+  }, 60);
+}
+
+// ---------- Bedienung ----------
+function chip(parent, label, fn) {
+  const b = document.createElement("button");
+  b.className = "btn"; b.type = "button"; b.textContent = label;
+  b.addEventListener("click", () => { ensureAudio(); youEl.textContent = ""; interrupt(); fn(); });
+  document.getElementById(parent).appendChild(b);
+}
+[["Uhrzeit", showTime], ["Datum", showDate], ["Timer 10 s", () => startTimer(10)], ["Timer aus", cancelTimer],
+ ["Würfeln", rollDice], ["Münze", flipCoin], ["Schere-Stein-Papier", playRPS], ["Wetter", showWeather],
+ ["Akku", showBattery], ["Foto", takePhoto]].forEach(([l, f]) => chip("g-display", l, f));
+[["Hände hoch!", surrender], ["Peng!", getShot], ["Tanzen", dance], ["Witz", tellJoke],
+ ["Streicheln", petted], ["Schütteln", simulateShake], ["Schlafen", goToSleep], ["Aufwachen", wakeUp]].forEach(([l, f]) => chip("g-action", l, f));
+[["happy", "Froh"], ["laughing", "Lachen"], ["sad", "Traurig"], ["crying", "Weinen"], ["angry", "Wütend"],
+ ["surprised", "Überrascht"], ["scared", "Angst"], ["love", "Verliebt"], ["dizzy", "Schwindelig"],
+ ["suspicious", "Misstrauisch"], ["excited", "Aufgeregt"], ["proud", "Cool"], ["thinking", "Nachdenken"],
+ ["sleepy", "Müde"], ["dead", "K.o."]].forEach(([m, l]) => chip("g-mood", l, () => demoMood(m)));
+COLORS.forEach(([name, hex], i) => {
+  const b = document.createElement("button");
+  b.className = "swatch"; b.type = "button"; b.style.background = hex; b.title = name; b.setAttribute("aria-label", name);
+  b.setAttribute("aria-pressed", i === 0 ? "true" : "false");
+  b.addEventListener("click", () => {
+    baseColor = hex; document.documentElement.style.setProperty("--eye", hex);
+    document.querySelectorAll(".swatch").forEach(s => s.setAttribute("aria-pressed", s === b ? "true" : "false"));
+  });
+  document.getElementById("g-color").appendChild(b);
+});
+
+const soundBtn = document.getElementById("sound");
+soundBtn.addEventListener("click", () => {
+  soundOn = !soundOn; soundBtn.setAttribute("aria-pressed", String(soundOn));
+  soundBtn.textContent = soundOn ? "Ton an" : "Ton aus";
+  if (!soundOn) stopSpeech(); else ensureAudio();
+});
+document.getElementById("talk").addEventListener("submit", e => {
+  e.preventDefault();
+  const inp = document.getElementById("cmd"), text = inp.value.trim();
+  if (!text) return;
+  ensureAudio(); youEl.textContent = `Du: „${text}“`; inp.value = "";
+  if (!/peng|päng|bang|bumm|piu|pew|schuss/i.test(text)) interrupt();
+  command(text);
+});
+
+// Bildschirm: antippen, gedrückt halten (streicheln), Maus = Gesicht
+let pressTimer = null, pressed = false;
+screen.addEventListener("pointerdown", e => {
+  ensureAudio(); pressed = false;
+  pressTimer = setTimeout(() => { pressed = true; petted(); }, 700);
+});
+const endPress = () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; if (!pressed) tapped(); } };
+screen.addEventListener("pointerup", endPress);
+screen.addEventListener("pointerleave", () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } S.pointer = null; });
+screen.addEventListener("pointermove", e => {
+  const r = screen.getBoundingClientRect();
+  S.pointer = { x: ((e.clientX - r.left) / r.width - .5) * 2.2, y: ((e.clientY - r.top) / r.height - .5) * 2 };
+  S.pointerAt = performance.now();
+});
+screen.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); ensureAudio(); tapped(); } });
+
+// Start: Emo wacht auf (ohne Ton – der kommt nach dem ersten Klick)
+perform(1, async c => {
+  show("sleeping"); if (!await c.wait(1000)) return;
+  show("sleepy", null); if (!await c.wait(1200)) return;
+  show("surprised", null); if (!await c.wait(300)) return;
+  show("happy"); sayEl.textContent = "Hallo! Ich bin Emo!";
+  if (!await c.wait(1800)) return; sayEl.textContent = ""; show("neutral");
+});
+})();
+</script>
+
+</body>
+</html>
