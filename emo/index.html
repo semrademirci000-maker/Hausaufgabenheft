@@ -781,6 +781,7 @@ function start() {
   // iOS: Sprache und Ton müssen einmal durch Antippen freigeschaltet werden.
   wakeUpGreeting();
   initVoice();
+  initPiper();
   try { const r = document.documentElement.requestFullscreen && document.documentElement.requestFullscreen({ navigationUI: "hide" }); r && r.catch(() => {}); } catch (e) {}
   try { if (window.DeviceMotionEvent && DeviceMotionEvent.requestPermission) DeviceMotionEvent.requestPermission().catch(() => {}); } catch (e) {}
   keepAwake();
@@ -909,7 +910,7 @@ function trackRecoil(tip) {
   gunHist = gunHist.filter(h => now - h.t < 450);
   if (!S.handsUp) return;
   const low = Math.min(...gunHist.map(h => h.y));
-  if (tip.y - low > .09) { gunHist = []; getShot(); }
+  if (tip.y - low > .06) { gunHist = []; getShot(); }
 }
 
 function surrender() {
@@ -918,12 +919,13 @@ function surrender() {
   perform(5, async c => {
     S.handsUp = true; S.trembling = true; show("scared"); play("scared");
     if (!await c.wait(350)) return;
-    await c.say(pick(["Nicht schießen!", "Hey! Okay, okay, ich ergebe mich!", "Ahh! Ich hab nichts gemacht!", "Bitte nicht! Ich bin doch nur ein kleiner Roboter!"]));
+    // Kurz halten – solange Emo spricht, kann er dein „Piu“ nicht hören.
+    await c.say(pick(["Nicht schießen!", "Ahh! Bitte nicht!", "Okay, okay!", "Hilfe!"]));
     const t0 = performance.now();
-    for (;;) {   // Hände oben lassen, solange die Pistole zu sehen ist
+    for (;;) {   // Hände oben lassen, solange die Pistole zu sehen ist – mindestens 7 Sekunden
       if (!await c.wait(300)) return;
       const gone = performance.now() - lastGunSeen > 1800, el = performance.now() - t0;
-      if ((gone && el > 3000) || el > 30000) break;
+      if ((gone && el > 7000) || el > 30000) break;
     }
     S.handsUp = false; S.trembling = false; show("happy", null); play("ok");
     await c.say(pick(["Puh… das war knapp!", "Hehe, du hast mich ganz schön erschreckt!", "Gut, dass du nicht geschossen hast!"]));
@@ -942,7 +944,7 @@ function showHeard(text) {
   heardTimer = setTimeout(() => { youEl.textContent = ""; }, 3000);
 }
 const HANDS_UP = /h(ä|a|e)nde? (hoch|nach oben)/i;
-const SHOT = /(^|[^a-zäöü])(p+i+u+|p+j+u+|p+e+w+|b+i+u+|p+e+u+|piuh|peng|päng|bäng|bang|bäm|bumm|pow|paff|puff|schuss)([^a-zäöü]|$)/i;
+const SHOT = /(^|[^a-zäöü])(p+[fj]?i+e?[uwh]+|p+j+u+|p+e+w+|b+[ij]+u+|p+e+u+|f+i+u+|t+i+u+|piuh|peng|päng|bäng|bang|bäm|bumm|pow|paff|puff|schuss)([^a-zäöü]|$)/i;
 function heardFinal(text) {
   touch(); showHeard(text);
   const fired = quickFired; quickFired = false;
@@ -1340,7 +1342,7 @@ function recStart() {
 // Während Emo spricht, hört er nicht zu – sonst versteht er sich selbst.
 function setMuted(m) {
   muted = m;
-  if (!m) ignoreUntil = performance.now() + 500;
+  if (!m) ignoreUntil = performance.now() + (S.handsUp ? 150 : 500);
   if (!rec) return;
   if (m) { if (recRunning) { try { rec.abort(); } catch (e) {} } }
   else { ignoreUntil = performance.now() + 500; recStart(); }
@@ -1413,14 +1415,33 @@ async function speak(text) {
   let played = false;
   if (soundOn) {
     initVoice(); ensureAudio();
-    const wav = await synth(text.replace(/[„“"«»]/g, ""));
-    if (wav && actx && token === speakToken) {
+    const clean = text.replace(/[„“"«»]/g, "");
+    let buf = null;
+    // Beim allerersten Start kurz auf Stimme B warten
+    for (let i = 0; i < 30 && !piperReady && !piperFailed && piper && performance.now() - piperStart < 6000; i++) await sleep(100);
+    if (!piperReady && !piperFailed && piper && token === speakToken) {
+      // Stimme lädt noch: wie EMO piepsend brabbeln, dazu der Text
+      subsEl.hidden = false;
+      const dur = babble(clean);
+      await sleep(Math.max(dur, clean.length * 55) + 300);
+      subsEl.hidden = !showSubs;
+      played = true;
+    }
+    if (!played && piperReady && actx) {
+      const d = await piperSay(clean);
+      if (d && d.pcm && token === speakToken) {
+        buf = actx.createBuffer(1, d.pcm.length, d.rate);
+        buf.getChannelData(0).set(d.pcm);
+      }
+    }
+    const wav = buf || played ? null : await synth(clean);
+    if ((buf || wav) && actx && token === speakToken) {
       try {
-        const buf = wavToBuffer(wav);
+        if (!buf) buf = wavToBuffer(wav);
         await new Promise(res => {
           const src = actx.createBufferSource();
           src.buffer = buf;
-          const g = actx.createGain(); g.gain.value = 1.6;
+          const g = actx.createGain(); g.gain.value = buf.sampleRate === actx.sampleRate && piperReady ? 1.2 : 1.6;
           src.connect(g); g.connect(actx.destination);
           src.onended = res; curVoice = src; src.start();
           setTimeout(res, buf.duration * 1000 + 600);
@@ -1436,7 +1457,7 @@ async function speak(text) {
   }
   if (token !== speakToken) return;
   S.speaking = false;
-  setTimeout(() => { if (!S.speaking) setMuted(false); }, 400);
+  setTimeout(() => { if (!S.speaking) setMuted(false); }, S.handsUp ? 120 : 400);
   setTimeout(() => { if (!S.speaking && sayEl.textContent === text) sayEl.textContent = ""; }, 2200);
 }
 
@@ -1510,11 +1531,22 @@ const EARS_MODEL = "Xenova/whisper-base";
 let earsWorker = null, earsReady = false, earsBusy = false, earsQueue = null, earsNodes = null;
 const earsFiles = {};
 function earsLoading(text) { earEl.hidden = false; earEl.className = ""; earEl.textContent = text; }
+let loadEars = 0, loadVoice = 0, earsFailed = false, piperFailed = false;
+function updateLoading() {
+  const earsDone = !useWhisper || earsReady || earsFailed, voiceDone = piperReady || piperFailed;
+  if (earsDone && voiceDone) {
+    if (earsFailed) earsLoading("Ich kann gerade nicht zuhören (Internet?)");
+    else ear(useWhisper ? "on" : (recRunning ? "on" : "off"));
+    return;
+  }
+  const p = Math.round(((earsDone ? 1 : loadEars) + (voiceDone ? 1 : loadVoice)) / 2 * 100);
+  earsLoading(`Emo wacht auf … ${Math.min(99, p)} %`);
+}
 function startEars(stream) {
   ensureAudio();
   if (!actx) { micState = "kein Ton möglich"; status(); return; }
   micState = "lädt Ohren …"; status();
-  earsLoading("Emo lernt zuhören …");
+  updateLoading();
   try { earsWorker = new Worker("ears-worker.js", { type: "module" }); }
   catch (e) { micState = "geht in diesem Browser nicht"; status(); earsLoading(""); return; }
   earsWorker.onmessage = e => {
@@ -1522,12 +1554,12 @@ function startEars(stream) {
     if (d.type === "progress") {
       earsFiles[d.file] = d;
       let l = 0, t = 0; for (const f of Object.values(earsFiles)) { l += f.loaded; t += f.total; }
-      if (!earsReady) earsLoading(`Emo lernt zuhören … ${Math.min(99, Math.round(l / Math.max(t, 1) * 100))} %`);
+      loadEars = l / Math.max(t, 1); updateLoading();
     } else if (d.type === "ready") {
-      earsReady = true; micState = "hört zu"; status(); ear("on");
+      earsReady = true; micState = "hört zu"; status(); updateLoading();
     } else if (d.type === "error") {
       micState = "Ohren konnten nicht laden"; status();
-      earsLoading("Ich kann gerade nicht zuhören (Internet?)");
+      earsFailed = true; updateLoading();
     } else if (d.type === "text") {
       earsBusy = false;
       heardSpeech(d.text);
@@ -1567,10 +1599,11 @@ function vadFeed(input) {
   }
   vadChunks.push(chunk); vadTotalMs += ms;
   if (rms > thr * 0.7) { vadSpeechMs += ms; vadSilenceMs = 0; } else vadSilenceMs += ms;
-  if (vadSilenceMs > 750 || vadTotalMs > 8000) {
+  if (vadSilenceMs > (S.handsUp ? 300 : 750) || vadTotalMs > 8000) {
     vadOn = false;
     const chunks = vadChunks; vadChunks = [];
     if (vadSpeechMs < 180) { ear("on"); return; }
+    if (vadSpeechMs < 750 && (S.handsUp || performance.now() - lastGunSeen < 3000)) { ear("on"); getShot(); return; }
     const audio = to16k(chunks, rate);
     if (earsBusy) earsQueue = audio; else sendToEars(audio);
   }
@@ -1877,8 +1910,51 @@ function simpleAnswer(q) {
   return [pick([`Echt${n}? Erzähl mehr!`, "Oh wow!", "Wirklich? Das ist ja spannend!", "Hihi, cool!", "Hmm, verstehe.", "Und dann?"]), pick(["happy", "surprised", "listening"])];
 }
 
+
+// =====================================================================
+//  Stimme B (Piper „Ramona“, höher + Roboter-Schimmer)
+// =====================================================================
+let piper = null, piperReady = false, piperSeq = 0, piperStart = 0;
+const piperWait = {};
+function initPiper() {
+  if (piper) return;
+  try { piper = new Worker("voice-worker.js"); piperStart = performance.now(); } catch (e) { piperFailed = true; return; }
+  piper.onmessage = e => {
+    const d = e.data;
+    if (d.type === "progress") { loadVoice = d.loaded / Math.max(d.total, 1); updateLoading(); }
+    else if (d.type === "ready") { piperReady = true; loadVoice = 1; updateLoading(); }
+    else if (d.type === "error") { console.warn("Stimme", d.message); piperFailed = true; updateLoading(); }
+    else if (d.type === "audio" && piperWait[d.id]) { piperWait[d.id](d); delete piperWait[d.id]; }
+  };
+  piper.onerror = () => { piperFailed = true; updateLoading(); };
+  piper.postMessage({ type: "load", model: "voice/de-ramona-low.onnx" });
+  updateLoading();
+}
+// EMO-Brabbeln: kleine Piepser im Sprachrhythmus
+function babble(text) {
+  const syll = Math.min(14, Math.max(3, Math.round(text.length / 4)));
+  const segs = [];
+  for (let i = 0; i < syll; i++) {
+    const f = rand(700, 1500);
+    segs.push(Sg(rand(.06, .12), f, f * rand(.8, 1.35), { wave: "soft", g: .3, vr: rand(8, 20), vd: .04 }));
+    segs.push(Pz(rand(.025, .07)));
+  }
+  RECIPES.__babble = segs;
+  bufCache.__babble = null;
+  if (soundOn) { ensureAudio(); if (actx) { const b = render("__babble"); try { cur && cur.stop(); } catch (e) {} const src = actx.createBufferSource(); src.buffer = b; src.connect(actx.destination); src.start(); cur = src; return b.duration * 1000; } }
+  return segs.reduce((n, x) => n + x.d, 0) * 1000;
+}
+function piperSay(text) {
+  return new Promise(res => {
+    const id = ++piperSeq;
+    piperWait[id] = res;
+    piper.postMessage({ type: "say", id, text, rate: 1.32, ring: .22, ringHz: 60, outRate: actx.sampleRate });
+    setTimeout(() => { if (piperWait[id]) { delete piperWait[id]; res(null); } }, 12000);
+  });
+}
+
 // Nur für Tests (Adresse mit ?test)
-if (location.search.includes("test")) window.__emo = { getShot, surrender, startRabble, command };
+if (location.search.includes("test")) window.__emo = { getShot, surrender, startRabble, command, vadFeed, state: () => ({ handsUp: S.handsUp, fallen: S.fallen, mood: S.mood, shot: shot.phase }) };
 
 // Vor dem ersten Tippen schläft Emo.
 show("sleeping");

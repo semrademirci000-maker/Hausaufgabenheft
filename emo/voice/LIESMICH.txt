@@ -1,0 +1,3 @@
+Emos Stimme B: Piper-Stimme „ramona“ (Deutsch), von https://github.com/rhasspy/piper
+(Piper: MIT-Lizenz; Stimmdaten: M-AILABS Speech Dataset, siehe Model Card).
+Emo spielt sie schneller und mit Ring-Modulation ab, damit sie wie ein kleiner Roboter klingt.
