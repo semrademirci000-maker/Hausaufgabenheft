@@ -750,6 +750,13 @@ const store = {
   set(k, v) { try { localStorage.setItem("emo." + k, JSON.stringify(v)); } catch (e) {} },
 };
 soundOn = store.get("sound", true);
+// Absturz-Schutz: Wurde die Seite beim letzten Mal mitten im Betrieb neu gestartet
+// (zu wenig Speicher), lädt Emo diesmal weniger.
+const crashCount = store.get("crash", 0);
+const liteVoice = crashCount >= 1;     // dann ohne Stimme B
+const liteEars = crashCount >= 2;      // dann ohne eigene Ohren (Safari-Spracherkennung)
+window.addEventListener("pagehide", () => store.set("crash", 0));   // normales Verlassen ist kein Absturz
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") store.set("crash", 0); });
 let showSubs = store.get("subs", false);
 let needWake = store.get("wake", false);
 let claudeKey = store.get("key", "");
@@ -769,19 +776,23 @@ let camState = "aus", visionState = "–", micState = "–";
 
 function status() {
   const ai = claudeKey ? "Claude" : "einfache Antworten (kein Schlüssel)";
-  statusEl.innerHTML = `Kamera: <b>${camState}</b> · Handerkennung: <b>${visionState}</b><br>Mikrofon: <b>${micState}</b> · KI: <b>${ai}</b>`;
+  const mode = liteEars ? " · Sparmodus 2" : liteVoice ? " · Sparmodus" : "";
+  statusEl.innerHTML = `Kamera: <b>${camState}</b> · Handerkennung: <b>${visionState}</b><br>Mikrofon: <b>${micState}</b> · KI: <b>${ai}</b>${mode}`;
 }
 
 // ---------- Start: ein Tippen weckt Emo ----------
 function start() {
   if (started) return;
   started = true;
+  store.set("crash", crashCount + 1);
+  // Läuft Emo 3 Minuten ohne Neustart, war alles gut.
+  setTimeout(() => store.set("crash", 0), 180000);
   startEl.hidden = true;
   ensureAudio();
   // iOS: Sprache und Ton müssen einmal durch Antippen freigeschaltet werden.
   wakeUpGreeting();
   initVoice();
-  initPiper();
+  if (!useWhisper) initPiper();          // auf dem iPhone erst nach den Ohren
   try { const r = document.documentElement.requestFullscreen && document.documentElement.requestFullscreen({ navigationUI: "hide" }); r && r.catch(() => {}); } catch (e) {}
   try { if (window.DeviceMotionEvent && DeviceMotionEvent.requestPermission) DeviceMotionEvent.requestPermission().catch(() => {}); } catch (e) {}
   keepAwake();
@@ -943,7 +954,7 @@ function showHeard(text) {
   clearTimeout(heardTimer);
   heardTimer = setTimeout(() => { youEl.textContent = ""; }, 3000);
 }
-const HANDS_UP = /h(ä|a|e)nde? (hoch|nach oben)/i;
+const HANDS_UP = /(^|[^a-zäöü])(h?(ä|a|e)nde?|hendi|händi|hand) ?(hoch|hoh|huch|nach oben)/i;
 const SHOT = /(^|[^a-zäöü])(p+[fj]?i+e?[uwh]+|p+j+u+|p+e+w+|b+[ij]+u+|p+e+u+|f+i+u+|t+i+u+|piuh|peng|päng|bäng|bang|bäm|bumm|pow|paff|puff|schuss)([^a-zäöü]|$)/i;
 function heardFinal(text) {
   touch(); showHeard(text);
@@ -1419,7 +1430,7 @@ async function speak(text) {
     let buf = null;
     // Beim allerersten Start kurz auf Stimme B warten
     for (let i = 0; i < 30 && !piperReady && !piperFailed && piper && performance.now() - piperStart < 6000; i++) await sleep(100);
-    if (!piperReady && !piperFailed && piper && token === speakToken) {
+    if (!piperReady && !piperFailed && !liteVoice && token === speakToken) {
       // Stimme lädt noch: wie EMO piepsend brabbeln, dazu der Text
       subsEl.hidden = false;
       const dur = babble(clean);
@@ -1464,7 +1475,7 @@ async function speak(text) {
 // =====================================================================
 //  Kamera und Mikrofon starten
 // =====================================================================
-const useWhisper = isIOS || !SR;      // iPhone: eigene Ohren statt Safari-Sprachdienst
+const useWhisper = (isIOS && !liteEars) || !SR;      // iPhone: eigene Ohren statt Safari-Sprachdienst
 async function startSenses() {
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { camState = "nicht verfügbar"; status(); return; }
   const VIDEO = { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } };
@@ -1527,7 +1538,7 @@ function startListening() {
 // =====================================================================
 //  Emos eigene Ohren (Whisper, läuft direkt auf dem Handy)
 // =====================================================================
-const EARS_MODEL = "Xenova/whisper-base";
+const EARS_MODEL = "Xenova/whisper-tiny";      // klein und sparsam – Safari stürzt sonst ab
 let earsWorker = null, earsReady = false, earsBusy = false, earsQueue = null, earsNodes = null;
 const earsFiles = {};
 function earsLoading(text) { earEl.hidden = false; earEl.className = ""; earEl.textContent = text; }
@@ -1557,9 +1568,11 @@ function startEars(stream) {
       loadEars = l / Math.max(t, 1); updateLoading();
     } else if (d.type === "ready") {
       earsReady = true; micState = "hört zu"; status(); updateLoading();
+      setTimeout(initPiper, 1500);
     } else if (d.type === "error") {
       micState = "Ohren konnten nicht laden"; status();
       earsFailed = true; updateLoading();
+      setTimeout(initPiper, 500);
     } else if (d.type === "text") {
       earsBusy = false;
       heardSpeech(d.text);
@@ -1576,7 +1589,7 @@ function startEars(stream) {
 }
 
 // Erkennt, wann du sprichst (Lautstärke), und schneidet den Satz aus.
-let vadNoise = 0.006, vadOn = false, vadChunks = [], vadSpeechMs = 0, vadSilenceMs = 0, vadTotalMs = 0;
+let vadPeak = 0, vadNoise = 0.006, vadOn = false, vadChunks = [], vadSpeechMs = 0, vadSilenceMs = 0, vadTotalMs = 0;
 const vadPre = [];
 function vadFeed(input) {
   const rate = actx.sampleRate, ms = input.length / rate * 1000;
@@ -1591,19 +1604,20 @@ function vadFeed(input) {
     if (rms < thr) vadNoise = vadNoise * 0.97 + rms * 0.03;
     vadPre.push(chunk); if (vadPre.length > 3) vadPre.shift();
     if (rms > thr) {
-      vadOn = true; vadChunks = vadPre.splice(0); vadSpeechMs = ms; vadSilenceMs = 0; vadTotalMs = ms * (vadChunks.length + 1);
+      vadOn = true; vadPeak = rms; vadChunks = vadPre.splice(0); vadSpeechMs = ms; vadSilenceMs = 0; vadTotalMs = ms * (vadChunks.length + 1);
       vadChunks.push(chunk);
       onSpeechStart();
     }
     return;
   }
-  vadChunks.push(chunk); vadTotalMs += ms;
+  vadChunks.push(chunk); vadTotalMs += ms; if (rms > vadPeak) vadPeak = rms;
   if (rms > thr * 0.7) { vadSpeechMs += ms; vadSilenceMs = 0; } else vadSilenceMs += ms;
   if (vadSilenceMs > (S.handsUp ? 300 : 750) || vadTotalMs > 8000) {
     vadOn = false;
     const chunks = vadChunks; vadChunks = [];
     if (vadSpeechMs < 180) { ear("on"); return; }
-    if (vadSpeechMs < 750 && (S.handsUp || performance.now() - lastGunSeen < 3000)) { ear("on"); getShot(); return; }
+    // Kurzer, kräftiger Laut („Piu!“) bei erhobenen Händen = Schuss
+    if (vadSpeechMs < 750 && vadPeak > Math.max(0.03, thr * 2.5) && (S.handsUp || performance.now() - lastGunSeen < 3000)) { ear("on"); getShot(); return; }
     const audio = to16k(chunks, rate);
     if (earsBusy) earsQueue = audio; else sendToEars(audio);
   }
@@ -1917,7 +1931,8 @@ function simpleAnswer(q) {
 let piper = null, piperReady = false, piperSeq = 0, piperStart = 0;
 const piperWait = {};
 function initPiper() {
-  if (piper) return;
+  if (piper || piperFailed) return;
+  if (liteVoice) { piperFailed = true; updateLoading(); return; }
   try { piper = new Worker("voice-worker.js"); piperStart = performance.now(); } catch (e) { piperFailed = true; return; }
   piper.onmessage = e => {
     const d = e.data;
