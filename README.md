@@ -59,6 +59,14 @@ Die Zahlen siehst du auf `statistik.html`, z. B.
 Die Seite ist nirgends in der App verlinkt. Mit **Mein Gerät nicht mitzählen**
 zählen deine eigenen Starts nicht mit.
 
+## Affen-Tag – Kletter-Fangspiel für iPhone und iPad
+
+In [`ios/AffenTag`](ios/AffenTag/README.md) liegt eine SwiftUI-App im Stil von
+Gorilla Tag: Du bewegst dich nur mit den Armen (linke/rechte Bildschirmhälfte =
+linke/rechte Hand), kletterst auf Bäume und fängst andere Affen. Mit Stumpf und
+Computer, sechs Karten, fünf Modi (Infektion, Fangen, Jagd, Farbschlacht, Locker),
+Computer-Affen, Hüten im Laden und Mehrspieler über WLAN/Bluetooth oder Game Center.
+
 ## Der letzte Bus – Nachtkiosk (3D-Actionspiel)
 
 In `derletztebus/` steckt ein 3D-Spiel (three.js), am besten **quer** gespielt:
