@@ -18,7 +18,8 @@ final class AffeKnoten {
     private var arme: [SCNNode] = []
     private var ellbogen: [SCNNode] = []
     private var haende: [SCNNode] = []
-    private var finger: [[(SCNNode, SCNNode)]] = [[], []]
+    /// Pro Hand: drei Finger (zwei vorne, ein Daumen), jeweils die Gelenke von innen nach außen
+    private var finger: [[(gelenke: [SCNNode], daumen: Bool)]] = [[], []]
     private let haut = SCNMaterial()
     private var ballons: [SCNNode] = []
     private let zielBand = SCNNode()
@@ -39,7 +40,7 @@ final class AffeKnoten {
         fell.diffuse.contents = Texturen.bild(.fell)
         fell.diffuse.wrapS = .repeat
         fell.diffuse.wrapT = .repeat
-        haut.diffuse.contents = farbe(0.15, 0.14, 0.13)
+        haut.diffuse.contents = farbe(0.37, 0.33, 0.30)
         lava.diffuse.contents = farbe(1, 0.42, 0.08)
         lava.emission.contents = farbe(0.9, 0.25, 0.02)
         gesichtMat.diffuse.contents = farbe(0.85, 0.72, 0.58)
@@ -163,44 +164,69 @@ final class AffeKnoten {
         n.simdOrientation = simd_quatf(from: V3(0, 1, 0), to: weg / l)
     }
 
-    /// Gorilla-Hand: Handrücken mit Fell, dunkle Handfläche, vier Finger mit Gelenk, Daumen.
+    /// Gorilla-Hand: kantige, flache Handfläche (kein Kreis), drei lange Finger – zwei vorne, ein abgespreizter Daumen.
     private func gorillaHand(links: Bool, index: Int) -> SCNNode {
         let g = SCNNode()
-        let s: Float = links ? -1 : 1
-        func block(_ b: V3, _ m: SCNMaterial) -> SCNNode {
-            let geo = SCNBox(width: CGFloat(b.x), height: CGFloat(b.y), length: CGFloat(b.z), chamferRadius: CGFloat(min(b.x, b.y) * 0.35))
-            geo.materials = [m]
-            return SCNNode(geometry: geo)
+        let s: CGFloat = links ? -1 : 1
+        // Umriss der Handfläche, flach gelegt: Handgelenk hinten, Knöchel vorne
+        let umriss: [(CGFloat, CGFloat)] = [(-0.042, 0.005), (0.042, 0.005), (0.07, 0.055), (0.062, 0.118), (0.02, 0.13), (-0.02, 0.13), (-0.062, 0.118), (-0.074, 0.06)]
+        func flaeche(_ dicke: CGFloat, _ m: SCNMaterial) -> SCNNode {
+            let pfad = UIBezierPath()
+            for (i, p) in umriss.enumerated() {
+                let pt = CGPoint(x: p.0 * s, y: p.1)
+                if i == 0 { pfad.move(to: pt) } else { pfad.addLine(to: pt) }
+            }
+            pfad.close()
+            let form = SCNShape(path: pfad, extrusionDepth: dicke)
+            form.chamferRadius = dicke * 0.25
+            form.materials = [m]
+            let n = SCNNode(geometry: form)
+            // Form liegt in x/y → flach hinlegen, Finger zeigen nach −z
+            n.simdEulerAngles = V3(-.pi / 2, 0, 0)
+            return n
         }
-        let ruecken = block(V3(0.12, 0.05, 0.13), fell)
-        ruecken.simdPosition = V3(0, 0.006, 0)
+        g.addChildNode(flaeche(0.034, haut))
+        let ruecken = flaeche(0.014, fell)
+        ruecken.simdPosition = V3(0, 0.022, 0.004)
+        ruecken.simdScale = V3(0.86, 0.78, 1)
         g.addChildNode(ruecken)
-        let ballen = block(V3(0.112, 0.03, 0.12), haut)
-        ballen.simdPosition = V3(0, -0.025, 0)
-        g.addChildNode(ballen)
-        for k in 0..<4 {
-            let f = SCNNode()
-            f.simdPosition = V3((-0.045 + Float(k) * 0.03) * s, -0.004, -0.064)
-            let glied1 = block(V3(0.027, 0.032, 0.06), fell)
-            glied1.simdPosition = V3(0, 0, -0.03)
-            f.addChildNode(glied1)
-            let gelenk = SCNNode()
-            gelenk.simdPosition = V3(0, 0, -0.058)
-            let glied2 = block(V3(0.025, 0.028, 0.05), haut)
-            glied2.simdPosition = V3(0, 0, -0.024)
-            gelenk.addChildNode(glied2)
-            f.addChildNode(gelenk)
-            g.addChildNode(f)
-            finger[index].append((f, gelenk))
+
+        func glied(_ r0: CGFloat, _ r1: CGFloat, _ l: Float) -> SCNNode {
+            let kegel = SCNCone(topRadius: r1, bottomRadius: r0, height: CGFloat(l))
+            kegel.radialSegmentCount = 10
+            kegel.materials = [haut]
+            let n = SCNNode(geometry: kegel)
+            n.simdEulerAngles = V3(-.pi / 2, 0, 0)
+            n.simdPosition = V3(0, 0, -l / 2)
+            return n
         }
-        let daumen = SCNNode()
-        daumen.simdPosition = V3(-0.065 * s, -0.01, -0.01)
-        daumen.simdEulerAngles = V3(0, 0.35 * s, 0)
-        let d = block(V3(0.03, 0.03, 0.06), haut)
-        d.simdPosition = V3(0, 0, -0.03)
-        daumen.addChildNode(d)
-        g.addChildNode(daumen)
-        g.simdScale = V3(repeating: 1.35)
+        func baueFinger(_ start: V3, _ drehung: Float, _ laengen: [Float], _ dicke: [CGFloat], daumen: Bool) {
+            let wurzel = SCNNode()
+            wurzel.simdPosition = start
+            wurzel.simdEulerAngles = V3(daumen ? -0.15 : 0, drehung, 0)
+            var eltern = wurzel
+            var gelenke: [SCNNode] = []
+            for (k, l) in laengen.enumerated() {
+                let gelenk = SCNNode()
+                let knoechel = SCNSphere(radius: dicke[k] * 1.12)
+                knoechel.segmentCount = 10
+                knoechel.materials = [haut]
+                gelenk.addChildNode(SCNNode(geometry: knoechel))
+                let letzte = k == laengen.count - 1
+                gelenk.addChildNode(glied(dicke[k], letzte ? 0.004 : dicke[k + 1], l))
+                if k > 0 { gelenk.simdPosition = V3(0, 0, -laengen[k - 1]) }
+                eltern.addChildNode(gelenk)
+                eltern = gelenk
+                gelenke.append(gelenk)
+            }
+            g.addChildNode(wurzel)
+            finger[index].append((gelenke: gelenke, daumen: daumen))
+        }
+        let sf = Float(s)
+        baueFinger(V3(-0.03 * sf, 0, -0.128), 0.06 * sf, [0.08, 0.07, 0.065], [0.023, 0.019, 0.015], daumen: false)
+        baueFinger(V3(0.03 * sf, 0, -0.128), -0.08 * sf, [0.075, 0.065, 0.06], [0.022, 0.018, 0.014], daumen: false)
+        baueFinger(V3(-0.07 * sf, -0.004, -0.05), 0.95 * sf, [0.065, 0.06], [0.024, 0.019], daumen: true)
+        g.simdScale = V3(repeating: 1.55)
         return g
     }
 
@@ -216,7 +242,7 @@ final class AffeKnoten {
             istLava = istJetztLava
             let m = istLava ? lava : fell
             for n in [kopf] + oberarme + arme + ellbogen { n.geometry?.materials = [m] }
-            for h in haende { h.childNodes.first?.geometry?.materials = [m] }
+            for h in haende { h.childNodes.first?.geometry?.materials = [istLava ? lava : haut] }
             koerper.childNodes.first?.geometry?.materials = [m]
         }
         if istLava {
@@ -255,15 +281,23 @@ final class AffeKnoten {
             setzeGlied(oberarme[i], von: s, bis: e)
             setzeGlied(arme[i], von: e, bis: h)
 
+            // Handfläche liegt flach auf der Fläche, Finger zeigen nach vorne – so sieht man sie
+            let haelt = griff.indices.contains(i) && griff[i] > 0.9
+            let oben = haelt ? haftNormalen[i] : V3(0, 1, 0)
+            var vor = richtung - oben * simd_dot(richtung, oben)
+            if simd_length(vor) < 0.1 { vor = vorne(a.gier) - oben * simd_dot(vorne(a.gier), oben) }
+            vor = simd_normalize(vor)
+            if !haelt { vor = simd_normalize(vor * 0.75 + richtung * 0.25) }
             let hand = haende[i]
-            hand.simdPosition = h + richtung * 0.04
-            var oben = griff.indices.contains(i) && griff[i] > 0.9 ? haftNormalen[i] : V3(0, 1, 0)
-            if abs(simd_dot(oben, richtung)) > 0.92 { oben = vorne(a.gier) }
-            hand.simdLook(at: a.position + h + richtung, up: oben, localFront: V3(0, 0, -1))
-            let krumm = griff.indices.contains(i) ? griff[i] : 0.4
-            for (f, g) in finger[i] {
-                f.eulerAngles.x += (Float(-krumm * 0.7) - f.eulerAngles.x) * 0.3
-                g.eulerAngles.x += (Float(-krumm * 1.1) - g.eulerAngles.x) * 0.3
+            hand.simdPosition = h + oben * 0.06 - vor * 0.04
+            hand.simdLook(at: a.position + hand.simdPosition + vor, up: oben, localFront: V3(0, 0, -1))
+            // Am Boden liegen die Finger flach; an Ästen und Wänden greifen sie zu
+            let krumm: Float = haelt ? (oben.y > 0.7 ? 0.05 : 1.0) : (griff.indices.contains(i) && griff[i] > 0.5 ? 0.3 : -0.12)
+            for f in finger[i] {
+                for (j, gelenk) in f.gelenke.enumerated() {
+                    let ziel = f.daumen ? -krumm * (j > 0 ? 0.9 : 0.5) : -krumm * [0.55, 0.8, 0.7][min(j, 2)]
+                    gelenk.eulerAngles.x += (ziel - gelenk.eulerAngles.x) * 0.3
+                }
             }
         }
 

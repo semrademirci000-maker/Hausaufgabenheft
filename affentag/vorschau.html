@@ -456,7 +456,7 @@ const TEX = {
   }, 2),
   haut: () => berechne("haut", 256, (u, w, o) => {
     const falte = 1 - Math.abs(kfbm(u, w, 6, 3, 4, 81) * 2 - 1), n = kfbm(u, w, 8, 8, 3, 82);
-    const l = 34 + n * 18 - glatt(.85, 1, falte) * 14;
+    const l = 150 + n * 50 - glatt(.85, 1, falte) * 45;
     o[0] = l; o[1] = l * .93; o[2] = l * .88; o[3] = n * .4 - glatt(.85, 1, falte) * .6;
   }, 6),
   nadeln: () => berechne("nadeln", 256, (u, w, o) => {
@@ -509,7 +509,7 @@ function blattTextur(farbig) {
 }
 
 // ---------- Arm-Fortbewegung (wie Model/Lokomotion.swift) ----------
-const RADIUS = 0.32, ARM = 0.95, SCHULTER = v(0.2, -0.12, 0.02), RUHE_G = grad(16), RUHE_N = grad(-30);
+const RADIUS = 0.32, ARM = 0.95, SCHULTER = v(0.2, -0.12, 0.02), RUHE_G = grad(13), RUHE_N = grad(-22);
 class Affe {
   constructor() {
     this.pos = v(0, 1, 0); this.vel = v(0, 0, 0); this.gier = 0;
@@ -1349,7 +1349,7 @@ function baueArme(szene) {
   const fell = fellTextur();
   const fellMat = new THREE.MeshPhysicalMaterial({ color: 0x2c2826, map: fell.map, normalMap: fell.normalMap, normalScale: new THREE.Vector2(1.6, 1.6), roughness: 1, sheen: .45, sheenRoughness: .7, sheenColor: new THREE.Color(0x4a443e), envMapIntensity: .5 });
   const ht = TEX.haut();
-  const hautMat = new THREE.MeshStandardMaterial({ color: 0x6a5e55, map: ht.map, normalMap: ht.normalMap, roughness: .6, envMapIntensity: .6 });
+  const hautMat = new THREE.MeshStandardMaterial({ color: 0x5f554d, map: ht.map, normalMap: ht.normalMap, roughness: .6, envMapIntensity: .6 });
   // Unterarm: dicker Muskel am Ellbogen, schmal am Handgelenk; Oberarm kräftig
   const unterGeo = armGeometrie([[0, .055], [.06, .07], [.25, .08], [.5, .068], [.8, .05], [1, .043]]);
   const oberGeo = armGeometrie([[0, .07], [.2, .092], [.5, .1], [.85, .08], [1, .066]]);
@@ -1363,25 +1363,40 @@ function baueArme(szene) {
   return { arme, fellMat };
 }
 function gorillaHand(links, fellMat, hautMat) {
+  // Kantige, flache Handfläche (kein Kreis) + drei lange Finger: zwei vorne, ein abgespreizter Daumen.
   const g = new THREE.Group(), s = links ? -1 : 1;
-  const ruecken = new THREE.Mesh(new THREE.SphereGeometry(1, 22, 10, 0, Math.PI * 2, 0, Math.PI / 2), fellMat);
-  ruecken.scale.set(.074, .036, .086); g.add(ruecken);
-  const ballen = new THREE.Mesh(new THREE.SphereGeometry(1, 22, 10, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), hautMat);
-  ballen.scale.set(.072, .026, .084); g.add(ballen);
+  const form = new THREE.Shape();
+  const umriss = [[-.042, .005], [.042, .005], [.07, .055], [.062, .118], [.02, .13], [-.02, .13], [-.062, .118], [-.074, .06]];
+  umriss.forEach(([x, y], i) => i ? form.lineTo(x * s, y) : form.moveTo(x * s, y));
+  form.closePath();
+  const flaeche = new THREE.ExtrudeGeometry(form, { depth: .034, bevelEnabled: true, bevelThickness: .008, bevelSize: .008, bevelSegments: 2 });
+  flaeche.rotateX(-Math.PI / 2); flaeche.translate(0, -.017, 0);
+  g.add(new THREE.Mesh(flaeche, hautMat));
+  // Fell auf dem Handrücken (flacher, etwas kleiner)
+  const ruecken = new THREE.ExtrudeGeometry(form, { depth: .014, bevelEnabled: true, bevelThickness: .006, bevelSize: .004, bevelSegments: 1 });
+  ruecken.rotateX(-Math.PI / 2); ruecken.scale(.86, 1, .78); ruecken.translate(0, .022, .004);
+  g.add(new THREE.Mesh(ruecken, fellMat));
+  // Fingerglieder: verjüngt, mit Knöchel; die letzte Spitze läuft spitz zu (Alien-Finger)
+  const glied = (r0, r1, l) => { const geo = new THREE.CylinderGeometry(r1, r0, l, 10, 1); geo.rotateX(-Math.PI / 2); geo.translate(0, 0, -l / 2); return geo; };
+  const knoechel = r => new THREE.SphereGeometry(r, 12, 10);
   const finger = [];
-  const glied = (r, l) => { const geo = new THREE.CapsuleGeometry(r, l, 4, 10); geo.rotateX(-Math.PI / 2); geo.translate(0, 0, -l / 2 - r * .6); return geo; };
-  for (let k = 0; k < 4; k++) {
-    const x = (-.05 + k * .033) * s, laenge = [.05, .058, .056, .046][k];
-    const knoechel = new THREE.Mesh(new THREE.SphereGeometry(.023, 12, 8), hautMat); knoechel.position.set(x, .008, -.074); knoechel.scale.set(1, .8, 1); g.add(knoechel);
-    const f = new THREE.Group(); f.position.set(x, .004, -.076); f.rotation.y = (k - 1.5) * -.06 * s;
-    const a = new THREE.Mesh(glied(.02, laenge), hautMat); f.add(a);
-    const gelenk = new THREE.Group(); gelenk.position.z = -laenge - .024; f.add(gelenk);
-    const b = new THREE.Mesh(glied(.018, laenge * .75), hautMat); gelenk.add(b);
-    g.add(f); finger.push([f, gelenk]);
-  }
-  const daumen = new THREE.Group(); daumen.position.set(-.06 * s, -.012, -.025); daumen.rotation.set(0, .55 * s, -.3 * s);
-  daumen.add(new THREE.Mesh(glied(.019, .038), hautMat)); g.add(daumen);
-  g.scale.setScalar(1.75);
+  const baueFinger = (start, richtungY, neigung, laengen, dicke) => {
+    const wurzel = new THREE.Group(); wurzel.position.copy(start); wurzel.rotation.set(neigung, richtungY, 0);
+    let eltern = wurzel; const gelenke = [];
+    laengen.forEach((l, k) => {
+      const gelenk = new THREE.Group();
+      gelenk.add(new THREE.Mesh(knoechel(dicke[k] * 1.12), hautMat));
+      const letzte = k === laengen.length - 1;
+      gelenk.add(new THREE.Mesh(glied(dicke[k], letzte ? .004 : dicke[k + 1] || dicke[k] * .85, l), hautMat));
+      if (k) gelenk.position.z = -laengen[k - 1];
+      eltern.add(gelenk); eltern = gelenk; gelenke.push(gelenk);
+    });
+    g.add(wurzel); return gelenke;
+  };
+  finger.push({ gelenke: baueFinger(v(-.03 * s, 0, -.128), .06 * s, 0, [.08, .07, .065], [.023, .019, .015]), daumen: false });
+  finger.push({ gelenke: baueFinger(v(.03 * s, 0, -.128), -.08 * s, 0, [.075, .065, .06], [.022, .018, .014]), daumen: false });
+  finger.push({ gelenke: baueFinger(v(-.07 * s, -.004, -.05), .95 * s, -.15, [.065, .06], [.024, .019]), daumen: true });
+  g.scale.setScalar(1.55);
   g.userData = { finger };
   g.traverse(o => { if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; } });
   return g;
@@ -1403,14 +1418,23 @@ function stelleArme(arme, ich, dt) {
     const handgelenk = hp.clone().addScaledVector(dir, -.06);
     setzeGlied(A.unter, ell, handgelenk);
     A.ell.position.copy(ell);
-    let oben = h.haftet ? h.hn.clone() : v(0, 1, 0);
-    if (Math.abs(oben.dot(dir)) > .92) oben = vorne(ich.gier);
-    _m4.lookAt(hp, hp.clone().add(dir), oben);
+    // Handfläche liegt flach auf der Fläche (Boden, Wand, Ast), Finger zeigen nach vorne – so sieht man sie
+    const oben = h.haftet ? h.hn.clone() : v(0, 1, 0);
+    let vor = dir.clone().addScaledVector(oben, -dir.dot(oben));
+    if (vor.lengthSq() < .01) vor = vorne(ich.gier).addScaledVector(oben, -vorne(ich.gier).dot(oben));
+    vor.normalize();
+    if (!h.haftet) vor.lerp(dir, .25).normalize();
+    _m4.lookAt(hp, hp.clone().add(vor), oben);
     _q.setFromRotationMatrix(_m4);
     A.hand.quaternion.slerp(_q, Math.min(1, dt * 18));
-    A.hand.position.copy(hp).addScaledVector(dir, .02);
-    const krumm = h.haftet ? 1.0 : (h.aktiv ? .45 : .14);
-    A.hand.userData.finger.forEach(([f, g]) => { f.rotation.x += (-krumm * .75 - f.rotation.x) * Math.min(1, dt * 14); g.rotation.x += (-krumm * 1.1 - g.rotation.x) * Math.min(1, dt * 14); });
+    A.hand.position.copy(hp).addScaledVector(oben, .06).addScaledVector(vor, -.04);
+    // Am Boden liegen die Finger flach; an Ästen und Wänden greifen sie zu
+    const krumm = h.haftet ? (h.hn.y > .7 ? .05 : 1.0) : (h.aktiv ? .3 : -.12);
+    const k = Math.min(1, dt * 14);
+    A.hand.userData.finger.forEach(f => f.gelenke.forEach((gl, j) => {
+      const ziel = f.daumen ? -krumm * (j ? .9 : .5) : -krumm * [.55, .8, .7][j];
+      gl.rotation.x += (ziel - gl.rotation.x) * k;
+    }));
   }
 }
 
