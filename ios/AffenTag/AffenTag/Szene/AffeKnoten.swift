@@ -93,21 +93,21 @@ final class AffeKnoten {
 
         for i in 0..<2 {
             // Oberarm und Unterarm (leicht konisch), dazwischen der Ellbogen
-            let ober = SCNCone(topRadius: 0.07, bottomRadius: 0.085, height: 1)
-            ober.radialSegmentCount = 10
+            let ober = SCNCone(topRadius: 0.046, bottomRadius: 0.056, height: 1)
+            ober.radialSegmentCount = 7
             ober.materials = [fell]
             let o = SCNNode(geometry: ober)
             wurzel.addChildNode(o)
             oberarme.append(o)
 
-            let unter = SCNCone(topRadius: 0.05, bottomRadius: 0.072, height: 1)
-            unter.radialSegmentCount = 10
+            let unter = SCNCone(topRadius: 0.034, bottomRadius: 0.048, height: 1)
+            unter.radialSegmentCount = 7
             unter.materials = [fell]
             let a = SCNNode(geometry: unter)
             wurzel.addChildNode(a)
             arme.append(a)
 
-            let e = SCNSphere(radius: 0.072)
+            let e = SCNSphere(radius: 0.046)
             e.segmentCount = 10
             e.materials = [fell]
             let en = SCNNode(geometry: e)
@@ -300,7 +300,7 @@ final class AffeKnoten {
             if !haelt { vor = simd_normalize(vor * 0.75 + richtung * 0.25) }
             let hand = haende[i]
             let gr = Affenkoerper.groesse
-            hand.simdScale = V3(repeating: 1.55 * gr)
+            hand.simdScale = V3(repeating: 1.3 * gr)
             ellbogen[i].simdScale = V3(repeating: gr * 0.85)
             hand.simdPosition = h + oben * (0.06 * gr) - vor * (0.04 * gr)
             hand.simdLook(at: a.position + hand.simdPosition + vor, up: oben, localFront: V3(0, 0, -1))

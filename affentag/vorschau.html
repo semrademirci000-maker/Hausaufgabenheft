@@ -129,7 +129,7 @@
   <button class="taste" id="tTastatur" data-taste="computer" aria-label="Tastatur">
     <svg viewBox="0 0 32 22" fill="none" stroke="currentColor" stroke-width="2"><rect x="1.5" y="1.5" width="29" height="19" rx="3"/><path d="M6 7h2M11 7h2M16 7h2M21 7h2M26 7h0M6 11.5h2M11 11.5h2M16 11.5h2M21 11.5h2M9 16h14" stroke-linecap="round"/></svg>
   </button>
-  <button class="taste" id="tPc" data-taste="computer" hidden>COMPUTER BENUTZEN</button>
+  <button class="taste" id="tPc" data-taste="computer" hidden>DRÜCKE E, UM DEN COMPUTER ZU BENUTZEN</button>
   <button class="taste rund gross" id="tF" data-taste="f">F</button>
   <button class="taste rund gross" id="tR" data-taste="r">R</button>
   <button class="taste rund gross" id="tE" data-taste="e">E</button>
@@ -149,7 +149,7 @@
 
 <section id="titel">
   <h1>AFFEN-TAG</h1>
-  <p class="unter" style="color:var(--gold)">VORSCHAU VERSION 6 · großer Gorilla · ohne rechten Joystick</p>
+  <p class="unter" style="color:var(--gold)">VORSCHAU VERSION 7 · Arme wie im Original · E am Computer</p>
   <p class="unter">Klettern nur mit den Armen. Diese Vorschau zeigt die Welten und die Steuerung der App. Echte Mitspieler, Fangen und der Laden sind in der iPhone- und iPad-App.</p>
   <div class="hinweis">
     <div><strong>LINKER STICK</strong>Laufen. Deine Hände setzen vorne auf und ziehen dich nach vorne.</div>
@@ -459,8 +459,8 @@ const TEX = {
     const faser = fbm(a * 40, d * 3, 2, 36);
     const riss = (() => { const k = fract(a / (Math.PI * 2) * 7 + fbm(d * 3, 1, 2, 37) * .08); const nah = Math.abs(k - .5) * 2; return d > .2 && d < .93 ? glatt(.985, 1, nah) * glatt(.2, .4, d) : 0; })();
     const alt = glatt(0, .95, d);
-    let r = mix(186, 150, alt), g = mix(128, 98, alt), b = mix(78, 58, alt);
-    r -= spaet * 50 + faser * 18; g -= spaet * 42 + faser * 14; b -= spaet * 30 + faser * 10;
+    let r = mix(132, 104, alt), g = mix(88, 66, alt), b = mix(52, 38, alt);
+    r -= spaet * 62 + faser * 14; g -= spaet * 46 + faser * 11; b -= spaet * 30 + faser * 8;
     r *= 1 - riss * .75; g *= 1 - riss * .75; b *= 1 - riss * .75;
     if (d > .95) { const t = glatt(.95, .99, d); r = mix(r, 62, t); g = mix(g, 46, t); b = mix(b, 34, t); }
     o[0] = r; o[1] = g; o[2] = b; o[3] = .55 - spaet * .25 - riss * .7 + faser * .12;
@@ -552,9 +552,10 @@ function blattTextur(farbig) {
 
 // ---------- Arm-Fortbewegung (wie Model/Lokomotion.swift) ----------
 // Größe des Gorillas (am Computer einstellbar). Alle Maße wachsen mit.
-let GROESSE = 2.6, RADIUS = 0.32 * 2.6, ARM = 0.95 * 2.6, SCHULTER = v(0.2, -0.12, 0.02).multiplyScalar(2.6);
-const RUHE_G = grad(13), RUHE_N = grad(-22);
-function setzeGroesse(g) { GROESSE = g; RADIUS = .32 * g; ARM = .95 * g; SCHULTER = v(.2, -.12, .02).multiplyScalar(g); }
+let GROESSE = 2.6, RADIUS = 0.32 * 2.6, ARM = 0.95 * 2.6, SCHULTER = v(0.13, -0.14, 0.02).multiplyScalar(2.6);
+// Hände ruhen vorne in der Bildmitte, wie im Original
+const RUHE_G = grad(9), RUHE_N = grad(-12);
+function setzeGroesse(g) { GROESSE = g; RADIUS = .32 * g; ARM = .95 * g; SCHULTER = v(.13, -.14, .02).multiplyScalar(g); }
 class Affe {
   constructor() {
     this.pos = v(0, 1, 0); this.vel = v(0, 0, 0); this.gier = 0;
@@ -1397,19 +1398,26 @@ const KARTEN = {
 // ---------- Gorilla-Arme und -Hände ----------
 function armGeometrie(profil) {
   const pts = profil.map(([y, r]) => new THREE.Vector2(r, y));
-  const geo = new THREE.LatheGeometry(pts, 18);
-  const uv = geo.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * 5, uv.getY(i) * 7);
+  // kantig wie im Original: wenige Seiten
+  const geo = new THREE.LatheGeometry(pts, 7);
+  const uv = geo.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * 2, uv.getY(i) * 6);
   return geo;
 }
+/** Grobe, pixelige Fellstruktur (32×32, ohne Weichzeichnen) wie im Original */
+function pixelFell() {
+  const c = document.createElement("canvas"); c.width = c.height = 32; const x = c.getContext("2d"), r = wuerfel(5);
+  for (let yy = 0; yy < 32; yy++) for (let xx = 0; xx < 32; xx++) { const l = 120 + Math.floor(r.roh() * 70) + (r.roh() < .12 ? -50 : 0); x.fillStyle = `rgb(${l},${l},${l})`; x.fillRect(xx, yy, 1, 1); }
+  const t = new THREE.CanvasTexture(c); t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestMipmapNearestFilter;
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.encoding = THREE.sRGBEncoding; return t;
+}
 function baueArme(szene) {
-  const fell = fellTextur();
-  const fellMat = new THREE.MeshPhysicalMaterial({ color: 0x2c2826, map: fell.map, normalMap: fell.normalMap, normalScale: new THREE.Vector2(.9, .9), roughness: 1, sheen: .6, sheenRoughness: .7, sheenColor: new THREE.Color(0x4a443e), envMapIntensity: .5 });
-  const ht = TEX.haut();
-  const hautMat = new THREE.MeshStandardMaterial({ color: 0x3b3735, map: ht.map, normalMap: ht.normalMap, roughness: .85, envMapIntensity: .2 });
-  // Unterarm: dicker Muskel am Ellbogen, schmal am Handgelenk; Oberarm kräftig
-  const unterGeo = armGeometrie([[0, .055], [.06, .07], [.25, .08], [.5, .068], [.8, .05], [1, .043]]);
-  const oberGeo = armGeometrie([[0, .07], [.2, .092], [.5, .1], [.85, .08], [1, .066]]);
-  const ellGeo = new THREE.SphereGeometry(.068, 16, 12);
+  // Dunkle, kantige Arme mit grober Struktur (Vorbild: Gorilla Tag auf dem Handy)
+  const fellMat = new THREE.MeshStandardMaterial({ color: 0x3a3a3a, map: pixelFell(), roughness: .95, flatShading: true, envMapIntensity: .35 });
+  const hautMat = new THREE.MeshStandardMaterial({ color: 0x262626, map: pixelFell(), roughness: .9, flatShading: true, envMapIntensity: .3 });
+  // schlanke Arme: Unterarm zum Handgelenk hin schmaler
+  const unterGeo = armGeometrie([[0, .042], [.3, .05], [.7, .042], [1, .034]]);
+  const oberGeo = armGeometrie([[0, .05], [.5, .058], [1, .046]]);
+  const ellGeo = new THREE.SphereGeometry(.046, 7, 5);
   const arme = [0, 1].map(i => {
     const ober = new THREE.Mesh(oberGeo, fellMat), unter = new THREE.Mesh(unterGeo, fellMat), ell = new THREE.Mesh(ellGeo, fellMat);
     [ober, unter, ell].forEach(m => { m.castShadow = true; m.frustumCulled = false; szene.add(m); });
@@ -1452,9 +1460,9 @@ function gorillaHand(links, fellMat, hautMat) {
     });
     g.add(wurzel); return gelenke;
   };
-  finger.push({ gelenke: baueFinger(v(-.03 * s, 0, -.128), .06 * s, 0, [.058, .048, .04], [.032, .03, .028]), daumen: false });
-  finger.push({ gelenke: baueFinger(v(.03 * s, 0, -.128), -.08 * s, 0, [.054, .045, .038], [.031, .029, .027]), daumen: false });
-  finger.push({ gelenke: baueFinger(v(-.07 * s, -.004, -.05), .95 * s, -.15, [.05, .042], [.033, .03]), daumen: true });
+  finger.push({ gelenke: baueFinger(v(-.03 * s, 0, -.128), .06 * s, 0, [.07, .055, .045], [.024, .022, .02]), daumen: false });
+  finger.push({ gelenke: baueFinger(v(.03 * s, 0, -.128), -.08 * s, 0, [.065, .05, .042], [.023, .021, .019]), daumen: false });
+  finger.push({ gelenke: baueFinger(v(-.07 * s, -.004, -.05), .95 * s, -.15, [.055, .045], [.025, .022]), daumen: true });
   g.scale.setScalar(1.55);
   g.userData = { finger };
   g.traverse(o => { if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; } });
@@ -1477,7 +1485,7 @@ function stelleArme(arme, ich, dt) {
     const handgelenk = hp.clone().addScaledVector(dir, -.06 * GROESSE);
     setzeGlied(A.unter, ell, handgelenk);
     A.ell.position.copy(ell); A.ell.scale.setScalar(GROESSE * .85);
-    A.hand.scale.setScalar(1.55 * GROESSE);
+    A.hand.scale.setScalar(1.3 * GROESSE);
     // Handfläche liegt flach auf der Fläche (Boden, Wand, Ast), Finger zeigen nach vorne – so sieht man sie
     const oben = h.haftet ? h.hn.clone() : v(0, 1, 0);
     let vor = dir.clone().addScaledVector(oben, -dir.dot(oben));
@@ -1635,7 +1643,7 @@ function zeigeTitel() { titel.hidden = false; steuerung.hidden = true; }
 function druck(taste, an) {
   document.querySelectorAll(`[data-taste="${taste}"]`).forEach(b => b.classList.toggle("an", an));
   if (taste === "shift") st.sprint = an;
-  if (taste === "e") st.greifen = an;
+  if (taste === "e") { st.greifen = an; if (an && !pcKnopf.hidden) { computer.hidden = false; st.greifen = false; return; } }
   if (taste === "1") st.hoch = an;
   if (taste === "3") st.runter = an;
   if (!an) return;
