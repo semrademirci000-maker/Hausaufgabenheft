@@ -4,8 +4,9 @@
 //  mit den Händen vom Boden, von Wänden und Ästen ab.
 //
 //  So funktioniert es:
-//  • Jede Hand hängt an einem Arm (Schulter + Armlänge). Der Finger auf dem
-//    Bildschirm dreht den Arm (hoch/runter, links/rechts).
+//  • Jede Hand hängt an einem Arm (Schulter + Armlänge). Die Handy-Steuerung
+//    (Joystick, Springen, 1–4, E) bewegt die Arme so, wie es ein Spieler mit
+//    VR-Brille tun würde – siehe `steuere(...)`.
 //  • Will die Hand in etwas hinein (Boden, Wand), bleibt sie stattdessen an
 //    der Oberfläche kleben – und der KÖRPER wird um genau diesen Rest
 //    verschoben. Hand nach unten-hinten ziehen = Körper nach oben-vorne.
@@ -21,6 +22,8 @@ struct Hand {
     var neigung: Float
     /// Finger liegt auf dem Bildschirm → Hand kann greifen.
     var aktiv = false
+    /// Niemand steuert die Hand → sie schwebt in die Ruhehaltung.
+    var frei = true
     /// Wo die Hand gerade ist (Welt).
     var position: V3 = .zero
     var haftet = false
@@ -42,8 +45,8 @@ final class Affenkoerper {
     static let radius: Float = 0.32
     static let armLaenge: Float = 0.92
     static let schulter = V3(0.2, -0.16, 0.05)
-    static let ruheGier: Float = grad(24)
-    static let ruheNeigung: Float = grad(-4)
+    static let ruheGier: Float = grad(16)
+    static let ruheNeigung: Float = grad(-30)
 
     var position: V3
     var geschwindigkeit: V3 = .zero
@@ -55,6 +58,11 @@ final class Affenkoerper {
     private(set) var aufDemBoden = false
     private var verlauf: [V3] = []
     private var hieltSichFest = false
+    // Handy-Steuerung
+    private var phase: Float = 0
+    private var sprungZeit: Float = 0
+    private var hub: Float = 1
+    var schlag: [Float] = [0, 0]
 
     init(position: V3, gier: Float) {
         self.position = position
@@ -73,6 +81,7 @@ final class Affenkoerper {
         verlauf.removeAll()
         for i in 0..<2 {
             haende[i].haftet = false
+            haende[i].frei = true
             haende[i].gier = (i == 0 ? -1 : 1) * Affenkoerper.ruheGier
             haende[i].neigung = Affenkoerper.ruheNeigung
             haende[i].position = handZiel(i)
@@ -89,16 +98,6 @@ final class Affenkoerper {
         return (koerper ?? position) + drehY(lokal, gier)
     }
 
-    /// Finger bewegt → Arm dreht sich (Winkel in Bogenmaß).
-    func bewegeArm(_ i: Int, dGier: Float, dNeigung: Float) {
-        let aussen: Float = grad(85), innen: Float = grad(35)
-        var h = haende[i]
-        h.gier += dGier
-        h.gier = i == 0 ? klemm(h.gier, -aussen, innen) : klemm(h.gier, -innen, aussen)
-        h.neigung = klemm(h.neigung + dNeigung, grad(-125), grad(80))
-        haende[i] = h
-    }
-
     /// Ein Physik-Schritt. Gibt Aufschläge für Klang und Vibration zurück.
     func schritt(dt: Float, welt: Welt, sprungFaktor: Float, maxTempo: Float, eingefroren: Bool) -> [Aufschlag] {
         var aufschlaege: [Aufschlag] = []
@@ -108,7 +107,7 @@ final class Affenkoerper {
         for i in 0..<2 {
             haende[i].ruhe += dt
             // Lose Hände schweben langsam zurück in die Ruhehaltung.
-            if !haende[i].aktiv {
+            if !haende[i].aktiv && haende[i].frei {
                 let zielGier = (i == 0 ? -1 : 1) * Affenkoerper.ruheGier
                 let k = min(1, dt * 6)
                 haende[i].gier += (zielGier - haende[i].gier) * k
@@ -170,7 +169,9 @@ final class Affenkoerper {
         let haelt = anzahl > 0
         if haelt {
             let vorher = position
-            position += korrektur / anzahl
+            var k = korrektur / anzahl
+            if k.y > 0 { k.y *= hub }
+            position += k
             var dummy = V3.zero
             welt.loese(position: &position, geschwindigkeit: &dummy, radius: Affenkoerper.radius)
             verlauf.append((position - vorher) / max(dt, 1e-3))
@@ -202,4 +203,92 @@ final class Affenkoerper {
     }
 
     var haeltSichFest: Bool { hieltSichFest }
+
+    // MARK: - Handy-Steuerung
+
+    /// Arm in eine Richtung (im Körper-Raum: x rechts, y oben, −z vorne) zeigen lassen.
+    private func zeige(_ i: Int, _ d: V3, aktiv: Bool) {
+        let n = d.normiert
+        haende[i].neigung = asin(klemm(n.y, -1, 1))
+        haende[i].gier = atan2(n.x, -n.z)
+        haende[i].aktiv = aktiv
+        haende[i].frei = false
+    }
+
+    func springe() {
+        if sprungZeit <= 0 { sprungZeit = 0.16 }
+    }
+
+    /// Bewegt die Arme wie ein VR-Spieler:
+    /// Laufen = abwechselnd Hand vorne aufsetzen und nach hinten durchziehen,
+    /// Wand vor dir = Hände oben anlegen und nach unten ziehen (klettern),
+    /// Springen = beide Hände kräftig nach unten stoßen.
+    func steuere(dt: Float, eingabe e: SteuerEingabe, welt: Welt, eingefroren: Bool) {
+        hub = 1
+        if eingefroren {
+            for i in 0..<2 { haende[i].aktiv = false; haende[i].frei = true }
+            return
+        }
+        let staerke = min(1, simd_length(SIMD2<Float>(e.lx, e.ly)))
+        let m = staerke > 0.15 ? V3(e.lx, 0, -e.ly).normiert : V3(0, 0, -1)
+        let runter = V3(0, -1, 0), hoch = V3(0, 1, 0)
+
+        if sprungZeit > 0 {
+            sprungZeit -= dt
+            let t = klemm(1 - sprungZeit / 0.16, 0, 1)
+            let th = grad(78 - 105 * t)
+            for i in 0..<2 {
+                var d = m * sin(th) + runter * cos(th)
+                d.x += i == 0 ? -0.18 : 0.18
+                zeige(i, d, aktiv: true)
+            }
+            return
+        }
+        for i in 0..<2 { schlag[i] = max(0, schlag[i] - dt) }
+
+        let mWelt = drehY(m, gier)
+        var wand = false
+        if staerke > 0.15 {
+            let vorn = position + mWelt * 0.78
+            wand = welt.punktInnen(vorn + V3(0, 0.1, 0)) != nil || welt.punktInnen(vorn + V3(0, 0.7, 0)) != nil
+            phase += dt * (1.15 + 1.35 * staerke) * (e.sprint ? 1.4 : 1)
+        }
+        for i in 0..<2 {
+            let seite: Float = i == 0 ? -0.22 : 0.22
+            if schlag[i] > 0 { zeige(i, V3(seite * 0.3, 0.05, -1), aktiv: false); continue }
+            if e.greifen { haende[i].aktiv = true; haende[i].frei = false; continue }
+            if e.hoch { zeige(i, V3(seite, 1.6, -0.6), aktiv: true); continue }
+            if e.runter { zeige(i, V3(seite * 1.5, -1, -0.15), aktiv: true); continue }
+            if staerke <= 0.15 { haende[i].aktiv = false; haende[i].frei = true; continue }
+
+            let p = (phase + Float(i) * 0.5).truncatingRemainder(dividingBy: 1)
+            let zug = p < 0.55
+            let t = zug ? p / 0.55 : (p - 0.55) / 0.45
+            var d: V3
+            if wand {
+                let a = zug ? grad(65 - 115 * t) : grad(-50 + 115 * t)
+                d = m * (cos(a) + 0.15) + hoch * sin(a)
+            } else {
+                // Beim Laufen hebt der Zug dich nur wenig an – sonst wäre jeder Schritt ein Riesensprung.
+                hub = e.sprint ? 0.45 : 0.3
+                let th = zug ? grad(72 - 98 * t) : grad(-26 + 98 * t)
+                let tief = cos(th) * (zug ? 1 : 1 - 0.55 * sin(.pi * t))
+                d = m * sin(th) + runter * tief
+            }
+            d.x += seite
+            zeige(i, d, aktiv: zug)
+        }
+    }
+}
+
+/// Was die Knöpfe und Joysticks gerade melden.
+struct SteuerEingabe {
+    var lx: Float = 0
+    var ly: Float = 0
+    var rx: Float = 0
+    var ry: Float = 0
+    var sprint = false
+    var greifen = false
+    var hoch = false
+    var runter = false
 }

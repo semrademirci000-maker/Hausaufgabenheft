@@ -30,6 +30,16 @@ final class SzeneVerwalter {
 
         let s = SCNLight()
         s.type = .directional
+        // Schatten von Bäumen, Plattformen und Händen
+        s.castsShadow = true
+        s.shadowMode = .forward
+        s.orthographicScale = 30
+        s.shadowMapSize = CGSize(width: 2048, height: 2048)
+        s.shadowSampleCount = 8
+        s.shadowRadius = 2.5
+        s.shadowColor = UIColor.black.withAlphaComponent(0.45)
+        s.zNear = 1
+        s.zFar = 120
         sonne.light = s
         sonne.simdEulerAngles = V3(grad(-55), grad(35), 0)
         szene.rootNode.addChildNode(sonne)
@@ -40,6 +50,24 @@ final class SzeneVerwalter {
         szene.rootNode.addChildNode(umgebung)
 
         kugelMaterial.lightingModel = .lambert
+
+        // Taschenlampe (Taste F)
+        let l = SCNLight()
+        l.type = .spot
+        l.intensity = 0
+        l.spotInnerAngle = 20
+        l.spotOuterAngle = 55
+        l.attenuationEndDistance = 30
+        l.color = farbe(1, 0.95, 0.8)
+        taschenlampe.light = l
+        taschenlampe.simdPosition = V3(0, -0.1, 0)
+        kamera.addChildNode(taschenlampe)
+    }
+
+    private let taschenlampe = SCNNode()
+
+    func lampe(_ an: Bool) {
+        taschenlampe.light?.intensity = an ? 1600 : 0
     }
 
     func zeige(_ k: GebauteKarte) {
@@ -58,7 +86,7 @@ final class SzeneVerwalter {
         szene.fogEndDistance = st.nebelEnde
         umgebung.light?.intensity = st.umgebung
         umgebung.light?.color = farbe(0.85, 0.9, 1)
-        sonne.light?.intensity = st.sonnenStaerke
+        sonne.light?.intensity = k.id == .stumpf ? st.sonnenStaerke * 0.6 : st.sonnenStaerke
         sonne.light?.color = st.sonne
     }
 
@@ -81,11 +109,16 @@ final class SzeneVerwalter {
         var raus: Bool
         var ballons: Int?
         var zielFarbe: V3?
+        /// Nur für dich: wie fest jede Hand zugreift und woran sie sich hält.
+        var griff: [Float] = []
+        var normalen: [V3] = []
     }
 
     func aktualisiere(affen liste: [AffenBild], kameraPosition: V3, gier: Float, neigung: Float,
                       kugeln farbkugeln: [Farbkugel], zeit: Double) {
         kameraHalter.simdPosition = kameraPosition
+        // Die Sonne wandert mit, damit die Schatten rund um dich scharf sind.
+        sonne.simdPosition = kameraPosition - sonne.simdWorldFront * 50
         kameraHalter.simdEulerAngles = V3(0, gier, 0)
         kamera.simdEulerAngles = V3(neigung, 0, 0)
 
@@ -100,6 +133,8 @@ final class SzeneVerwalter {
                 affen[bild.affe.id] = knoten
                 szene.rootNode.addChildNode(knoten.wurzel)
             }
+            knoten.griff = bild.griff
+            if bild.normalen.count == 2 { knoten.haftNormalen = bild.normalen }
             knoten.aktualisiere(bild.affe, lava: bild.lava, raus: bild.raus, ballonAnzahl: bild.ballons,
                                 zielFarbe: bild.zielFarbe, zeit: zeit)
         }

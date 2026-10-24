@@ -1,7 +1,8 @@
 //
 //  SpielView.swift
-//  Die 3D-Welt plus alles, was darüber liegt: Meldungen, Spielerliste,
-//  Lava-Rand, Jagd-Kompass, Schleuder-Knopf, Computer-Knopf und Menü.
+//  Die 3D-Welt plus alles, was darüber liegt: die Handy-Steuerung
+//  (Joysticks und Tasten wie beim Mobile-Spielen), Meldungen, Spielerliste,
+//  Lava-Rand, Jagd-Kompass, Schleuder und Menü.
 //
 
 import SwiftUI
@@ -9,8 +10,6 @@ import SwiftUI
 struct SpielView: View {
     @EnvironmentObject private var spiel: Spiel
     @EnvironmentObject private var hud: HUD
-    @State private var menue = false
-    @State private var zeigeListe = true
 
     var body: some View {
         ZStack {
@@ -29,8 +28,10 @@ struct SpielView: View {
                 Color.cyan.opacity(0.18).ignoresSafeArea().allowsHitTesting(false)
             }
 
-            oben
-            unten
+            anzeigen
+            SteuerungView()
+
+            if spiel.zeigeListe { spielerListe }
 
             if !spiel.einstellungen.anleitungGesehen {
                 AnleitungView { spiel.einstellungen.anleitungGesehen = true }
@@ -42,119 +43,77 @@ struct SpielView: View {
         .sheet(isPresented: $spiel.zeigeLaden) {
             LadenView().environmentObject(spiel)
         }
-        .sheet(isPresented: $menue) {
-            MenueView(schliessen: { menue = false }).environmentObject(spiel)
+        .sheet(isPresented: $spiel.zeigeMenue) {
+            MenueView(schliessen: { spiel.zeigeMenue = false }).environmentObject(spiel)
         }
     }
 
-    // MARK: Oben
+    // MARK: Anzeigen (nicht antippbar)
 
-    private var oben: some View {
-        VStack(spacing: 6) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(hud.unterzeile)
-                        .font(Stil.dick(14))
-                        .foregroundStyle(.white)
-                        .umrandet()
-                    Text(hud.netz)
-                        .font(.system(size: 11, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.85))
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(Capsule().fill(.black.opacity(0.35)))
-                }
-                .allowsHitTesting(false)
-
-                Spacer()
-
-                // Wischstreifen-Hinweis
-                Text("↔︎  hier wischen zum Umschauen")
-                    .font(.system(size: 11, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.55))
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 5)
-                    .background(Capsule().fill(.white.opacity(0.08)))
-                    .allowsHitTesting(false)
-
-                Spacer()
-
-                HStack(spacing: 10) {
-                    Text("💎 \(hud.steine)")
-                        .font(Stil.dick(16))
-                        .foregroundStyle(.white)
-                        .umrandet()
-                    Button { zeigeListe.toggle() } label: {
-                        Image(systemName: "person.3.fill")
-                            .font(.system(size: 15, weight: .bold))
-                            .frame(width: 40, height: 40)
-                            .background(Circle().fill(.black.opacity(0.4)))
-                            .foregroundStyle(.white)
-                    }
-                    Button { menue = true } label: {
-                        Image(systemName: "line.3.horizontal")
-                            .font(.system(size: 17, weight: .bold))
-                            .frame(width: 40, height: 40)
-                            .background(Circle().fill(.black.opacity(0.4)))
-                            .foregroundStyle(.white)
-                    }
-                }
+    private var anzeigen: some View {
+        VStack(spacing: 8) {
+            Text(hud.unterzeile)
+                .font(Stil.dick(13))
+                .foregroundStyle(.white)
+                .umrandet()
+            Text("💎 \(hud.steine)  ·  \(hud.netz)")
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .foregroundStyle(.white.opacity(0.9))
+                .padding(.horizontal, 10)
+                .padding(.vertical, 3)
+                .background(Capsule().fill(.black.opacity(0.35)))
+            if let m = hud.meldung {
+                Text(m)
+                    .font(Stil.dick(26))
+                    .foregroundStyle(hud.istLava ? Stil.lava : .white)
+                    .multilineTextAlignment(.center)
+                    .umrandet()
+                    .padding(.top, 30)
+                    .transition(.scale.combined(with: .opacity))
             }
-
-            HStack(alignment: .top) {
-                Spacer()
-                if zeigeListe { spielerListe }
+            if let ziel = hud.zielName, let f = hud.zielFarbe {
+                jagdKompass(ziel, f)
             }
-
+            if hud.raus {
+                Text("DU BIST RAUS – SCHAU ZU BIS ZUR NÄCHSTEN RUNDE")
+                    .font(Stil.dick(13))
+                    .foregroundStyle(.white.opacity(0.85))
+                    .umrandet()
+            }
             Spacer()
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 10)
-        .overlay(alignment: .top) {
-            VStack(spacing: 10) {
-                if let m = hud.meldung {
-                    Text(m)
-                        .font(Stil.dick(26))
-                        .foregroundStyle(hud.istLava ? Stil.lava : .white)
-                        .multilineTextAlignment(.center)
-                        .umrandet()
-                        .transition(.scale.combined(with: .opacity))
-                }
-                if let ziel = hud.zielName, let f = hud.zielFarbe {
-                    jagdKompass(ziel, f)
-                }
-                if hud.raus {
-                    Text("DU BIST RAUS – SCHAU ZU BIS ZUR NÄCHSTEN RUNDE")
-                        .font(Stil.dick(13))
-                        .foregroundStyle(.white.opacity(0.85))
-                        .umrandet()
-                }
-            }
-            .padding(.top, 70)
-            .animation(.spring(duration: 0.3), value: hud.meldung)
-            .allowsHitTesting(false)
-        }
+        .padding(.top, 84)
+        .frame(maxWidth: 520)
+        .animation(.spring(duration: 0.3), value: hud.meldung)
+        .allowsHitTesting(false)
     }
 
     private var spielerListe: some View {
-        VStack(alignment: .leading, spacing: 3) {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("SPIELER IM RAUM").font(Stil.dick(18)).foregroundStyle(.white)
             ForEach(hud.spieler) { s in
-                HStack(spacing: 6) {
+                HStack(spacing: 8) {
                     Circle()
                         .fill(s.lava ? Stil.lava : Color(s.farbe))
-                        .frame(width: 11, height: 11)
+                        .frame(width: 13, height: 13)
                         .overlay(Circle().strokeBorder(.black.opacity(0.4)))
                     Text(s.name)
-                        .font(.system(size: 11, weight: s.ich ? .heavy : .semibold, design: .monospaced))
+                        .font(.system(size: 14, weight: s.ich ? .heavy : .semibold, design: .monospaced))
                         .foregroundStyle(s.raus ? .white.opacity(0.4) : .white)
                         .strikethrough(s.raus)
-                    if s.lava { Text("🔥").font(.system(size: 10)) }
+                    if s.lava { Text("🔥").font(.system(size: 12)) }
                 }
             }
+            if hud.spieler.count < 2 {
+                Text("Gerade ist keiner da – du kletterst allein.\nFreunde: Computer → RAUM → Code eingeben.")
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.75))
+            }
         }
-        .padding(8)
-        .background(RoundedRectangle(cornerRadius: 10).fill(.black.opacity(0.35)))
-        .allowsHitTesting(false)
+        .padding(18)
+        .background(RoundedRectangle(cornerRadius: 16).fill(Color(red: 0.04, green: 0.08, blue: 0.05).opacity(0.88)))
+        .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(.white.opacity(0.9), lineWidth: 3))
+        .onTapGesture { spiel.zeigeListe = false }
     }
 
     private func jagdKompass(_ name: String, _ f: V3) -> some View {
@@ -174,50 +133,6 @@ struct SpielView: View {
         .padding(.vertical, 6)
         .background(Capsule().fill(.black.opacity(0.35)))
     }
-
-    // MARK: Unten
-
-    private var unten: some View {
-        VStack {
-            Spacer()
-            HStack(alignment: .bottom) {
-                Text("LINKE HAND")
-                    .font(.system(size: 10, weight: .heavy, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.35))
-                    .allowsHitTesting(false)
-                Spacer()
-                VStack(spacing: 10) {
-                    if let b = hud.ballons {
-                        HStack(spacing: 4) {
-                            ForEach(0..<3, id: \.self) { i in
-                                Text(i < b ? "🎈" : "💥").font(.system(size: 20)).opacity(i < b ? 1 : 0.5)
-                            }
-                        }
-                        .allowsHitTesting(false)
-                        if !hud.raus {
-                            Button { spiel.schiessen() } label: {
-                                Label("SCHLEUDER", systemImage: "scope")
-                            }
-                            .buttonStyle(DickerKnopf(farbe: Color(red: 0.85, green: 0.25, blue: 0.5)))
-                        }
-                    }
-                    if hud.amComputer {
-                        Button { spiel.zeigeComputer = true } label: {
-                            Label("COMPUTER", systemImage: "desktopcomputer")
-                        }
-                        .buttonStyle(DickerKnopf(farbe: Color(red: 0.1, green: 0.55, blue: 0.25)))
-                    }
-                }
-                Spacer()
-                Text("RECHTE HAND")
-                    .font(.system(size: 10, weight: .heavy, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.35))
-                    .allowsHitTesting(false)
-            }
-            .padding(.horizontal, 24)
-            .padding(.bottom, 14)
-        }
-    }
 }
 
 // MARK: - Anleitung beim ersten Start
@@ -229,21 +144,18 @@ struct AnleitungView: View {
         ZStack {
             Color.black.opacity(0.6).ignoresSafeArea()
             VStack(spacing: 14) {
-                Text("SO BEWEGST DU DICH").font(Stil.dick(24)).foregroundStyle(.white)
+                Text("SO STEUERST DU DEINEN GORILLA").font(Stil.dick(24)).foregroundStyle(.white)
                 HStack(alignment: .top, spacing: 18) {
-                    schritt("✋", "Finger links = linke Hand, rechts = rechte Hand. Ein liegender Finger ist eine greifende Hand.")
-                    schritt("⬇️", "Zieh den Finger nach UNTEN, während die Hand den Boden berührt → du springst nach vorne-oben.")
-                    schritt("🧗", "An Wände und Bäume greifen und nach unten ziehen = klettern. Loslassen mit Schwung = fliegen!")
-                    schritt("👀", "Im oberen Streifen wischen = umschauen. Oder am Computer „Gyro“ einschalten.")
+                    schritt("🕹️", "Linker Stick (W A S D): laufen. Deine Hände drücken sich dabei wirklich vom Boden ab.")
+                    schritt("👀", "Rechter Stick: umschauen. Oder einfach irgendwo über die Welt wischen.")
+                    schritt("⎵", "Springen. ⇧ = sprinten. Gegen eine Wand laufen = hochklettern.")
+                    schritt("✋", "E festhalten · 1 Hände hoch · 3 runter · 4/2 linke/rechte Hand · R zurück · F Lampe · TAB Spieler")
                 }
-                Text("Grüner Kreis = deine Hand hält sich gerade fest.")
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.green)
                 Button("LOS GEHT'S!", action: fertig)
                     .buttonStyle(DickerKnopf())
             }
             .padding(24)
-            .frame(maxWidth: 760)
+            .frame(maxWidth: 780)
             .background(RoundedRectangle(cornerRadius: 24).fill(Stil.holz))
             .overlay(RoundedRectangle(cornerRadius: 24).strokeBorder(.black.opacity(0.4), lineWidth: 4))
             .padding(20)
@@ -267,6 +179,10 @@ struct AnleitungView: View {
 struct MenueView: View {
     @EnvironmentObject private var spiel: Spiel
     let schliessen: () -> Void
+
+    init(schliessen: @escaping () -> Void) {
+        self.schliessen = schliessen
+    }
 
     var body: some View {
         ScrollView {

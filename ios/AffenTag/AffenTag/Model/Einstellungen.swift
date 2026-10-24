@@ -25,7 +25,7 @@ enum Warteschlange: String, Codable, CaseIterable { case standard, minispiele, w
 
 struct Einstellungen: Codable, Equatable {
     var name = "AFFE\(Int.random(in: 100...999))"
-    var rot = 6, gruen = 3, blau = 1
+    var rot = 2, gruen = 2, blau = 2
     var drehModus: DrehModus = .sanft
     var drehTempo = 5
     var gyro = false

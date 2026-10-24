@@ -51,13 +51,40 @@ final class KartenBauer {
         return m
     }
 
+    /// Material mit Oberfläche (Holz, Rinde, Gras …). `su`/`sv` = wie oft die Textur
+    /// sich wiederholt – so ist sie überall etwa gleich groß (eine Kachel ≈ 2 m).
+    func material(_ f: UIColor, art: TexturArt?, su: Float, sv: Float) -> SCNMaterial {
+        guard let art else { return material(f) }
+        let u = max(1, (su * 2).rounded() / 2), v = max(1, (sv * 2).rounded() / 2)
+        let schluessel = "\(f.description)|\(art.rawValue)|\(u)|\(v)"
+        if let m = cache[schluessel] { return m }
+        let m = SCNMaterial()
+        m.lightingModel = .lambert
+        m.diffuse.contents = Texturen.bild(art)
+        m.diffuse.wrapS = .repeat
+        m.diffuse.wrapT = .repeat
+        m.diffuse.mipFilter = .linear
+        m.diffuse.contentsTransform = SCNMatrix4MakeScale(u, v, 1)
+        m.multiply.contents = f
+        cache[schluessel] = m
+        return m
+    }
+
     // MARK: Grundformen
 
     @discardableResult
     func kiste(_ mitte: V3, _ groesse: V3, _ f: UIColor, _ mat: Material,
                gier: Float = 0, fest: Bool = true, leuchten: Bool = false) -> SCNNode {
         let g = SCNBox(width: CGFloat(groesse.x), height: CGFloat(groesse.y), length: CGFloat(groesse.z), chamferRadius: 0)
-        g.materials = [material(f, leuchten: leuchten)]
+        var a: CGFloat = 1
+        f.getRed(nil, green: nil, blue: nil, alpha: &a)
+        if !leuchten, a >= 1, let art = TexturArt.fuer(mat) {
+            // vorne, rechts, hinten, links, oben, unten
+            let (x, y, z) = (groesse.x / 2, groesse.y / 2, groesse.z / 2)
+            g.materials = [(x, y), (z, y), (x, y), (z, y), (x, z), (x, z)].map { material(f, art: art, su: $0.0, sv: $0.1) }
+        } else {
+            g.materials = [material(f, leuchten: leuchten)]
+        }
         let n = SCNNode(geometry: g)
         n.simdPosition = mitte
         n.simdEulerAngles = V3(0, gier, 0)
@@ -69,10 +96,17 @@ final class KartenBauer {
     /// Senkrechter Zylinder, `fuss` ist die Mitte der Unterseite.
     @discardableResult
     func zylinder(_ fuss: V3, radius: Float, hoehe: Float, _ f: UIColor, _ mat: Material,
-                  seiten: Int = 7, fest: Bool = true) -> SCNNode {
+                  seiten: Int = 7, fest: Bool = true, textur: TexturArt? = nil) -> SCNNode {
         let g = SCNCylinder(radius: CGFloat(radius), height: CGFloat(hoehe))
-        g.radialSegmentCount = seiten
-        g.materials = [material(f)]
+        g.radialSegmentCount = max(seiten, 10)
+        let art: TexturArt? = textur ?? (mat == .holz ? (hoehe > radius * 2.5 ? TexturArt.rinde : TexturArt.holz) : TexturArt.fuer(mat))
+        if art == .ringe {
+            g.materials = [material(f, art: .holz, su: .pi * radius, sv: hoehe / 2), material(f, art: .ringe, su: 1, sv: 1),
+                           material(f, art: .ringe, su: 1, sv: 1)]
+        } else {
+            g.materials = [material(f, art: art, su: .pi * radius, sv: hoehe / 2), material(f, art: art, su: radius, sv: radius),
+                           material(f, art: art, su: radius, sv: radius)]
+        }
         let n = SCNNode(geometry: g)
         let mitte = fuss + V3(0, hoehe / 2, 0)
         n.simdPosition = mitte
@@ -85,8 +119,8 @@ final class KartenBauer {
     func kugel(_ mitte: V3, radius: Float, _ f: UIColor, _ mat: Material,
                fest: Bool = true, stauchung: V3 = V3(1, 1, 1), leuchten: Bool = false) -> SCNNode {
         let g = SCNSphere(radius: CGFloat(radius))
-        g.segmentCount = 8
-        g.materials = [material(f, leuchten: leuchten)]
+        g.segmentCount = 12
+        g.materials = [leuchten ? material(f, leuchten: true) : material(f, art: TexturArt.fuer(mat), su: .pi * radius, sv: radius)]
         let n = SCNNode(geometry: g)
         n.simdPosition = mitte
         n.simdScale = stauchung
@@ -109,8 +143,8 @@ final class KartenBauer {
     func kegel(_ fuss: V3, radius: Float, hoehe: Float, _ f: UIColor, _ mat: Material,
                fest: Bool = true, seiten: Int = 7, kopfueber: Bool = false) -> SCNNode {
         let g = SCNCone(topRadius: 0, bottomRadius: CGFloat(radius), height: CGFloat(hoehe))
-        g.radialSegmentCount = seiten
-        g.materials = [material(f)]
+        g.radialSegmentCount = max(seiten, 8)
+        g.materials = [material(f, art: TexturArt.fuer(mat), su: .pi * radius, sv: hoehe / 2)]
         let n = SCNNode(geometry: g)
         let mitte = fuss + V3(0, kopfueber ? -hoehe / 2 : hoehe / 2, 0)
         n.simdPosition = mitte

@@ -142,12 +142,12 @@ struct ComputerView: View {
                 Text("SO SIEHST DU AUS").font(Stil.terminal(13)).foregroundStyle(Stil.terminalGruen)
             }
         case .drehen:
-            zeile("UMSCHAUEN MIT DEM OBEREN WISCHSTREIFEN:")
+            zeile("UMSCHAUEN (RECHTER STICK ODER ÜBER DIE WELT WISCHEN):")
             ForEach(DrehModus.allCases, id: \.self) { d in
                 wahl(d.computerName, e.drehModus == d) { spiel.einstellungen.drehModus = d }
             }
             stufe("TEMPO", e.drehTempo, 1...9) { spiel.einstellungen.drehTempo = $0 }
-            stufe("ARME", e.empfindlichkeit, 1...9) { spiel.einstellungen.empfindlichkeit = $0 }
+            stufe("STICK", e.empfindlichkeit, 1...9) { spiel.einstellungen.empfindlichkeit = $0 }
             wahl("GYRO (GERÄT DREHEN = UMSCHAUEN): \(e.gyro ? "AN" : "AUS")", e.gyro) { spiel.einstellungen.gyro.toggle() }
         case .modus:
             zeile("SPIELMODUS (GILT AUF ALLEN KARTEN AUSSER DEM STUMPF):")
@@ -182,8 +182,8 @@ struct ComputerView: View {
             wahl("VIBRATION: \(e.vibration ? "AN" : "AUS")", e.vibration) { spiel.einstellungen.vibration.toggle() }
         case .info:
             zeile("AFFEN-TAG – KLETTERN NUR MIT DEN ARMEN.")
-            zeile("LINKE BILDSCHIRMHÄLFTE = LINKE HAND\nRECHTE HÄLFTE = RECHTE HAND\nOBERER STREIFEN = UMSCHAUEN")
-            zeile("HAND AUF DEN BODEN, FINGER NACH UNTEN ZIEHEN = SPRINGEN.\nAN WÄNDEN ZIEHEN = KLETTERN.")
+            zeile("LINKER STICK (W A S D) = LAUFEN – DEINE HÄNDE STOSSEN SICH VOM BODEN AB\nRECHTER STICK = UMSCHAUEN · ⎵ = SPRINGEN · ⇧ = SPRINTEN")
+            zeile("GEGEN EINE WAND LAUFEN = HOCHKLETTERN · E = FESTHALTEN\n1 = HÄNDE HOCH · 3 = RUNTER · 4/2 = LINKE/RECHTE HAND\nR = ZURÜCK ZUM START · F = TASCHENLAMPE · TAB = SPIELER")
             zeile("LAVA-AFFEN SIND SCHNELLER UND SPRINGEN WEITER.")
             zeile("💎 STEINE GIBT ES FÜRS FANGEN, ÜBERLEBEN UND GEWINNEN.")
             knopf("ANLEITUNG NOCHMAL ZEIGEN") {

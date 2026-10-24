@@ -62,6 +62,9 @@ final class Spiel: ObservableObject {
     }
     @Published var zeigeComputer = false
     @Published var zeigeLaden = false
+    @Published var zeigeMenue = false
+    @Published var zeigeListe = false
+    @Published private(set) var lampeAn = false
     @Published private(set) var karte: KartenID = .stumpf
     @Published private(set) var raumCode: String?
 
@@ -121,6 +124,8 @@ final class Spiel: ObservableObject {
         bewegung.stopDeviceMotionUpdates()
         zeigeComputer = false
         zeigeLaden = false
+        zeigeMenue = false
+        eingabe = SteuerEingabe()
         bildschirm = .titel
     }
 
@@ -150,18 +155,47 @@ final class Spiel: ObservableObject {
 
     // MARK: - Eingaben
 
-    /// Finger auf der linken (0) oder rechten (1) Hälfte.
-    func handAktiv(_ i: Int, _ aktiv: Bool) {
-        lokal.haende[i].aktiv = aktiv
+    enum Taste: String {
+        case leer, shift, e, r, f, tab, esc, logo, computer
+        case eins = "1", zwei = "2", drei = "3", vier = "4"
     }
 
-    /// Fingerbewegung, relativ zur Bildschirmhöhe.
-    func arm(_ i: Int, dx: Float, dy: Float) {
-        let f = 2.6 * (0.55 + Float(einstellungen.empfindlichkeit) * 0.1)
-        lokal.bewegeArm(i, dGier: dx * f, dNeigung: -dy * f)
+    /// Joysticks: links laufen, rechts umschauen (je −1…1, y nach oben).
+    var eingabe = SteuerEingabe()
+
+    /// Eine Taste auf dem Bildschirm wurde gedrückt oder losgelassen.
+    func taste(_ t: Taste, _ gedrueckt: Bool) {
+        switch t {
+        case .shift: eingabe.sprint = gedrueckt
+        case .e: eingabe.greifen = gedrueckt
+        case .eins: eingabe.hoch = gedrueckt
+        case .drei: eingabe.runter = gedrueckt
+        default: break
+        }
+        guard gedrueckt else { return }
+        switch t {
+        case .leer: lokal.springe()
+        case .vier: lokal.schlag[0] = 0.25
+        case .zwei: lokal.schlag[1] = 0.25
+        case .r:
+            lokal.setzeZurueck(auf: welt.startpunkte.randomElement() ?? V3(0, 1, 0), gier: lokal.gier)
+            zeige("ZURÜCK ZUM START", sekunden: 1.2)
+        case .f:
+            lampeAn.toggle()
+            szene.lampe(lampeAn)
+            zeige(lampeAn ? "TASCHENLAMPE AN" : "TASCHENLAMPE AUS", sekunden: 1)
+        case .tab: zeigeListe.toggle()
+        case .computer: zeigeComputer = true
+        case .logo: zeigeMenue = true
+        case .esc:
+            if zeigeComputer { zeigeComputer = false }
+            else if zeigeLaden { zeigeLaden = false }
+            else { zeigeMenue.toggle() }
+        default: break
+        }
     }
 
-    /// Wischen im oberen Streifen: umschauen.
+    /// Wischen über die Welt: umschauen.
     func blick(dx: Float, dy: Float) {
         let tempo = 0.5 + Float(einstellungen.drehTempo) * 0.15
         switch einstellungen.drehModus {
@@ -209,6 +243,7 @@ final class Spiel: ObservableObject {
         // Du
         let lava = istLava(ich)
         let eingefroren = (affen[ich]?.eingefrorenBis ?? 0) > zeit
+        lokal.steuere(dt: fdt, eingabe: eingabe, welt: welt, eingefroren: eingefroren)
         let aufschlaege = lokal.schritt(dt: fdt, welt: welt, sprungFaktor: lava ? 1.3 : 1.1,
                                         maxTempo: lava ? 8.5 : 6.5, eingefroren: eingefroren)
         for a in aufschlaege {
@@ -246,10 +281,17 @@ final class Spiel: ObservableObject {
         umgebungsKlang(dt)
 
         // Bild
+        let griff: [Float] = lokal.haende.map { $0.haftet ? 1 : ($0.aktiv ? 0.55 : 0.3) }
+        let normalen = lokal.haende.map(\.haftNormale)
         let bilder: [SzeneVerwalter.AffenBild] = affen.values.map { a in
-            SzeneVerwalter.AffenBild(affe: a, lava: istLava(a.id), raus: istRaus(a.id),
-                                     ballons: runde.modus == .farbschlacht ? (runde.ballons[a.id] ?? 0) : nil,
-                                     zielFarbe: a.istLokal ? zielVon(ich).flatMap { affen[$0]?.farbe } : nil)
+            var bild = SzeneVerwalter.AffenBild(affe: a, lava: istLava(a.id), raus: istRaus(a.id),
+                                                ballons: runde.modus == .farbschlacht ? (runde.ballons[a.id] ?? 0) : nil,
+                                                zielFarbe: a.istLokal ? zielVon(ich).flatMap { affen[$0]?.farbe } : nil)
+            if a.istLokal {
+                bild.griff = griff
+                bild.normalen = normalen
+            }
+            return bild
         }
         szene.aktualisiere(affen: bilder, kameraPosition: lokal.position + V3(0, 0.12, 0),
                            gier: lokal.gier, neigung: lokal.blickNeigung, kugeln: kugeln, zeit: zeit)
@@ -262,6 +304,10 @@ final class Spiel: ObservableObject {
     }
 
     private func wendeBlickAn(_ dt: Float) {
+        // Rechter Joystick
+        let stick = 0.6 + Float(einstellungen.empfindlichkeit) * 0.1
+        if einstellungen.drehModus != .aus { blickGier -= eingabe.rx * 2.6 * stick * dt }
+        if !einstellungen.gyro { blickNeigung = klemm(blickNeigung + eingabe.ry * 1.6 * stick * dt, grad(-80), grad(80)) }
         if einstellungen.gyro, let m = bewegung.deviceMotion {
             let g = V3(Float(m.gravity.x), Float(m.gravity.y), Float(m.gravity.z))
             let w = V3(Float(m.rotationRate.x), Float(m.rotationRate.y), Float(m.rotationRate.z))

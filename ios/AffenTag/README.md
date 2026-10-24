@@ -32,20 +32,30 @@ Mindestversion: **iOS 17**. Das Spiel läuft nur **quer**.
 
 ## So spielst du
 
-| Finger | Wirkung |
-|---|---|
-| linke Bildschirmhälfte | **linke Hand** |
-| rechte Bildschirmhälfte | **rechte Hand** |
-| oberer Streifen | **umschauen** (oder am Computer „Gyro“ an: Gerät drehen) |
+Die Steuerung ist aufgebaut wie beim Gorilla-Tag-Spielen auf dem Handy
+(Joysticks und Tasten auf dem Bildschirm):
 
-* Ein Finger, der auf dem Bildschirm liegt, ist eine Hand, die **greifen** kann.
-  Finger nach unten = Arm nach unten, nach oben = Arm nach oben, seitlich = seitlich.
-* Berührt die Hand den Boden und du ziehst weiter nach unten, **schiebt sich dein
-  Körper nach vorne-oben** – ein Sprung. Abwechselnd links/rechts = rennen.
-* An Wände, Bäume und Äste greifen und runterziehen = **klettern**.
-* Loslassen mitten im Schwung = **fliegen**. Lava-Affen springen weiter (×1,3 statt ×1,1).
-* Der Finger-Kreis wird **grün**, solange deine Hand sich irgendwo festhält.
+| Taste | Wirkung |
+|---|---|
+| linker Stick (W A S D) | **laufen** – deine Gorilla-Hände setzen vorne auf und ziehen nach hinten durch, genau wie im Original |
+| rechter Stick oder über die Welt wischen | **umschauen** |
+| ⎵ | **springen** – beide Hände stoßen dich vom Boden ab |
+| ⇧ | **sprinten** |
+| gegen eine Wand laufen | **hochklettern** (Hände oben anlegen, runterziehen) |
+| E (halten) | **festhalten** – an Ästen und Wänden hängen bleiben |
+| 1 / 3 | Hände **hoch** / **runter** |
+| 4 / 2 | linke / rechte Hand nach vorne schlagen (zum Fangen) |
+| R | zurück zum Start |
+| F | Taschenlampe |
+| TAB | Spieler im Raum |
+| 🦍 / ESC | Menü (Karte wechseln, Laden, Titel) |
+| ⌨︎ oder … | Computer |
+
+* Unter der Haube steckt dieselbe Hand-Physik wie in VR: Die Hände kleben an
+  Flächen, der Körper wird von ihnen geschoben, Schwung bleibt beim Loslassen.
 * Jede Oberfläche klingt anders (Holz, Stein, Blätter, Eis …), dazu Vibration.
+* Welt mit Texturen (Holzbretter, Rinde, Jahresringe im Stumpf, Gras, Stein),
+  Schatten und dunklen Gorilla-Händen mit Fingern, die beim Festhalten zugreifen.
 
 ## Alles drin
 
@@ -109,7 +119,7 @@ Sprachchat gibt es (noch) nicht.
 | Datei | Inhalt |
 |---|---|
 | `AffenTagApp.swift` | Einstieg, Wechsel Titel ↔ Spiel |
-| `Model/Lokomotion.swift` | **Die Arm-Fortbewegung**: Hände kleben an Flächen, der Körper wird um den Rest verschoben, Schwung beim Loslassen |
+| `Model/Lokomotion.swift` | **Die Arm-Fortbewegung**: Hände kleben an Flächen, der Körper wird um den Rest verschoben, Schwung beim Loslassen; `steuere(...)` bewegt die Arme passend zum Joystick (Laufen, Klettern, Springen) |
 | `Model/Welt.swift` | Kollision: Kisten, Zylinder, Kugeln; Hände-Abfrage und Körper-Herausschieben |
 | `Model/Spiel.swift` | 60-Hz-Takt, Fangen, Runden aller Modi, Farbkugeln, Netz-Abgleich, Gruppe, Steine, HUD |
 | `Model/Spieler.swift` | Affe, Modi, Rundenzustand, Kosmetik-Liste |
@@ -120,7 +130,9 @@ Sprachchat gibt es (noch) nicht.
 | `Szene/AffeKnoten.swift` | 3D-Affe mit Armen, Lava-Glühen, Namensschild, Ballons, Hüte/Brillen |
 | `Szene/SzeneVerwalter.swift` | Szene, Himmel, Nebel, Licht, Kamera |
 | `Netz/*.swift` | Nachrichten, WLAN/Bluetooth (MultipeerConnectivity), Online (GameKit) |
-| `Views/SzeneAnsicht.swift` | SceneKit-Ansicht mit Mehrfinger-Steuerung |
+| `Views/SzeneAnsicht.swift` | SceneKit-Ansicht, Wischen = umschauen |
+| `Views/SteuerungView.swift` | Joysticks und Tasten (TAB, 🦍, ESC, 1–4, ⇧, F, R, E, ⎵, Tastatur) |
+| `Szene/Texturen.swift` | Selbst gemalte Oberflächen (Holz, Rinde, Jahresringe, Gras, Fell …) |
 | `Views/SpielView.swift` | HUD, Anleitung, Menü |
 | `Views/ComputerView.swift` | Der grüne Computer mit Tastatur |
 | `Views/LadenView.swift`, `Views/TitelView.swift` | Laden und Startbildschirm |

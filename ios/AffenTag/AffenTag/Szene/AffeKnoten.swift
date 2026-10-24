@@ -14,8 +14,12 @@ final class AffeKnoten {
     private let kopf = SCNNode()
     private let kopfSchmuck = SCNNode()
     private let namensSchild = SCNNode()
+    private var oberarme: [SCNNode] = []
     private var arme: [SCNNode] = []
+    private var ellbogen: [SCNNode] = []
     private var haende: [SCNNode] = []
+    private var finger: [[(SCNNode, SCNNode)]] = [[], []]
+    private let haut = SCNMaterial()
     private var ballons: [SCNNode] = []
     private let zielBand = SCNNode()
 
@@ -31,7 +35,11 @@ final class AffeKnoten {
     private var fellFarbe = V3(-1, -1, -1)
 
     init(lokal: Bool) {
-        for m in [fell, lava, gesichtMat] { m.lightingModel = .lambert }
+        for m in [fell, lava, gesichtMat, haut] { m.lightingModel = .lambert }
+        fell.diffuse.contents = Texturen.bild(.fell)
+        fell.diffuse.wrapS = .repeat
+        fell.diffuse.wrapT = .repeat
+        haut.diffuse.contents = farbe(0.15, 0.14, 0.13)
         lava.diffuse.contents = farbe(1, 0.42, 0.08)
         lava.emission.contents = farbe(0.9, 0.25, 0.02)
         gesichtMat.diffuse.contents = farbe(0.85, 0.72, 0.58)
@@ -82,24 +90,37 @@ final class AffeKnoten {
         if lokal { koerper.isHidden = true }
         wurzel.addChildNode(koerper)
 
-        for _ in 0..<2 {
-            let arm = SCNCylinder(radius: 0.055, height: 1)
-            arm.radialSegmentCount = 6
-            arm.materials = [fell]
-            let a = SCNNode(geometry: arm)
+        for i in 0..<2 {
+            // Oberarm und Unterarm (leicht konisch), dazwischen der Ellbogen
+            let ober = SCNCone(topRadius: 0.07, bottomRadius: 0.085, height: 1)
+            ober.radialSegmentCount = 10
+            ober.materials = [fell]
+            let o = SCNNode(geometry: ober)
+            wurzel.addChildNode(o)
+            oberarme.append(o)
+
+            let unter = SCNCone(topRadius: 0.05, bottomRadius: 0.072, height: 1)
+            unter.radialSegmentCount = 10
+            unter.materials = [fell]
+            let a = SCNNode(geometry: unter)
             wurzel.addChildNode(a)
             arme.append(a)
 
-            let hand = SCNSphere(radius: lokal ? 0.075 : 0.09)
-            hand.segmentCount = 8
-            hand.materials = [fell]
-            let h = SCNNode(geometry: hand)
+            let e = SCNSphere(radius: 0.072)
+            e.segmentCount = 10
+            e.materials = [fell]
+            let en = SCNNode(geometry: e)
+            wurzel.addChildNode(en)
+            ellbogen.append(en)
+
+            let h = gorillaHand(links: i == 0, index: i)
             wurzel.addChildNode(h)
             haende.append(h)
         }
-        if lokal {
+        for n in oberarme + arme + ellbogen + haende {
+            n.castsShadow = true
             // Die eigenen Arme nicht in der Kamera abschneiden lassen
-            for n in arme + haende { n.renderingOrder = 10 }
+            if lokal { n.renderingOrder = 10 }
         }
 
         let band = SCNTorus(ringRadius: 0.085, pipeRadius: 0.025)
@@ -129,18 +150,73 @@ final class AffeKnoten {
         if !lokal { wurzel.addChildNode(namensSchild) }
     }
 
+    /// Wie fest jede Hand zugreift (0 = offen, 1 = Faust) und woran sie sich hält.
+    var griff: [Float] = []
+    var haftNormalen: [V3] = [V3(0, 1, 0), V3(0, 1, 0)]
+
+    private func setzeGlied(_ n: SCNNode, von a: V3, bis b: V3) {
+        let weg = b - a
+        let l = max(0.02, simd_length(weg))
+        n.simdPosition = a + weg / 2
+        n.simdScale = V3(1, l, 1)
+        // Kegel: oben (+y) ist das schmale Ende → zeigt zur Hand
+        n.simdOrientation = simd_quatf(from: V3(0, 1, 0), to: weg / l)
+    }
+
+    /// Gorilla-Hand: Handrücken mit Fell, dunkle Handfläche, vier Finger mit Gelenk, Daumen.
+    private func gorillaHand(links: Bool, index: Int) -> SCNNode {
+        let g = SCNNode()
+        let s: Float = links ? -1 : 1
+        func block(_ b: V3, _ m: SCNMaterial) -> SCNNode {
+            let geo = SCNBox(width: CGFloat(b.x), height: CGFloat(b.y), length: CGFloat(b.z), chamferRadius: CGFloat(min(b.x, b.y) * 0.35))
+            geo.materials = [m]
+            return SCNNode(geometry: geo)
+        }
+        let ruecken = block(V3(0.12, 0.05, 0.13), fell)
+        ruecken.simdPosition = V3(0, 0.006, 0)
+        g.addChildNode(ruecken)
+        let ballen = block(V3(0.112, 0.03, 0.12), haut)
+        ballen.simdPosition = V3(0, -0.025, 0)
+        g.addChildNode(ballen)
+        for k in 0..<4 {
+            let f = SCNNode()
+            f.simdPosition = V3((-0.045 + Float(k) * 0.03) * s, -0.004, -0.064)
+            let glied1 = block(V3(0.027, 0.032, 0.06), fell)
+            glied1.simdPosition = V3(0, 0, -0.03)
+            f.addChildNode(glied1)
+            let gelenk = SCNNode()
+            gelenk.simdPosition = V3(0, 0, -0.058)
+            let glied2 = block(V3(0.025, 0.028, 0.05), haut)
+            glied2.simdPosition = V3(0, 0, -0.024)
+            gelenk.addChildNode(glied2)
+            f.addChildNode(gelenk)
+            g.addChildNode(f)
+            finger[index].append((f, gelenk))
+        }
+        let daumen = SCNNode()
+        daumen.simdPosition = V3(-0.065 * s, -0.01, -0.01)
+        daumen.simdEulerAngles = V3(0, 0.35 * s, 0)
+        let d = block(V3(0.03, 0.03, 0.06), haut)
+        d.simdPosition = V3(0, 0, -0.03)
+        daumen.addChildNode(d)
+        g.addChildNode(daumen)
+        g.simdScale = V3(repeating: 1.35)
+        return g
+    }
+
     func aktualisiere(_ a: Affe, lava istJetztLava: Bool, raus: Bool, ballonAnzahl: Int?, zielFarbe: V3?, zeit: Double) {
         wurzel.simdPosition = a.position
         koerper.simdEulerAngles = V3(0, a.gier, 0)
 
         if fellFarbe != a.farbe {
             fellFarbe = a.farbe
-            fell.diffuse.contents = farbe(CGFloat(a.farbe.x), CGFloat(a.farbe.y), CGFloat(a.farbe.z))
+            fell.multiply.contents = farbe(CGFloat(0.06 + a.farbe.x * 0.9), CGFloat(0.06 + a.farbe.y * 0.9), CGFloat(0.06 + a.farbe.z * 0.9))
         }
         if istJetztLava != istLava {
             istLava = istJetztLava
             let m = istLava ? lava : fell
-            for n in [kopf] + arme + haende { n.geometry?.materials = [m] }
+            for n in [kopf] + oberarme + arme + ellbogen { n.geometry?.materials = [m] }
+            for h in haende { h.childNodes.first?.geometry?.materials = [m] }
             koerper.childNodes.first?.geometry?.materials = [m]
         }
         if istLava {
@@ -163,18 +239,32 @@ final class AffeKnoten {
             if let g = Kosmetik.mit(a.gesicht) { kopfSchmuck.addChildNode(KosmetikBauer.knoten(g)) }
         }
 
-        // Arme: von der Schulter zur Hand
+        // Arme: Schulter → Ellbogen → Hand
         for i in 0..<2 {
             var schulter = Affenkoerper.schulter
             if i == 0 { schulter.x = -schulter.x }
             let s = drehY(schulter, a.gier)
             let h = a.haende[i] - a.position
-            haende[i].simdPosition = h
             let weg = h - s
             let l = max(0.05, simd_length(weg))
-            arme[i].simdPosition = s + weg / 2
-            arme[i].simdScale = V3(1, l, 1)
-            arme[i].simdOrientation = simd_quatf(from: V3(0, 1, 0), to: weg / l)
+            let richtung = weg / l
+            // Ellbogen leicht nach außen-unten geknickt – je näher die Hand, desto mehr
+            let knick = drehY(V3(i == 0 ? -0.12 : 0.12, -0.1, 0), a.gier) * (max(0, 1 - l / Affenkoerper.armLaenge) * 2 + 0.25)
+            let e = s + weg * 0.5 + knick
+            ellbogen[i].simdPosition = e
+            setzeGlied(oberarme[i], von: s, bis: e)
+            setzeGlied(arme[i], von: e, bis: h)
+
+            let hand = haende[i]
+            hand.simdPosition = h + richtung * 0.04
+            var oben = griff.indices.contains(i) && griff[i] > 0.9 ? haftNormalen[i] : V3(0, 1, 0)
+            if abs(simd_dot(oben, richtung)) > 0.92 { oben = vorne(a.gier) }
+            hand.simdLook(at: a.position + h + richtung, up: oben, localFront: V3(0, 0, -1))
+            let krumm = griff.indices.contains(i) ? griff[i] : 0.4
+            for (f, g) in finger[i] {
+                f.eulerAngles.x += (Float(-krumm * 0.7) - f.eulerAngles.x) * 0.3
+                g.eulerAngles.x += (Float(-krumm * 1.1) - g.eulerAngles.x) * 0.3
+            }
         }
 
         if let b = ballonAnzahl {

@@ -113,12 +113,8 @@ enum Karten {
     private static func stumpf(_ b: KartenBauer) -> Stimmung {
         let r: Float = 7
         let wand = farbe(0.47, 0.31, 0.18)
-        b.zylinder(V3(0, -1, 0), radius: r + 1.5, hoehe: 1, farbe(0.55, 0.38, 0.22), .holz, seiten: 18)
+        b.zylinder(V3(0, -1, 0), radius: r + 1.5, hoehe: 1, farbe(0.62, 0.43, 0.26), .holz, seiten: 24, textur: .ringe)
         b.zylinder(V3(0, 7.2, 0), radius: r + 1.5, hoehe: 0.6, wand, .holz, seiten: 18)
-        // Jahresringe auf dem Boden
-        for (i, rr) in [5.5, 3.6, 1.8].enumerated() {
-            b.zylinder(V3(0, -0.98 + Float(i) * 0.01, 0), radius: Float(rr), hoehe: 1, farbe(0.6 - CGFloat(i) * 0.03, 0.42, 0.25), .holz, seiten: 18, fest: false)
-        }
 
         let tore = Dictionary(uniqueKeysWithValues: stumpfTore)
         for i in 0..<18 {
