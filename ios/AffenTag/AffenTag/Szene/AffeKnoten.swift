@@ -159,7 +159,8 @@ final class AffeKnoten {
         let weg = b - a
         let l = max(0.02, simd_length(weg))
         n.simdPosition = a + weg / 2
-        n.simdScale = V3(1, l, 1)
+        let g = Affenkoerper.groesse * 0.85
+        n.simdScale = V3(g, l, g)
         // Kegel: oben (+y) ist das schmale Ende → zeigt zur Hand
         n.simdOrientation = simd_quatf(from: V3(0, 1, 0), to: weg / l)
     }
@@ -275,7 +276,7 @@ final class AffeKnoten {
             let l = max(0.05, simd_length(weg))
             let richtung = weg / l
             // Ellbogen leicht nach außen-unten geknickt – je näher die Hand, desto mehr
-            let knick = drehY(V3(i == 0 ? -0.12 : 0.12, -0.1, 0), a.gier) * (max(0, 1 - l / Affenkoerper.armLaenge) * 2 + 0.25)
+            let knick = drehY(V3(i == 0 ? -0.12 : 0.12, -0.1, 0), a.gier) * ((max(0, 1 - l / Affenkoerper.armLaenge) * 2 + 0.25) * Affenkoerper.groesse)
             let e = s + weg * 0.5 + knick
             ellbogen[i].simdPosition = e
             setzeGlied(oberarme[i], von: s, bis: e)
@@ -289,7 +290,10 @@ final class AffeKnoten {
             vor = simd_normalize(vor)
             if !haelt { vor = simd_normalize(vor * 0.75 + richtung * 0.25) }
             let hand = haende[i]
-            hand.simdPosition = h + oben * 0.06 - vor * 0.04
+            let gr = Affenkoerper.groesse
+            hand.simdScale = V3(repeating: 1.55 * gr)
+            ellbogen[i].simdScale = V3(repeating: gr * 0.85)
+            hand.simdPosition = h + oben * (0.06 * gr) - vor * (0.04 * gr)
             hand.simdLook(at: a.position + hand.simdPosition + vor, up: oben, localFront: V3(0, 0, -1))
             // Am Boden liegen die Finger flach; an Ästen und Wänden greifen sie zu
             let krumm: Float = haelt ? (oben.y > 0.7 ? 0.05 : 1.0) : (griff.indices.contains(i) && griff[i] > 0.5 ? 0.3 : -0.12)

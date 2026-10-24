@@ -2,7 +2,7 @@
 //  SteuerungView.swift
 //  Die Handy-Steuerung wie beim Mobile-Spielen:
 //  links Joystick (W A S D) zum Laufen, darunter 1–4 und ⇧ (Sprinten),
-//  oben TAB · Menü · ESC, rechts Tastatur, Joystick zum Umschauen, F, R, E und ⎵ (Springen).
+//  oben TAB · Menü · ESC, rechts Tastatur, F, R, E und ⎵ (Springen). Umschauen: über die Welt wischen.
 //  Jede Taste ist eine eigene Ansicht – so gehen mehrere Finger gleichzeitig.
 //
 
@@ -56,13 +56,6 @@ struct SteuerungView: View {
                 // Rechts
                 TasteView(taste: .computer, form: .eckig, groesse: CGSize(width: 70, height: 60)) { Image(systemName: "keyboard") }
                     .position(x: w - 42, y: h * 0.16 + 30)
-
-                Joystick(buchstaben: false) { x, y in
-                    spiel.eingabe.rx = x
-                    spiel.eingabe.ry = y
-                }
-                .frame(width: stick, height: stick)
-                .position(x: w - stick / 2 - 80, y: h * 0.22 + stick / 2)
 
                 TasteView(taste: .f, form: .rund, groesse: CGSize(width: rund, height: rund)) { Text("F") }
                     .position(x: w - 120, y: h * 0.64)

@@ -58,6 +58,7 @@ final class Spiel: ObservableObject {
             klang.lautstaerke(einstellungen.lautstaerke)
             if einstellungen.gyro != oldValue.gyro { gyroUmschalten() }
             if einstellungen.verbindung != oldValue.verbindung { notfallNah = false }
+            Affenkoerper.groesse = Float(einstellungen.groesse)
         }
     }
     @Published var zeigeComputer = false
@@ -103,6 +104,7 @@ final class Spiel: ObservableObject {
 
     init() {
         einstellungen = Einstellungen.laden()
+        Affenkoerper.groesse = Float(einstellungen.groesse)
         hud.steine = einstellungen.steine
         klang.lautstaerke(einstellungen.lautstaerke)
     }
@@ -245,7 +247,7 @@ final class Spiel: ObservableObject {
         let eingefroren = (affen[ich]?.eingefrorenBis ?? 0) > zeit
         lokal.steuere(dt: fdt, eingabe: eingabe, welt: welt, eingefroren: eingefroren)
         let aufschlaege = lokal.schritt(dt: fdt, welt: welt, sprungFaktor: lava ? 1.3 : 1.1,
-                                        maxTempo: lava ? 8.5 : 6.5, eingefroren: eingefroren)
+                                        maxTempo: lava ? 13 : 11, eingefroren: eingefroren)
         for a in aufschlaege {
             klang.aufschlag(a.material, staerke: a.staerke)
             if einstellungen.vibration { haptik.impactOccurred(intensity: CGFloat(min(1, 0.3 + a.staerke))) }
@@ -293,7 +295,7 @@ final class Spiel: ObservableObject {
             }
             return bild
         }
-        szene.aktualisiere(affen: bilder, kameraPosition: lokal.position + V3(0, 0.12, 0),
+        szene.aktualisiere(affen: bilder, kameraPosition: lokal.position + V3(0, 0.1 * Affenkoerper.groesse, 0),
                            gier: lokal.gier, neigung: lokal.blickNeigung, kugeln: kugeln, zeit: zeit)
 
         hudTakt -= dt

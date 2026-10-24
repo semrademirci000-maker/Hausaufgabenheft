@@ -146,7 +146,7 @@ struct AnleitungView: View {
                 Text("SO STEUERST DU DEINEN GORILLA").font(Stil.dick(24)).foregroundStyle(.white)
                 HStack(alignment: .top, spacing: 18) {
                     schritt("gamecontroller.fill", "Linker Stick (W A S D): laufen. Deine Hände drücken sich dabei wirklich vom Boden ab.")
-                    schritt("eye.fill", "Rechter Stick: umschauen. Oder einfach irgendwo über die Welt wischen.")
+                    schritt("eye.fill", "Umschauen: einfach irgendwo über die Welt wischen.")
                     schritt("arrow.up.circle.fill", "Springen. ⇧ = sprinten. Gegen eine Wand laufen = hochklettern.")
                     schritt("hand.raised.fill", "E festhalten · 1 Hände hoch · 3 runter · 4/2 linke/rechte Hand · R zurück · F Lampe · TAB Spieler")
                 }

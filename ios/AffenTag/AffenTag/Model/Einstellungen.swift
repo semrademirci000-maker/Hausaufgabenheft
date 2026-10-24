@@ -40,6 +40,8 @@ struct Einstellungen: Codable, Equatable {
     var hut: String?
     var gesicht: String?
     var anleitungGesehen = false
+    /// Größe des Gorillas, 1.0 bis 2.6
+    var groesse = 1.8
 
     private static let schluessel = "affentag.einstellungen"
 

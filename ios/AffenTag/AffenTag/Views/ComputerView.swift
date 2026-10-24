@@ -12,13 +12,14 @@ struct ComputerView: View {
     @Environment(\.dismiss) private var schliessen
 
     enum Seite: String, CaseIterable, Identifiable {
-        case raum, name, farbe, drehen, modus, warteschlange, karte, ton, info
+        case raum, name, farbe, groesse, drehen, modus, warteschlange, karte, ton, info
         var id: String { rawValue }
         var titel: String {
             switch self {
             case .raum: return "RAUM"
             case .name: return "NAME"
             case .farbe: return "FARBE"
+            case .groesse: return "GRÖSSE"
             case .drehen: return "DREHEN"
             case .modus: return "MODUS"
             case .warteschlange: return "WARTESCHLANGE"
@@ -141,8 +142,12 @@ struct ComputerView: View {
                     .overlay(Circle().strokeBorder(Stil.terminalGruen, lineWidth: 2))
                 Text("SO SIEHST DU AUS").font(Stil.terminal(13)).foregroundStyle(Stil.terminalGruen)
             }
+        case .groesse:
+            zeile("WIE GROSS IST DEIN GORILLA? (10 BIS 26)")
+            stufe("GRÖSSE", Int((e.groesse * 10).rounded()), 10...26) { spiel.einstellungen.groesse = Double($0) / 10 }
+            zeile("GRÖSSER = LÄNGERE ARME, WEITERE SCHRITTE, HÖHER SPRINGEN.")
         case .drehen:
-            zeile("UMSCHAUEN (RECHTER STICK ODER ÜBER DIE WELT WISCHEN):")
+            zeile("UMSCHAUEN DURCH WISCHEN ÜBER DIE WELT:")
             ForEach(DrehModus.allCases, id: \.self) { d in
                 wahl(d.computerName, e.drehModus == d) { spiel.einstellungen.drehModus = d }
             }
@@ -182,7 +187,7 @@ struct ComputerView: View {
             wahl("VIBRATION: \(e.vibration ? "AN" : "AUS")", e.vibration) { spiel.einstellungen.vibration.toggle() }
         case .info:
             zeile("AFFEN-TAG – KLETTERN NUR MIT DEN ARMEN.")
-            zeile("LINKER STICK (W A S D) = LAUFEN – DEINE HÄNDE STOSSEN SICH VOM BODEN AB\nRECHTER STICK = UMSCHAUEN · ⎵ = SPRINGEN · ⇧ = SPRINTEN")
+            zeile("LINKER STICK (W A S D) = LAUFEN – DEINE HÄNDE STOSSEN SICH VOM BODEN AB\nWISCHEN = UMSCHAUEN · ⎵ = SPRINGEN · ⇧ = SPRINTEN")
             zeile("GEGEN EINE WAND LAUFEN = HOCHKLETTERN · E = FESTHALTEN\n1 = HÄNDE HOCH · 3 = RUNTER · 4/2 = LINKE/RECHTE HAND\nR = ZURÜCK ZUM START · F = TASCHENLAMPE · TAB = SPIELER")
             zeile("LAVA-AFFEN SIND SCHNELLER UND SPRINGEN WEITER.")
             zeile("STEINE GIBT ES FÜRS FANGEN, ÜBERLEBEN UND GEWINNEN.")

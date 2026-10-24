@@ -40,7 +40,7 @@
   .stick .a { left: 9%; top: 50%; transform: translateY(-50%); }
   .stick .d { right: 9%; top: 50%; transform: translateY(-50%); }
   #stickL { left: max(4vw, env(safe-area-inset-left, 0px)); top: 20%; }
-  #stickR { right: max(9vw, calc(env(safe-area-inset-right, 0px) + 40px)); top: 22%; }
+  #tPc { left: 50%; transform: translateX(-50%); bottom: max(6%, calc(env(safe-area-inset-bottom, 0px) + 10px)); padding: 0 22px; height: 52px; border-radius: 26px; background: rgba(20,60,30,.75); border-color: var(--terminal); color: var(--terminal); font: 700 16px var(--mono); letter-spacing: .08em; }
   #dpad { left: max(6vw, calc(env(safe-area-inset-left, 0px) + 20px)); bottom: max(5%, calc(env(safe-area-inset-bottom, 0px) + 8px)); display: grid; grid-template-columns: repeat(3, clamp(38px, 4.8vw, 52px)); grid-template-rows: repeat(3, clamp(38px, 4.8vw, 52px)); }
   #dpad .taste { border-radius: 8px; }
   #dpad [data-taste="1"] { grid-column: 2; grid-row: 1; }
@@ -91,6 +91,14 @@
   .stufe output { width: 28px; text-align: center; font-size: 20px; font-variant-numeric: tabular-nums; }
   .tbtn { background: var(--terminal); color: #000; border: 0; font: 700 15px var(--mono); padding: 6px 12px; cursor: pointer; }
   #farbe { width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--terminal); }
+  .reiter { display: flex; flex-wrap: wrap; gap: 6px; }
+  .reiterknopf { background: transparent; color: var(--terminal); border: 1.5px solid var(--terminal); font: 700 13px var(--mono); padding: 5px 9px; cursor: pointer; }
+  .reiterknopf.an { background: var(--terminal); color: #000; }
+  .seite { display: grid; gap: 10px; }
+  .terminal input { background: #000; color: var(--terminal); border: 1.5px solid var(--terminal); font: 700 18px var(--mono); padding: 8px 10px; text-transform: uppercase; min-width: 0; }
+  .liste { display: grid; gap: 6px; }
+  .liste button { text-align: left; background: transparent; color: var(--terminal); border: 0; font: 700 15px var(--mono); padding: 4px 0; cursor: pointer; }
+  .liste button.an { color: #000; background: var(--terminal); padding-inline: 6px; }
   @media (prefers-reduced-motion: reduce) { #meldung { transition: none; } }
 </style>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rye&family=Nunito:wght@600;700;800;900&family=Space+Mono:wght@400;700&display=swap">
@@ -121,7 +129,7 @@
   <button class="taste" id="tTastatur" data-taste="computer" aria-label="Tastatur">
     <svg viewBox="0 0 32 22" fill="none" stroke="currentColor" stroke-width="2"><rect x="1.5" y="1.5" width="29" height="19" rx="3"/><path d="M6 7h2M11 7h2M16 7h2M21 7h2M26 7h0M6 11.5h2M11 11.5h2M16 11.5h2M21 11.5h2M9 16h14" stroke-linecap="round"/></svg>
   </button>
-  <div class="stick" id="stickR" aria-label="Umschauen"><div class="knauf"></div></div>
+  <button class="taste" id="tPc" data-taste="computer" hidden>COMPUTER BENUTZEN</button>
   <button class="taste rund gross" id="tF" data-taste="f">F</button>
   <button class="taste rund gross" id="tR" data-taste="r">R</button>
   <button class="taste rund gross" id="tE" data-taste="e">E</button>
@@ -154,13 +162,46 @@
 
 <section id="computer" hidden>
   <div class="terminal" role="dialog" aria-label="Computer">
-    <h2>AFFEN-OS 1.0 · FARBE</h2>
-    <p>FELLFARBE, STUFEN 0 BIS 9</p>
-    <div class="stufe"><span>ROT</span><button class="tbtn" data-k="r" data-d="-1">−</button><output id="oR">1</output><button class="tbtn" data-k="r" data-d="1">+</button></div>
-    <div class="stufe"><span>GRÜN</span><button class="tbtn" data-k="g" data-d="-1">−</button><output id="oG">1</output><button class="tbtn" data-k="g" data-d="1">+</button></div>
-    <div class="stufe"><span>BLAU</span><button class="tbtn" data-k="b" data-d="-1">−</button><output id="oB">1</output><button class="tbtn" data-k="b" data-d="1">+</button></div>
-    <div class="stufe"><span>SO:</span><div id="farbe"></div></div>
-    <p>RAUM, NAME, MODUS und GRUPPE stellst du in der App am Computer ein: Raum-Code tippen, und deine Freunde mit demselben Code landen bei dir.</p>
+    <h2>AFFEN-OS 1.0</h2>
+    <div class="reiter" role="tablist">
+      <button class="reiterknopf an" data-seite="name">NAME</button>
+      <button class="reiterknopf" data-seite="farbe">FARBE</button>
+      <button class="reiterknopf" data-seite="groesse">GRÖSSE</button>
+      <button class="reiterknopf" data-seite="raum">RAUM</button>
+      <button class="reiterknopf" data-seite="modus">MODUS</button>
+      <button class="reiterknopf" data-seite="info">INFO</button>
+    </div>
+    <div class="seite" data-seite="name">
+      <p>DEIN NAME (BIS 12 ZEICHEN):</p>
+      <input id="pcName" maxlength="12" autocomplete="off" spellcheck="false">
+      <button class="tbtn" id="pcNameOk">SPEICHERN</button>
+    </div>
+    <div class="seite" data-seite="farbe" hidden>
+      <p>FELLFARBE, STUFEN 0 BIS 9</p>
+      <div class="stufe"><span>ROT</span><button class="tbtn" data-k="r" data-d="-1">−</button><output id="oR">1</output><button class="tbtn" data-k="r" data-d="1">+</button></div>
+      <div class="stufe"><span>GRÜN</span><button class="tbtn" data-k="g" data-d="-1">−</button><output id="oG">1</output><button class="tbtn" data-k="g" data-d="1">+</button></div>
+      <div class="stufe"><span>BLAU</span><button class="tbtn" data-k="b" data-d="-1">−</button><output id="oB">1</output><button class="tbtn" data-k="b" data-d="1">+</button></div>
+      <div class="stufe"><span>SO:</span><div id="farbe"></div></div>
+    </div>
+    <div class="seite" data-seite="groesse" hidden>
+      <p>WIE GROSS IST DEIN GORILLA?</p>
+      <div class="stufe"><span>GRÖSSE</span><button class="tbtn" id="gMinus">−</button><output id="oGroesse">1.8</output><button class="tbtn" id="gPlus">+</button></div>
+      <p>GRÖSSER = LÄNGERE ARME, WEITERE SCHRITTE, HÖHER SPRINGEN.</p>
+    </div>
+    <div class="seite" data-seite="raum" hidden>
+      <p>RAUM-CODE EINTIPPEN. FREUNDE MIT DEMSELBEN CODE LANDEN IM SELBEN RAUM.</p>
+      <input id="pcRaum" maxlength="10" autocomplete="off" spellcheck="false" placeholder="Z. B. AFFEN7">
+      <button class="tbtn" id="pcRaumOk">BETRETEN</button>
+      <p id="pcRaumText">AKTUELLER RAUM: ÖFFENTLICH</p>
+    </div>
+    <div class="seite" data-seite="modus" hidden>
+      <p>SPIELMODUS:</p>
+      <div class="liste" id="pcModi"></div>
+    </div>
+    <div class="seite" data-seite="info" hidden>
+      <p>LINKER STICK: LAUFEN. GEGEN STAMM ODER WAND: HOCHKLETTERN.<br>WISCHEN: UMSCHAUEN. LEERTASTE: SPRINGEN. SHIFT: SPRINTEN.<br>E: FESTHALTEN. R: ZURÜCK ZUM START. F: TASCHENLAMPE. TAB: SPIELER.</p>
+      <p>IN DER VORSCHAU BIST DU ALLEIN. RAUM, MODUS UND MITSPIELER FUNKTIONIEREN IN DER APP.</p>
+    </div>
     <button class="tbtn" id="pcZu">SCHLIESSEN</button>
   </div>
 </section>
@@ -509,7 +550,10 @@ function blattTextur(farbig) {
 }
 
 // ---------- Arm-Fortbewegung (wie Model/Lokomotion.swift) ----------
-const RADIUS = 0.32, ARM = 0.95, SCHULTER = v(0.2, -0.12, 0.02), RUHE_G = grad(13), RUHE_N = grad(-22);
+// Größe des Gorillas (am Computer einstellbar). Alle Maße wachsen mit.
+let GROESSE = 1.8, RADIUS = 0.32 * GROESSE, ARM = 0.95 * GROESSE, SCHULTER = v(0.2, -0.12, 0.02).multiplyScalar(GROESSE);
+const RUHE_G = grad(13), RUHE_N = grad(-22);
+function setzeGroesse(g) { GROESSE = g; RADIUS = .32 * g; ARM = .95 * g; SCHULTER = v(.2, -.12, .02).multiplyScalar(g); }
 class Affe {
   constructor() {
     this.pos = v(0, 1, 0); this.vel = v(0, 0, 0); this.gier = 0;
@@ -539,8 +583,9 @@ class Affe {
   /** Wie weit ist vor mir (Richtung m, Welt) etwas zum Festhalten? Sucht auf mehreren Höhen. */
   wandAbstand(mWelt, welt) {
     let best = null;
-    for (const hh of [.75, .35, 0]) {
-      for (let d = .3; d <= .84; d += .04) {
+    const G = GROESSE;
+    for (const hh of [.75 * G, .35 * G, 0]) {
+      for (let d = .3 * G; d <= .84 * G; d += .04 * G) {
         if (welt.punktInnen(this.pos.clone().addScaledVector(mWelt, d).add(v(0, hh, 0)))) { if (best === null || d < best) best = d; break; }
       }
     }
@@ -578,12 +623,13 @@ class Affe {
     // Abstand laufend nachmessen (der Stamm wird nach oben dünner); weich nachführen
     if (wand !== null) this.wandWeg = this.klettert ? mix(this.wandWeg, wand, Math.min(1, dt * 8)) : wand;
     // Beim Klettern lehnt sich der Körper an den Stamm heran (wie ein Spieler, der sich vorbeugt)
-    if (this.klettert && this.h.some(h => h.haftet) && this.wandWeg > .48) {
-      const schritt = Math.min(dt * 1.6, this.wandWeg - .48);
+    if (this.klettert && this.h.some(h => h.haftet) && this.wandWeg > .48 * GROESSE) {
+      const schritt = Math.min(dt * 1.6 * GROESSE, this.wandWeg - .48 * GROESSE);
       this.pos.addScaledVector(mWelt, schritt); this.wandWeg -= schritt;
       for (const h of this.h) if (h.haftet) { /* Hände bleiben, wo sie sind */ }
     }
-    if (mag > 0.15) this.phase += dt * (this.klettert ? 1.0 + .35 * mag : (1.15 + 1.35 * mag) * (st.sprint ? 1.4 : 1));
+    // Schnelle Armzüge: Laufen ~9 m/s, Sprinten ~12 m/s (bei normaler Größe)
+    if (mag > 0.15) this.phase += dt * (this.klettert ? .7 + .25 * mag : (1.5 + 1.5 * mag) * (st.sprint ? 1.35 : 1));
     for (let i = 0; i < 2; i++) {
       const seite = i ? .2 : -.2;
       if (this.schlag[i] > 0) { this.zeige(i, v(seite * .3, .05, -1), false); continue; }
@@ -597,10 +643,10 @@ class Affe {
         const p = (this.phase + i * .5) % 1, zug = p < .62, t = zug ? p / .62 : (p - .62) / .38;
         // Oben so hoch greifen, wie der Arm bei diesem Abstand noch an die Wand kommt;
         // beim Runterziehen wandert die Hand zum Körper → du wirst zur Wand und nach oben gezogen.
-        const tief = this.wandWeg + .14, oben = Math.min(.75, Math.sqrt(Math.max(0, .9 * .9 - tief * tief)));
-        const y = zug ? mix(oben, -.55, t) : mix(-.55, oben, t);
-        const weg = zug ? tief : tief - .25;
-        const punkt = m.clone().multiplyScalar(weg).add(v(seite * 1.2, y, 0));
+        const G = GROESSE, tief = this.wandWeg + .14 * G, oben = Math.min(.75 * G, Math.sqrt(Math.max(0, (.9 * G) ** 2 - tief * tief)));
+        const y = zug ? mix(oben, -.55 * G, t) : mix(-.55 * G, oben, t);
+        const weg = zug ? tief : tief - .25 * G;
+        const punkt = m.clone().multiplyScalar(weg).add(v(seite * 1.2 * G, y, 0));
         // Erst loslassen, wenn die andere Hand sicher hält
         const halten = !zug && this.h[i].haftet && !this.h[1 - i].haftet;
         if (halten) { this.h[i].aktiv = true; this.h[i].frei = false; continue; }
@@ -659,10 +705,10 @@ class Affe {
       if (this.hielt) {
         this.vel.multiplyScalar(this.klettert ? .4 : 1.1);
         // Sprung: beide Hände haben sich kräftig vom Boden abgestoßen
-        if (this.sprungStoss) { this.vel.y = Math.max(this.vel.y * 1.2, 5.3); this.sprungStoss = false; }
-        if (this.vel.length() > 7.5) this.vel.setLength(7.5);
+        if (this.sprungStoss) { this.vel.y = Math.max(this.vel.y * 1.2, 5.3 * Math.sqrt(GROESSE)); this.sprungStoss = false; }
+        if (this.vel.length() > 12) this.vel.setLength(12);
       }
-      if (this.sprungStoss && this.sprungZeit <= 0) { this.vel.y = Math.max(this.vel.y * 1.2, 5.3); this.sprungStoss = false; }
+      if (this.sprungStoss && this.sprungZeit <= 0) { this.vel.y = Math.max(this.vel.y * 1.2, 5.3 * Math.sqrt(GROESSE)); this.sprungStoss = false; }
       this.verlauf = [];
       this.vel.y -= welt.schwer * dt;
       this.pos.addScaledVector(this.vel, dt);
@@ -1107,7 +1153,7 @@ const KARTEN = {
         const d = v(Math.sin(a), 0, Math.cos(a)), tor = imTor(a);
         const y0 = tor ? tuerHoehe : 0;
         // reicht unsichtbar bis über den Rand – man kann nicht aus dem Stumpf herausfallen
-        b.welt.dazu({ typ: "kiste", m: d.clone().multiplyScalar(R + .3).add(v(0, (y0 + H + 4) / 2, 0)), h: v(.5, (H + 4 - y0) / 2, .35), g: gierZu(d), mat: "holz" });
+        b.welt.dazu({ typ: "kiste", m: d.clone().multiplyScalar(R + .3).add(v(0, (y0 + H + 10) / 2, 0)), h: v(.5, (H + 10 - y0) / 2, .35), g: gierZu(d), mat: "holz" });
       }
       // Oberer Rand des Stumpfs (Rinde)
       const randGeo = new THREE.TorusGeometry(R + .25, .5, 14, 96); randGeo.rotateX(Math.PI / 2);
@@ -1171,7 +1217,7 @@ const KARTEN = {
         b.laub(e, 2.6); b.laub(s.clone().lerp(e, .5).add(v(0, 1.6, 0)), 2.2);
       }
       // unsichtbare Decke knapp über dem Rand
-      b.welt.dazu({ typ: "zyl", m: v(0, H + 2.6, 0), r: R + 1.5, hh: .5, mat: "holz" });
+      b.welt.dazu({ typ: "zyl", m: v(0, H + 5, 0), r: R + 1.5, hh: 3, mat: "holz" });
       b.welt.start = [v(0, .6, 2.6)]; b.welt.grenzR = R + 3.4;
       b.innen = true;
     },
@@ -1342,14 +1388,14 @@ const KARTEN = {
 function armGeometrie(profil) {
   const pts = profil.map(([y, r]) => new THREE.Vector2(r, y));
   const geo = new THREE.LatheGeometry(pts, 18);
-  const uv = geo.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * 2, uv.getY(i) * 3);
+  const uv = geo.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * 5, uv.getY(i) * 7);
   return geo;
 }
 function baueArme(szene) {
   const fell = fellTextur();
-  const fellMat = new THREE.MeshPhysicalMaterial({ color: 0x2c2826, map: fell.map, normalMap: fell.normalMap, normalScale: new THREE.Vector2(1.6, 1.6), roughness: 1, sheen: .45, sheenRoughness: .7, sheenColor: new THREE.Color(0x4a443e), envMapIntensity: .5 });
+  const fellMat = new THREE.MeshPhysicalMaterial({ color: 0x2c2826, map: fell.map, normalMap: fell.normalMap, normalScale: new THREE.Vector2(.9, .9), roughness: 1, sheen: .6, sheenRoughness: .7, sheenColor: new THREE.Color(0x4a443e), envMapIntensity: .5 });
   const ht = TEX.haut();
-  const hautMat = new THREE.MeshStandardMaterial({ color: 0x5f554d, map: ht.map, normalMap: ht.normalMap, roughness: .6, envMapIntensity: .6 });
+  const hautMat = new THREE.MeshStandardMaterial({ color: 0x4a403a, map: ht.map, normalMap: ht.normalMap, roughness: .85, envMapIntensity: .2 });
   // Unterarm: dicker Muskel am Ellbogen, schmal am Handgelenk; Oberarm kräftig
   const unterGeo = armGeometrie([[0, .055], [.06, .07], [.25, .08], [.5, .068], [.8, .05], [1, .043]]);
   const oberGeo = armGeometrie([[0, .07], [.2, .092], [.5, .1], [.85, .08], [1, .066]]);
@@ -1385,9 +1431,11 @@ function gorillaHand(links, fellMat, hautMat) {
     let eltern = wurzel; const gelenke = [];
     laengen.forEach((l, k) => {
       const gelenk = new THREE.Group();
-      gelenk.add(new THREE.Mesh(knoechel(dicke[k] * 1.12), hautMat));
+      gelenk.add(new THREE.Mesh(knoechel(dicke[k] * .98), hautMat));
       const letzte = k === laengen.length - 1;
-      gelenk.add(new THREE.Mesh(glied(dicke[k], letzte ? .004 : dicke[k + 1] || dicke[k] * .85, l), hautMat));
+      gelenk.add(new THREE.Mesh(glied(dicke[k], letzte ? dicke[k] * .75 : dicke[k + 1] || dicke[k] * .85, l), hautMat));
+      // runde Fingerkuppe statt Spitze
+      if (letzte) { const kuppe = new THREE.Mesh(knoechel(dicke[k] * .78), hautMat); kuppe.position.z = -l; gelenk.add(kuppe); }
       if (k) gelenk.position.z = -laengen[k - 1];
       eltern.add(gelenk); eltern = gelenk; gelenke.push(gelenk);
     });
@@ -1404,20 +1452,21 @@ function gorillaHand(links, fellMat, hautMat) {
 const _m4 = new THREE.Matrix4(), _q = new THREE.Quaternion();
 function setzeGlied(mesh, a, b) {
   const d = b.clone().sub(a), l = Math.max(.02, d.length());
-  mesh.position.copy(a); mesh.scale.set(1, l, 1);
+  mesh.position.copy(a); mesh.scale.set(GROESSE * .85, l, GROESSE * .85);
   mesh.quaternion.setFromUnitVectors(v(0, 1, 0), d.divideScalar(l));
 }
 function stelleArme(arme, ich, dt) {
   for (let i = 0; i < 2; i++) {
     const A = arme[i], h = ich.h[i];
-    const schulter = ich.pos.clone().add(drehY(ich.schulter(i).add(v(0, -.02, .1)), ich.gier)), hp = h.pos;
+    const schulter = ich.pos.clone().add(drehY(ich.schulter(i).add(v(0, -.02, .1).multiplyScalar(GROESSE)), ich.gier)), hp = h.pos;
     const weg = hp.clone().sub(schulter), l = Math.max(.05, weg.length()), dir = weg.clone().divideScalar(l);
-    const knick = drehY(v(i ? .14 : -.14, -.12, .02), ich.gier).multiplyScalar(Math.max(0, 1 - l / ARM) * 1.8 + .2);
+    const knick = drehY(v(i ? .14 : -.14, -.12, .02), ich.gier).multiplyScalar((Math.max(0, 1 - l / ARM) * 1.8 + .2) * GROESSE);
     const ell = schulter.clone().addScaledVector(weg, .48).add(knick);
     setzeGlied(A.ober, schulter, ell);
-    const handgelenk = hp.clone().addScaledVector(dir, -.06);
+    const handgelenk = hp.clone().addScaledVector(dir, -.06 * GROESSE);
     setzeGlied(A.unter, ell, handgelenk);
-    A.ell.position.copy(ell);
+    A.ell.position.copy(ell); A.ell.scale.setScalar(GROESSE * .85);
+    A.hand.scale.setScalar(1.55 * GROESSE);
     // Handfläche liegt flach auf der Fläche (Boden, Wand, Ast), Finger zeigen nach vorne – so sieht man sie
     const oben = h.haftet ? h.hn.clone() : v(0, 1, 0);
     let vor = dir.clone().addScaledVector(oben, -dir.dot(oben));
@@ -1427,7 +1476,7 @@ function stelleArme(arme, ich, dt) {
     _m4.lookAt(hp, hp.clone().add(vor), oben);
     _q.setFromRotationMatrix(_m4);
     A.hand.quaternion.slerp(_q, Math.min(1, dt * 18));
-    A.hand.position.copy(hp).addScaledVector(oben, .06).addScaledVector(vor, -.04);
+    A.hand.position.copy(hp).addScaledVector(oben, .06 * GROESSE).addScaledVector(vor, -.04 * GROESSE);
     // Am Boden liegen die Finger flach; an Ästen und Wänden greifen sie zu
     const krumm = h.haftet ? (h.hn.y > .7 ? .05 : 1.0) : (h.aktiv ? .3 : -.12);
     const k = Math.min(1, dt * 14);
@@ -1569,7 +1618,6 @@ function stick(el, setze) {
   el.addEventListener("pointerup", los); el.addEventListener("pointercancel", los);
 }
 stick(document.getElementById("stickL"), (x, y) => { st.lx = x; st.ly = y; });
-stick(document.getElementById("stickR"), (x, y) => { st.rx = x; st.ry = y; });
 
 let lampeAn = false;
 function zeigeTitel() { titel.hidden = false; steuerung.hidden = true; }
@@ -1634,6 +1682,35 @@ function farbeSetzen() {
 try { Object.assign(farbe, JSON.parse(localStorage.getItem("affentag.farbe3") || "{}")); } catch (_) {}
 farbeSetzen();
 document.getElementById("pcZu").onclick = () => { computer.hidden = true; };
+const pcKnopf = document.getElementById("tPc");
+// Computer: Reiter, Name, Größe, Raum, Modus – gespeichert auf diesem Gerät
+const pc = { name: "AFFE" + Math.floor(100 + Math.random() * 900), groesse: 1.8, raum: "", modus: "INFEKTION" };
+try { Object.assign(pc, JSON.parse(localStorage.getItem("affentag.pc") || "{}")); } catch (_) {}
+const pcSpeichern = () => { try { localStorage.setItem("affentag.pc", JSON.stringify(pc)); } catch (_) {} };
+computer.querySelectorAll(".reiterknopf").forEach(k => k.onclick = () => {
+  computer.querySelectorAll(".reiterknopf").forEach(x => x.classList.toggle("an", x === k));
+  computer.querySelectorAll(".seite").forEach(x => x.hidden = x.dataset.seite !== k.dataset.seite);
+});
+const nameFeld = document.getElementById("pcName"), raumFeld = document.getElementById("pcRaum");
+function pcAnzeigen() {
+  nameFeld.value = pc.name;
+  document.getElementById("listeName").textContent = pc.name + " (DU)";
+  document.getElementById("oGroesse").textContent = pc.groesse.toFixed(1);
+  document.getElementById("pcRaumText").textContent = "AKTUELLER RAUM: " + (pc.raum || "ÖFFENTLICH");
+  document.querySelectorAll("#pcModi button").forEach(b => b.classList.toggle("an", b.textContent === pc.modus));
+}
+document.getElementById("pcNameOk").onclick = () => { const n = nameFeld.value.trim().toUpperCase(); if (n) { pc.name = n; pcSpeichern(); pcAnzeigen(); zeige("NAME: " + n, 1.5); } };
+const groesseSetzen = g => { pc.groesse = Math.round(klemm(g, 1, 2.6) * 10) / 10; setzeGroesse(pc.groesse); pcSpeichern(); pcAnzeigen(); };
+document.getElementById("gMinus").onclick = () => groesseSetzen(pc.groesse - .1);
+document.getElementById("gPlus").onclick = () => groesseSetzen(pc.groesse + .1);
+document.getElementById("pcRaumOk").onclick = () => { pc.raum = raumFeld.value.trim().toUpperCase(); raumFeld.value = ""; pcSpeichern(); pcAnzeigen(); };
+["INFEKTION", "FANGEN", "JAGD", "FARBSCHLACHT", "LOCKER"].forEach(m => {
+  const b = document.createElement("button"); b.textContent = m; b.onclick = () => { pc.modus = m; pcSpeichern(); pcAnzeigen(); };
+  document.getElementById("pcModi").appendChild(b);
+});
+setzeGroesse(pc.groesse); pcAnzeigen();
+// Beim Tippen im Computer keine Spieltasten auslösen
+computer.addEventListener("keydown", e => e.stopPropagation());
 computer.querySelectorAll("[data-k]").forEach(b => b.onclick = () => { const k = b.dataset.k; farbe[k] = klemm(farbe[k] + +b.dataset.d, 0, 9); farbeSetzen(); });
 
 const kartenListe = document.getElementById("kartenListe");
@@ -1669,8 +1746,8 @@ function takt(jetzt) {
   const steuer = { ...st, lx: st.lx || kx, ly: st.ly || ky };
   const pfeil = (tasten.arrowleft ? 1 : 0) - (tasten.arrowright ? 1 : 0);
   if (titel.hidden) {
-    ich.gier += blickG + (-st.rx * 2.6 + pfeil * 2.2) * dt; blickG = 0;
-    blickN = klemm(blickN + (st.ry * 1.6 + ((tasten.arrowup ? 1 : 0) - (tasten.arrowdown ? 1 : 0)) * 1.5) * dt, grad(-80), grad(80));
+    ich.gier += blickG + pfeil * 2.2 * dt; blickG = 0;
+    blickN = klemm(blickN + ((tasten.arrowup ? 1 : 0) - (tasten.arrowdown ? 1 : 0)) * 1.5 * dt, grad(-80), grad(80));
   } else {
     ich.gier += dt * .06; blickG = 0;
   }
@@ -1682,8 +1759,9 @@ function takt(jetzt) {
       const d = ich.pos.clone().sub(t.m);
       if (Math.abs(d.x) < t.h.x && Math.abs(d.y) < t.h.y && Math.abs(d.z) < t.h.z) { lade(t.ziel); break; }
     }
-    if (welt.computer && welt.computer.distanceTo(ich.pos) < 2.2 && !zeige.pc) { zeige("COMPUTER: TASTATUR-KNOPF RECHTS OBEN", 2.5); zeige.pc = true; }
-    if (!welt.computer || welt.computer.distanceTo(ich.pos) > 3) zeige.pc = false;
+    // Am Computer: großer Knopf unten in der Mitte
+    const amPc = !!welt.computer && flach(welt.computer.clone().sub(ich.pos)).length() < 2.6;
+    if (pcKnopf.hidden === amPc) pcKnopf.hidden = !amPc;
   }
   if (zeit > meldungBis) meldung.style.opacity = 0;
   for (const p of [flocken, staub]) if (p) {
@@ -1694,7 +1772,7 @@ function takt(jetzt) {
   }
   for (const l of aktuelleLichter) { const f = .85 + .15 * Math.sin(zeit * 9 + l.s) * Math.sin(zeit * 5.3 + l.s * 2); l.l.intensity = l.basis * f; l.glas.material.emissiveIntensity = 2.2 * f; }
 
-  halter.position.copy(ich.pos).add(v(0, .1, 0)); halter.rotation.y = ich.gier; kamera.rotation.x = blickN;
+  halter.position.copy(ich.pos).add(v(0, .1 * GROESSE, 0)); halter.rotation.y = ich.gier; kamera.rotation.x = blickN;
   sonne.position.copy(ich.pos).addScaledVector(sonnenRichtung, 60); sonne.target.position.copy(ich.pos);
   stelleArme(arme, ich, dt);
   renderer.render(scene, kamera);

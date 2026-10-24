@@ -42,9 +42,11 @@ struct Aufschlag {
 }
 
 final class Affenkoerper {
-    static let radius: Float = 0.32
-    static let armLaenge: Float = 0.92
-    static let schulter = V3(0.2, -0.16, 0.05)
+    /// Größe des Gorillas (am Computer einstellbar). Alle Maße wachsen mit.
+    static var groesse: Float = 1.8
+    static var radius: Float { 0.32 * groesse }
+    static var armLaenge: Float { 0.92 * groesse }
+    static var schulter: V3 { V3(0.2, -0.16, 0.05) * groesse }
     static let ruheGier: Float = grad(16)
     static let ruheNeigung: Float = grad(-30)
 
@@ -204,7 +206,7 @@ final class Affenkoerper {
             }
             if sprungStoss && sprungZeit <= 0 {
                 // Sprung: beide Hände haben sich kräftig vom Boden abgestoßen
-                geschwindigkeit.y = max(geschwindigkeit.y * 1.2, 5.3)
+                geschwindigkeit.y = max(geschwindigkeit.y * 1.2, 5.3 * sqrt(Affenkoerper.groesse))
                 sprungStoss = false
             }
             verlauf.removeAll()
@@ -239,14 +241,15 @@ final class Affenkoerper {
     /// Wie weit ist vor mir (Richtung m, Welt) etwas zum Festhalten? Sucht auf mehreren Höhen.
     private func wandAbstand(_ m: V3, welt: Welt) -> Float? {
         var bester: Float?
-        for hh: Float in [0.75, 0.35, 0] {
-            var d: Float = 0.3
-            while d <= 0.84 {
+        let g = Affenkoerper.groesse
+        for hh: Float in [0.75 * g, 0.35 * g, 0] {
+            var d: Float = 0.3 * g
+            while d <= 0.84 * g {
                 if welt.punktInnen(position + m * d + V3(0, hh, 0)) != nil {
                     if bester == nil || d < bester! { bester = d }
                     break
                 }
-                d += 0.04
+                d += 0.04 * g
             }
         }
         return bester
@@ -296,13 +299,15 @@ final class Affenkoerper {
         // Abstand laufend nachmessen (ein Stamm wird nach oben dünner), weich nachführen
         if let wand { wandWeg = klettert ? wandWeg + (wand - wandWeg) * min(1, dt * 8) : wand }
         // Beim Klettern lehnt sich der Körper an den Stamm heran
-        if klettert && haende.contains(where: { $0.haftet }) && wandWeg > 0.48 {
-            let schritt = min(dt * 1.6, wandWeg - 0.48)
+        let gr = Affenkoerper.groesse
+        if klettert && haende.contains(where: { $0.haftet }) && wandWeg > 0.48 * gr {
+            let schritt = min(dt * 1.6 * gr, wandWeg - 0.48 * gr)
             position += mWelt * schritt
             wandWeg -= schritt
         }
         if staerke > 0.15 {
-            phase += dt * (klettert ? 1.0 + 0.35 * staerke : (1.15 + 1.35 * staerke) * (e.sprint ? 1.4 : 1))
+            // Schnelle Armzüge: zügig laufen, Sprinten noch schneller
+            phase += dt * (klettert ? 0.7 + 0.25 * staerke : (1.5 + 1.5 * staerke) * (e.sprint ? 1.35 : 1))
         }
         for i in 0..<2 {
             let seite: Float = i == 0 ? -0.22 : 0.22
@@ -318,17 +323,18 @@ final class Affenkoerper {
                 let p = (phase + Float(i) * 0.5).truncatingRemainder(dividingBy: 1)
                 let zug = p < 0.62
                 let t = zug ? p / 0.62 : (p - 0.62) / 0.38
-                let tief = wandWeg + 0.14
-                let oben = min(0.75, sqrt(max(0, 0.81 - tief * tief)))
-                let y = zug ? oben + (-0.55 - oben) * t : -0.55 + (oben + 0.55) * t
-                let weg = zug ? tief : tief - 0.25
+                let tief = wandWeg + 0.14 * gr
+                let oben = min(0.75 * gr, sqrt(max(0, 0.81 * gr * gr - tief * tief)))
+                let unten = -0.55 * gr
+                let y = zug ? oben + (unten - oben) * t : unten + (oben - unten) * t
+                let weg = zug ? tief : tief - 0.25 * gr
                 // Erst loslassen, wenn die andere Hand sicher hält
                 if !zug && haende[i].haftet && !haende[1 - i].haftet {
                     haende[i].aktiv = true
                     haende[i].frei = false
                     continue
                 }
-                var punkt = m * weg + V3(seite * 1.2, y, 0)
+                var punkt = m * weg + V3(seite * 1.2 * gr, y, 0)
                 var schulter = Affenkoerper.schulter
                 if i == 0 { schulter.x = -schulter.x }
                 punkt -= schulter
