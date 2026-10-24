@@ -3,7 +3,7 @@
 //  Was die Geräte sich gegenseitig schicken.
 //
 //  Jedes Gerät steuert seinen eigenen Affen. Das Gerät mit der kleinsten ID
-//  ist der „Meister“: Es steuert die Computer-Affen und bestimmt die Runde.
+//  ist der „Meister“: Es bestimmt die Runde (wer Lava ist, wer gewonnen hat).
 //
 
 import Foundation
@@ -22,7 +22,8 @@ struct AffenDaten: Codable {
 
 enum Inhalt: Codable {
     case affe(AffenDaten)
-    case bots([AffenDaten])
+    /// Privater Raum: alle zusammen auf diese Karte
+    case gruppe(KartenID)
     case runde(Runde)
     case markiert(taeger: String, opfer: String)
     case schuss(Farbkugel)

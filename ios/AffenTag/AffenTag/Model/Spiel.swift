@@ -1,6 +1,6 @@
 //
 //  Spiel.swift
-//  Das Herz: läuft 60-mal pro Sekunde, bewegt dich und die Bots,
+//  Das Herz: läuft 60-mal pro Sekunde, bewegt dich und die anderen Spieler,
 //  prüft wer wen gefangen hat, steuert die Runden und redet mit dem Netz.
 //
 
@@ -27,7 +27,6 @@ struct SpielerZeile: Identifiable, Equatable {
     var farbe: V3
     var lava: Bool
     var raus: Bool
-    var bot: Bool
     var ich: Bool
 }
 
@@ -58,6 +57,7 @@ final class Spiel: ObservableObject {
             einstellungen.speichern()
             klang.lautstaerke(einstellungen.lautstaerke)
             if einstellungen.gyro != oldValue.gyro { gyroUmschalten() }
+            if einstellungen.verbindung != oldValue.verbindung { notfallNah = false }
         }
     }
     @Published var zeigeComputer = false
@@ -73,7 +73,6 @@ final class Spiel: ObservableObject {
     private(set) var welt = Welt()
     private(set) var lokal = Affenkoerper(position: V3(0, 1, 0), gier: 0)
     private var affen: [String: Affe] = [:]
-    private var hirne: [String: BotHirn] = [:]
     private(set) var runde = Runde()
     private var zeit: Double = 0
     private var naechsteRundeUm: Double = 0
@@ -88,7 +87,7 @@ final class Spiel: ObservableObject {
     private var belohnungTakt: Double = 0
     private var vogelTakt: Double = 3
     private var meldungBis: Double = 0
-    private var botNummer = 0
+    private var notfallNah = false
     private var taktgeber: Taktgeber?
     private let bewegung = CMMotionManager()
     private let haptik = UIImpactFeedbackGenerator(style: .light)
@@ -131,19 +130,17 @@ final class Spiel: ObservableObject {
         szene.zeige(gebaut)
         karte = k
         kugeln.removeAll()
-        hirne.removeAll()
         affen.removeAll()
 
         let start = welt.startpunkte.randomElement() ?? V3(0, 1, 0)
         let blick = k == .stumpf ? 0 : gierZu(-start.flach)
         lokal.setzeZurueck(auf: start, gier: blick)
         blickNeigung = 0
-        affen[ich] = Affe(id: ich, name: einstellungen.name, farbe: meineFarbe, istBot: false, istLokal: true, position: start)
+        affen[ich] = Affe(id: ich, name: einstellungen.name, farbe: meineFarbe, istLokal: true, position: start)
 
         runde = Runde()
         runde.modus = k == .stumpf ? .locker : einstellungen.modus
-        fuelleBots()
-        starteRunde()
+        runde.wartet = true
         klang.wind(k == .hoehle ? 0.5 : (k == .wolken || k == .berge ? 0.7 : 0.25))
         verbinde()
         zeige("\(k.symbol) \(k.name.uppercased())", sekunden: 2.5)
@@ -240,22 +237,6 @@ final class Spiel: ObservableObject {
             return
         }
 
-        // Bots (nur der Meister)
-        if istMeister {
-            fuelleBots()
-            for (id, hirn) in hirne {
-                guard var a = affen[id] else { continue }
-                let l = lage(fuer: a)
-                let eingefroren = a.eingefrorenBis > zeit
-                hirn.schritt(&a, dt: fdt, welt: welt, lage: l, eingefroren: eingefroren)
-                affen[id] = a
-                if runde.modus == .farbschlacht { botSchiesst(id, hirn: hirn, dt: fdt) }
-            }
-        } else if !hirne.isEmpty {
-            for id in hirne.keys { affen[id] = nil }
-            hirne.removeAll()
-        }
-
         glaetteEntfernte(fdt)
         pruefeFangen()
         bewegeKugeln(fdt)
@@ -294,98 +275,20 @@ final class Spiel: ObservableObject {
         blickGier = 0
     }
 
-    // MARK: - Bots
+    // MARK: - Spieler im Raum
 
-    private var menschen: [String] { affen.values.filter { !$0.istBot }.map(\.id) }
+    private var menschen: [String] { Array(affen.keys) }
 
+    /// Das Gerät mit der kleinsten ID bestimmt die Runden für alle.
     var istMeister: Bool { menschen.min() == ich }
-
-    private func fuelleBots() {
-        guard istMeister else { return }
-        let wunsch = karte == .stumpf ? min(3, einstellungen.botAnzahl) : einstellungen.botAnzahl
-        let ziel = max(0, min(wunsch, 10 - menschen.count))
-        // Bots ohne Hirn übernehmen (der alte Meister ist weg)
-        for a in affen.values where a.istBot && hirne[a.id] == nil {
-            hirne[a.id] = BotHirn(start: a.position, staerke: einstellungen.botStaerke, saat: UInt64(abs(a.id.hashValue)))
-        }
-        let bots = affen.values.filter(\.istBot).map(\.id).sorted()
-        if bots.count > ziel {
-            for id in bots.suffix(bots.count - ziel) {
-                affen[id] = nil
-                hirne[id] = nil
-            }
-        } else if bots.count < ziel {
-            for _ in 0..<(ziel - bots.count) {
-                botNummer += 1
-                let id = "bot-\(ich.prefix(4))-\(botNummer)"
-                let start = (welt.startpunkte.randomElement() ?? V3(0, 1, 0)) + V3(Float.random(in: -1...1), 0, Float.random(in: -1...1))
-                let namen = BotHirn.namen
-                var bot = Affe(id: id, name: namen[(botNummer + Int.random(in: 0..<namen.count)) % namen.count],
-                               farbe: V3(Float.random(in: 0.1...1), Float.random(in: 0.1...1), Float.random(in: 0.1...1)),
-                               istBot: true, istLokal: false, position: start)
-                if Int.random(in: 0..<3) == 0 { bot.hut = Kosmetik.alle.filter { $0.art == .hut }.randomElement()?.id }
-                affen[id] = bot
-                hirne[id] = BotHirn(start: start, staerke: einstellungen.botStaerke, saat: UInt64(botNummer * 7919))
-                if runde.modus == .farbschlacht && !runde.vorbei { runde.ballons[id] = 0 }
-            }
-        }
-    }
-
-    private func lage(fuer a: Affe) -> BotLage {
-        let lava = istLava(a.id)
-        let raus = istRaus(a.id)
-        var l = BotLage(jagen: nil, fliehen: nil, lava: lava, raus: raus, zielenAuf: nil)
-        if runde.vorbei || raus { return l }
-        func naechster(_ filter: (Affe) -> Bool) -> Affe? {
-            affen.values.filter { $0.id != a.id && filter($0) }
-                .min { simd_length($0.position - a.position) < simd_length($1.position - a.position) }
-        }
-        switch runde.modus {
-        case .infektion, .fangen:
-            if lava {
-                l.jagen = naechster { !self.istLava($0.id) }?.position
-            } else if let g = naechster({ self.istLava($0.id) }), simd_length(g.position - a.position) < 16 {
-                l.fliehen = g.position
-            }
-        case .jagd:
-            if let z = zielVon(a.id), let ziel = affen[z] { l.jagen = ziel.position }
-            if let jaeger = affen.values.first(where: { zielVon($0.id) == a.id }),
-               simd_length(jaeger.position - a.position) < 6 {
-                l.fliehen = jaeger.position
-                l.jagen = nil
-            }
-        case .farbschlacht:
-            l.zielenAuf = naechster { !self.istRaus($0.id) }?.position
-        case .locker:
-            break
-        }
-        return l
-    }
-
-    private func botSchiesst(_ id: String, hirn: BotHirn, dt: Float) {
-        guard !runde.vorbei, !istRaus(id), let a = affen[id] else { return }
-        hirn.schussTakt -= dt
-        guard hirn.schussTakt <= 0 else { return }
-        hirn.schussTakt = Float.random(in: 1.2...2.8) / Float(hirn.staerke)  + 0.6
-        guard let ziel = affen.values.filter({ $0.id != id && !istRaus($0.id) })
-            .min(by: { simd_length($0.position - a.position) < simd_length($1.position - a.position) }),
-              simd_length(ziel.position - a.position) < 22,
-              welt.freieSicht(a.position, ziel.position) else { return }
-        let start = a.position + V3(0, 0.2, 0)
-        let flug = simd_length(ziel.position - start) / 22
-        var zielPunkt = ziel.position + ziel.geschwindigkeit * flug + V3(0, 0.25 * flug * flug * 9.81, 0)
-        let fehler = Float(4 - hirn.staerke) * 0.35
-        zielPunkt += V3(Float.random(in: -fehler...fehler), Float.random(in: -fehler...fehler), Float.random(in: -fehler...fehler))
-        feuere(von: id, start: start, richtung: (zielPunkt - start).normiert, farbe: a.farbe)
-    }
 
     // MARK: - Andere Spieler weich bewegen
 
     private func glaetteEntfernte(_ dt: Float) {
         let k = 1 - exp(-dt * 12)
-        for (id, alt) in affen where id != ich && hirne[id] == nil {
+        for (id, alt) in affen where id != ich {
             var a = alt
-            if zeit - a.zuletztGehoert > (a.istBot ? 3 : 6) {
+            if zeit - a.zuletztGehoert > 6 {
                 affen[id] = nil
                 continue
             }
@@ -429,19 +332,16 @@ final class Spiel: ObservableObject {
     }
 
     private func pruefeFangen() {
-        guard !runde.vorbei, [.infektion, .fangen, .jagd].contains(runde.modus) else { return }
-        var faenger = [ich]
-        if istMeister { faenger += hirne.keys }
-        for t in faenger {
-            guard let taeger = affen[t], taeger.eingefrorenBis <= zeit else { continue }
-            for opfer in affen.values where opfer.id != t && kannFangen(t, opfer.id) {
-                let mitHand = taeger.haende.contains { simd_length($0 - opfer.position) < 0.48 }
-                let mitKoerper = simd_length(taeger.position - opfer.position) < 0.62
-                if mitHand || mitKoerper {
-                    wendeMarkierungAn(t, opfer.id)
-                    sende(.markiert(taeger: t, opfer: opfer.id), zuverlaessig: true)
-                    break
-                }
+        guard !runde.vorbei, !runde.wartet, [.infektion, .fangen, .jagd].contains(runde.modus) else { return }
+        // Jedes Gerät prüft nur für den eigenen Affen, ob er jemanden erwischt.
+        guard let taeger = affen[ich], taeger.eingefrorenBis <= zeit else { return }
+        for opfer in affen.values where opfer.id != ich && kannFangen(ich, opfer.id) {
+            let mitHand = taeger.haende.contains { simd_length($0 - opfer.position) < 0.48 }
+            let mitKoerper = simd_length(taeger.position - opfer.position) < 0.62
+            if mitHand || mitKoerper {
+                wendeMarkierungAn(ich, opfer.id)
+                sende(.markiert(taeger: ich, opfer: opfer.id), zuverlaessig: true)
+                return
             }
         }
     }
@@ -485,6 +385,7 @@ final class Spiel: ObservableObject {
         guard istMeister else { return }
         runde.nummer += 1
         runde.vorbei = false
+        runde.wartet = false
         runde.sieger = nil
         runde.lava = []
         runde.raus = []
@@ -516,6 +417,19 @@ final class Spiel: ObservableObject {
     }
 
     private func rundenLogik() {
+        // Allein im Raum: frei klettern, bis jemand dazukommt.
+        if affen.count < 2 {
+            if !runde.wartet {
+                let war = runde.modus != .locker && runde.nummer > 0
+                runde = Runde(modus: runde.modus, nummer: runde.nummer, wartet: true)
+                if war { zeige("DIE ANDEREN SIND WEG – WARTE AUF SPIELER", sekunden: 3) }
+            }
+            return
+        }
+        if runde.wartet {
+            starteRunde()
+            return
+        }
         if runde.vorbei {
             if zeit >= naechsteRundeUm { starteRunde() }
             return
@@ -613,7 +527,7 @@ final class Spiel: ObservableObject {
                 szene.klecks(k.position, k.farbe)
                 continue
             }
-            let entscheide = k.von == ich || (istMeister && hirne[k.von] != nil)
+            let entscheide = k.von == ich
             var getroffen = false
             for a in affen.values where a.id != k.von && !istRaus(a.id) {
                 if simd_length(a.position - k.position) < 0.45 {
@@ -657,11 +571,30 @@ final class Spiel: ObservableObject {
         } else {
             schluessel = "OEFF-\(karte.rawValue)-\(runde.modus.rawValue)-\(einstellungen.warteschlange.rawValue)"
         }
-        let t: NetzTransport = einstellungen.verbindung == .online ? OnlineNetz() : NahNetz(name: einstellungen.name)
+        let online = einstellungen.verbindung == .online && !notfallNah
+        let t: NetzTransport = online ? OnlineNetz() : NahNetz(name: einstellungen.name)
         t.beimEmpfang = { [weak self] daten in self?.empfange(daten) }
-        t.beiStatus = { [weak self] status in self?.netzStatus = status }
+        t.beiStatus = { [weak self] status in
+            guard let self else { return }
+            self.netzStatus = status
+            // Kein Game Center (z. B. nicht angemeldet): dann wenigstens Geräte in der Nähe suchen.
+            if online, case .fehler = status, !self.notfallNah {
+                self.notfallNah = true
+                self.verbinde()
+            }
+        }
         netz = t
         t.starte(raum: schluessel)
+    }
+
+    /// Karte wechseln – im privaten Raum kommen alle Freunde mit.
+    func gruppeNach(_ k: KartenID) {
+        guard bildschirm == .spiel else {
+            spielen(k)
+            return
+        }
+        if raumCode != nil { sende(.gruppe(k), zuverlaessig: true) }
+        lade(k)
     }
 
     /// Privaten Raum betreten (oder mit nil verlassen).
@@ -677,7 +610,7 @@ final class Spiel: ObservableObject {
         netz?.stoppe()
         netz = nil
         netzStatus = .aus
-        for (id, a) in affen where !a.istLokal && hirne[id] == nil { affen[id] = nil }
+        for id in affen.keys where id != ich { affen[id] = nil }
     }
 
     private func sende(_ inhalt: Inhalt, zuverlaessig: Bool) {
@@ -697,9 +630,6 @@ final class Spiel: ObservableObject {
         if sendeTakt <= 0 {
             sendeTakt = 1.0 / 15
             if let a = affen[ich] { sende(.affe(daten(a)), zuverlaessig: false) }
-            if istMeister && !hirne.isEmpty {
-                sende(.bots(hirne.keys.compactMap { affen[$0] }.map(daten)), zuverlaessig: false)
-            }
         }
         rundeSendeTakt -= dt
         if rundeSendeTakt <= 0 {
@@ -713,16 +643,20 @@ final class Spiel: ObservableObject {
         switch p.inhalt {
         case .affe(let d):
             let neu = affen[d.id] == nil
-            uebernimm(d, bot: false)
+            uebernimm(d)
             if neu {
                 klang.beitreten()
                 zeige("\(d.name) IST DA", sekunden: 1.5)
                 // Ein neuer Spieler bekommt sofort den Rundenstand.
                 if istMeister { sende(.runde(runde), zuverlaessig: true) }
             }
-        case .bots(let liste):
-            guard !istMeister else { return }
-            for d in liste { uebernimm(d, bot: true) }
+        case .gruppe(let ziel):
+            // Ein Freund im selben privaten Raum nimmt alle mit auf eine Karte.
+            guard raumCode != nil, ziel != karte else { return }
+            let wer = affen[p.von]?.name ?? "DEINE GRUPPE"
+            klang.tor()
+            lade(ziel)
+            zeige("\(wer) HAT EUCH NACH \(ziel.name.uppercased()) MITGENOMMEN", sekunden: 3)
         case .runde(let r):
             guard !istMeister else { return }
             let alt = runde
@@ -737,14 +671,11 @@ final class Spiel: ObservableObject {
             wendeTrefferAn(s, o)
         case .tschuess(let id):
             affen[id] = nil
-            for bid in affen.keys where bid.hasPrefix("bot-\(id.prefix(4))") && hirne[bid] == nil {
-                affen[bid] = nil
-            }
         }
     }
 
-    private func uebernimm(_ d: AffenDaten, bot: Bool) {
-        var a = affen[d.id] ?? Affe(id: d.id, name: d.name, farbe: d.farbe, istBot: bot, istLokal: false, position: d.p)
+    private func uebernimm(_ d: AffenDaten) {
+        var a = affen[d.id] ?? Affe(id: d.id, name: d.name, farbe: d.farbe, istLokal: false, position: d.p)
         a.name = d.name
         a.farbe = d.farbe
         a.hut = d.hut
@@ -804,14 +735,17 @@ final class Spiel: ObservableObject {
 
         let zeilen = affen.values
             .map { SpielerZeile(id: $0.id, name: $0.name, farbe: $0.farbe, lava: istLava($0.id), raus: istRaus($0.id),
-                                bot: $0.istBot, ich: $0.id == ich) }
-            .sorted { ($0.ich ? 0 : 1, $0.bot ? 1 : 0, $0.name) < ($1.ich ? 0 : 1, $1.bot ? 1 : 0, $1.name) }
+                                ich: $0.id == ich) }
+            .sorted { ($0.ich ? 0 : 1, $0.name) < ($1.ich ? 0 : 1, $1.name) }
         if hud.spieler != zeilen { hud.spieler = zeilen }
 
         var unter = "\(karte.symbol) \(karte.name.uppercased()) · \(runde.modus.name.uppercased())"
+        if runde.wartet && runde.modus != .locker { unter += " · WARTE AUF 2. SPIELER" }
         if let c = raumCode { unter += " · RAUM \(c)" }
         if hud.unterzeile != unter { hud.unterzeile = unter }
-        let netzText = einstellungen.verbindung == .aus ? "Offline · nur Bots" : netzStatus.text
+        var netzText = einstellungen.verbindung == .aus ? "Offline · du spielst allein" : netzStatus.text
+        if notfallNah { netzText = "Game Center aus · " + netzText }
+        if affen.count < 2 && einstellungen.verbindung != .aus { netzText += " · bis dahin kletterst du allein" }
         if hud.netz != netzText { hud.netz = netzText }
         if hud.steine != einstellungen.steine { hud.steine = einstellungen.steine }
 

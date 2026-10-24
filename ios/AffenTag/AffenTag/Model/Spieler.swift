@@ -1,6 +1,6 @@
 //
 //  Spieler.swift
-//  Ein Affe (du, ein Computer-Affe oder ein Freund übers Netz),
+//  Ein Affe (du oder ein anderer Spieler übers Netz),
 //  die Spielmodi und der Zustand einer Runde.
 //
 
@@ -14,7 +14,6 @@ struct Affe: Identifiable {
     var farbe: V3
     var hut: String?
     var gesicht: String?
-    var istBot: Bool
     var istLokal: Bool
 
     var position: V3
@@ -32,11 +31,10 @@ struct Affe: Identifiable {
     var zielGier: Float = 0
     var zielHaende: [V3] = []
 
-    init(id: String, name: String, farbe: V3, istBot: Bool, istLokal: Bool, position: V3) {
+    init(id: String, name: String, farbe: V3, istLokal: Bool, position: V3) {
         self.id = id
         self.name = name
         self.farbe = farbe
-        self.istBot = istBot
         self.istLokal = istLokal
         self.position = position
         self.haende = [position + V3(-0.4, -0.3, -0.5), position + V3(0.4, -0.3, -0.5)]
@@ -85,6 +83,8 @@ struct Runde: Codable, Equatable {
     /// Runde ist vorbei, kurze Pause bis zur nächsten.
     var vorbei = false
     var sieger: String?
+    /// Weniger als zwei Spieler im Raum: niemand ist Lava, alle klettern frei.
+    var wartet = true
 }
 
 // MARK: - Kosmetik

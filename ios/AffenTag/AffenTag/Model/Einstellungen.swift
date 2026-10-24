@@ -12,9 +12,9 @@ enum DrehModus: String, Codable, CaseIterable { case sanft, ruck, aus
 enum Verbindung: String, Codable, CaseIterable { case aus, nah, online
     var computerName: String {
         switch self {
-        case .aus: return "OFFLINE (NUR BOTS)"
+        case .aus: return "OFFLINE (ALLEIN ÜBEN)"
         case .nah: return "IN DER NÄHE (WLAN/BLUETOOTH)"
-        case .online: return "ONLINE (GAME CENTER)"
+        case .online: return "ONLINE – ALLE SPIELER (GAME CENTER)"
         }
     }
 }
@@ -30,11 +30,9 @@ struct Einstellungen: Codable, Equatable {
     var drehTempo = 5
     var gyro = false
     var empfindlichkeit = 5
-    var verbindung: Verbindung = .nah
+    var verbindung: Verbindung = .online
     var warteschlange: Warteschlange = .standard
     var modus: Modus = .infektion
-    var botAnzahl = 6
-    var botStaerke = 2
     var lautstaerke = 7
     var vibration = true
     var steine = 50

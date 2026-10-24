@@ -55,11 +55,28 @@ final class OnlineNetz: NSObject, NetzTransport {
                     self.spiel = gefunden
                     gefunden.delegate = self
                     self.beiStatus?(.verbunden(gefunden.players.count))
+                    self.nachruecken(anfrage)
                 } else {
                     self.beiStatus?(.fehler("Game Center: \(fehler?.localizedDescription ?? "kein Spiel gefunden")"))
                 }
             }
         }
+    }
+
+    /// Wie in einem offenen Raum: Wer später sucht, wird ins laufende Spiel geholt.
+    private func nachruecken(_ anfrage: GKMatchRequest) {
+        guard aktiv, let spiel, spiel.players.count + 1 < anfrage.maxPlayers else {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 5) { [weak self] in self?.nachrueckenSpaeter(anfrage) }
+            return
+        }
+        GKMatchmaker.shared().addPlayers(to: spiel, matchRequest: anfrage) { [weak self] _ in
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in self?.nachrueckenSpaeter(anfrage) }
+        }
+    }
+
+    private func nachrueckenSpaeter(_ anfrage: GKMatchRequest) {
+        guard aktiv, spiel != nil else { return }
+        nachruecken(anfrage)
     }
 
     func sende(_ daten: Data, zuverlaessig: Bool) {

@@ -148,9 +148,6 @@ struct SpielView: View {
                         .font(.system(size: 11, weight: s.ich ? .heavy : .semibold, design: .monospaced))
                         .foregroundStyle(s.raus ? .white.opacity(0.4) : .white)
                         .strikethrough(s.raus)
-                    if s.bot {
-                        Text("BOT").font(.system(size: 8, weight: .bold)).foregroundStyle(.white.opacity(0.5))
-                    }
                     if s.lava { Text("🔥").font(.system(size: 10)) }
                 }
             }

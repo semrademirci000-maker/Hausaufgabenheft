@@ -48,7 +48,7 @@ struct TitelView: View {
                         .buttonStyle(DickerKnopf(farbe: Color(red: 0.1, green: 0.5, blue: 0.25)))
                 }
 
-                Text("SCHNELLSTART – \(spiel.einstellungen.modus.name.uppercased()) MIT \(spiel.einstellungen.botAnzahl) BOTS")
+                Text("DIREKT AUF EINE KARTE – \(spiel.einstellungen.modus.name.uppercased()) MIT ECHTEN SPIELERN")
                     .font(Stil.dick(13))
                     .foregroundStyle(.white)
                     .umrandet()
@@ -80,6 +80,7 @@ struct TitelView: View {
                     Text("👤 \(spiel.einstellungen.name)")
                     Text("💎 \(spiel.einstellungen.steine)")
                     Text(spiel.einstellungen.verbindung == .aus ? "📴 Offline" : (spiel.einstellungen.verbindung == .nah ? "📶 In der Nähe" : "🌍 Online"))
+                    Text("👥 Freunde: Computer → RAUM")
                 }
                 .font(Stil.dick(14))
                 .foregroundStyle(.white)

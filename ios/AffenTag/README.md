@@ -1,7 +1,8 @@
 # Affen-Tag – native iOS-App (SwiftUI + SceneKit)
 
-Ein Kletter-Fangspiel im Stil von Gorilla Tag – für **iPhone und iPad**, mit
-**Computer-Affen (Bots)** und **Mehrspieler**. Du hast keine Beine: Du bewegst
+Ein Kletter-Fangspiel im Stil von Gorilla Tag – für **iPhone und iPad**, nur mit
+**echten Spielern** (keine Bots). Ist gerade keiner da, kletterst du allein, bis
+jemand dazukommt. Du hast keine Beine: Du bewegst
 dich nur, indem du dich mit den Händen vom Boden, von Wänden und Bäumen abstößt.
 
 > **Wichtig:** Dieser Code wurde auf einem Linux-Rechner geschrieben – dort gibt es
@@ -68,31 +69,38 @@ Mindestversion: **iOS 17**. Das Spiel läuft nur **quer**.
 **Der Computer** (im Stumpf hinlaufen → Knopf „COMPUTER“, oder im Menü)
 - RAUM: privaten Raum-Code eintippen → Freunde mit demselben Code landen bei dir
 - NAME, FARBE (Rot/Grün/Blau 0–9), DREHEN (sanft/ruck/aus, Tempo, Arm-Empfindlichkeit, Gyro)
-- MODUS, WARTESCHLANGE (Standard/Minispiele/Wettkampf), GRUPPE (alle auf eine Karte)
-- BOTS (0–9 Computer-Affen, Stärke 1–3), TON (Lautstärke, Vibration), INFO
+- MODUS, WARTESCHLANGE (Standard/Minispiele/Wettkampf)
+- GRUPPE: im privaten Raum eine Karte wählen → **alle Freunde im Raum kommen mit**
+- TON (Lautstärke, Vibration), INFO
 
 **Laden** – Hüte und Brillen (Krone, Bananenhut, Propellerkappe, Heiligenschein,
 Sonnenbrille …) gegen 💎 Steine. Steine gibt es fürs Fangen, Treffen, Überleben und Gewinnen.
 
-**Computer-Affen** – hüpfen mit Armschwüngen, klettern Wände hoch (ab Stärke 2),
-jagen dich als Lava, flüchten vor Lava, zielen in der Farbschlacht.
-
 ## Mehrspieler
 
-Am Computer unter **RAUM → VERBINDUNG** wählen:
+Es gibt keine Computer-Gegner – nur echte Spieler. So läuft es:
 
-* **In der Nähe (Standard)** – iPhone und iPad im selben WLAN oder per Bluetooth
-  finden sich automatisch (MultipeerConnectivity). Kein Server, kein Konto nötig.
-  Beim ersten Start fragt iOS nach „Lokales Netzwerk“ → **Erlauben**.
-* **Online (Game Center)** – übers Internet. Dafür in Xcode unter
-  *Signing & Capabilities → + Capability → Game Center* einschalten und die App
-  in App Store Connect anlegen (Game Center braucht einen bezahlten Entwickler-Account).
-* **Offline** – nur du und die Bots.
+* **Öffentlich:** Du gehst durch ein Tor, und das Spiel sucht alle, die gerade
+  dieselbe Karte im selben Modus spielen (bis 10 Affen). Ist keiner da, kletterst
+  du allein. Kommt jemand dazu, startet automatisch die Runde (z. B. wird einer Lava).
+  Wer später kommt, rückt in den laufenden Raum nach.
+* **Privat mit Freunden:** Am Computer unter **RAUM** einen ausgedachten Code
+  tippen (z. B. `AFFEN7`) und **BETRETEN**. Deine Freunde tippen denselben Code.
+  Unter **GRUPPE** wählst du eine Karte – alle im Raum kommen automatisch mit.
 
-Wer auf derselben Karte im selben Modus und derselben Warteschlange ist, landet im
-selben öffentlichen Raum. Mit einem **Raum-Code** spielt ihr privat. Bots füllen
-den Raum bis 10 Affen auf. Das Gerät mit der kleinsten Spieler-ID steuert die Bots
-und die Runden für alle; geht es weg, übernimmt automatisch das nächste.
+Am Computer unter **RAUM → VERBINDUNG**:
+
+* **Online – alle Spieler (Standard)** über Game Center, übers Internet.
+  Dafür in Xcode unter *Signing & Capabilities → + Capability → Game Center*
+  einschalten und die App in App Store Connect anlegen – das geht nur mit einem
+  **bezahlten Apple-Entwickler-Account** (99 €/Jahr). Ohne Game Center sucht das
+  Spiel automatisch Geräte in der Nähe.
+* **In der Nähe** – iPhone und iPad im selben WLAN oder per Bluetooth, ohne Konto
+  und ohne Server. Beim ersten Start fragt iOS nach „Lokales Netzwerk“ → **Erlauben**.
+* **Offline** – allein üben.
+
+Das Gerät mit der kleinsten Spieler-ID bestimmt die Runden (wer Lava ist, wer
+gewonnen hat); geht es weg, übernimmt automatisch das nächste.
 
 Sprachchat gibt es (noch) nicht.
 
@@ -103,8 +111,7 @@ Sprachchat gibt es (noch) nicht.
 | `AffenTagApp.swift` | Einstieg, Wechsel Titel ↔ Spiel |
 | `Model/Lokomotion.swift` | **Die Arm-Fortbewegung**: Hände kleben an Flächen, der Körper wird um den Rest verschoben, Schwung beim Loslassen |
 | `Model/Welt.swift` | Kollision: Kisten, Zylinder, Kugeln; Hände-Abfrage und Körper-Herausschieben |
-| `Model/Spiel.swift` | 60-Hz-Takt, Fangen, Runden aller Modi, Farbkugeln, Netz-Abgleich, Steine, HUD |
-| `Model/BotHirn.swift` | Computer-Affen |
+| `Model/Spiel.swift` | 60-Hz-Takt, Fangen, Runden aller Modi, Farbkugeln, Netz-Abgleich, Gruppe, Steine, HUD |
 | `Model/Spieler.swift` | Affe, Modi, Rundenzustand, Kosmetik-Liste |
 | `Model/Einstellungen.swift` | Alles vom Computer, gespeichert in UserDefaults |
 | `Model/Mathe.swift` | Vektoren, Winkel, reproduzierbarer Zufall |

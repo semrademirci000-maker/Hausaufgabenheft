@@ -65,7 +65,8 @@ In [`ios/AffenTag`](ios/AffenTag/README.md) liegt eine SwiftUI-App im Stil von
 Gorilla Tag: Du bewegst dich nur mit den Armen (linke/rechte Bildschirmhälfte =
 linke/rechte Hand), kletterst auf Bäume und fängst andere Affen. Mit Stumpf und
 Computer, sechs Karten, fünf Modi (Infektion, Fangen, Jagd, Farbschlacht, Locker),
-Computer-Affen, Hüten im Laden und Mehrspieler über WLAN/Bluetooth oder Game Center.
+Hüten im Laden und Mehrspieler nur mit echten Spielern (online über Game Center oder
+in der Nähe über WLAN/Bluetooth). Mit Freunden: am Computer einen Raum-Code eingeben.
 
 ## Der letzte Bus – Nachtkiosk (3D-Actionspiel)
 

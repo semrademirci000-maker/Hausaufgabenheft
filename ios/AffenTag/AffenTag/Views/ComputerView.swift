@@ -2,7 +2,7 @@
 //  ComputerView.swift
 //  Der Computer im Stumpf – grüne Schrift auf schwarzem Bildschirm, darunter
 //  eine Tastatur zum Antippen. Hier stellst du alles ein: Raum-Code, Name,
-//  Fellfarbe, Drehen, Modus, Warteschlange, Bots, Ton.
+//  Fellfarbe, Drehen, Modus, Warteschlange, Gruppe, Ton.
 //
 
 import SwiftUI
@@ -12,7 +12,7 @@ struct ComputerView: View {
     @Environment(\.dismiss) private var schliessen
 
     enum Seite: String, CaseIterable, Identifiable {
-        case raum, name, farbe, drehen, modus, warteschlange, karte, bots, ton, info
+        case raum, name, farbe, drehen, modus, warteschlange, karte, ton, info
         var id: String { rawValue }
         var titel: String {
             switch self {
@@ -23,7 +23,6 @@ struct ComputerView: View {
             case .modus: return "MODUS"
             case .warteschlange: return "WARTESCHLANGE"
             case .karte: return "GRUPPE"
-            case .bots: return "BOTS"
             case .ton: return "TON"
             case .info: return "INFO"
             }
@@ -111,7 +110,7 @@ struct ComputerView: View {
         switch seite {
         case .raum:
             zeile("AKTUELLER RAUM: \(spiel.raumCode ?? "ÖFFENTLICH")")
-            zeile("TIPPE EINEN CODE UND DRÜCKE BETRETEN.\nFREUNDE MIT DEMSELBEN CODE LANDEN IM SELBEN RAUM.")
+            zeile("ÖFFENTLICH = DU TRIFFST ALLE, DIE GERADE SPIELEN.\nPRIVAT MIT FREUNDEN: AUSGEDACHTEN CODE TIPPEN (Z. B. AFFEN7),\nBETRETEN DRÜCKEN – DEINE FREUNDE TIPPEN DENSELBEN CODE.\nIST GERADE KEINER DA, KLETTERST DU ALLEIN.")
             zeile("CODE: \(eingabe)_", gross: true)
             HStack {
                 knopf("BETRETEN") { spiel.raumBetreten(eingabe); eingabe = "" }
@@ -169,18 +168,15 @@ struct ComputerView: View {
             }
             zeile("NUR SPIELER IN DERSELBEN WARTESCHLANGE TREFFEN SICH.")
         case .karte:
-            zeile("GRUPPE: ALLE ZUSAMMEN AUF EINE KARTE")
+            zeile(spiel.raumCode == nil
+                  ? "GRUPPE: ERST UNTER RAUM EINEN CODE BETRETEN.\nDANN NIMMST DU HIER ALLE FREUNDE IM RAUM MIT AUF EINE KARTE."
+                  : "GRUPPE \(spiel.raumCode ?? ""): KARTE WÄHLEN – ALLE IM RAUM KOMMEN MIT!")
             ForEach(KartenID.allCases) { k in
                 wahl("\(k.symbol) \(k.name.uppercased())", spiel.karte == k) {
                     schliessen()
-                    if spiel.bildschirm == .spiel { spiel.lade(k) } else { spiel.spielen(k) }
+                    spiel.gruppeNach(k)
                 }
             }
-            zeile("TIPP: FREUNDE IM SELBEN RAUM-CODE GEHEN EINFACH DURCH DASSELBE TOR.")
-        case .bots:
-            stufe("COMPUTER-AFFEN", e.botAnzahl, 0...9) { spiel.einstellungen.botAnzahl = $0 }
-            stufe("STÄRKE", e.botStaerke, 1...3) { spiel.einstellungen.botStaerke = $0 }
-            zeile("BOTS FÜLLEN DEN RAUM AUF, BIS 10 AFFEN DA SIND.\nDER SPIELER MIT DER KLEINSTEN ID STEUERT SIE FÜR ALLE.")
         case .ton:
             stufe("LAUTSTÄRKE", e.lautstaerke, 0...10) { spiel.einstellungen.lautstaerke = $0 }
             wahl("VIBRATION: \(e.vibration ? "AN" : "AUS")", e.vibration) { spiel.einstellungen.vibration.toggle() }
