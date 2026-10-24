@@ -35,13 +35,16 @@ struct Koerper {
     var mitte: V3
     var form: Form
     var material: Material
+    /// Plattformen und Brücken: von unten durchkletterbar, oben fest.
+    var einweg = false
     /// Grober Umkreis für die schnelle Vorauswahl.
     let reichweite: Float
 
-    init(mitte: V3, form: Form, material: Material) {
+    init(mitte: V3, form: Form, material: Material, einweg: Bool = false) {
         self.mitte = mitte
         self.form = form
         self.material = material
+        self.einweg = einweg
         switch form {
         case .kiste(let h, _): reichweite = simd_length(h)
         case .zylinder(let r, let hh): reichweite = sqrt(r * r + hh * hh)
@@ -134,6 +137,16 @@ final class Welt {
 
         case .kiste(let h, let g):
             let lokal = drehY(c - k.mitte, -g)
+            if k.einweg {
+                if r == 0 {
+                    // Hände: bis 60 cm unter der Oberfläche fühlt sich die Plattform wie Boden an
+                    if abs(lokal.x) < h.x && abs(lokal.z) < h.z && lokal.y < h.y && lokal.y > h.y - 0.6 {
+                        return Treffer(normale: drehY(V3(0, 1, 0), g), tiefe: h.y - lokal.y, material: k.material)
+                    }
+                    return nil
+                }
+                if lokal.y < h.y - r * 0.6 { return nil }
+            }
             let nah = simd_clamp(lokal, -h, h)
             let weg = lokal - nah
             let l = simd_length(weg)

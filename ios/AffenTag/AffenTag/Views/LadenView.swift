@@ -1,6 +1,6 @@
 //
 //  LadenView.swift
-//  Hüte und Brillen gegen Steine (💎), die du beim Spielen verdienst.
+//  Hüte und Brillen gegen Steine, die du beim Spielen verdienst.
 //
 
 import SwiftUI
@@ -13,9 +13,9 @@ struct LadenView: View {
     var body: some View {
         VStack(spacing: 14) {
             HStack {
-                Text("🛍️ LADEN").font(Stil.dick(26))
+                Text("LADEN").font(Stil.dick(26))
                 Spacer()
-                Text("💎 \(spiel.einstellungen.steine)").font(Stil.dick(22))
+                Text("\(spiel.einstellungen.steine) STEINE").font(Stil.dick(22))
                 Button("FERTIG") { schliessen() }
                     .buttonStyle(DickerKnopf())
             }
@@ -40,7 +40,11 @@ struct LadenView: View {
         let besitzt = e.besitz.contains(k.id)
         let traegt = e.hut == k.id || e.gesicht == k.id
         return VStack(spacing: 6) {
-            Text(k.symbol).font(.system(size: 44))
+            Text(String(k.name.prefix(1)))
+                .font(Stil.dick(34))
+                .foregroundStyle(.white)
+                .frame(width: 64, height: 64)
+                .background(Circle().fill(Stil.holz))
             Text(k.name).font(Stil.dick(14)).foregroundStyle(.black)
             Text(k.art == .hut ? "Kopf" : "Gesicht").font(.system(size: 11)).foregroundStyle(.gray)
             Button {
@@ -54,7 +58,7 @@ struct LadenView: View {
                     zuTeuer = k.name
                 }
             } label: {
-                Text(besitzt ? (traegt ? "ABLEGEN" : "ANZIEHEN") : "💎 \(k.preis)")
+                Text(besitzt ? (traegt ? "ABLEGEN" : "ANZIEHEN") : "\(k.preis) STEINE")
                     .font(Stil.dick(14))
                     .frame(maxWidth: .infinity)
             }

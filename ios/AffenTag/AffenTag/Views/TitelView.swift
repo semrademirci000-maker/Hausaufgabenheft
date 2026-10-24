@@ -21,8 +21,6 @@ struct TitelView: View {
 
             VStack(spacing: 14) {
                 HStack(spacing: 14) {
-                    Text("🦍").font(.system(size: 64))
-                        .rotationEffect(.degrees(wippen ? -8 : 8))
                     VStack(alignment: .leading, spacing: 0) {
                         Text("AFFEN-TAG")
                             .font(Stil.dick(58))
@@ -58,7 +56,6 @@ struct TitelView: View {
                         ForEach(KartenID.spielbar) { k in
                             Button { spiel.spielen(k) } label: {
                                 VStack(spacing: 3) {
-                                    Text(k.symbol).font(.system(size: 30))
                                     Text(k.name.uppercased()).font(Stil.dick(13))
                                     Text(k.beschreibung)
                                         .font(.system(size: 10, weight: .semibold, design: .rounded))
@@ -77,10 +74,10 @@ struct TitelView: View {
                 }
 
                 HStack(spacing: 18) {
-                    Text("👤 \(spiel.einstellungen.name)")
-                    Text("💎 \(spiel.einstellungen.steine)")
-                    Text(spiel.einstellungen.verbindung == .aus ? "📴 Offline" : (spiel.einstellungen.verbindung == .nah ? "📶 In der Nähe" : "🌍 Online"))
-                    Text("👥 Freunde: Computer → RAUM")
+                    Text(spiel.einstellungen.name)
+                    Text("\(spiel.einstellungen.steine) STEINE")
+                    Text(spiel.einstellungen.verbindung == .aus ? "Offline" : (spiel.einstellungen.verbindung == .nah ? "In der Nähe" : "Online"))
+                    Text("Freunde: Computer → RAUM")
                 }
                 .font(Stil.dick(14))
                 .foregroundStyle(.white)

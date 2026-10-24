@@ -148,7 +148,7 @@ final class Spiel: ObservableObject {
         runde.wartet = true
         klang.wind(k == .hoehle ? 0.5 : (k == .wolken || k == .berge ? 0.7 : 0.25))
         verbinde()
-        zeige("\(k.symbol) \(k.name.uppercased())", sekunden: 2.5)
+        zeige(k.name.uppercased(), sekunden: 2.5)
     }
 
     var meineFarbe: V3 { fellFarbe(einstellungen.rot, einstellungen.gruen, einstellungen.blau) }
@@ -414,14 +414,14 @@ final class Spiel: ObservableObject {
             klang.gefangen()
             if einstellungen.vibration { haptikStark.impactOccurred() }
             switch runde.modus {
-            case .infektion: zeige("DU BIST LAVA! 🔥", sekunden: 2)
-            case .fangen: zeige("DU BIST ES! 🔥", sekunden: 2)
+            case .infektion: zeige("DU BIST LAVA!", sekunden: 2)
+            case .fangen: zeige("DU BIST ES!", sekunden: 2)
             default: zeige("\(nameT) HAT DICH ERWISCHT!", sekunden: 2.5)
             }
         } else if t == ich {
             klang.fangen()
             einstellungen.steine += 2
-            zeige("\(nameO) GEFANGEN! +2 💎", sekunden: 1.5)
+            zeige("\(nameO) GEFANGEN! +2 STEINE", sekunden: 1.5)
         } else {
             klang.fernFangen()
         }
@@ -456,7 +456,7 @@ final class Spiel: ObservableObject {
         guard runde.modus != .locker else { return }
         klang.rundeStart()
         if istLava(ich) {
-            zeige(runde.modus == .fangen ? "DU BIST ES! FANG JEMANDEN! 🔥" : "DU BIST LAVA! FANG ALLE! 🔥", sekunden: 3)
+            zeige(runde.modus == .fangen ? "DU BIST ES! FANG JEMANDEN!" : "DU BIST LAVA! FANG ALLE!", sekunden: 3)
         } else {
             zeige("NEUE RUNDE: \(runde.modus.name.uppercased())", sekunden: 2.5)
         }
@@ -527,7 +527,7 @@ final class Spiel: ObservableObject {
         } else if let s = runde.sieger {
             if s == ich {
                 einstellungen.steine += 10
-                zeige("DU HAST GEWONNEN! +10 💎", sekunden: 4)
+                zeige("DU HAST GEWONNEN! +10 STEINE", sekunden: 4)
             } else {
                 zeige("\(affen[s]?.name ?? "?") HAT GEWONNEN!", sekunden: 4)
             }
@@ -599,7 +599,7 @@ final class Spiel: ObservableObject {
             zeige((runde.ballons[o] ?? 0) == 0 ? "ALLE BALLONS WEG – DU BIST RAUS!" : "BALLON GEPLATZT!", sekunden: 1.8)
         } else if s == ich {
             einstellungen.steine += 1
-            zeige("TREFFER! +1 💎", sekunden: 1)
+            zeige("TREFFER! +1 STEIN", sekunden: 1)
         }
     }
 
@@ -785,7 +785,7 @@ final class Spiel: ObservableObject {
             .sorted { ($0.ich ? 0 : 1, $0.name) < ($1.ich ? 0 : 1, $1.name) }
         if hud.spieler != zeilen { hud.spieler = zeilen }
 
-        var unter = "\(karte.symbol) \(karte.name.uppercased()) · \(runde.modus.name.uppercased())"
+        var unter = "\(karte.name.uppercased()) · \(runde.modus.name.uppercased())"
         if runde.wartet && runde.modus != .locker { unter += " · WARTE AUF 2. SPIELER" }
         if let c = raumCode { unter += " · RAUM \(c)" }
         if hud.unterzeile != unter { hud.unterzeile = unter }

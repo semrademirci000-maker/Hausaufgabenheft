@@ -96,23 +96,22 @@ struct Kosmetik: Identifiable {
     let name: String
     let preis: Int
     let art: KosmetikArt
-    let symbol: String
 
     static let alle: [Kosmetik] = [
-        Kosmetik(id: "banane", name: "Bananenhut", preis: 25, art: .hut, symbol: "🍌"),
-        Kosmetik(id: "party", name: "Partyhut", preis: 30, art: .hut, symbol: "🥳"),
-        Kosmetik(id: "krone", name: "Krone", preis: 120, art: .hut, symbol: "👑"),
-        Kosmetik(id: "cowboy", name: "Cowboyhut", preis: 60, art: .hut, symbol: "🤠"),
-        Kosmetik(id: "muetze", name: "Weihnachtsmütze", preis: 45, art: .hut, symbol: "🎅"),
-        Kosmetik(id: "pilz", name: "Pilzhut", preis: 50, art: .hut, symbol: "🍄"),
-        Kosmetik(id: "propeller", name: "Propellerkappe", preis: 80, art: .hut, symbol: "🚁"),
-        Kosmetik(id: "heiligenschein", name: "Heiligenschein", preis: 150, art: .hut, symbol: "😇"),
-        Kosmetik(id: "blumen", name: "Blumenkranz", preis: 35, art: .hut, symbol: "🌼"),
-        Kosmetik(id: "zylinder", name: "Zylinder", preis: 90, art: .hut, symbol: "🎩"),
-        Kosmetik(id: "sonnenbrille", name: "Sonnenbrille", preis: 40, art: .gesicht, symbol: "🕶️"),
-        Kosmetik(id: "nerdbrille", name: "Nerdbrille", preis: 30, art: .gesicht, symbol: "🤓"),
-        Kosmetik(id: "schnurrbart", name: "Schnurrbart", preis: 20, art: .gesicht, symbol: "🥸"),
-        Kosmetik(id: "maske", name: "Taucherbrille", preis: 55, art: .gesicht, symbol: "🤿"),
+        Kosmetik(id: "banane", name: "Bananenhut", preis: 25, art: .hut),
+        Kosmetik(id: "party", name: "Partyhut", preis: 30, art: .hut),
+        Kosmetik(id: "krone", name: "Krone", preis: 120, art: .hut),
+        Kosmetik(id: "cowboy", name: "Cowboyhut", preis: 60, art: .hut),
+        Kosmetik(id: "muetze", name: "Weihnachtsmütze", preis: 45, art: .hut),
+        Kosmetik(id: "pilz", name: "Pilzhut", preis: 50, art: .hut),
+        Kosmetik(id: "propeller", name: "Propellerkappe", preis: 80, art: .hut),
+        Kosmetik(id: "heiligenschein", name: "Heiligenschein", preis: 150, art: .hut),
+        Kosmetik(id: "blumen", name: "Blumenkranz", preis: 35, art: .hut),
+        Kosmetik(id: "zylinder", name: "Zylinder", preis: 90, art: .hut),
+        Kosmetik(id: "sonnenbrille", name: "Sonnenbrille", preis: 40, art: .gesicht),
+        Kosmetik(id: "nerdbrille", name: "Nerdbrille", preis: 30, art: .gesicht),
+        Kosmetik(id: "schnurrbart", name: "Schnurrbart", preis: 20, art: .gesicht),
+        Kosmetik(id: "maske", name: "Taucherbrille", preis: 55, art: .gesicht),
     ]
 
     static func mit(_ id: String?) -> Kosmetik? { alle.first { $0.id == id } }

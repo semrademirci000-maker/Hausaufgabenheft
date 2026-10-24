@@ -56,7 +56,7 @@ struct SpielView: View {
                 .font(Stil.dick(13))
                 .foregroundStyle(.white)
                 .umrandet()
-            Text("💎 \(hud.steine)  ·  \(hud.netz)")
+            Text("\(hud.steine) STEINE  ·  \(hud.netz)")
                 .font(.system(size: 11, weight: .bold, design: .rounded))
                 .foregroundStyle(.white.opacity(0.9))
                 .padding(.horizontal, 10)
@@ -101,7 +101,6 @@ struct SpielView: View {
                         .font(.system(size: 14, weight: s.ich ? .heavy : .semibold, design: .monospaced))
                         .foregroundStyle(s.raus ? .white.opacity(0.4) : .white)
                         .strikethrough(s.raus)
-                    if s.lava { Text("🔥").font(.system(size: 12)) }
                 }
             }
             if hud.spieler.count < 2 {
@@ -146,10 +145,10 @@ struct AnleitungView: View {
             VStack(spacing: 14) {
                 Text("SO STEUERST DU DEINEN GORILLA").font(Stil.dick(24)).foregroundStyle(.white)
                 HStack(alignment: .top, spacing: 18) {
-                    schritt("🕹️", "Linker Stick (W A S D): laufen. Deine Hände drücken sich dabei wirklich vom Boden ab.")
-                    schritt("👀", "Rechter Stick: umschauen. Oder einfach irgendwo über die Welt wischen.")
-                    schritt("⎵", "Springen. ⇧ = sprinten. Gegen eine Wand laufen = hochklettern.")
-                    schritt("✋", "E festhalten · 1 Hände hoch · 3 runter · 4/2 linke/rechte Hand · R zurück · F Lampe · TAB Spieler")
+                    schritt("gamecontroller.fill", "Linker Stick (W A S D): laufen. Deine Hände drücken sich dabei wirklich vom Boden ab.")
+                    schritt("eye.fill", "Rechter Stick: umschauen. Oder einfach irgendwo über die Welt wischen.")
+                    schritt("arrow.up.circle.fill", "Springen. ⇧ = sprinten. Gegen eine Wand laufen = hochklettern.")
+                    schritt("hand.raised.fill", "E festhalten · 1 Hände hoch · 3 runter · 4/2 linke/rechte Hand · R zurück · F Lampe · TAB Spieler")
                 }
                 Button("LOS GEHT'S!", action: fertig)
                     .buttonStyle(DickerKnopf())
@@ -164,7 +163,7 @@ struct AnleitungView: View {
 
     private func schritt(_ symbol: String, _ text: String) -> some View {
         VStack(spacing: 6) {
-            Text(symbol).font(.system(size: 34))
+            Image(systemName: symbol).font(.system(size: 30, weight: .bold)).foregroundStyle(Stil.lava)
             Text(text)
                 .font(.system(size: 13, weight: .semibold, design: .rounded))
                 .foregroundStyle(.white)
@@ -203,7 +202,6 @@ struct MenueView: View {
                     ForEach(KartenID.spielbar) { k in
                         Button { schliessen(); spiel.lade(k) } label: {
                             VStack(spacing: 2) {
-                                Text(k.symbol).font(.system(size: 28))
                                 Text(k.name.uppercased()).font(Stil.dick(13))
                             }
                             .frame(maxWidth: .infinity)

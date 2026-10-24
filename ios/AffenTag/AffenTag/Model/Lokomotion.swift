@@ -63,6 +63,11 @@ final class Affenkoerper {
     private var sprungZeit: Float = 0
     private var hub: Float = 1
     var schlag: [Float] = [0, 0]
+    private(set) var klettert = false
+    private var sprungStoss = false
+    private var kletterZeit: Float = 0
+    private var kletterRichtung = V3(0, 0, -1)
+    private var wandWeg: Float = 0.5
 
     init(position: V3, gier: Float) {
         self.position = position
@@ -79,6 +84,12 @@ final class Affenkoerper {
         gier = g
         geschwindigkeit = .zero
         verlauf.removeAll()
+        hieltSichFest = false
+        phase = 0
+        kletterZeit = 0
+        klettert = false
+        sprungZeit = 0
+        sprungStoss = false
         for i in 0..<2 {
             haende[i].haftet = false
             haende[i].frei = true
@@ -171,6 +182,11 @@ final class Affenkoerper {
             let vorher = position
             var k = korrektur / anzahl
             if k.y > 0 { k.y *= hub }
+            if klettert {
+                // Beim Klettern drückt das Zugreifen dich nicht von der Wand weg
+                let weg = k.x * kletterRichtung.x + k.z * kletterRichtung.z
+                if weg < 0 { k.x -= kletterRichtung.x * weg; k.z -= kletterRichtung.z * weg }
+            }
             position += k
             var dummy = V3.zero
             welt.loese(position: &position, geschwindigkeit: &dummy, radius: Affenkoerper.radius)
@@ -181,10 +197,15 @@ final class Affenkoerper {
         } else {
             if hieltSichFest {
                 // Losgelassen: Schwung mitnehmen.
-                var v = geschwindigkeit * sprungFaktor
+                var v = geschwindigkeit * (klettert ? 0.4 : sprungFaktor)
                 let l = simd_length(v)
                 if l > maxTempo { v *= maxTempo / l }
                 geschwindigkeit = v
+            }
+            if sprungStoss && sprungZeit <= 0 {
+                // Sprung: beide Hände haben sich kräftig vom Boden abgestoßen
+                geschwindigkeit.y = max(geschwindigkeit.y * 1.2, 5.3)
+                sprungStoss = false
             }
             verlauf.removeAll()
             geschwindigkeit.y -= welt.schwerkraft * dt
@@ -215,8 +236,27 @@ final class Affenkoerper {
         haende[i].frei = false
     }
 
+    /// Wie weit ist vor mir (Richtung m, Welt) etwas zum Festhalten? Sucht auf mehreren Höhen.
+    private func wandAbstand(_ m: V3, welt: Welt) -> Float? {
+        var bester: Float?
+        for hh: Float in [0.75, 0.35, 0] {
+            var d: Float = 0.3
+            while d <= 0.84 {
+                if welt.punktInnen(position + m * d + V3(0, hh, 0)) != nil {
+                    if bester == nil || d < bester! { bester = d }
+                    break
+                }
+                d += 0.04
+            }
+        }
+        return bester
+    }
+
     func springe() {
-        if sprungZeit <= 0 { sprungZeit = 0.16 }
+        if sprungZeit <= 0 {
+            sprungZeit = 0.16
+            if aufDemBoden || hieltSichFest { sprungStoss = true }
+        }
     }
 
     /// Bewegt die Arme wie ein VR-Spieler:
@@ -247,11 +287,22 @@ final class Affenkoerper {
         for i in 0..<2 { schlag[i] = max(0, schlag[i] - dt) }
 
         let mWelt = drehY(m, gier)
-        var wand = false
+        let wand: Float? = staerke > 0.15 && e.ly > -0.2 ? wandAbstand(mWelt, welt: welt) : nil
+        // Kurz weiterklettern, auch wenn die Wand einen Moment nicht gefunden wird (kein Flackern)
+        kletterZeit = wand != nil ? 0.45 : max(0, kletterZeit - dt)
+        if staerke <= 0.15 || e.ly <= -0.2 { kletterZeit = 0 }
+        klettert = kletterZeit > 0
+        kletterRichtung = mWelt
+        // Abstand laufend nachmessen (ein Stamm wird nach oben dünner), weich nachführen
+        if let wand { wandWeg = klettert ? wandWeg + (wand - wandWeg) * min(1, dt * 8) : wand }
+        // Beim Klettern lehnt sich der Körper an den Stamm heran
+        if klettert && haende.contains(where: { $0.haftet }) && wandWeg > 0.48 {
+            let schritt = min(dt * 1.6, wandWeg - 0.48)
+            position += mWelt * schritt
+            wandWeg -= schritt
+        }
         if staerke > 0.15 {
-            let vorn = position + mWelt * 0.78
-            wand = welt.punktInnen(vorn + V3(0, 0.1, 0)) != nil || welt.punktInnen(vorn + V3(0, 0.7, 0)) != nil
-            phase += dt * (1.15 + 1.35 * staerke) * (e.sprint ? 1.4 : 1)
+            phase += dt * (klettert ? 1.0 + 0.35 * staerke : (1.15 + 1.35 * staerke) * (e.sprint ? 1.4 : 1))
         }
         for i in 0..<2 {
             let seite: Float = i == 0 ? -0.22 : 0.22
@@ -261,14 +312,34 @@ final class Affenkoerper {
             if e.runter { zeige(i, V3(seite * 1.5, -1, -0.15), aktiv: true); continue }
             if staerke <= 0.15 { haende[i].aktiv = false; haende[i].frei = true; continue }
 
+            if klettert {
+                // Hand zielt auf die Wand, legt oben an und zieht nach unten zum Körper hin.
+                // Zug 62 % der Zeit, die Hände wechseln sich ab → immer hält mindestens eine.
+                let p = (phase + Float(i) * 0.5).truncatingRemainder(dividingBy: 1)
+                let zug = p < 0.62
+                let t = zug ? p / 0.62 : (p - 0.62) / 0.38
+                let tief = wandWeg + 0.14
+                let oben = min(0.75, sqrt(max(0, 0.81 - tief * tief)))
+                let y = zug ? oben + (-0.55 - oben) * t : -0.55 + (oben + 0.55) * t
+                let weg = zug ? tief : tief - 0.25
+                // Erst loslassen, wenn die andere Hand sicher hält
+                if !zug && haende[i].haftet && !haende[1 - i].haftet {
+                    haende[i].aktiv = true
+                    haende[i].frei = false
+                    continue
+                }
+                var punkt = m * weg + V3(seite * 1.2, y, 0)
+                var schulter = Affenkoerper.schulter
+                if i == 0 { schulter.x = -schulter.x }
+                punkt -= schulter
+                zeige(i, punkt, aktiv: zug)
+                continue
+            }
             let p = (phase + Float(i) * 0.5).truncatingRemainder(dividingBy: 1)
             let zug = p < 0.55
             let t = zug ? p / 0.55 : (p - 0.55) / 0.45
             var d: V3
-            if wand {
-                let a = zug ? grad(65 - 115 * t) : grad(-50 + 115 * t)
-                d = m * (cos(a) + 0.15) + hoch * sin(a)
-            } else {
+            do {
                 // Beim Laufen hebt der Zug dich nur wenig an – sonst wäre jeder Schritt ein Riesensprung.
                 hub = e.sprint ? 0.45 : 0.3
                 let th = zug ? grad(72 - 98 * t) : grad(-26 + 98 * t)

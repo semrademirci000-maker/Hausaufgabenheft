@@ -23,18 +23,6 @@ enum KartenID: String, CaseIterable, Codable, Identifiable {
         }
     }
 
-    var symbol: String {
-        switch self {
-        case .stumpf: return "🪵"
-        case .wald: return "🌲"
-        case .hoehle: return "💎"
-        case .canyon: return "🏜️"
-        case .berge: return "🏔️"
-        case .strand: return "🏖️"
-        case .wolken: return "☁️"
-        }
-    }
-
     var torFarbe: UIColor {
         switch self {
         case .stumpf: return farbe(0.9, 0.7, 0.3)

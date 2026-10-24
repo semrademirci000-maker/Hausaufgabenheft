@@ -89,7 +89,11 @@ final class KartenBauer {
         n.simdPosition = mitte
         n.simdEulerAngles = V3(0, gier, 0)
         statisch.addChildNode(n)
-        if fest { welt.dazu(Koerper(mitte: mitte, form: .kiste(halb: groesse / 2, gier: gier), material: mat)) }
+        if fest {
+            // Dünne Holzbretter (Plattformen, Brücken) lassen sich von unten durchklettern
+            let einweg = mat == .holz && groesse.y < 0.45
+            welt.dazu(Koerper(mitte: mitte, form: .kiste(halb: groesse / 2, gier: gier), material: mat, einweg: einweg))
+        }
         return n
     }
 

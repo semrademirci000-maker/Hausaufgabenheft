@@ -83,7 +83,7 @@ struct ComputerView: View {
             }
 
             HStack {
-                Text("AFFEN-OS v1.0  ·  💎 \(spiel.einstellungen.steine)")
+                Text("AFFEN-OS v1.0  ·  \(spiel.einstellungen.steine) STEINE")
                     .font(Stil.terminal(11))
                     .foregroundStyle(Stil.terminalGruen.opacity(0.7))
                 Spacer()
@@ -172,7 +172,7 @@ struct ComputerView: View {
                   ? "GRUPPE: ERST UNTER RAUM EINEN CODE BETRETEN.\nDANN NIMMST DU HIER ALLE FREUNDE IM RAUM MIT AUF EINE KARTE."
                   : "GRUPPE \(spiel.raumCode ?? ""): KARTE WÄHLEN – ALLE IM RAUM KOMMEN MIT!")
             ForEach(KartenID.allCases) { k in
-                wahl("\(k.symbol) \(k.name.uppercased())", spiel.karte == k) {
+                wahl(k.name.uppercased(), spiel.karte == k) {
                     schliessen()
                     spiel.gruppeNach(k)
                 }
@@ -185,7 +185,7 @@ struct ComputerView: View {
             zeile("LINKER STICK (W A S D) = LAUFEN – DEINE HÄNDE STOSSEN SICH VOM BODEN AB\nRECHTER STICK = UMSCHAUEN · ⎵ = SPRINGEN · ⇧ = SPRINTEN")
             zeile("GEGEN EINE WAND LAUFEN = HOCHKLETTERN · E = FESTHALTEN\n1 = HÄNDE HOCH · 3 = RUNTER · 4/2 = LINKE/RECHTE HAND\nR = ZURÜCK ZUM START · F = TASCHENLAMPE · TAB = SPIELER")
             zeile("LAVA-AFFEN SIND SCHNELLER UND SPRINGEN WEITER.")
-            zeile("💎 STEINE GIBT ES FÜRS FANGEN, ÜBERLEBEN UND GEWINNEN.")
+            zeile("STEINE GIBT ES FÜRS FANGEN, ÜBERLEBEN UND GEWINNEN.")
             knopf("ANLEITUNG NOCHMAL ZEIGEN") {
                 spiel.einstellungen.anleitungGesehen = false
                 schliessen()

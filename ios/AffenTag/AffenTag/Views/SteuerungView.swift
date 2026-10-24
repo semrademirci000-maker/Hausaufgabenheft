@@ -2,7 +2,7 @@
 //  SteuerungView.swift
 //  Die Handy-Steuerung wie beim Mobile-Spielen:
 //  links Joystick (W A S D) zum Laufen, darunter 1–4 und ⇧ (Sprinten),
-//  oben TAB · 🦍 · ESC, rechts Tastatur, Joystick zum Umschauen, F, R, E und ⎵ (Springen).
+//  oben TAB · Menü · ESC, rechts Tastatur, Joystick zum Umschauen, F, R, E und ⎵ (Springen).
 //  Jede Taste ist eine eigene Ansicht – so gehen mehrere Finger gleichzeitig.
 //
 
@@ -25,7 +25,7 @@ struct SteuerungView: View {
                     .position(x: 36, y: 26)
                 HStack(spacing: max(14, w * 0.04)) {
                     TasteView(taste: .tab, form: .eckig, groesse: CGSize(width: 56, height: 40)) { Text("TAB") }
-                    TasteView(taste: .logo, form: .rund, groesse: CGSize(width: 64, height: 64), hell: true) { Text("🦍").font(.system(size: 32)) }
+                    TasteView(taste: .logo, form: .rund, groesse: CGSize(width: 64, height: 64), hell: true) { Image(systemName: "line.3.horizontal").font(.system(size: 24, weight: .bold)) }
                     TasteView(taste: .esc, form: .eckig, groesse: CGSize(width: 56, height: 40)) { Text("ESC") }
                 }
                 .position(x: w / 2, y: 34)
@@ -78,7 +78,7 @@ struct SteuerungView: View {
                     if let b = hud.ballons {
                         HStack(spacing: 4) {
                             ForEach(0..<3, id: \.self) { i in
-                                Text(i < b ? "🎈" : "💥").font(.system(size: 20)).opacity(i < b ? 1 : 0.5)
+                                Circle().fill(i < b ? Color.red : Color.white.opacity(0.25)).frame(width: 18, height: 22)
                             }
                         }
                         .allowsHitTesting(false)
