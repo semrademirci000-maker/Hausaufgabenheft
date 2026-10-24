@@ -43,7 +43,7 @@ struct Aufschlag {
 
 final class Affenkoerper {
     /// Größe des Gorillas (am Computer einstellbar). Alle Maße wachsen mit.
-    static var groesse: Float = 1.8
+    static var groesse: Float = 2.6
     static var radius: Float { 0.32 * groesse }
     static var armLaenge: Float { 0.92 * groesse }
     static var schulter: V3 { V3(0.2, -0.16, 0.05) * groesse }
@@ -307,7 +307,7 @@ final class Affenkoerper {
         }
         if staerke > 0.15 {
             // Schnelle Armzüge: zügig laufen, Sprinten noch schneller
-            phase += dt * (klettert ? 0.7 + 0.25 * staerke : (1.5 + 1.5 * staerke) * (e.sprint ? 1.35 : 1))
+            phase += dt * (klettert ? 0.7 + 0.25 * staerke : (1.9 + 1.9 * staerke) * (e.sprint ? 1.35 : 1))
         }
         for i in 0..<2 {
             let seite: Float = i == 0 ? -0.22 : 0.22

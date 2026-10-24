@@ -247,7 +247,7 @@ final class Spiel: ObservableObject {
         let eingefroren = (affen[ich]?.eingefrorenBis ?? 0) > zeit
         lokal.steuere(dt: fdt, eingabe: eingabe, welt: welt, eingefroren: eingefroren)
         let aufschlaege = lokal.schritt(dt: fdt, welt: welt, sprungFaktor: lava ? 1.3 : 1.1,
-                                        maxTempo: lava ? 13 : 11, eingefroren: eingefroren)
+                                        maxTempo: lava ? 17 : 15, eingefroren: eingefroren)
         for a in aufschlaege {
             klang.aufschlag(a.material, staerke: a.staerke)
             if einstellungen.vibration { haptik.impactOccurred(intensity: CGFloat(min(1, 0.3 + a.staerke))) }

@@ -40,7 +40,7 @@ final class AffeKnoten {
         fell.diffuse.contents = Texturen.bild(.fell)
         fell.diffuse.wrapS = .repeat
         fell.diffuse.wrapT = .repeat
-        haut.diffuse.contents = farbe(0.37, 0.33, 0.30)
+        haut.diffuse.contents = farbe(0.23, 0.22, 0.21)
         lava.diffuse.contents = farbe(1, 0.42, 0.08)
         lava.emission.contents = farbe(0.9, 0.25, 0.02)
         gesichtMat.diffuse.contents = farbe(0.85, 0.72, 0.58)
@@ -214,7 +214,16 @@ final class AffeKnoten {
                 knoechel.materials = [haut]
                 gelenk.addChildNode(SCNNode(geometry: knoechel))
                 let letzte = k == laengen.count - 1
-                gelenk.addChildNode(glied(dicke[k], letzte ? 0.004 : dicke[k + 1], l))
+                gelenk.addChildNode(glied(dicke[k], dicke[k] * 0.96, l))
+                if letzte {
+                    // dicke, runde Fingerkuppe – nichts Spitzes
+                    let kuppe = SCNSphere(radius: dicke[k] * 1.08)
+                    kuppe.segmentCount = 10
+                    kuppe.materials = [haut]
+                    let kn = SCNNode(geometry: kuppe)
+                    kn.simdPosition = V3(0, 0, -l)
+                    gelenk.addChildNode(kn)
+                }
                 if k > 0 { gelenk.simdPosition = V3(0, 0, -laengen[k - 1]) }
                 eltern.addChildNode(gelenk)
                 eltern = gelenk
@@ -224,9 +233,9 @@ final class AffeKnoten {
             finger[index].append((gelenke: gelenke, daumen: daumen))
         }
         let sf = Float(s)
-        baueFinger(V3(-0.03 * sf, 0, -0.128), 0.06 * sf, [0.08, 0.07, 0.065], [0.023, 0.019, 0.015], daumen: false)
-        baueFinger(V3(0.03 * sf, 0, -0.128), -0.08 * sf, [0.075, 0.065, 0.06], [0.022, 0.018, 0.014], daumen: false)
-        baueFinger(V3(-0.07 * sf, -0.004, -0.05), 0.95 * sf, [0.065, 0.06], [0.024, 0.019], daumen: true)
+        baueFinger(V3(-0.03 * sf, 0, -0.128), 0.06 * sf, [0.058, 0.048, 0.04], [0.032, 0.03, 0.028], daumen: false)
+        baueFinger(V3(0.03 * sf, 0, -0.128), -0.08 * sf, [0.054, 0.045, 0.038], [0.031, 0.029, 0.027], daumen: false)
+        baueFinger(V3(-0.07 * sf, -0.004, -0.05), 0.95 * sf, [0.05, 0.042], [0.033, 0.03], daumen: true)
         g.simdScale = V3(repeating: 1.55)
         return g
     }

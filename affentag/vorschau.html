@@ -149,6 +149,7 @@
 
 <section id="titel">
   <h1>AFFEN-TAG</h1>
+  <p class="unter" style="color:var(--gold)">VORSCHAU VERSION 6 · großer Gorilla · ohne rechten Joystick</p>
   <p class="unter">Klettern nur mit den Armen. Diese Vorschau zeigt die Welten und die Steuerung der App. Echte Mitspieler, Fangen und der Laden sind in der iPhone- und iPad-App.</p>
   <div class="hinweis">
     <div><strong>LINKER STICK</strong>Laufen. Deine Hände setzen vorne auf und ziehen dich nach vorne.</div>
@@ -185,7 +186,7 @@
     </div>
     <div class="seite" data-seite="groesse" hidden>
       <p>WIE GROSS IST DEIN GORILLA?</p>
-      <div class="stufe"><span>GRÖSSE</span><button class="tbtn" id="gMinus">−</button><output id="oGroesse">1.8</output><button class="tbtn" id="gPlus">+</button></div>
+      <div class="stufe"><span>GRÖSSE</span><button class="tbtn" id="gMinus">−</button><output id="oGroesse">2.6</output><button class="tbtn" id="gPlus">+</button></div>
       <p>GRÖSSER = LÄNGERE ARME, WEITERE SCHRITTE, HÖHER SPRINGEN.</p>
     </div>
     <div class="seite" data-seite="raum" hidden>
@@ -551,7 +552,7 @@ function blattTextur(farbig) {
 
 // ---------- Arm-Fortbewegung (wie Model/Lokomotion.swift) ----------
 // Größe des Gorillas (am Computer einstellbar). Alle Maße wachsen mit.
-let GROESSE = 1.8, RADIUS = 0.32 * GROESSE, ARM = 0.95 * GROESSE, SCHULTER = v(0.2, -0.12, 0.02).multiplyScalar(GROESSE);
+let GROESSE = 2.6, RADIUS = 0.32 * 2.6, ARM = 0.95 * 2.6, SCHULTER = v(0.2, -0.12, 0.02).multiplyScalar(2.6);
 const RUHE_G = grad(13), RUHE_N = grad(-22);
 function setzeGroesse(g) { GROESSE = g; RADIUS = .32 * g; ARM = .95 * g; SCHULTER = v(.2, -.12, .02).multiplyScalar(g); }
 class Affe {
@@ -629,7 +630,7 @@ class Affe {
       for (const h of this.h) if (h.haftet) { /* Hände bleiben, wo sie sind */ }
     }
     // Schnelle Armzüge: Laufen ~9 m/s, Sprinten ~12 m/s (bei normaler Größe)
-    if (mag > 0.15) this.phase += dt * (this.klettert ? .7 + .25 * mag : (1.5 + 1.5 * mag) * (st.sprint ? 1.35 : 1));
+    if (mag > 0.15) this.phase += dt * (this.klettert ? .65 + .25 * mag : (1.9 + 1.9 * mag) * (st.sprint ? 1.35 : 1));
     for (let i = 0; i < 2; i++) {
       const seite = i ? .2 : -.2;
       if (this.schlag[i] > 0) { this.zeige(i, v(seite * .3, .05, -1), false); continue; }
@@ -706,7 +707,7 @@ class Affe {
         this.vel.multiplyScalar(this.klettert ? .4 : 1.1);
         // Sprung: beide Hände haben sich kräftig vom Boden abgestoßen
         if (this.sprungStoss) { this.vel.y = Math.max(this.vel.y * 1.2, 5.3 * Math.sqrt(GROESSE)); this.sprungStoss = false; }
-        if (this.vel.length() > 12) this.vel.setLength(12);
+        if (this.vel.length() > 15) this.vel.setLength(15);
       }
       if (this.sprungStoss && this.sprungZeit <= 0) { this.vel.y = Math.max(this.vel.y * 1.2, 5.3 * Math.sqrt(GROESSE)); this.sprungStoss = false; }
       this.verlauf = [];
@@ -1225,7 +1226,7 @@ const KARTEN = {
 
   wald: {
     name: "Wald", text: "Riesenbäume, ein Baumhaus mit zwei Etagen und Hängebrücken.", farbe: 0x58ff8a,
-    sonne: [40, 150], truebung: 4, belichtung: .5, nebel: [0xa8bfae, 30, 110],
+    sonne: [40, 150], truebung: 4, belichtung: .5, nebel: [0x9fb6a6, 45, 170],
     bau(b) {
       const w = b.w;
       b.gelaende(176, 177, (x, z) => {
@@ -1270,8 +1271,17 @@ const KARTEN = {
         b.rohr([s, s.clone().lerp(e, .5), e], .42, .36, "rinde", 0x8c7a68, 12);
       }
       for (let i = 0; i < 40; i++) { const x = w.zahl(-44, 44), z = w.zahl(-44, 44); if (Math.hypot(x, z) < 7) continue; b.laub(v(x, Y(x, z) + .5, z), w.zahl(.7, 1.2), .7); }
-      // Waldrand
-      for (let i = 0; i < 26; i++) { const a = i / 26 * Math.PI * 2, r = w.zahl(50, 60), p = v(Math.sin(a) * r, 0, Math.cos(a) * r); p.y = Y(p.x, p.z); b.baum(p, w.zahl(14, 19), w.zahl(.8, 1.2), { aeste: 4 }); }
+      // Felswand rundherum: hoher, zerklüfteter Steinring begrenzt den Wald
+      const wand = new THREE.CylinderGeometry(47, 52, 40, 140, 30, true), wp = wand.attributes.position, wuv = wand.attributes.uv;
+      for (let i = 0; i < wp.count; i++) {
+        const x = wp.getX(i), y = wp.getY(i), z = wp.getZ(i), a = Math.atan2(x, z);
+        const f = 1 + (rausch(a * 9, y * .12, 41) - .5) * .09 + (rausch(a * 30, y * .5, 42) - .5) * .03 + Math.max(0, Math.sin(a * 23 + y * .08)) * .012;
+        wp.setXYZ(i, x * f, y, z * f); wuv.setXY(i, wuv.getX(i) * 26, wuv.getY(i) * 4);
+      }
+      wand.computeVertexNormals();
+      const wm = b.mesh(wand, b.mat("stein", 0x9a958c, { relief: 2.2 }), false); wm.material.side = THREE.BackSide; wm.position.y = 14;
+      // Bäume dicht vor der Wand
+      for (let i = 0; i < 18; i++) { const a = i / 18 * Math.PI * 2 + w.zahl(-.1, .1), r = w.zahl(40, 44), p = v(Math.sin(a) * r, 0, Math.cos(a) * r); p.y = Y(p.x, p.z); b.baum(p, w.zahl(13, 18), w.zahl(.8, 1.15), { aeste: 4 }); }
       b.gras(handy ? 15000 : 26000, 46, v(0, 0, 0), [.3, .44, .14], (x, z) => Math.hypot(x, z) < 1.7);
       b.welt.start = [v(0, Y(0, 8.5) + .6, 8.5)]; b.welt.grenzR = 46;
     },
@@ -1395,7 +1405,7 @@ function baueArme(szene) {
   const fell = fellTextur();
   const fellMat = new THREE.MeshPhysicalMaterial({ color: 0x2c2826, map: fell.map, normalMap: fell.normalMap, normalScale: new THREE.Vector2(.9, .9), roughness: 1, sheen: .6, sheenRoughness: .7, sheenColor: new THREE.Color(0x4a443e), envMapIntensity: .5 });
   const ht = TEX.haut();
-  const hautMat = new THREE.MeshStandardMaterial({ color: 0x4a403a, map: ht.map, normalMap: ht.normalMap, roughness: .85, envMapIntensity: .2 });
+  const hautMat = new THREE.MeshStandardMaterial({ color: 0x3b3735, map: ht.map, normalMap: ht.normalMap, roughness: .85, envMapIntensity: .2 });
   // Unterarm: dicker Muskel am Ellbogen, schmal am Handgelenk; Oberarm kräftig
   const unterGeo = armGeometrie([[0, .055], [.06, .07], [.25, .08], [.5, .068], [.8, .05], [1, .043]]);
   const oberGeo = armGeometrie([[0, .07], [.2, .092], [.5, .1], [.85, .08], [1, .066]]);
@@ -1433,17 +1443,18 @@ function gorillaHand(links, fellMat, hautMat) {
       const gelenk = new THREE.Group();
       gelenk.add(new THREE.Mesh(knoechel(dicke[k] * .98), hautMat));
       const letzte = k === laengen.length - 1;
-      gelenk.add(new THREE.Mesh(glied(dicke[k], letzte ? dicke[k] * .75 : dicke[k + 1] || dicke[k] * .85, l), hautMat));
+      gelenk.add(new THREE.Mesh(glied(dicke[k], dicke[k] * .96, l), hautMat));
       // runde Fingerkuppe statt Spitze
-      if (letzte) { const kuppe = new THREE.Mesh(knoechel(dicke[k] * .78), hautMat); kuppe.position.z = -l; gelenk.add(kuppe); }
+      // dicke, runde Fingerkuppe – nichts Spitzes
+      if (letzte) { const kuppe = new THREE.Mesh(knoechel(dicke[k] * 1.08), hautMat); kuppe.position.z = -l; kuppe.scale.set(1, .85, 1.15); gelenk.add(kuppe); }
       if (k) gelenk.position.z = -laengen[k - 1];
       eltern.add(gelenk); eltern = gelenk; gelenke.push(gelenk);
     });
     g.add(wurzel); return gelenke;
   };
-  finger.push({ gelenke: baueFinger(v(-.03 * s, 0, -.128), .06 * s, 0, [.08, .07, .065], [.023, .019, .015]), daumen: false });
-  finger.push({ gelenke: baueFinger(v(.03 * s, 0, -.128), -.08 * s, 0, [.075, .065, .06], [.022, .018, .014]), daumen: false });
-  finger.push({ gelenke: baueFinger(v(-.07 * s, -.004, -.05), .95 * s, -.15, [.065, .06], [.024, .019]), daumen: true });
+  finger.push({ gelenke: baueFinger(v(-.03 * s, 0, -.128), .06 * s, 0, [.058, .048, .04], [.032, .03, .028]), daumen: false });
+  finger.push({ gelenke: baueFinger(v(.03 * s, 0, -.128), -.08 * s, 0, [.054, .045, .038], [.031, .029, .027]), daumen: false });
+  finger.push({ gelenke: baueFinger(v(-.07 * s, -.004, -.05), .95 * s, -.15, [.05, .042], [.033, .03]), daumen: true });
   g.scale.setScalar(1.55);
   g.userData = { finger };
   g.traverse(o => { if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; } });
@@ -1684,9 +1695,9 @@ farbeSetzen();
 document.getElementById("pcZu").onclick = () => { computer.hidden = true; };
 const pcKnopf = document.getElementById("tPc");
 // Computer: Reiter, Name, Größe, Raum, Modus – gespeichert auf diesem Gerät
-const pc = { name: "AFFE" + Math.floor(100 + Math.random() * 900), groesse: 1.8, raum: "", modus: "INFEKTION" };
-try { Object.assign(pc, JSON.parse(localStorage.getItem("affentag.pc") || "{}")); } catch (_) {}
-const pcSpeichern = () => { try { localStorage.setItem("affentag.pc", JSON.stringify(pc)); } catch (_) {} };
+const pc = { name: "AFFE" + Math.floor(100 + Math.random() * 900), groesse: 2.6, raum: "", modus: "INFEKTION" };
+try { Object.assign(pc, JSON.parse(localStorage.getItem("affentag.pc6") || "{}")); } catch (_) {}
+const pcSpeichern = () => { try { localStorage.setItem("affentag.pc6", JSON.stringify(pc)); } catch (_) {} };
 computer.querySelectorAll(".reiterknopf").forEach(k => k.onclick = () => {
   computer.querySelectorAll(".reiterknopf").forEach(x => x.classList.toggle("an", x === k));
   computer.querySelectorAll(".seite").forEach(x => x.hidden = x.dataset.seite !== k.dataset.seite);
@@ -1700,7 +1711,7 @@ function pcAnzeigen() {
   document.querySelectorAll("#pcModi button").forEach(b => b.classList.toggle("an", b.textContent === pc.modus));
 }
 document.getElementById("pcNameOk").onclick = () => { const n = nameFeld.value.trim().toUpperCase(); if (n) { pc.name = n; pcSpeichern(); pcAnzeigen(); zeige("NAME: " + n, 1.5); } };
-const groesseSetzen = g => { pc.groesse = Math.round(klemm(g, 1, 2.6) * 10) / 10; setzeGroesse(pc.groesse); pcSpeichern(); pcAnzeigen(); };
+const groesseSetzen = g => { pc.groesse = Math.round(klemm(g, 1, 3.6) * 10) / 10; setzeGroesse(pc.groesse); pcSpeichern(); pcAnzeigen(); };
 document.getElementById("gMinus").onclick = () => groesseSetzen(pc.groesse - .1);
 document.getElementById("gPlus").onclick = () => groesseSetzen(pc.groesse + .1);
 document.getElementById("pcRaumOk").onclick = () => { pc.raum = raumFeld.value.trim().toUpperCase(); raumFeld.value = ""; pcSpeichern(); pcAnzeigen(); };

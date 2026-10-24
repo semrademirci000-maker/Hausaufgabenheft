@@ -143,8 +143,8 @@ struct ComputerView: View {
                 Text("SO SIEHST DU AUS").font(Stil.terminal(13)).foregroundStyle(Stil.terminalGruen)
             }
         case .groesse:
-            zeile("WIE GROSS IST DEIN GORILLA? (10 BIS 26)")
-            stufe("GRÖSSE", Int((e.groesse * 10).rounded()), 10...26) { spiel.einstellungen.groesse = Double($0) / 10 }
+            zeile("WIE GROSS IST DEIN GORILLA? (10 BIS 36)")
+            stufe("GRÖSSE", Int((e.groesse * 10).rounded()), 10...36) { spiel.einstellungen.groesse = Double($0) / 10 }
             zeile("GRÖSSER = LÄNGERE ARME, WEITERE SCHRITTE, HÖHER SPRINGEN.")
         case .drehen:
             zeile("UMSCHAUEN DURCH WISCHEN ÜBER DIE WELT:")
