@@ -1,0 +1,722 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Affen-Tag Vorschau</title>
+</head>
+<body>
+<style>
+  /* Layout: Vollbild-3D-Welt, darüber schwebende Holz-Tafeln und Finger-Kreise. Bewusst ein einziger Look (Waldtag). */
+  :root {
+    --holz: #6b4426;
+    --holz-dunkel: #3d2614;
+    --blatt: #4caf50;
+    --lava: #ff6d14;
+    --terminal: #33ff66;
+    --nacht: #0b1a10;
+    --papier: #fff8ec;
+    --display: "Lilita One", "Arial Rounded MT Bold", "Trebuchet MS", system-ui, sans-serif;
+    --text: "Nunito", "Segoe UI", system-ui, sans-serif;
+    --mono: "Space Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    color-scheme: dark;
+  }
+  html, body { height: 100%; }
+  [hidden] { display: none !important; }
+  body {
+    margin: 0; background: var(--nacht); color: var(--papier); font-family: var(--text);
+    overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+  #welt { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  .hud { position: fixed; pointer-events: none; z-index: 5; }
+  #oben {
+    top: 0; left: 0; right: 0; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
+    padding-top: calc(10px + env(safe-area-inset-top, 0px));
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .umrandet { text-shadow: 2px 2px 0 #000, -1px -1px 0 #000, 0 0 6px rgba(0,0,0,.6); }
+  #ort { font-family: var(--display); font-size: 18px; letter-spacing: .04em; }
+  #status { font-size: 12px; font-weight: 700; background: rgba(0,0,0,.35); border-radius: 99px; padding: 3px 10px; margin-top: 4px; display: inline-block; }
+  #wischHinweis {
+    font-size: 11px; font-weight: 800; color: rgba(255,255,255,.6); background: rgba(255,255,255,.08);
+    border-radius: 99px; padding: 5px 12px; white-space: nowrap;
+  }
+  #knoepfe { display: flex; gap: 8px; pointer-events: auto; }
+  .rund {
+    width: 42px; height: 42px; border-radius: 50%; border: 0; background: rgba(0,0,0,.45); color: #fff;
+    font: 700 18px var(--text); cursor: pointer;
+  }
+  #meldung {
+    top: 22%; left: 0; right: 0; text-align: center; font-family: var(--display); font-size: clamp(22px, 4vw, 38px);
+    letter-spacing: .03em; transition: opacity .3s; padding-inline: 16px;
+  }
+  #unten {
+    bottom: 0; left: 0; right: 0; display: flex; justify-content: space-between; align-items: flex-end;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    padding-left: max(20px, env(safe-area-inset-left, 0px)); padding-right: max(20px, env(safe-area-inset-right, 0px));
+    font: 900 10px var(--text); letter-spacing: .12em; color: rgba(255,255,255,.4);
+  }
+  #pcKnopf { pointer-events: auto; }
+  .kreis {
+    position: fixed; width: 74px; height: 74px; margin: -37px 0 0 -37px; border-radius: 50%;
+    border: 3px solid rgba(255,255,255,.7); background: rgba(255,255,255,.12); pointer-events: none; z-index: 6;
+  }
+  .kreis.haftet { border-color: #3ddc5a; background: rgba(61,220,90,.25); }
+
+  .knopf {
+    font: 400 19px var(--display); letter-spacing: .05em; color: #fff; border: 3px solid rgba(0,0,0,.35);
+    border-radius: 14px; padding: 10px 18px; cursor: pointer; background: var(--blatt);
+    box-shadow: 0 4px 0 rgba(0,0,0,.35); transition: transform .06s, box-shadow .06s;
+  }
+  .knopf:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0,0,0,.35); }
+  .knopf:focus-visible, .rund:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+
+  /* Titel */
+  #titel {
+    position: fixed; inset: 0; z-index: 20; overflow-y: auto;
+    background: linear-gradient(#5aa8ff, #8fd27a 70%, #4f8f3c);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+    padding-block: calc(16px + env(safe-area-inset-top, 0px)) calc(16px + env(safe-area-inset-bottom, 0px));
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  #titel h1 { font: 400 clamp(44px, 9vw, 84px) var(--display); margin: 0; letter-spacing: .03em; text-wrap: balance; text-align: center; }
+  #titel .unter { font-weight: 800; font-size: 15px; text-align: center; max-width: 60ch; }
+  .karten { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; max-width: 900px; }
+  .karte {
+    width: 150px; border-radius: 14px; border: 3px solid rgba(0,0,0,.3); padding: 10px; color: #fff; cursor: pointer;
+    font-family: var(--text); text-align: center; box-shadow: 0 4px 0 rgba(0,0,0,.3); display: grid; gap: 3px;
+  }
+  .karte b { font: 400 17px var(--display); letter-spacing: .05em; }
+  .karte span { font-size: 11px; font-weight: 700; line-height: 1.3; }
+  .karte .sym { font-size: 28px; }
+  .hinweis {
+    background: rgba(61,38,20,.85); border-radius: 16px; padding: 12px 16px; max-width: 760px; font-size: 13px; font-weight: 700;
+    line-height: 1.45; display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px 18px;
+  }
+  .hinweis div { min-width: 0; }
+  .hinweis strong { display: block; font: 400 15px var(--display); letter-spacing: .04em; color: #ffd36b; }
+
+  /* Computer */
+  #computer {
+    position: fixed; inset: 0; z-index: 30; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center;
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .terminal {
+    background: #041207; border: 3px solid var(--terminal); color: var(--terminal); font-family: var(--mono);
+    padding: 16px; width: min(640px, 100%); max-height: 90%; overflow-y: auto; display: grid; gap: 10px; font-size: 14px;
+    box-shadow: 0 0 30px rgba(51,255,102,.25);
+  }
+  .terminal h2 { margin: 0; font-size: 16px; }
+  .terminal p { margin: 0; line-height: 1.5; }
+  .stufe { display: flex; align-items: center; gap: 10px; }
+  .stufe span:first-child { width: 70px; }
+  .stufe output { width: 28px; text-align: center; font-size: 20px; font-variant-numeric: tabular-nums; }
+  .tbtn { background: var(--terminal); color: #000; border: 0; font: 700 15px var(--mono); padding: 6px 12px; cursor: pointer; }
+  #farbe { width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--terminal); }
+  @media (prefers-reduced-motion: reduce) { .knopf, #meldung { transition: none; } }
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@600;700;800;900&family=Space+Mono:wght@400;700&display=swap">
+
+<canvas id="welt" aria-label="3D-Welt"></canvas>
+
+<div class="hud" id="oben">
+  <div>
+    <div id="ort" class="umrandet">🪵 STUMPF</div>
+    <div id="status">Vorschau · du kletterst allein</div>
+  </div>
+  <div id="wischHinweis">↔︎ hier wischen zum Umschauen</div>
+  <div id="knoepfe">
+    <button class="rund" id="menueKnopf" aria-label="Zurück zum Titel">☰</button>
+  </div>
+</div>
+<div class="hud umrandet" id="meldung"></div>
+<div class="hud" id="unten">
+  <span>LINKE HAND</span>
+  <button class="knopf" id="pcKnopf" hidden>💻 COMPUTER</button>
+  <span>RECHTE HAND</span>
+</div>
+<div class="kreis" id="kreis0" hidden></div>
+<div class="kreis" id="kreis1" hidden></div>
+
+<section id="titel">
+  <h1 class="umrandet">🦍 AFFEN-TAG</h1>
+  <p class="unter umrandet">Vorschau der App: gleiche Arm-Physik, gleiche Welten. Mehrspieler, Fangen und Laden gibt es in der iPhone-/iPad-App.</p>
+  <div class="hinweis">
+    <div><strong>✋ HÄNDE</strong>Finger links = linke Hand, rechts = rechte Hand. Am PC: Maus links oder rechts gedrückt halten.</div>
+    <div><strong>⬇️ SPRINGEN</strong>Hand auf den Boden und nach UNTEN ziehen – du fliegst nach vorne.</div>
+    <div><strong>🧗 KLETTERN</strong>An Bäume und Wände greifen und runterziehen. Grüner Kreis = Hand hält fest.</div>
+    <div><strong>👀 UMSCHAUEN</strong>Oben im Streifen wischen. Am PC auch Pfeiltasten oder A/D.</div>
+  </div>
+  <div class="karten" id="kartenListe"></div>
+</section>
+
+<section id="computer" hidden>
+  <div class="terminal" role="dialog" aria-label="Computer">
+    <h2>AFFEN-OS v1.0 · FARBE</h2>
+    <p>FELLFARBE – STUFEN 0 BIS 9</p>
+    <div class="stufe"><span>ROT</span><button class="tbtn" data-k="r" data-d="-1">−</button><output id="oR">6</output><button class="tbtn" data-k="r" data-d="1">+</button></div>
+    <div class="stufe"><span>GRÜN</span><button class="tbtn" data-k="g" data-d="-1">−</button><output id="oG">3</output><button class="tbtn" data-k="g" data-d="1">+</button></div>
+    <div class="stufe"><span>BLAU</span><button class="tbtn" data-k="b" data-d="-1">−</button><output id="oB">1</output><button class="tbtn" data-k="b" data-d="1">+</button></div>
+    <div class="stufe"><span>SO:</span><div id="farbe"></div></div>
+    <p>RAUM, NAME, MODUS, WARTESCHLANGE und GRUPPE stellst du in der App am Computer ein: Dort tippst du einen Raum-Code, und deine Freunde mit demselben Code landen bei dir.</p>
+    <button class="tbtn" id="pcZu">SCHLIESSEN</button>
+  </div>
+</section>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(() => {
+"use strict";
+const V3 = THREE.Vector3;
+const grad = g => g * Math.PI / 180;
+const klemm = (v, a, b) => Math.min(Math.max(v, a), b);
+const v = (x, y, z) => new V3(x, y, z);
+function drehY(p, a) { const c = Math.cos(a), s = Math.sin(a); return v(c * p.x + s * p.z, p.y, -s * p.x + c * p.z); }
+const vorne = g => v(-Math.sin(g), 0, -Math.cos(g));
+const gierZu = r => Math.atan2(-r.x, -r.z);
+const flach = p => v(p.x, 0, p.z);
+
+function wuerfel(saat) {
+  let z = BigInt.asUintN(64, BigInt(saat) * 0x9E3779B97F4A7C15n | 1n);
+  const n = () => { z ^= BigInt.asUintN(64, z << 13n); z ^= z >> 7n; z ^= BigInt.asUintN(64, z << 17n); return z; };
+  return {
+    zahl: (lo, hi) => lo + (hi - lo) * Number(n() % 1000000n) / 1000000,
+    ganz: (lo, hi) => lo + Number(n() % BigInt(hi - lo + 1)),
+  };
+}
+
+// ---------- Materialien ----------
+const RUTSCH = { eis: 0.88, schnee: 0.25, wolke: 0.15, metall: 0.2 };
+
+// ---------- Welt / Kollision ----------
+class Welt {
+  constructor() { this.k = []; this.tore = []; this.start = [v(0, 1, 0)]; this.boden = -25; this.grenzR = 60; this.schwer = 9.81; this.computer = null; }
+  dazu(k) {
+    k.reich = k.typ === "kiste" ? k.h.length() : k.typ === "zyl" ? Math.hypot(k.r, k.hh) : k.r;
+    this.k.push(k);
+  }
+  static test(c, r, k) {
+    if (k.typ === "kugel") {
+      const d = c.clone().sub(k.m), l = d.length();
+      if (l >= k.r + r) return null;
+      return { n: l > 1e-5 ? d.divideScalar(l) : v(0, 1, 0), tiefe: k.r + r - l, mat: k.mat };
+    }
+    if (k.typ === "kiste") {
+      const lo = drehY(c.clone().sub(k.m), -k.g), h = k.h;
+      const nah = v(klemm(lo.x, -h.x, h.x), klemm(lo.y, -h.y, h.y), klemm(lo.z, -h.z, h.z));
+      const weg = lo.clone().sub(nah), l = weg.length();
+      if (l > 1e-5) { if (l >= r) return null; return { n: drehY(weg.divideScalar(l), k.g), tiefe: r - l, mat: k.mat }; }
+      const px = h.x - Math.abs(lo.x), py = h.y - Math.abs(lo.y), pz = h.z - Math.abs(lo.z);
+      let n = v(0, lo.y >= 0 ? 1 : -1, 0), t = py;
+      if (px < t) { t = px; n = v(lo.x >= 0 ? 1 : -1, 0, 0); }
+      if (pz < t) { t = pz; n = v(0, 0, lo.z >= 0 ? 1 : -1); }
+      return { n: drehY(n, k.g), tiefe: t + r, mat: k.mat };
+    }
+    const d = c.clone().sub(k.m), rad = v(d.x, 0, d.z), rl = rad.length();
+    const ry = klemm(d.y, -k.hh, k.hh);
+    const rn = rl > k.r ? rad.clone().multiplyScalar(k.r / rl) : rad.clone();
+    const weg = d.clone().sub(v(rn.x, ry, rn.z)), l = weg.length();
+    if (l > 1e-5) { if (l >= r) return null; return { n: weg.divideScalar(l), tiefe: r - l, mat: k.mat }; }
+    const seite = k.r - rl, oben = k.hh - d.y, unten = k.hh + d.y;
+    if (seite <= oben && seite <= unten) return { n: rl > 1e-5 ? rad.divideScalar(rl) : v(1, 0, 0), tiefe: seite + r, mat: k.mat };
+    return oben <= unten ? { n: v(0, 1, 0), tiefe: oben + r, mat: k.mat } : { n: v(0, -1, 0), tiefe: unten + r, mat: k.mat };
+  }
+  punktInnen(p) {
+    let best = null;
+    for (const k of this.k) {
+      if (p.distanceToSquared(k.m) > k.reich * k.reich) continue;
+      const t = Welt.test(p, 0, k);
+      if (t && t.tiefe > (best ? best.tiefe : 0)) best = t;
+    }
+    return best;
+  }
+  loese(pos, vel, r) {
+    let steht = false, wand = null, mat = null;
+    for (let i = 0; i < 3; i++) {
+      const alle = [];
+      for (const k of this.k) {
+        const g = k.reich + r;
+        if (pos.distanceToSquared(k.m) > g * g) continue;
+        const t = Welt.test(pos, r, k); if (t) alle.push(t);
+      }
+      if (!alle.length) break;
+      for (const t of alle) {
+        pos.addScaledVector(t.n, t.tiefe);
+        const gegen = vel.dot(t.n); if (gegen < 0) vel.addScaledVector(t.n, -gegen);
+        if (t.n.y > 0.55) { steht = true; mat = t.mat; } else if (Math.abs(t.n.y) < 0.5) { wand = t.n; mat = mat || t.mat; }
+      }
+    }
+    const f = flach(pos), l = f.length();
+    if (l > this.grenzR) {
+      const n = f.divideScalar(l); pos.addScaledVector(n, -(l - this.grenzR));
+      const raus = vel.dot(n); if (raus > 0) vel.addScaledVector(n, -raus);
+    }
+    return { steht, wand, mat };
+  }
+}
+
+// ---------- Arm-Fortbewegung (wie Model/Lokomotion.swift) ----------
+const RADIUS = 0.32, ARM = 0.92, SCHULTER = v(0.2, -0.16, 0.05), RUHE_G = grad(24), RUHE_N = grad(-4);
+class Affe {
+  constructor() {
+    this.pos = v(0, 1, 0); this.vel = v(0, 0, 0); this.gier = 0; this.neigung = 0;
+    this.h = [0, 1].map(i => ({ g: (i ? 1 : -1) * RUHE_G, n: RUHE_N, aktiv: false, pos: v(0, 0, 0), haftet: false, hp: v(0, 0, 0), hn: v(0, 1, 0), mat: "gras", ruhe: 1 }));
+    this.verlauf = []; this.hielt = false;
+  }
+  reset(p, g) {
+    this.pos.copy(p); this.gier = g; this.vel.set(0, 0, 0); this.verlauf = [];
+    this.h.forEach((h, i) => { h.haftet = false; h.g = (i ? 1 : -1) * RUHE_G; h.n = RUHE_N; h.pos = this.ziel(i); });
+  }
+  ziel(i) {
+    const h = this.h[i], s = SCHULTER.clone(); if (i === 0) s.x = -s.x;
+    const r = v(Math.sin(h.g) * Math.cos(h.n), Math.sin(h.n), -Math.cos(h.g) * Math.cos(h.n));
+    return this.pos.clone().add(drehY(s.add(r.multiplyScalar(ARM)), this.gier));
+  }
+  arm(i, dg, dn) {
+    const h = this.h[i], aussen = grad(85), innen = grad(35);
+    h.g = i === 0 ? klemm(h.g + dg, -aussen, innen) : klemm(h.g + dg, -innen, aussen);
+    h.n = klemm(h.n + dn, grad(-125), grad(80));
+  }
+  schritt(dt, welt) {
+    const schlaege = []; const korr = v(0, 0, 0); let anz = 0;
+    for (let i = 0; i < 2; i++) {
+      const h = this.h[i]; h.ruhe += dt;
+      if (!h.aktiv) { const k = Math.min(1, dt * 6); h.g += ((i ? 1 : -1) * RUHE_G - h.g) * k; h.n += (RUHE_N - h.n) * k; }
+      const ziel = this.ziel(i);
+      if (!h.aktiv) { h.haftet = false; const t = welt.punktInnen(ziel); h.pos = t ? ziel.addScaledVector(t.n, t.tiefe) : ziel; continue; }
+      if (h.haftet) {
+        const druck = ziel.clone().sub(h.hp).dot(h.hn);
+        if (druck < 0.015 || welt.punktInnen(ziel)) {
+          const r = RUTSCH[h.mat] || 0;
+          if (r > 0) { const t = ziel.clone().sub(h.hp); t.addScaledVector(h.hn, -t.dot(h.hn)); h.hp.addScaledVector(t, r); }
+          h.pos = h.hp.clone(); korr.add(h.hp.clone().sub(ziel)); anz++; continue;
+        }
+        h.haftet = false;
+      }
+      const t = welt.punktInnen(ziel);
+      if (t) {
+        const p = ziel.clone().addScaledVector(t.n, t.tiefe);
+        h.haftet = true; h.hp = p.clone(); h.hn = t.n.clone(); h.mat = t.mat; h.pos = p;
+        korr.add(p.clone().sub(ziel)); anz++;
+        if (h.ruhe > 0.12) { schlaege.push({ mat: t.mat, staerke: Math.min(1, t.tiefe * 8 + this.vel.length() * 0.15) }); h.ruhe = 0; }
+      } else h.pos = ziel;
+    }
+    if (anz > 0) {
+      const vorher = this.pos.clone();
+      this.pos.addScaledVector(korr, 1 / anz);
+      welt.loese(this.pos, v(0, 0, 0), RADIUS);
+      this.verlauf.push(this.pos.clone().sub(vorher).divideScalar(Math.max(dt, 1e-3)));
+      if (this.verlauf.length > 5) this.verlauf.shift();
+      this.vel = this.verlauf.reduce((a, b) => a.add(b), v(0, 0, 0)).divideScalar(this.verlauf.length);
+    } else {
+      if (this.hielt) { this.vel.multiplyScalar(1.1); if (this.vel.length() > 6.5) this.vel.setLength(6.5); }
+      this.verlauf = [];
+      this.vel.y -= welt.schwer * dt;
+      this.pos.addScaledVector(this.vel, dt);
+      const e = welt.loese(this.pos, this.vel, RADIUS);
+      if (e.steht) { const k = Math.max(0, 1 - dt * 7 * (1 - (RUTSCH[e.mat] || 0))); this.vel.x *= k; this.vel.z *= k; }
+    }
+    this.hielt = anz > 0;
+    return schlaege;
+  }
+}
+
+// ---------- Kartenbau ----------
+const C = (r, g, b) => new THREE.Color(r, g, b);
+const FARBEN = { gras: C(.36, .62, .25), stamm: C(.42, .28, .17), brett: C(.64, .47, .28), blatt: C(.24, .56, .22), stein: C(.5, .5, .52) };
+class Bauer {
+  constructor(saat) { this.welt = new Welt(); this.gruppe = new THREE.Group(); this.w = wuerfel(saat); this.cache = new Map(); }
+  mat(f, leucht, alpha) {
+    const key = f.getHexString() + (leucht ? "L" : "") + (alpha || "");
+    if (!this.cache.has(key)) {
+      const m = new THREE.MeshLambertMaterial({ color: f, flatShading: true });
+      if (leucht) m.emissive = f.clone().multiplyScalar(0.8);
+      if (alpha) { m.transparent = true; m.opacity = alpha; m.depthWrite = false; }
+      this.cache.set(key, m);
+    }
+    return this.cache.get(key);
+  }
+  vari(f, s = 0.08) { return f.clone().multiplyScalar(this.w.zahl(1 - s, 1 + s)); }
+  mesh(geo, f, p, o = {}) { const m = new THREE.Mesh(geo, this.mat(f, o.leucht, o.alpha)); m.position.copy(p); this.gruppe.add(m); return m; }
+  kiste(m, s, f, mat, g = 0, fest = true, o = {}) {
+    const me = this.mesh(new THREE.BoxGeometry(s.x, s.y, s.z), f, m, o); me.rotation.y = g;
+    if (fest) this.welt.dazu({ typ: "kiste", m: m.clone(), h: s.clone().multiplyScalar(0.5), g, mat });
+    return me;
+  }
+  zyl(fuss, r, h, f, mat, seiten = 7, fest = true) {
+    const m = fuss.clone().add(v(0, h / 2, 0));
+    this.mesh(new THREE.CylinderGeometry(r, r, h, seiten), f, m);
+    if (fest) this.welt.dazu({ typ: "zyl", m, r, hh: h / 2, mat });
+  }
+  kugel(m, r, f, mat, fest = true, st = [1, 1, 1], o = {}) {
+    const me = this.mesh(new THREE.SphereGeometry(r, 8, 6), f, m, o); me.scale.set(...st);
+    if (!fest) return;
+    if (st[0] === 1 && st[1] === 1 && st[2] === 1) this.welt.dazu({ typ: "kugel", m: m.clone(), r, mat });
+    else this.welt.dazu({ typ: "zyl", m: m.clone(), r: r * Math.min(st[0], st[2]) * 0.92, hh: r * st[1] * 0.8, mat });
+  }
+  kegel(fuss, r, h, f, mat, fest = true, seiten = 7) {
+    this.mesh(new THREE.ConeGeometry(r, h, seiten), f, fuss.clone().add(v(0, h / 2, 0)));
+    if (fest) this.welt.dazu({ typ: "zyl", m: fuss.clone().add(v(0, h * 0.3, 0)), r: r * 0.55, hh: h * 0.3, mat });
+  }
+  bruecke(a, b, breite, f) {
+    const weg = b.clone().sub(a), fl = flach(weg), stufen = Math.max(1, Math.floor(Math.abs(weg.y) / 0.35));
+    const g = gierZu(fl), lang = fl.length() / stufen;
+    for (let i = 0; i < stufen; i++) {
+      const p = stufen === 1 ? a.clone().add(b).multiplyScalar(0.5) : a.clone().addScaledVector(weg, (i + 0.5) / stufen);
+      this.kiste(p, v(breite, 0.2, lang + 0.05), this.vari(f, 0.05), "holz", g);
+    }
+  }
+  schild(text, p, g, groesse, farbe) {
+    const c = document.createElement("canvas"); c.width = 512; c.height = 128;
+    const x = c.getContext("2d");
+    x.font = "64px 'Lilita One', 'Arial Rounded MT Bold', sans-serif"; x.textAlign = "center"; x.textBaseline = "middle";
+    x.lineWidth = 10; x.strokeStyle = "#000"; x.strokeText(text, 256, 64);
+    x.fillStyle = "#" + farbe.getHexString(); x.fillText(text, 256, 64);
+    const tex = new THREE.CanvasTexture(c);
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(groesse * 4, groesse), new THREE.MeshBasicMaterial({ map: tex, transparent: true }));
+    m.position.copy(p); m.rotation.y = g; this.gruppe.add(m);
+  }
+  tor(mitte, g, ziel) {
+    const holz = C(.35, .22, .12), rechts = drehY(v(1, 0, 0), g);
+    this.kiste(mitte.clone().addScaledVector(rechts, 1.05).add(v(0, .3, 0)), v(.3, 3, .5), holz, "holz", g);
+    this.kiste(mitte.clone().addScaledVector(rechts, -1.05).add(v(0, .3, 0)), v(.3, 3, .5), holz, "holz", g);
+    this.kiste(mitte.clone().add(v(0, 1.95, 0)), v(2.4, .35, .5), holz, "holz", g);
+    this.kiste(mitte.clone().add(v(0, .3, 0)), v(1.8, 2.9, .08), KARTEN[ziel].farbe, "holz", g, false, { leucht: true, alpha: 0.55 });
+    this.schild(KARTEN[ziel].name.toUpperCase(), mitte.clone().add(v(0, 2.5, 0)).addScaledVector(vorne(g), -0.3), g, 0.5, KARTEN[ziel].farbe);
+    this.welt.tore.push({ m: mitte.clone().add(v(0, .3, 0)), h: v(1, 1.5, 1), ziel });
+  }
+  licht(p, f, staerke, weite) { const l = new THREE.PointLight(f, staerke, weite); l.position.copy(p); this.gruppe.add(l); }
+}
+
+function baum(b, p, h, r, plattform) {
+  b.zyl(p, r, h, b.vari(FARBEN.stamm), "holz");
+  const krone = b.w.zahl(3, 4.2);
+  b.kugel(p.clone().add(v(0, h + .5, 0)), krone, b.vari(FARBEN.blatt, .12), "blaetter", true, [1, .62, 1]);
+  b.kugel(p.clone().add(v(b.w.zahl(-1.5, 1.5), h + 2.1, b.w.zahl(-1.5, 1.5))), krone * .7, b.vari(FARBEN.blatt, .12), "blaetter", true, [1, .65, 1]);
+  const n = b.w.ganz(2, 4);
+  for (let i = 0; i < n; i++) {
+    const a = b.w.zahl(0, 2 * Math.PI), d = v(Math.sin(a), 0, Math.cos(a)), y = b.w.zahl(h * .35, h * .85), lang = b.w.zahl(1.8, 3.2);
+    b.kiste(p.clone().addScaledVector(d, r + lang / 2 - .1).add(v(0, y, 0)), v(.38, .38, lang), FARBEN.stamm, "holz", gierZu(d));
+  }
+  if (plattform) b.kiste(p.clone().add(v(0, b.w.zahl(h * .4, h * .6), 0)), v(3.8, .3, 3.8), b.vari(FARBEN.brett), "holz", b.w.zahl(0, 1.5));
+}
+
+const KARTEN = {
+  stumpf: { name: "Stumpf", sym: "🪵", farbe: C(.9, .7, .3), text: "Treffpunkt mit Computer und Toren zu allen Karten.",
+    himmel: 0x8fc4ff, nebel: [0x4d3824, 30, 60],
+    bau(b) {
+      const r = 7, wand = C(.47, .31, .18);
+      b.zyl(v(0, -1, 0), r + 1.5, 1, C(.55, .38, .22), "holz", 18);
+      b.zyl(v(0, 7.2, 0), r + 1.5, .6, wand, "holz", 18);
+      [5.5, 3.6, 1.8].forEach((rr, i) => b.zyl(v(0, -.98 + i * .01, 0), rr, 1, C(.6 - i * .03, .42, .25), "holz", 18, false));
+      const tore = { 1: "wald", 4: "canyon", 7: "berge", 11: "wolken" };
+      for (let i = 0; i < 18; i++) {
+        const a = i * grad(20), d = v(Math.sin(a), 0, Math.cos(a)), g = gierZu(d);
+        const ziel = tore[i];
+        if (ziel) {
+          b.tor(d.clone().multiplyScalar(r), g, ziel);
+          const t = drehY(v(1, 0, 0), g);
+          b.kiste(d.clone().multiplyScalar(r).addScaledVector(t, 1.25).add(v(0, 3.5, 0)), v(.2, 7, .6), wand, "holz", g);
+          b.kiste(d.clone().multiplyScalar(r).addScaledVector(t, -1.25).add(v(0, 3.5, 0)), v(.2, 7, .6), wand, "holz", g);
+          b.kiste(d.clone().multiplyScalar(r).add(v(0, 4.8, 0)), v(2.5, 4.4, .6), wand, "holz", g);
+          b.kiste(d.clone().multiplyScalar(r + 1.6).add(v(0, 1.5, 0)), v(2.6, 3.6, .4), C(.15, .1, .06), "holz", g);
+        } else {
+          b.kiste(d.clone().multiplyScalar(r).add(v(0, 3.5, 0)), v(2.5, 7, .6), b.vari(wand, .06), "holz", g);
+          if (i !== 9) b.kiste(d.clone().multiplyScalar(r - .6).add(v(0, [1.6, 3.2, 4.8][i % 3], 0)), v(1.9, .25, .9), FARBEN.brett, "holz", g);
+        }
+      }
+      const pc = v(0, 0, -(r - 1.3));
+      b.kiste(pc.clone().add(v(0, .45, 0)), v(2.4, .9, 1), C(.5, .35, .2), "holz");
+      b.kiste(pc.clone().add(v(0, 1.55, -.2)), v(1.5, 1.1, .25), C(.2, .2, .22), "metall");
+      b.kiste(pc.clone().add(v(0, 1.55, -.06)), v(1.3, .9, .02), C(.1, .9, .35), "metall", 0, false, { leucht: true });
+      b.schild("COMPUTER", pc.clone().add(v(0, 2.5, -.2)), 0, .4, C(.2, 1, .4));
+      b.schild("AFFEN-TAG", v(0, 5.6, -(r - .4)), 0, .9, C(1, .85, .3));
+      b.welt.computer = pc.clone().add(v(0, 1, .8));
+      for (let i = 0; i < 7; i++) { const a = i * grad(51); b.kugel(v(Math.sin(a) * 5, 9.5 + i % 2, Math.cos(a) * 5), 4, b.vari(FARBEN.blatt), "blaetter", false, [1, .5, 1]); }
+      b.licht(v(0, 5.5, 0), 0xffd99a, 1.2, 18);
+      b.welt.start = [v(0, .5, 2.5)];
+      b.welt.grenzR = r + .6;
+      return 0;
+    } },
+  wald: { name: "Wald", sym: "🌲", farbe: C(.35, .95, .35), text: "Riesige Bäume, Baumhaus und Hängebrücken.",
+    himmel: 0x8cc4ef, nebel: [0xa6ccbf, 25, 75],
+    bau(b) {
+      b.kiste(v(0, -.5, 0), v(110, 1, 110), FARBEN.gras, "gras");
+      b.zyl(v(0, 0, 0), 1.6, 15, FARBEN.stamm, "holz", 9);
+      b.kiste(v(0, 6.5, 0), v(10, .4, 10), FARBEN.brett, "holz");
+      [[0, 4.9, 10, .25], [0, -4.9, 10, .25], [4.9, 0, .25, 10], [-4.9, 1.5, .25, 7]].forEach(([x, z, sx, sz]) => b.kiste(v(x, 7.2, z), v(sx, 1, sz), b.vari(FARBEN.brett), "holz"));
+      b.kiste(v(0, 11, 0), v(6, .35, 6), FARBEN.brett, "holz", grad(45));
+      b.kiste(v(0, 13.4, 0), v(7, .3, 7), C(.55, .3, .18), "holz");
+      b.kugel(v(0, 16, 0), 5.5, FARBEN.blatt, "blaetter", true, [1, .55, 1]);
+      for (let i = 0; i < 9; i++) { const a = i * grad(40); b.kiste(v(Math.sin(a) * 1.9, .7 + i * .7, Math.cos(a) * 1.9), v(.9, .18, .6), FARBEN.brett, "holz", a); }
+      const baeume = []; let versuche = 0;
+      while (baeume.length < 26 && versuche++ < 400) {
+        const p = v(b.w.zahl(-40, 40), 0, b.w.zahl(-40, 40));
+        if (p.length() < 9 || baeume.some(q => q.distanceTo(p) < 8)) continue;
+        baeume.push(p); baum(b, p, b.w.zahl(9, 14), b.w.zahl(.55, 1), baeume.length % 2 === 0);
+      }
+      [...baeume].sort((a, c) => a.length() - c.length()).slice(0, 4).forEach(p => {
+        const d = p.clone().normalize();
+        b.bruecke(d.clone().multiplyScalar(5).add(v(0, 6.7, 0)), p.clone().addScaledVector(d, -1.3).add(v(0, 6.7, 0)), 1.1, FARBEN.brett);
+        b.kiste(p.clone().add(v(0, 6.6, 0)), v(3, .3, 3), FARBEN.brett, "holz", gierZu(d));
+      });
+      for (let i = 0; i < 18; i++) { const p = v(b.w.zahl(-42, 42), .2, b.w.zahl(-42, 42)); if (flach(p).length() > 6) b.kugel(p, b.w.zahl(.6, 1.6), b.vari(FARBEN.stein), "stein", true, [1, .7, 1]); }
+      for (let i = 0; i < 30; i++) b.kugel(v(b.w.zahl(-44, 44), .3, b.w.zahl(-44, 44)), b.w.zahl(.5, .9), b.vari(FARBEN.blatt, .15), "blaetter", false, [1.3, .7, 1.3]);
+      for (let i = 0; i < 40; i++) {
+        const a = i * 2 * Math.PI / 40, p = v(Math.sin(a), 0, Math.cos(a)).multiplyScalar(b.w.zahl(47, 52));
+        b.zyl(p, 1, 16, FARBEN.stamm, "holz", 7, false); b.kugel(p.clone().add(v(0, 15, 0)), 5, b.vari(FARBEN.blatt), "blaetter", false, [1, .7, 1]);
+      }
+      b.welt.start = [v(0, .5, 7)]; b.welt.grenzR = 45;
+      return 0;
+    } },
+  canyon: { name: "Canyon", sym: "🏜️", farbe: C(1, .55, .2), text: "Rote Felstürme, Holzbrücken und Kakteen.",
+    himmel: 0xf3b984, nebel: [0xf2bf8c, 30, 90],
+    bau(b) {
+      const sch = [C(.72, .36, .2), C(.82, .48, .26), C(.65, .3, .18), C(.88, .58, .32)];
+      b.kiste(v(0, -.5, 0), v(120, 1, 120), C(.87, .68, .42), "sand");
+      const gipfel = []; let versuche = 0;
+      while (gipfel.length < 14 && versuche++ < 300) {
+        const p = v(b.w.zahl(-36, 36), 0, b.w.zahl(-36, 36));
+        if (p.length() < 8 || gipfel.some(q => flach(q).distanceTo(p) < 11)) continue;
+        const stufen = b.w.ganz(2, 4); let y = 0, br = b.w.zahl(6, 9); const g = b.w.zahl(0, 1.5);
+        for (let s = 0; s < stufen; s++) {
+          const h = b.w.zahl(2.5, 4.5);
+          b.kiste(p.clone().add(v(b.w.zahl(-.6, .6), y + h / 2, b.w.zahl(-.6, .6))), v(br, h, br * b.w.zahl(.8, 1.1)), sch[(s + gipfel.length) % 4], "stein", g);
+          y += h; br *= b.w.zahl(.65, .85);
+        }
+        gipfel.push(p.clone().add(v(0, y, 0)));
+      }
+      gipfel.forEach((a, i) => {
+        const rest = gipfel.slice(i + 1); if (!rest.length) return;
+        const z = rest.reduce((m, q) => flach(q).distanceTo(flach(a)) < flach(m).distanceTo(flach(a)) ? q : m);
+        if (flach(z).distanceTo(flach(a)) < 20) b.bruecke(a.clone().add(v(0, .1, 0)), z.clone().add(v(0, .1, 0)), 1, FARBEN.brett);
+      });
+      b.kiste(v(-4, 4, 0), v(2.5, 8, 3), sch[0], "stein"); b.kiste(v(4, 4, 0), v(2.5, 8, 3), sch[0], "stein"); b.kiste(v(0, 8.8, 0), v(11, 1.8, 3.2), sch[1], "stein");
+      const kaktus = C(.3, .6, .3);
+      for (let i = 0; i < 22; i++) {
+        const p = v(b.w.zahl(-42, 42), 0, b.w.zahl(-42, 42)); if (p.length() < 6) continue;
+        const h = b.w.zahl(2, 4), s = b.w.zahl(0, 1) > .5 ? 1 : -1;
+        b.zyl(p, .35, h, kaktus, "blaetter", 6);
+        b.kiste(p.clone().add(v(.45 * s, h * .55, 0)), v(.7, .3, .3), kaktus, "blaetter");
+        b.kiste(p.clone().add(v(.7 * s, h * .55 + .5, 0)), v(.3, 1, .3), kaktus, "blaetter");
+      }
+      for (let i = 0; i < 30; i++) { const a = i * 2 * Math.PI / 30, d = v(Math.sin(a), 0, Math.cos(a)); b.kiste(d.clone().multiplyScalar(49).add(v(0, 9, 0)), v(11, 18 + b.w.zahl(0, 8), 4), sch[i % 4], "stein", gierZu(d)); }
+      b.welt.start = [v(0, .5, 4)]; b.welt.grenzR = 46;
+      return 0;
+    } },
+  berge: { name: "Berge", sym: "🏔️", farbe: C(.6, .9, 1), text: "Ein Berg zum Hochklettern – Eis ist rutschig!",
+    himmel: 0xc8d8ee, nebel: [0xe0eaf8, 15, 65],
+    bau(b) {
+      const schnee = C(.93, .95, 1), fels = C(.45, .47, .52), eis = C(.6, .85, 1);
+      b.kiste(v(0, -.5, 0), v(110, 1, 110), schnee, "schnee");
+      let br = 30, y = 0;
+      for (let i = 0; i < 11; i++) {
+        b.kiste(v(b.w.zahl(-1.5, 1.5), y + .8, -12 + b.w.zahl(-1.5, 1.5)), v(br, 1.6, br), i % 3 === 2 ? fels : b.vari(schnee, .03), i % 3 === 2 ? "stein" : "schnee", i * .21);
+        y += 1.6; br -= 2.4;
+      }
+      b.zyl(v(0, y, -12), .15, 3, FARBEN.stamm, "holz", 5);
+      b.kiste(v(.6, y + 2.6, -12), v(1.1, .7, .05), C(.9, .2, .2), "holz", 0, false);
+      for (let i = 0; i < 12; i++) { const a = i * grad(30); b.kiste(v(Math.sin(a) * b.w.zahl(14, 26), b.w.zahl(2, 9), Math.cos(a) * b.w.zahl(14, 26) + 4), v(b.w.zahl(2.5, 4.5), .5, b.w.zahl(2.5, 4.5)), eis, "eis", b.w.zahl(0, 3), true, { alpha: .85 }); }
+      b.zyl(v(18, -.45, 18), 9, .5, C(.65, .85, 1), "eis", 12);
+      const tanne = C(.15, .4, .28);
+      for (let i = 0; i < 24; i++) {
+        const p = v(b.w.zahl(-42, 42), 0, b.w.zahl(-42, 42));
+        if (p.distanceTo(v(0, 0, -12)) < 17 || p.distanceTo(v(18, 0, 18)) < 10) continue;
+        const h = b.w.zahl(5, 9);
+        b.zyl(p, .35, h * .3, FARBEN.stamm, "holz", 5);
+        for (let s = 0; s < 3; s++) b.kegel(p.clone().add(v(0, h * (.2 + s * .25), 0)), (1 - s * .28) * h * .32, h * .45, b.vari(tanne), "blaetter", s === 0);
+      }
+      for (let i = 0; i < 3; i++) { const p = v(i * 6 - 6, 0, 22); b.kugel(p.clone().add(v(0, .8, 0)), .9, schnee, "schnee"); b.kugel(p.clone().add(v(0, 2, 0)), .62, schnee, "schnee"); b.kugel(p.clone().add(v(0, 2.9, 0)), .42, schnee, "schnee"); }
+      b.welt.start = [v(0, .5, 30)]; b.welt.grenzR = 46;
+      return 1;
+    } },
+  wolken: { name: "Wolken", sym: "☁️", farbe: C(1, 1, 1), text: "Wolkeninseln hoch im Himmel – wenig Schwerkraft.",
+    himmel: 0x8fb4ff, nebel: [0xf2e6ff, 30, 100],
+    bau(b) {
+      const weiss = C(.97, .97, 1), marmor = C(.92, .9, .85), gold = C(1, .82, .3);
+      const wolke = (p, g) => { for (let i = 0; i < 5; i++) b.kugel(p.clone().add(v(b.w.zahl(-1, 1) * g, b.w.zahl(-.2, .3) * g, b.w.zahl(-1, 1) * g)), g * b.w.zahl(.6, 1) * (i ? 1 : 1.3), b.vari(weiss, .03), "wolke", true, [1, .5, 1]); };
+      wolke(v(0, -1.5, 0), 5); wolke(v(5, -1.5, 4), 4);
+      for (let i = 0; i < 18; i++) { const a = i * grad(47), r = 10 + i * 1.6; wolke(v(Math.sin(a) * r, b.w.zahl(-1, 12), Math.cos(a) * r), b.w.zahl(2, 3.6)); }
+      [[-3, -3], [3, -3], [-3, 3], [3, 3]].forEach(([x, z]) => b.zyl(v(x, 0, z - 8), .45, 5, marmor, "stein", 8));
+      b.kiste(v(0, 5.3, -8), v(8, .6, 8), marmor, "stein");
+      b.kegel(v(0, 5.6, -8), 5.5, 2, gold, "metall", true, 4);
+      b.kiste(v(0, .2, -8), v(8, .4, 8), marmor, "stein");
+      b.welt.start = [v(0, 1.5, 2)]; b.welt.grenzR = 48; b.welt.boden = -20; b.welt.schwer = 4.2;
+      return 0;
+    } },
+};
+
+// ---------- Szene ----------
+const canvas = document.getElementById("welt");
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+const scene = new THREE.Scene();
+const halter = new THREE.Object3D(); scene.add(halter);
+const kamera = new THREE.PerspectiveCamera(78, 1, .05, 250); halter.add(kamera);
+const sonne = new THREE.DirectionalLight(0xfff4dd, .9); sonne.position.set(-20, 40, 15); scene.add(sonne);
+const himmelLicht = new THREE.HemisphereLight(0xdfeeff, 0x6b5a3a, .65); scene.add(himmelLicht);
+let kartenGruppe = null, welt = new Welt(), karte = "stumpf", schnee = null;
+
+// Eigene Arme
+const fell = new THREE.MeshLambertMaterial({ color: 0x8a5520, flatShading: true });
+const arme = [0, 1].map(() => { const m = new THREE.Mesh(new THREE.CylinderGeometry(.055, .055, 1, 6), fell); m.renderOrder = 10; scene.add(m); return m; });
+const haende = [0, 1].map(() => { const m = new THREE.Mesh(new THREE.SphereGeometry(.075, 8, 6), fell); scene.add(m); return m; });
+
+const ich = new Affe();
+function lade(id) {
+  if (kartenGruppe) scene.remove(kartenGruppe);
+  if (schnee) { scene.remove(schnee); schnee = null; }
+  const saat = [...id].reduce((h, c) => (Math.imul(h, 31) + c.charCodeAt(0)) >>> 0, 7);
+  const b = new Bauer(saat);
+  const k = KARTEN[id];
+  const flocken = k.bau(b);
+  welt = b.welt; kartenGruppe = b.gruppe; scene.add(kartenGruppe); karte = id;
+  scene.background = new THREE.Color(k.himmel);
+  scene.fog = new THREE.Fog(k.nebel[0], k.nebel[1], k.nebel[2]);
+  if (flocken) {
+    const g = new THREE.BufferGeometry(), n = 1500, p = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) { p[i * 3] = (Math.random() - .5) * 90; p[i * 3 + 1] = Math.random() * 25; p[i * 3 + 2] = (Math.random() - .5) * 90; }
+    g.setAttribute("position", new THREE.BufferAttribute(p, 3));
+    schnee = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xffffff, size: .09 })); scene.add(schnee);
+  }
+  const s = welt.start[0];
+  ich.reset(s, id === "stumpf" ? 0 : gierZu(flach(s).negate()));
+  blickN = 0;
+  document.getElementById("ort").textContent = `${k.sym} ${k.name.toUpperCase()}`;
+  zeige(`${k.sym} ${k.name.toUpperCase()}`, 2.2);
+}
+
+// ---------- Klang ----------
+let ac = null;
+function klang(mat, staerke) {
+  if (!ac) return;
+  const t = ac.currentTime, l = .25 + .75 * Math.min(1, staerke);
+  const ton = (f, dauer, laut, typ = "sine", gleit = 1) => {
+    const o = ac.createOscillator(), g = ac.createGain(); o.type = typ; o.frequency.setValueAtTime(f, t);
+    o.frequency.exponentialRampToValueAtTime(f * gleit, t + dauer); g.gain.setValueAtTime(laut * l, t);
+    g.gain.exponentialRampToValueAtTime(.001, t + dauer); o.connect(g).connect(ac.destination); o.start(t); o.stop(t + dauer);
+  };
+  const rauschen = (dauer, laut, tief, hoch) => {
+    const buf = ac.createBuffer(1, Math.ceil(ac.sampleRate * dauer), ac.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 3);
+    const s = ac.createBufferSource(); s.buffer = buf;
+    const lp = ac.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = tief;
+    const hp = ac.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = hoch;
+    const g = ac.createGain(); g.gain.value = laut * l; s.connect(lp).connect(hp).connect(g).connect(ac.destination); s.start(t);
+  };
+  if (mat === "holz") { ton(230, .12, .5, "sine", .5); rauschen(.05, .25, 1800, 300); }
+  else if (mat === "gras" || mat === "sand") { rauschen(.09, .5, mat === "sand" ? 1400 : 900, 120); ton(110, .08, .25, "sine", .6); }
+  else if (mat === "stein") { ton(720, .06, .25); rauschen(.04, .35, 5000, 1200); }
+  else if (mat === "blaetter") rauschen(.22, .35, 6000, 2200);
+  else if (mat === "eis") { ton(1900, .35, .18); rauschen(.04, .15, 8000, 3000); }
+  else if (mat === "schnee") rauschen(.12, .45, 3000, 600);
+  else if (mat === "metall") { ton(1180, .2, .05, "square"); ton(1770, .3, .15); }
+  else rauschen(.25, .3, 700, 80);
+}
+
+// ---------- Eingabe ----------
+const rollen = new Map(), letzte = new Map();
+const kreise = [document.getElementById("kreis0"), document.getElementById("kreis1")];
+let blickN = 0, blickG = 0, tasten = {};
+canvas.addEventListener("pointerdown", e => {
+  canvas.setPointerCapture(e.pointerId);
+  const h = canvas.clientHeight, w = canvas.clientWidth, belegt = new Set([...rollen.values()]);
+  let r;
+  if (e.clientY < h * .2) r = "blick";
+  else {
+    r = e.clientX < w / 2 ? 0 : 1;
+    if (belegt.has(r)) r = 1 - r;
+    if (belegt.has(r)) r = "blick";
+  }
+  rollen.set(e.pointerId, r); letzte.set(e.pointerId, [e.clientX, e.clientY]);
+  if (r !== "blick") { ich.h[r].aktiv = true; kreise[r].hidden = false; kreise[r].style.left = e.clientX + "px"; kreise[r].style.top = e.clientY + "px"; }
+});
+canvas.addEventListener("pointermove", e => {
+  const r = rollen.get(e.pointerId); if (r === undefined) return;
+  const [ax, ay] = letzte.get(e.pointerId), h = Math.max(1, canvas.clientHeight);
+  const dx = (e.clientX - ax) / h, dy = (e.clientY - ay) / h; letzte.set(e.pointerId, [e.clientX, e.clientY]);
+  if (r === "blick") { blickG -= dx * 3.2 * 1.25; blickN = klemm(blickN - dy * 2.5, grad(-80), grad(80)); }
+  else { const f = 2.6 * 1.05; ich.arm(r, dx * f, -dy * f); kreise[r].style.left = e.clientX + "px"; kreise[r].style.top = e.clientY + "px"; }
+});
+const ende = e => { const r = rollen.get(e.pointerId); if (r !== undefined && r !== "blick") { ich.h[r].aktiv = false; kreise[r].hidden = true; } rollen.delete(e.pointerId); letzte.delete(e.pointerId); };
+canvas.addEventListener("pointerup", ende); canvas.addEventListener("pointercancel", ende);
+canvas.addEventListener("contextmenu", e => e.preventDefault());
+addEventListener("keydown", e => { tasten[e.key.toLowerCase()] = true; });
+addEventListener("keyup", e => { tasten[e.key.toLowerCase()] = false; });
+
+// ---------- HUD ----------
+const meldung = document.getElementById("meldung"); let meldungBis = 0, zeit = 0;
+function zeige(t, s) { meldung.textContent = t; meldung.style.opacity = 1; meldungBis = zeit + s; }
+const pcKnopf = document.getElementById("pcKnopf"), computer = document.getElementById("computer");
+const farbe = { r: 6, g: 3, b: 1 };
+function farbeSetzen() {
+  ["r", "g", "b"].forEach(k => document.getElementById("o" + k.toUpperCase()).textContent = farbe[k]);
+  const c = C(farbe.r / 9, farbe.g / 9, farbe.b / 9); fell.color = c;
+  document.getElementById("farbe").style.background = "#" + c.getHexString();
+  try { localStorage.setItem("affentag.farbe", JSON.stringify(farbe)); } catch (_) {}
+}
+try { Object.assign(farbe, JSON.parse(localStorage.getItem("affentag.farbe") || "{}")); } catch (_) {}
+farbeSetzen();
+pcKnopf.onclick = () => { computer.hidden = false; };
+document.getElementById("pcZu").onclick = () => { computer.hidden = true; };
+computer.querySelectorAll("[data-k]").forEach(b => b.onclick = () => { const k = b.dataset.k; farbe[k] = klemm(farbe[k] + +b.dataset.d, 0, 9); farbeSetzen(); });
+document.getElementById("menueKnopf").onclick = () => { titel.hidden = false; };
+
+const titel = document.getElementById("titel"), liste = document.getElementById("kartenListe");
+Object.entries(KARTEN).forEach(([id, k]) => {
+  const b = document.createElement("button"); b.className = "karte";
+  b.style.background = "#" + k.farbe.clone().multiplyScalar(.75).getHexString();
+  b.innerHTML = `<span class="sym">${k.sym}</span><b>${k.name.toUpperCase()}</b><span>${k.text}</span>`;
+  b.onclick = () => {
+    try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); ac.resume(); } catch (_) {}
+    titel.hidden = true; lade(id);
+  };
+  liste.appendChild(b);
+});
+
+function groesse() {
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  renderer.setSize(w, h, false); kamera.aspect = w / h; kamera.updateProjectionMatrix();
+}
+addEventListener("resize", groesse);
+
+// ---------- Takt ----------
+lade("stumpf");
+let zuletzt = performance.now();
+function takt(jetzt) {
+  const dt = Math.min(.05, (jetzt - zuletzt) / 1000); zuletzt = jetzt; zeit += dt;
+  if (canvas.width !== Math.floor(canvas.clientWidth * renderer.getPixelRatio())) groesse();
+  const dreh = (tasten["arrowleft"] || tasten["a"] ? 1 : 0) - (tasten["arrowright"] || tasten["d"] ? 1 : 0);
+  ich.gier += blickG + dreh * 2.2 * dt; blickG = 0;
+  blickN = klemm(blickN + ((tasten["arrowup"] || tasten["w"] ? 1 : 0) - (tasten["arrowdown"] || tasten["s"] ? 1 : 0)) * 1.5 * dt, grad(-80), grad(80));
+  if (titel.hidden) {
+    for (const s of ich.schritt(dt, welt)) { klang(s.mat, s.staerke); if (navigator.vibrate) try { navigator.vibrate(8); } catch (_) {} }
+    if (ich.pos.y < welt.boden) ich.reset(welt.start[0], ich.gier);
+    for (const t of welt.tore) {
+      const d = ich.pos.clone().sub(t.m);
+      if (Math.abs(d.x) < t.h.x && Math.abs(d.y) < t.h.y && Math.abs(d.z) < t.h.z) { lade(t.ziel); break; }
+    }
+  }
+  kreise.forEach((k, i) => k.classList.toggle("haftet", ich.h[i].haftet));
+  pcKnopf.hidden = !(welt.computer && welt.computer.distanceTo(ich.pos) < 2.6);
+  if (zeit > meldungBis) meldung.style.opacity = 0;
+  if (schnee) { const p = schnee.geometry.attributes.position; for (let i = 0; i < p.count; i++) { let y = p.getY(i) - dt * 1.3; if (y < 0) y += 25; p.setY(i, y); } p.needsUpdate = true; }
+
+  halter.position.copy(ich.pos).add(v(0, .12, 0)); halter.rotation.y = ich.gier; kamera.rotation.x = blickN;
+  for (let i = 0; i < 2; i++) {
+    const s = SCHULTER.clone(); if (i === 0) s.x = -s.x;
+    const sw = ich.pos.clone().add(drehY(s, ich.gier)), hp = ich.h[i].pos, weg = hp.clone().sub(sw), l = Math.max(.05, weg.length());
+    haende[i].position.copy(hp);
+    arme[i].position.copy(sw).addScaledVector(weg, .5); arme[i].scale.set(1, l, 1);
+    arme[i].quaternion.setFromUnitVectors(v(0, 1, 0), weg.divideScalar(l));
+  }
+  renderer.render(scene, kamera);
+  requestAnimationFrame(takt);
+}
+groesse();
+requestAnimationFrame(takt);
+})();
+</script>
+</body>
+</html>

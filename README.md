@@ -68,6 +68,9 @@ Computer, sechs Karten, fünf Modi (Infektion, Fangen, Jagd, Farbschlacht, Locke
 Hüten im Laden und Mehrspieler nur mit echten Spielern (online über Game Center oder
 in der Nähe über WLAN/Bluetooth). Mit Freunden: am Computer einen Raum-Code eingeben.
 
+**Vorschau im Browser** (ohne Mehrspieler, gleiche Arm-Physik):
+https://semrademirci000-maker.github.io/Hausaufgabenheft/affentag/vorschau.html
+
 ## Der letzte Bus – Nachtkiosk (3D-Actionspiel)
 
 In `derletztebus/` steckt ein 3D-Spiel (three.js), am besten **quer** gespielt:
