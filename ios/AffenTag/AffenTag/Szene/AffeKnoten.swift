@@ -40,7 +40,7 @@ final class AffeKnoten {
         fell.diffuse.contents = Texturen.bild(.fell)
         fell.diffuse.wrapS = .repeat
         fell.diffuse.wrapT = .repeat
-        haut.diffuse.contents = farbe(0.23, 0.22, 0.21)
+        haut.diffuse.contents = farbe(0.05, 0.045, 0.045)
         lava.diffuse.contents = farbe(1, 0.42, 0.08)
         lava.emission.contents = farbe(0.9, 0.25, 0.02)
         gesichtMat.diffuse.contents = farbe(0.85, 0.72, 0.58)
@@ -93,22 +93,22 @@ final class AffeKnoten {
 
         for i in 0..<2 {
             // Oberarm und Unterarm (leicht konisch), dazwischen der Ellbogen
-            let ober = SCNCone(topRadius: 0.046, bottomRadius: 0.056, height: 1)
-            ober.radialSegmentCount = 7
+            let ober = SCNCone(topRadius: 0.052, bottomRadius: 0.064, height: 1)
+            ober.radialSegmentCount = 16
             ober.materials = [fell]
             let o = SCNNode(geometry: ober)
             wurzel.addChildNode(o)
             oberarme.append(o)
 
-            let unter = SCNCone(topRadius: 0.034, bottomRadius: 0.048, height: 1)
-            unter.radialSegmentCount = 7
+            let unter = SCNCone(topRadius: 0.04, bottomRadius: 0.052, height: 1)
+            unter.radialSegmentCount = 16
             unter.materials = [fell]
             let a = SCNNode(geometry: unter)
             wurzel.addChildNode(a)
             arme.append(a)
 
-            let e = SCNSphere(radius: 0.046)
-            e.segmentCount = 10
+            let e = SCNSphere(radius: 0.054)
+            e.segmentCount = 16
             e.materials = [fell]
             let en = SCNNode(geometry: e)
             wurzel.addChildNode(en)
@@ -246,7 +246,7 @@ final class AffeKnoten {
 
         if fellFarbe != a.farbe {
             fellFarbe = a.farbe
-            fell.multiply.contents = farbe(CGFloat(0.06 + a.farbe.x * 0.9), CGFloat(0.06 + a.farbe.y * 0.9), CGFloat(0.06 + a.farbe.z * 0.9))
+            fell.multiply.contents = farbe(CGFloat(0.02 + a.farbe.x * 0.6), CGFloat(0.02 + a.farbe.y * 0.6), CGFloat(0.02 + a.farbe.z * 0.6))
         }
         if istJetztLava != istLava {
             istLava = istJetztLava
