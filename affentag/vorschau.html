@@ -40,6 +40,7 @@
   .stick .a { left: 9%; top: 50%; transform: translateY(-50%); }
   .stick .d { right: 9%; top: 50%; transform: translateY(-50%); }
   #stickL { left: max(4vw, env(safe-area-inset-left, 0px)); top: 20%; }
+  #stickR { right: max(9vw, calc(env(safe-area-inset-right, 0px) + 40px)); top: 22%; }
   #tPc { left: 50%; transform: translateX(-50%); bottom: max(6%, calc(env(safe-area-inset-bottom, 0px) + 10px)); padding: 0 22px; height: 52px; border-radius: 26px; background: rgba(20,60,30,.75); border-color: var(--terminal); color: var(--terminal); font: 700 16px var(--mono); letter-spacing: .08em; }
   #dpad { left: max(6vw, calc(env(safe-area-inset-left, 0px) + 20px)); bottom: max(5%, calc(env(safe-area-inset-bottom, 0px) + 8px)); display: grid; grid-template-columns: repeat(3, clamp(38px, 4.8vw, 52px)); grid-template-rows: repeat(3, clamp(38px, 4.8vw, 52px)); }
   #dpad .taste { border-radius: 8px; }
@@ -129,6 +130,7 @@
   <button class="taste" id="tTastatur" data-taste="computer" aria-label="Tastatur">
     <svg viewBox="0 0 32 22" fill="none" stroke="currentColor" stroke-width="2"><rect x="1.5" y="1.5" width="29" height="19" rx="3"/><path d="M6 7h2M11 7h2M16 7h2M21 7h2M26 7h0M6 11.5h2M11 11.5h2M16 11.5h2M21 11.5h2M9 16h14" stroke-linecap="round"/></svg>
   </button>
+  <div class="stick" id="stickR" aria-label="Umschauen"><div class="knauf"></div></div>
   <button class="taste" id="tPc" data-taste="computer" hidden>DRÜCKE E, UM DEN COMPUTER ZU BENUTZEN</button>
   <button class="taste rund gross" id="tF" data-taste="f">F</button>
   <button class="taste rund gross" id="tR" data-taste="r">R</button>
@@ -149,7 +151,7 @@
 
 <section id="titel">
   <h1>AFFEN-TAG</h1>
-  <p class="unter" style="color:var(--gold)">VORSCHAU VERSION 8 · Arme wie in Version 6 · E am Computer</p>
+  <p class="unter" style="color:var(--gold)">VORSCHAU VERSION 9 · ruhiges Laufen · rechter Joystick zum Umschauen</p>
   <p class="unter">Klettern nur mit den Armen. Diese Vorschau zeigt die Welten und die Steuerung der App. Echte Mitspieler, Fangen und der Laden sind in der iPhone- und iPad-App.</p>
   <div class="hinweis">
     <div><strong>LINKER STICK</strong>Laufen. Deine Hände setzen vorne auf und ziehen dich nach vorne.</div>
@@ -601,6 +603,7 @@ class Affe {
    */
   steuere(dt, st, welt) {
     const mag = Math.min(1, Math.hypot(st.lx, st.ly));
+    this.laeuft = false;
     const m = mag > 0.15 ? v(st.lx, 0, -st.ly).normalize() : v(0, 0, -1);
     const runter = v(0, -1, 0);
     this.hub = 1;
@@ -630,7 +633,7 @@ class Affe {
       for (const h of this.h) if (h.haftet) { /* Hände bleiben, wo sie sind */ }
     }
     // Schnelle Armzüge: Laufen ~9 m/s, Sprinten ~12 m/s (bei normaler Größe)
-    if (mag > 0.15) this.phase += dt * (this.klettert ? .65 + .25 * mag : (1.9 + 1.9 * mag) * (st.sprint ? 1.35 : 1));
+    if (mag > 0.15) this.phase += dt * (this.klettert ? .65 + .25 * mag : (1.1 + .6 * mag) * (st.sprint ? 1.3 : 1));
     for (let i = 0; i < 2; i++) {
       const seite = i ? .2 : -.2;
       if (this.schlag[i] > 0) { this.zeige(i, v(seite * .3, .05, -1), false); continue; }
@@ -654,18 +657,23 @@ class Affe {
         this.zieleAuf(i, punkt, zug);
         continue;
       }
-      // Laufen: vorne aufsetzen, nach hinten durchziehen; zurück durch die Luft.
-      // Der Zug hebt dich nur wenig an – sonst wäre jeder Schritt ein Riesensprung.
-      this.hub = st.sprint ? .45 : .3;
+      // Laufen: kontrolliert am Boden mit fester Geschwindigkeit (kein Wegfliegen).
+      // Die Arme schwingen dabei sichtbar mit: vorne aufsetzen, nach hinten durchziehen.
+      this.laeuft = true;
+      this.laufZiel = mWelt.clone().multiplyScalar((st.sprint ? 7.5 : 5) * mag);
       const p = (this.phase + i * .5) % 1, zug = p < .55, t = zug ? p / .55 : (p - .55) / .45;
-      const th = zug ? grad(72 - 98 * t) : grad(-26 + 98 * t);
-      const d = m.clone().multiplyScalar(Math.sin(th)).addScaledVector(runter, Math.cos(th) * (zug ? 1 : 1 - .55 * Math.sin(Math.PI * t)));
+      const th = zug ? grad(55 - 85 * t) : grad(-30 + 85 * t);
+      const d = m.clone().multiplyScalar(Math.sin(th)).addScaledVector(runter, Math.cos(th) * (zug ? 1 : 1 - .5 * Math.sin(Math.PI * t)));
       d.x += seite;
-      this.zeige(i, d, zug);
+      this.zeige(i, d, false);
+      // Klopfgeräusch, wenn eine Hand aufsetzt
+      if (this.letztesP && this.letztesP[i] > .5 && p < .5 && this.amBoden) this.klopfen = true;
+      (this.letztesP = this.letztesP || [0, 0])[i] = p;
     }
   }
   schritt(dt, welt) {
     const schlaege = []; const korr = v(0, 0, 0); let anz = 0;
+    if (this.klopfen) { schlaege.push({ mat: this.bodenMat || "gras", staerke: .5 }); this.klopfen = false; }
     for (let i = 0; i < 2; i++) {
       const h = this.h[i]; h.ruhe += dt;
       if (!h.aktiv && h.frei) { const k = Math.min(1, dt * 6); h.g += ((i ? 1 : -1) * RUHE_G - h.g) * k; h.n += (RUHE_N - h.n) * k; }
@@ -704,17 +712,25 @@ class Affe {
       this.vel = this.verlauf.reduce((a, b) => a.add(b), v(0, 0, 0)).divideScalar(this.verlauf.length);
     } else {
       if (this.hielt) {
-        this.vel.multiplyScalar(this.klettert ? .4 : 1.1);
+        // Beim Laufen kein Wegfliegen: Schwung nur nach vorne, kaum nach oben
+        if (this.laeuft && !this.sprungStoss) { this.vel.multiplyScalar(.9); this.vel.y = Math.min(this.vel.y, .8); }
+        else this.vel.multiplyScalar(this.klettert ? .4 : 1.1);
         // Sprung: beide Hände haben sich kräftig vom Boden abgestoßen
         if (this.sprungStoss) { this.vel.y = Math.max(this.vel.y * 1.2, 5.3 * Math.sqrt(GROESSE)); this.sprungStoss = false; }
-        if (this.vel.length() > 15) this.vel.setLength(15);
+        if (this.vel.length() > 9) this.vel.setLength(9);
       }
       if (this.sprungStoss && this.sprungZeit <= 0) { this.vel.y = Math.max(this.vel.y * 1.2, 5.3 * Math.sqrt(GROESSE)); this.sprungStoss = false; }
+      // Laufen: Geschwindigkeit weich auf das Ziel bringen (in der Luft nur wenig steuern)
+      if (this.laeuft) {
+        const k = Math.min(1, dt * (this.amBoden ? 12 : 2));
+        this.vel.x += (this.laufZiel.x - this.vel.x) * k; this.vel.z += (this.laufZiel.z - this.vel.z) * k;
+      }
       this.verlauf = [];
       this.vel.y -= welt.schwer * dt;
       this.pos.addScaledVector(this.vel, dt);
       const e = welt.loese(this.pos, this.vel, RADIUS);
-      if (e.steht) { const k = Math.max(0, 1 - dt * 7 * (1 - (RUTSCH[e.mat] || 0))); this.vel.x *= k; this.vel.z *= k; }
+      if (e.steht && !this.laeuft) { const k = Math.max(0, 1 - dt * 7 * (1 - (RUTSCH[e.mat] || 0))); this.vel.x *= k; this.vel.z *= k; }
+      if (e.steht) this.bodenMat = e.mat;
       this.amBoden = e.steht;
     }
     if (anz > 0) this.amBoden = true;
@@ -1636,6 +1652,7 @@ function stick(el, setze) {
   el.addEventListener("pointerup", los); el.addEventListener("pointercancel", los);
 }
 stick(document.getElementById("stickL"), (x, y) => { st.lx = x; st.ly = y; });
+stick(document.getElementById("stickR"), (x, y) => { st.rx = x; st.ry = y; });
 
 let lampeAn = false;
 function zeigeTitel() { titel.hidden = false; steuerung.hidden = true; }
@@ -1764,8 +1781,9 @@ function takt(jetzt) {
   const steuer = { ...st, lx: st.lx || kx, ly: st.ly || ky };
   const pfeil = (tasten.arrowleft ? 1 : 0) - (tasten.arrowright ? 1 : 0);
   if (titel.hidden) {
-    ich.gier += blickG + pfeil * 2.2 * dt; blickG = 0;
-    blickN = klemm(blickN + ((tasten.arrowup ? 1 : 0) - (tasten.arrowdown ? 1 : 0)) * 1.5 * dt, grad(-80), grad(80));
+    // Rechter Joystick: gemütlich umschauen
+    ich.gier += blickG + (-st.rx * 1.3 + pfeil * 1.5) * dt; blickG = 0;
+    blickN = klemm(blickN + (st.ry * .8 + ((tasten.arrowup ? 1 : 0) - (tasten.arrowdown ? 1 : 0)) * 1.0) * dt, grad(-80), grad(80));
   } else {
     ich.gier += dt * .06; blickG = 0;
   }

@@ -64,6 +64,9 @@ final class Affenkoerper {
     private var phase: Float = 0
     private var sprungZeit: Float = 0
     private var hub: Float = 1
+    /// Laufen am Boden: feste Zielgeschwindigkeit statt Armschwung-Physik (kein Wegfliegen)
+    private var laeuft = false
+    private var laufZiel = V3.zero
     var schlag: [Float] = [0, 0]
     private(set) var klettert = false
     private var sprungStoss = false
@@ -209,12 +212,17 @@ final class Affenkoerper {
                 geschwindigkeit.y = max(geschwindigkeit.y * 1.2, 5.3 * sqrt(Affenkoerper.groesse))
                 sprungStoss = false
             }
+            if laeuft {
+                let k = min(1, dt * (aufDemBoden ? 12 : 2))
+                geschwindigkeit.x += (laufZiel.x - geschwindigkeit.x) * k
+                geschwindigkeit.z += (laufZiel.z - geschwindigkeit.z) * k
+            }
             verlauf.removeAll()
             geschwindigkeit.y -= welt.schwerkraft * dt
             position += geschwindigkeit * dt
             let ergebnis = welt.loese(position: &position, geschwindigkeit: &geschwindigkeit, radius: Affenkoerper.radius)
             aufDemBoden = ergebnis.steht
-            if ergebnis.steht {
+            if ergebnis.steht && !laeuft {
                 let reibung = 1 - (ergebnis.material?.rutschig ?? 0)
                 let k = max(0, 1 - dt * 7 * reibung)
                 geschwindigkeit.x *= k
@@ -268,6 +276,7 @@ final class Affenkoerper {
     /// Springen = beide Hände kräftig nach unten stoßen.
     func steuere(dt: Float, eingabe e: SteuerEingabe, welt: Welt, eingefroren: Bool) {
         hub = 1
+        laeuft = false
         if eingefroren {
             for i in 0..<2 { haende[i].aktiv = false; haende[i].frei = true }
             return
@@ -307,7 +316,7 @@ final class Affenkoerper {
         }
         if staerke > 0.15 {
             // Schnelle Armzüge: zügig laufen, Sprinten noch schneller
-            phase += dt * (klettert ? 0.7 + 0.25 * staerke : (1.9 + 1.9 * staerke) * (e.sprint ? 1.35 : 1))
+            phase += dt * (klettert ? 0.7 + 0.25 * staerke : (1.1 + 0.6 * staerke) * (e.sprint ? 1.3 : 1))
         }
         for i in 0..<2 {
             let seite: Float = i == 0 ? -0.22 : 0.22
@@ -346,14 +355,15 @@ final class Affenkoerper {
             let t = zug ? p / 0.55 : (p - 0.55) / 0.45
             var d: V3
             do {
-                // Beim Laufen hebt der Zug dich nur wenig an – sonst wäre jeder Schritt ein Riesensprung.
-                hub = e.sprint ? 0.45 : 0.3
-                let th = zug ? grad(72 - 98 * t) : grad(-26 + 98 * t)
-                let tief = cos(th) * (zug ? 1 : 1 - 0.55 * sin(.pi * t))
+                // Laufen: kontrolliert am Boden, die Arme schwingen nur sichtbar mit
+                laeuft = true
+                laufZiel = mWelt * ((e.sprint ? 7.5 : 5) * staerke)
+                let th = zug ? grad(55 - 85 * t) : grad(-30 + 85 * t)
+                let tief = cos(th) * (zug ? 1 : 1 - 0.5 * sin(.pi * t))
                 d = m * sin(th) + runter * tief
             }
             d.x += seite
-            zeige(i, d, aktiv: zug)
+            zeige(i, d, aktiv: false)
         }
     }
 }

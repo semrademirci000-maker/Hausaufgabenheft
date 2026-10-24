@@ -57,6 +57,14 @@ struct SteuerungView: View {
                 TasteView(taste: .computer, form: .eckig, groesse: CGSize(width: 70, height: 60)) { Image(systemName: "keyboard") }
                     .position(x: w - 42, y: h * 0.16 + 30)
 
+                // Rechter Joystick: gemütlich umschauen
+                Joystick(buchstaben: false) { x, y in
+                    spiel.eingabe.rx = x
+                    spiel.eingabe.ry = y
+                }
+                .frame(width: stick, height: stick)
+                .position(x: w - stick / 2 - 80, y: h * 0.22 + stick / 2)
+
                 TasteView(taste: .f, form: .rund, groesse: CGSize(width: rund, height: rund)) { Text("F") }
                     .position(x: w - 120, y: h * 0.64)
                 TasteView(taste: .r, form: .rund, groesse: CGSize(width: rund, height: rund)) { Text("R") }
