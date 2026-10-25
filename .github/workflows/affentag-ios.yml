@@ -1,0 +1,76 @@
+# Baut die native iOS-App „Affen-Tag" auf einem Mac von GitHub – ganz ohne eigenen Mac.
+# Ergebnis: AffenTag.ipa (unsigniert) als Download unter „Releases" und als Build-Artefakt.
+# Installieren aufs iPad: mit Sideloadly oder AltStore (signiert die App mit deiner Apple-ID).
+name: Affen-Tag iOS-App bauen
+
+on:
+  push:
+    paths:
+      - "ios/AffenTag/**"
+      - ".github/workflows/affentag-ios.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: affentag-ios
+  cancel-in-progress: true
+
+jobs:
+  bauen:
+    runs-on: macos-15
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Xcode auswählen
+        run: |
+          sudo xcode-select -s "$(ls -d /Applications/Xcode_16*.app | sort -V | tail -1)"
+          xcodebuild -version
+
+      - name: App bauen (ohne Signatur)
+        working-directory: ios/AffenTag
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project AffenTag.xcodeproj \
+            -scheme AffenTag \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            build | tee xcodebuild.log | grep -E "error:|warning: unused|BUILD (SUCCEEDED|FAILED)" || true
+          grep -q "BUILD SUCCEEDED" xcodebuild.log
+
+      - name: Fehlerprotokoll anzeigen
+        if: failure()
+        working-directory: ios/AffenTag
+        run: grep -E "error:" -A 3 xcodebuild.log | head -200 || true
+
+      - name: IPA packen
+        working-directory: ios/AffenTag
+        run: |
+          mkdir -p Payload
+          cp -R build/Build/Products/Release-iphoneos/AffenTag.app Payload/
+          zip -qry AffenTag.ipa Payload
+          ls -lh AffenTag.ipa
+
+      - name: Als Build-Artefakt hochladen
+        uses: actions/upload-artifact@v4
+        with:
+          name: AffenTag-ipa
+          path: ios/AffenTag/AffenTag.ipa
+
+      - name: Als Download unter Releases bereitstellen
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: affentag-neueste
+          name: Affen-Tag (neueste Version)
+          body: |
+            Automatisch gebaut aus ${{ github.sha }}.
+            AffenTag.ipa herunterladen und mit Sideloadly oder AltStore aufs iPad/iPhone installieren.
+          files: ios/AffenTag/AffenTag.ipa
+          make_latest: true
+          prerelease: false
