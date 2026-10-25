@@ -179,7 +179,7 @@
 </section>
 <section id="titel">
   <div style="display:flex;align-items:center;gap:18px"><div class="titelbild"><svg viewBox="0 0 64 64" aria-hidden="true"><defs><radialGradient id="gF" cx=".5" cy=".38" r=".62"><stop offset="0" stop-color="#9a8a7e"/><stop offset="1" stop-color="#56493f"/></radialGradient><radialGradient id="gK" cx=".5" cy=".3" r=".7"><stop offset="0" stop-color="#4c443f"/><stop offset="1" stop-color="#1a1716"/></radialGradient></defs><path fill="url(#gK)" d="M32 2c7 0 12 4 14 10 6 2 11 8 12 15 2 2 3 5 2 8-1 2-2 3-4 3-2 11-11 22-24 23C19 60 10 49 8 38c-2 0-3-1-4-3-1-3 0-6 2-8 1-7 6-13 12-15 2-6 7-10 14-10z"/><path fill="url(#gF)" d="M32 18c8 0 15 2 18 6 3 4 2 10 0 15-2 9-9 16-18 16s-16-7-18-16c-2-5-3-11 0-15 3-4 10-6 18-6z"/><path fill="#1a1716" d="M11 27c5-6 13-8 21-6 8-2 16 0 21 6-2 2-5 3-8 3-4 0-8-2-13-2s-9 2-13 2c-3 0-6-1-8-3z"/><ellipse cx="23.5" cy="31.5" rx="3.4" ry="2.4" fill="#0c0807"/><ellipse cx="40.5" cy="31.5" rx="3.4" ry="2.4" fill="#0c0807"/><circle cx="23.5" cy="31.6" r="1.5" fill="#5c3416"/><circle cx="40.5" cy="31.6" r="1.5" fill="#5c3416"/><circle cx="24.2" cy="31" r=".6" fill="#f2e6d8"/><circle cx="41.2" cy="31" r=".6" fill="#f2e6d8"/><path fill="#3b322d" d="M32 31c3 0 5 3 7 6 2 2 3 4 2 6-1 2-5 2-9 2s-8 0-9-2c-1-2 0-4 2-6 2-3 4-6 7-6z"/><ellipse cx="28" cy="42" rx="2.6" ry="1.9" fill="#0b0909"/><ellipse cx="36" cy="42" rx="2.6" ry="1.9" fill="#0b0909"/><path fill="#1a1716" d="M20 47c4 4 8 5 12 5s8-1 12-5c-3 6-7 8-12 8s-9-2-12-8z"/><path stroke="#0b0909" stroke-width="1.5" fill="none" stroke-linecap="round" d="M24 49c5 2 11 2 16 0"/></svg></div><h1>AFFEN-TAG</h1></div>
-  <p class="unter" style="color:var(--gold)">VORSCHAU VERSION 16 · Anmelden · Sprünge mit Schwung · an der Felswand klettern</p>
+  <p class="unter" style="color:var(--gold)">VORSCHAU VERSION 17 · Arme und Hände im Gorilla-Tag-Stil</p>
   <p id="angemeldet"></p>
   <p class="unter">Klettern nur mit den Armen. Diese Vorschau zeigt die Welten und die Steuerung der App. Echte Mitspieler, Fangen und der Laden sind in der iPhone- und iPad-App.</p>
   <div class="hinweis">
@@ -1533,72 +1533,48 @@ const KARTEN = {
 };
 
 // ---------- Gorilla-Arme und -Hände ----------
-/** Arm als Drehkörper; das Fell franst am Rand leicht aus (keine glatten Rohre) */
-function armGeometrie(profil, zotteln = .03) {
-  const pts = profil.map(([y, r]) => new THREE.Vector2(r, y));
-  const geo = new THREE.LatheGeometry(pts, 20);
-  const pos = geo.attributes.position, uv = geo.attributes.uv;
-  for (let i = 0; i < pos.count; i++) {
-    const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i), a = Math.atan2(x, z);
-    // zum Handgelenk hin zotteliger (dort hängt das Fell über die Hand)
-    const zz = zotteln * (.5 + y * 1.1);
-    const f = 1 + (rausch(a * 3.2 + 9, y * 9, 31) - .5) * zz * 2 + (rausch(a * 11, y * 26, 32) - .5) * zz * 1.4;
-    pos.setXYZ(i, x * f, y, z * f);
-    uv.setXY(i, uv.getX(i) * 7, uv.getY(i) * 9);
-  }
-  geo.computeVertexNormals();
-  return geo;
-}
 function baueArme(szene) {
-  // Fell: echte Haarstruktur in der Spielerfarbe (Standard braun), Hände: dunkles, ledriges Grau
-  const fell = fellTextur(), haut = TEX.haut();
-  const fellMat = new THREE.MeshStandardMaterial({ color: 0x4a3426, map: fell.map, normalMap: fell.normalMap, normalScale: new THREE.Vector2(.55, .55), roughness: .92, envMapIntensity: .3 });
-  const hautMat = new THREE.MeshStandardMaterial({ color: 0x070606, normalMap: haut.normalMap, normalScale: new THREE.Vector2(.5, .5), roughness: .75, envMapIntensity: .12 });
-  // Schlanke, lange Arme mit feinem, gleichmäßigem Fell – Unterarm zum Handgelenk hin leicht kräftiger
-  const oberGeo = armGeometrie([[0, .068], [.25, .072], [.6, .064], [.9, .056], [1, .054]]);
-  const unterGeo = armGeometrie([[0, .055], [.25, .06], [.6, .062], [.85, .064], [.95, .062], [1, .05]], .045);
-  const ellGeo = new THREE.SphereGeometry(.058, 18, 14);
+  // Gorilla-Tag-Stil: kantige Low-Poly-Formen in der Spielerfarbe, matt, ohne Fell-Textur.
+  // Die Hände haben dieselbe Farbe, nur dunkler.
+  const fellMat = new THREE.MeshStandardMaterial({ color: 0x4a3426, roughness: .88, flatShading: true, envMapIntensity: .4 });
+  const handMat = new THREE.MeshStandardMaterial({ color: 0x2a1d15, roughness: .8, flatShading: true, envMapIntensity: .35 });
+  const hautMat = new THREE.MeshStandardMaterial({ color: 0x070606, normalMap: TEX.haut().normalMap, normalScale: new THREE.Vector2(.5, .5), roughness: .75, envMapIntensity: .12 });
+  const glied = (unten, oben) => { const geo = new THREE.CylinderGeometry(oben, unten, 1, 7, 1); geo.translate(0, .5, 0); return geo; };
+  // Oberarm kräftig an der Schulter, Unterarm wird zum Handgelenk hin etwas breiter
+  const oberGeo = glied(.07, .056), unterGeo = glied(.052, .062), ellGeo = new THREE.IcosahedronGeometry(.057, 1);
   const arme = [0, 1].map(i => {
     const ober = new THREE.Mesh(oberGeo, fellMat), unter = new THREE.Mesh(unterGeo, fellMat), ell = new THREE.Mesh(ellGeo, fellMat);
     [ober, unter, ell].forEach(m => { m.castShadow = true; m.frustumCulled = false; szene.add(m); });
-    const hand = gorillaHand(i === 0, fellMat, hautMat); szene.add(hand);
+    const hand = gorillaHand(i === 0, handMat); szene.add(hand);
     return { ober, unter, ell, hand };
   });
-  return { arme, fellMat, hautMat };
+  return { arme, fellMat, hautMat, handMat };
 }
-function gorillaHand(links, fellMat, hautMat) {
-  // Breite, gepolsterte Handfläche + zwei dicke Finger und ein abgespreizter Daumen
+function gorillaHand(links, handMat) {
+  // Kompakte Gorilla-Hand: breite Handfläche, zwei kurze dicke Finger dicht beieinander, Daumen an der Seite
   const g = new THREE.Group(), s = links ? -1 : 1;
-  const flaeche = new THREE.RoundedBoxGeometry(.13, .05, .13, 3, .022);
+  const kasten = (b, h, t, r) => new THREE.RoundedBoxGeometry(b, h, t, 1, r);
+  const flaeche = kasten(.13, .058, .12, .02);
   const pos = flaeche.attributes.position;
-  for (let i = 0; i < pos.count; i++) {
-    // hinten (Handgelenk) schmaler, vorne breiter; Handrücken leicht gewölbt
-    const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i), t = (z + .065) / .13;
-    pos.setXYZ(i, x * mix(1.05, .82, t), y + (y > 0 ? (1 - (x / .065) ** 2) * .008 : 0), z);
-  }
-  flaeche.computeVertexNormals(); flaeche.translate(0, 0, -.065);
-  g.add(new THREE.Mesh(flaeche, hautMat));
-  // Knöchelreihe vorne
-  for (const kx of [-.03, .03]) { const k = new THREE.Mesh(new THREE.SphereGeometry(.026, 12, 10), hautMat); k.position.set(kx * s, .01, -.12); k.scale.set(1, .8, 1); g.add(k); }
-  const glied = (r0, r1, l) => { const geo = new THREE.CylinderGeometry(r1, r0, l, 12, 1); geo.rotateX(-Math.PI / 2); geo.translate(0, 0, -l / 2); return geo; };
-  const kugel = r => new THREE.SphereGeometry(r, 12, 10);
+  for (let i = 0; i < pos.count; i++) { const z = pos.getZ(i), t = (z + .06) / .12; pos.setX(i, pos.getX(i) * mix(1.04, .84, t)); }
+  flaeche.computeVertexNormals(); flaeche.translate(0, 0, -.058);
+  g.add(new THREE.Mesh(flaeche, handMat));
   const finger = [];
-  const baueFinger = (start, richtungY, neigung, laengen, dicke) => {
-    const wurzel = new THREE.Group(); wurzel.position.copy(start); wurzel.rotation.set(neigung, richtungY, 0);
+  const baueFinger = (start, richtungY, laengen, breite, hoehe) => {
+    const wurzel = new THREE.Group(); wurzel.position.copy(start); wurzel.rotation.set(0, richtungY, 0);
     let eltern = wurzel; const gelenke = [];
     laengen.forEach((l, k) => {
       const gelenk = new THREE.Group();
-      gelenk.add(new THREE.Mesh(kugel(dicke[k]), hautMat));
-      gelenk.add(new THREE.Mesh(glied(dicke[k], dicke[k] * .94, l), hautMat));
-      if (k === laengen.length - 1) { const kuppe = new THREE.Mesh(kugel(dicke[k] * .98), hautMat); kuppe.position.z = -l; kuppe.scale.set(1, .82, 1.05); gelenk.add(kuppe); }
+      const geo = kasten(breite * (1 - k * .06), hoehe * (1 - k * .06), l + .012, .014); geo.translate(0, 0, -l / 2);
+      gelenk.add(new THREE.Mesh(geo, handMat));
       if (k) gelenk.position.z = -laengen[k - 1];
       eltern.add(gelenk); eltern = gelenk; gelenke.push(gelenk);
     });
     g.add(wurzel); return gelenke;
   };
-  finger.push({ gelenke: baueFinger(v(-.03 * s, -.004, -.12), .05 * s, 0, [.042, .036, .03], [.027, .025, .023]), daumen: false });
-  finger.push({ gelenke: baueFinger(v(.03 * s, -.004, -.12), -.06 * s, 0, [.04, .034, .028], [.026, .024, .022]), daumen: false });
-  finger.push({ gelenke: baueFinger(v(-.06 * s, -.006, -.055), 1.0 * s, -.1, [.04, .033], [.026, .023]), daumen: true });
+  finger.push({ gelenke: baueFinger(v(-.031 * s, -.002, -.112), .03 * s, [.046, .038, .03], .054, .048), daumen: false });
+  finger.push({ gelenke: baueFinger(v(.031 * s, -.002, -.112), -.03 * s, [.044, .036, .028], .052, .047), daumen: false });
+  finger.push({ gelenke: baueFinger(v(-.066 * s, -.006, -.045), .75 * s, [.04, .032], .044, .042), daumen: true });
   g.scale.setScalar(1.55);
   g.userData = { finger };
   g.traverse(o => { if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; } });
@@ -1667,7 +1643,7 @@ function stelleArme(arme, ich, dt) {
     A.hand.quaternion.slerp(_q, Math.min(1, dt * 18));
     A.hand.position.copy(hp).addScaledVector(oben, .06 * GROESSE).addScaledVector(vor, -.04 * GROESSE);
     // Am Boden liegen die Finger flach; an Ästen und Wänden greifen sie zu
-    const krumm = h.haftet ? (h.hn.y > .7 ? .05 : 1.0) : (h.aktiv ? .3 : -.12);
+    const krumm = h.haftet ? (h.hn.y > .7 ? .18 : 1.0) : (h.aktiv ? .35 : .22);
     const k = Math.min(1, dt * 14);
     A.hand.userData.finger.forEach(f => f.gelenke.forEach((gl, j) => {
       const ziel = f.daumen ? -krumm * (j ? .9 : .5) : -krumm * [.55, .8, .7][j];
@@ -1721,7 +1697,7 @@ function stelleHimmel(k) {
 
 // ---------- Spieler und Arme ----------
 const ich = new Affe();
-const { arme, fellMat, hautMat } = baueArme(scene);
+const { arme, fellMat, hautMat, handMat } = baueArme(scene);
 // Der eigene Körper – nur im Spiegel sichtbar
 const koerper = gorillaKoerper(fellMat, hautMat); scene.add(koerper); SPIEGEL_KOERPER = koerper;
 let kartenGruppe = null, welt = new Welt(), karte = "stumpf", flocken = null, staub = null, aktuelleLichter = [];
@@ -1889,7 +1865,7 @@ function zeige(t, s) { meldung.textContent = t; meldung.style.opacity = 1; meldu
 const farbe = { r: 3, g: 2, b: 1 };
 function farbeSetzen() {
   ["r", "g", "b"].forEach(k => document.getElementById("o" + k.toUpperCase()).textContent = farbe[k]);
-  const c = C(.03 + farbe.r / 9 * .8, .028 + farbe.g / 9 * .8, .026 + farbe.b / 9 * .8); fellMat.color.copy(c);
+  const c = C(.008 + farbe.r / 9 * .26, .007 + farbe.g / 9 * .26, .006 + farbe.b / 9 * .26); fellMat.color.copy(c); handMat.color.copy(c).multiplyScalar(.6);
   document.getElementById("farbe").style.background = "#" + c.clone().convertLinearToSRGB().getHexString();
   try { localStorage.setItem("affentag.farbe5", JSON.stringify(farbe)); } catch (_) {}
 }

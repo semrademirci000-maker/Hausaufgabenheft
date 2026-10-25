@@ -20,7 +20,6 @@ final class AffeKnoten {
     private var haende: [SCNNode] = []
     /// Pro Hand: drei Finger (zwei vorne, ein Daumen), jeweils die Gelenke von innen nach außen
     private var finger: [[(gelenke: [SCNNode], daumen: Bool)]] = [[], []]
-    private let haut = SCNMaterial()
     private var ballons: [SCNNode] = []
     private let zielBand = SCNNode()
 
@@ -34,15 +33,12 @@ final class AffeKnoten {
     private var istLava = false
     private var istRaus = false
     private var fellFarbe = V3(-1, -1, -1)
+    private let handMat = SCNMaterial()
 
     init(lokal: Bool) {
-        for m in [fell, lava, gesichtMat, haut] { m.lightingModel = .lambert }
-        fell.diffuse.contents = Texturen.bild(.fell)
-        fell.diffuse.wrapS = .repeat
-        fell.diffuse.wrapT = .repeat
-        // feines, gleichmäßiges Fell statt grober Zotteln
-        fell.diffuse.contentsTransform = SCNMatrix4MakeScale(5, 7, 1)
-        haut.diffuse.contents = farbe(0.06, 0.055, 0.052)
+        for m in [fell, lava, gesichtMat] { m.lightingModel = .lambert }
+        // Gorilla-Tag-Stil: einfarbig und matt, Hände in derselben Farbe, nur dunkler
+        handMat.lightingModel = .lambert
         lava.diffuse.contents = farbe(1, 0.42, 0.08)
         lava.emission.contents = farbe(0.9, 0.25, 0.02)
         gesichtMat.diffuse.contents = farbe(0.85, 0.72, 0.58)
@@ -95,21 +91,21 @@ final class AffeKnoten {
         for i in 0..<2 {
             // Oberarm und Unterarm (leicht konisch), dazwischen der Ellbogen
             let ober = SCNCone(topRadius: 0.054, bottomRadius: 0.068, height: 1)
-            ober.radialSegmentCount = 16
+            ober.radialSegmentCount = 7
             ober.materials = [fell]
             let o = SCNNode(geometry: ober)
             wurzel.addChildNode(o)
             oberarme.append(o)
 
             let unter = SCNCone(topRadius: 0.062, bottomRadius: 0.055, height: 1)
-            unter.radialSegmentCount = 16
+            unter.radialSegmentCount = 7
             unter.materials = [fell]
             let a = SCNNode(geometry: unter)
             wurzel.addChildNode(a)
             arme.append(a)
 
             let e = SCNSphere(radius: 0.058)
-            e.segmentCount = 16
+            e.segmentCount = 6
             e.materials = [fell]
             let en = SCNNode(geometry: e)
             wurzel.addChildNode(en)
@@ -178,63 +174,31 @@ final class AffeKnoten {
 
     /// Gorilla-Hand: kantige, flache Handfläche (kein Kreis), drei lange Finger – zwei vorne, ein abgespreizter Daumen.
     private func gorillaHand(links: Bool, index: Int) -> SCNNode {
+        // Kompakte Gorilla-Hand: breite Handfläche, zwei kurze dicke Finger dicht beieinander, Daumen an der Seite
         let g = SCNNode()
-        let s: CGFloat = links ? -1 : 1
-        // Umriss der Handfläche, flach gelegt: Handgelenk hinten, Knöchel vorne
-        let umriss: [(CGFloat, CGFloat)] = [(-0.042, 0.005), (0.042, 0.005), (0.07, 0.055), (0.062, 0.118), (0.02, 0.13), (-0.02, 0.13), (-0.062, 0.118), (-0.074, 0.06)]
-        func flaeche(_ dicke: CGFloat, _ m: SCNMaterial) -> SCNNode {
-            let pfad = UIBezierPath()
-            for (i, p) in umriss.enumerated() {
-                let pt = CGPoint(x: p.0 * s, y: p.1)
-                if i == 0 { pfad.move(to: pt) } else { pfad.addLine(to: pt) }
-            }
-            pfad.close()
-            let form = SCNShape(path: pfad, extrusionDepth: dicke)
-            form.chamferRadius = dicke * 0.25
-            form.materials = [m]
-            let n = SCNNode(geometry: form)
-            // Form liegt in x/y → flach hinlegen, Finger zeigen nach −z
-            n.simdEulerAngles = V3(-.pi / 2, 0, 0)
-            return n
+        let sf: Float = links ? -1 : 1
+        func kasten(_ b: CGFloat, _ h: CGFloat, _ t: CGFloat, _ r: CGFloat) -> SCNBox {
+            let k = SCNBox(width: b, height: h, length: t, chamferRadius: r)
+            k.chamferSegmentCount = 1
+            k.materials = [handMat]
+            return k
         }
-        g.addChildNode(flaeche(0.034, haut))
-        let ruecken = flaeche(0.014, fell)
-        ruecken.simdPosition = V3(0, 0.022, 0.004)
-        ruecken.simdScale = V3(0.86, 0.78, 1)
-        g.addChildNode(ruecken)
+        let flaeche = SCNNode(geometry: kasten(0.13, 0.058, 0.12, 0.02))
+        flaeche.simdPosition = V3(0, 0, -0.058)
+        g.addChildNode(flaeche)
 
-        func glied(_ r0: CGFloat, _ r1: CGFloat, _ l: Float) -> SCNNode {
-            let kegel = SCNCone(topRadius: r1, bottomRadius: r0, height: CGFloat(l))
-            kegel.radialSegmentCount = 10
-            kegel.materials = [haut]
-            let n = SCNNode(geometry: kegel)
-            n.simdEulerAngles = V3(-.pi / 2, 0, 0)
-            n.simdPosition = V3(0, 0, -l / 2)
-            return n
-        }
-        func baueFinger(_ start: V3, _ drehung: Float, _ laengen: [Float], _ dicke: [CGFloat], daumen: Bool) {
+        func baueFinger(_ start: V3, _ drehung: Float, _ laengen: [Float], breite: CGFloat, hoehe: CGFloat, daumen: Bool) {
             let wurzel = SCNNode()
             wurzel.simdPosition = start
-            wurzel.simdEulerAngles = V3(daumen ? -0.15 : 0, drehung, 0)
+            wurzel.simdEulerAngles = V3(0, drehung, 0)
             var eltern = wurzel
             var gelenke: [SCNNode] = []
             for (k, l) in laengen.enumerated() {
                 let gelenk = SCNNode()
-                let knoechel = SCNSphere(radius: dicke[k] * 1.12)
-                knoechel.segmentCount = 10
-                knoechel.materials = [haut]
-                gelenk.addChildNode(SCNNode(geometry: knoechel))
-                let letzte = k == laengen.count - 1
-                gelenk.addChildNode(glied(dicke[k], dicke[k] * 0.96, l))
-                if letzte {
-                    // dicke, runde Fingerkuppe – nichts Spitzes
-                    let kuppe = SCNSphere(radius: dicke[k] * 1.08)
-                    kuppe.segmentCount = 10
-                    kuppe.materials = [haut]
-                    let kn = SCNNode(geometry: kuppe)
-                    kn.simdPosition = V3(0, 0, -l)
-                    gelenk.addChildNode(kn)
-                }
+                let schmaler = 1 - CGFloat(k) * 0.06
+                let teil = SCNNode(geometry: kasten(breite * schmaler, hoehe * schmaler, CGFloat(l) + 0.012, 0.014))
+                teil.simdPosition = V3(0, 0, -l / 2)
+                gelenk.addChildNode(teil)
                 if k > 0 { gelenk.simdPosition = V3(0, 0, -laengen[k - 1]) }
                 eltern.addChildNode(gelenk)
                 eltern = gelenk
@@ -243,10 +207,9 @@ final class AffeKnoten {
             g.addChildNode(wurzel)
             finger[index].append((gelenke: gelenke, daumen: daumen))
         }
-        let sf = Float(s)
-        baueFinger(V3(-0.03 * sf, 0, -0.128), 0.06 * sf, [0.058, 0.048, 0.04], [0.032, 0.03, 0.028], daumen: false)
-        baueFinger(V3(0.03 * sf, 0, -0.128), -0.08 * sf, [0.054, 0.045, 0.038], [0.031, 0.029, 0.027], daumen: false)
-        baueFinger(V3(-0.07 * sf, -0.004, -0.05), 0.95 * sf, [0.05, 0.042], [0.033, 0.03], daumen: true)
+        baueFinger(V3(-0.031 * sf, -0.002, -0.112), 0.03 * sf, [0.046, 0.038, 0.03], breite: 0.054, hoehe: 0.048, daumen: false)
+        baueFinger(V3(0.031 * sf, -0.002, -0.112), -0.03 * sf, [0.044, 0.036, 0.028], breite: 0.052, hoehe: 0.047, daumen: false)
+        baueFinger(V3(-0.066 * sf, -0.006, -0.045), 0.75 * sf, [0.04, 0.032], breite: 0.044, hoehe: 0.042, daumen: true)
         g.simdScale = V3(repeating: 1.55)
         return g
     }
@@ -257,13 +220,15 @@ final class AffeKnoten {
 
         if fellFarbe != a.farbe {
             fellFarbe = a.farbe
-            fell.multiply.contents = farbe(CGFloat(0.04 + a.farbe.x * 0.85), CGFloat(0.04 + a.farbe.y * 0.85), CGFloat(0.04 + a.farbe.z * 0.85))
+            let fr = CGFloat(0.03 + a.farbe.x * 0.55), fg = CGFloat(0.03 + a.farbe.y * 0.55), fb = CGFloat(0.03 + a.farbe.z * 0.55)
+            fell.diffuse.contents = farbe(fr, fg, fb)
+            handMat.diffuse.contents = farbe(fr * 0.6, fg * 0.6, fb * 0.6)
         }
         if istJetztLava != istLava {
             istLava = istJetztLava
             let m = istLava ? lava : fell
             for n in [kopf] + oberarme + arme + ellbogen { n.geometry?.materials = [m] }
-            for h in haende { h.childNodes.first?.geometry?.materials = [istLava ? lava : haut] }
+            for h in haende { h.enumerateHierarchy { n, _ in n.geometry?.materials = [istLava ? lava : handMat] } }
             koerper.childNodes.first?.geometry?.materials = [m]
         }
         if istLava {
