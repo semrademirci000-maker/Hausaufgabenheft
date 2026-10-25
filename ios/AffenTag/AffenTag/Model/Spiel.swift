@@ -308,8 +308,10 @@ final class Spiel: ObservableObject {
     private func wendeBlickAn(_ dt: Float) {
         // Rechter Joystick
         let stick = 0.6 + Float(einstellungen.empfindlichkeit) * 0.1
-        if einstellungen.drehModus != .aus { blickGier -= eingabe.rx * 1.3 * stick * dt }
-        if !einstellungen.gyro { blickNeigung = klemm(blickNeigung + eingabe.ry * 0.8 * stick * dt, grad(-80), grad(80)) }
+        // Blick-Stick: kleine Ausschläge fein, voller Ausschlag schnell
+        let kurve = { (x: Float) -> Float in x < 0 ? -pow(-x, 1.4) : pow(x, 1.4) }
+        if einstellungen.drehModus != .aus { blickGier -= kurve(eingabe.rx) * 3.0 * stick * dt }
+        if !einstellungen.gyro { blickNeigung = klemm(blickNeigung + kurve(eingabe.ry) * 1.9 * stick * dt, grad(-80), grad(80)) }
         if einstellungen.gyro, let m = bewegung.deviceMotion {
             let g = V3(Float(m.gravity.x), Float(m.gravity.y), Float(m.gravity.z))
             let w = V3(Float(m.rotationRate.x), Float(m.rotationRate.y), Float(m.rotationRate.z))

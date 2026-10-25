@@ -38,7 +38,7 @@ struct SteuerungView: View {
                     .position(x: 36, y: 26)
                 HStack(spacing: max(14, w * 0.04)) {
                     TasteView(taste: .tab, form: .eckig, groesse: CGSize(width: 56, height: 40)) { Text("TAB") }
-                    TasteView(taste: .logo, form: .rund, groesse: CGSize(width: 64, height: 64), hell: true) { GorillaKopf().fill(Color.black, style: FillStyle(eoFill: true)).frame(width: 40, height: 40) }
+                    TasteView(taste: .logo, form: .rund, groesse: CGSize(width: 64, height: 64), hell: true) { Image("GorillaLogo").resizable().interpolation(.high).frame(width: 46, height: 46) }
                     TasteView(taste: .esc, form: .eckig, groesse: CGSize(width: 56, height: 40)) { Text("ESC") }
                 }
                 .position(x: w / 2, y: 34)
@@ -168,42 +168,6 @@ struct StickBild: View {
             .font(.system(size: max(16, r * 0.24), weight: .heavy, design: .rounded))
             .foregroundStyle(.white.opacity(0.92))
         }
-    }
-}
-
-// MARK: - Gorilla-Kopf (selbst gezeichnet, statt Menü-Symbol)
-
-struct GorillaKopf: Shape {
-    func path(in rect: CGRect) -> Path {
-        let w = rect.width, h = rect.height
-        func p(_ x: CGFloat, _ y: CGFloat) -> CGPoint { CGPoint(x: rect.minX + x * w, y: rect.minY + y * h) }
-        var k = Path()
-        // Kopf mit Scheitelkamm
-        k.move(to: p(0.5, 0.04))
-        k.addCurve(to: p(0.9, 0.42), control1: p(0.74, 0.06), control2: p(0.92, 0.2))
-        k.addCurve(to: p(0.78, 0.9), control1: p(0.9, 0.62), control2: p(0.9, 0.8))
-        k.addCurve(to: p(0.22, 0.9), control1: p(0.62, 1.0), control2: p(0.38, 1.0))
-        k.addCurve(to: p(0.1, 0.42), control1: p(0.1, 0.8), control2: p(0.08, 0.62))
-        k.addCurve(to: p(0.5, 0.04), control1: p(0.08, 0.2), control2: p(0.26, 0.06))
-        k.closeSubpath()
-        // Ohren
-        k.addEllipse(in: CGRect(origin: p(0.0, 0.38), size: CGSize(width: 0.16 * w, height: 0.2 * h)))
-        k.addEllipse(in: CGRect(origin: p(0.84, 0.38), size: CGSize(width: 0.16 * w, height: 0.2 * h)))
-        // Gesicht ausgespart (gerade Füllregel)
-        var g = Path()
-        g.move(to: p(0.5, 0.36))
-        g.addCurve(to: p(0.78, 0.5), control1: p(0.66, 0.3), control2: p(0.8, 0.36))
-        g.addCurve(to: p(0.5, 0.86), control1: p(0.78, 0.72), control2: p(0.66, 0.86))
-        g.addCurve(to: p(0.22, 0.5), control1: p(0.34, 0.86), control2: p(0.22, 0.72))
-        g.addCurve(to: p(0.5, 0.36), control1: p(0.2, 0.36), control2: p(0.34, 0.3))
-        g.closeSubpath()
-        k.addPath(g)
-        // Augen und Nasenlöcher wieder gefüllt
-        k.addEllipse(in: CGRect(origin: p(0.33, 0.46), size: CGSize(width: 0.1 * w, height: 0.08 * h)))
-        k.addEllipse(in: CGRect(origin: p(0.57, 0.46), size: CGSize(width: 0.1 * w, height: 0.08 * h)))
-        k.addEllipse(in: CGRect(origin: p(0.41, 0.62), size: CGSize(width: 0.07 * w, height: 0.06 * h)))
-        k.addEllipse(in: CGRect(origin: p(0.52, 0.62), size: CGSize(width: 0.07 * w, height: 0.06 * h)))
-        return k
     }
 }
 
