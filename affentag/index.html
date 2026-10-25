@@ -150,7 +150,7 @@
   <div id="oben">
     <button class="taste klein" data-taste="tab">TAB</button>
     <button class="taste rund" id="tMenue" data-taste="menue" aria-label="Karten">
-      <svg viewBox="0 0 64 64" aria-hidden="true"><defs><radialGradient id="gF" cx=".5" cy=".38" r=".62"><stop offset="0" stop-color="#9a8a7e"/><stop offset="1" stop-color="#56493f"/></radialGradient><radialGradient id="gK" cx=".5" cy=".3" r=".7"><stop offset="0" stop-color="#4c443f"/><stop offset="1" stop-color="#1a1716"/></radialGradient></defs><path fill="url(#gK)" d="M32 2c7 0 12 4 14 10 6 2 11 8 12 15 2 2 3 5 2 8-1 2-2 3-4 3-2 11-11 22-24 23C19 60 10 49 8 38c-2 0-3-1-4-3-1-3 0-6 2-8 1-7 6-13 12-15 2-6 7-10 14-10z"/><path fill="url(#gF)" d="M32 18c8 0 15 2 18 6 3 4 2 10 0 15-2 9-9 16-18 16s-16-7-18-16c-2-5-3-11 0-15 3-4 10-6 18-6z"/><path fill="#1a1716" d="M11 27c5-6 13-8 21-6 8-2 16 0 21 6-2 2-5 3-8 3-4 0-8-2-13-2s-9 2-13 2c-3 0-6-1-8-3z"/><ellipse cx="23.5" cy="31.5" rx="3.4" ry="2.4" fill="#0c0807"/><ellipse cx="40.5" cy="31.5" rx="3.4" ry="2.4" fill="#0c0807"/><circle cx="23.5" cy="31.6" r="1.5" fill="#5c3416"/><circle cx="40.5" cy="31.6" r="1.5" fill="#5c3416"/><circle cx="24.2" cy="31" r=".6" fill="#f2e6d8"/><circle cx="41.2" cy="31" r=".6" fill="#f2e6d8"/><path fill="#3b322d" d="M32 31c3 0 5 3 7 6 2 2 3 4 2 6-1 2-5 2-9 2s-8 0-9-2c-1-2 0-4 2-6 2-3 4-6 7-6z"/><ellipse cx="28" cy="42" rx="2.6" ry="1.9" fill="#0b0909"/><ellipse cx="36" cy="42" rx="2.6" ry="1.9" fill="#0b0909"/><path fill="#1a1716" d="M20 47c4 4 8 5 12 5s8-1 12-5c-3 6-7 8-12 8s-9-2-12-8z"/><path stroke="#0b0909" stroke-width="1.5" fill="none" stroke-linecap="round" d="M24 49c5 2 11 2 16 0"/></svg>
+      <svg viewBox="0 0 64 64" aria-hidden="true"><path fill="#111" d="M32 2c7 0 12 4 14 10 6 2 11 8 12 15 2 2 3 5 2 8-1 2-2 3-4 3-2 11-11 22-24 23C19 60 10 49 8 38c-2 0-3-1-4-3-1-3 0-6 2-8 1-7 6-13 12-15 2-6 7-10 14-10z"/><path stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" d="M15 27.5c5-4 11-5 17-3.5 6-1.5 12-.5 17 3.5"/><path fill="#fff" d="M20 31.5c1.5-1.6 5.5-1.6 7 0-1.5 1.8-5.5 1.8-7 0zM37 31.5c1.5-1.6 5.5-1.6 7 0-1.5 1.8-5.5 1.8-7 0z"/><circle cx="23.5" cy="31.6" r="1.3" fill="#111"/><circle cx="40.5" cy="31.6" r="1.3" fill="#111"/><path stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" d="M32 33.5c-3 2-6 5-6.5 8M32 33.5c3 2 6 5 6.5 8"/><ellipse cx="28.3" cy="42" rx="2.4" ry="1.7" fill="#fff"/><ellipse cx="35.7" cy="42" rx="2.4" ry="1.7" fill="#fff"/><path stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round" d="M23.5 49c5.5 2.6 11.5 2.6 17 0"/></svg>
     </button>
     <button class="taste klein" data-taste="esc">ESC</button>
   </div>
@@ -186,7 +186,8 @@
 <div id="liste" hidden>
   <h2>SPIELER IM RAUM</h2>
   <div id="listeName" style="font-weight:800">DU</div>
-  <p id="listeAndere">Noch niemand da. Wer denselben Raum-Code und dieselbe Karte hat, taucht hier auf.</p>
+  <div id="listeStatus" style="font-size:12px;opacity:.75;font-weight:800;letter-spacing:.06em">SERVER: AUS</div>
+  <p id="listeAndere" style="white-space:pre-line">Noch niemand da. Wer denselben Raum-Code und dieselbe Karte hat, taucht hier auf.</p>
 </div>
 <div id="quer">Bitte quer halten</div>
 
@@ -219,7 +220,7 @@
 </section>
 <section id="titel">
   <div style="display:flex;align-items:center;gap:18px"><div class="titelbild"><svg viewBox="0 0 64 64" aria-hidden="true"><defs><radialGradient id="gF" cx=".5" cy=".38" r=".62"><stop offset="0" stop-color="#9a8a7e"/><stop offset="1" stop-color="#56493f"/></radialGradient><radialGradient id="gK" cx=".5" cy=".3" r=".7"><stop offset="0" stop-color="#4c443f"/><stop offset="1" stop-color="#1a1716"/></radialGradient></defs><path fill="url(#gK)" d="M32 2c7 0 12 4 14 10 6 2 11 8 12 15 2 2 3 5 2 8-1 2-2 3-4 3-2 11-11 22-24 23C19 60 10 49 8 38c-2 0-3-1-4-3-1-3 0-6 2-8 1-7 6-13 12-15 2-6 7-10 14-10z"/><path fill="url(#gF)" d="M32 18c8 0 15 2 18 6 3 4 2 10 0 15-2 9-9 16-18 16s-16-7-18-16c-2-5-3-11 0-15 3-4 10-6 18-6z"/><path fill="#1a1716" d="M11 27c5-6 13-8 21-6 8-2 16 0 21 6-2 2-5 3-8 3-4 0-8-2-13-2s-9 2-13 2c-3 0-6-1-8-3z"/><ellipse cx="23.5" cy="31.5" rx="3.4" ry="2.4" fill="#0c0807"/><ellipse cx="40.5" cy="31.5" rx="3.4" ry="2.4" fill="#0c0807"/><circle cx="23.5" cy="31.6" r="1.5" fill="#5c3416"/><circle cx="40.5" cy="31.6" r="1.5" fill="#5c3416"/><circle cx="24.2" cy="31" r=".6" fill="#f2e6d8"/><circle cx="41.2" cy="31" r=".6" fill="#f2e6d8"/><path fill="#3b322d" d="M32 31c3 0 5 3 7 6 2 2 3 4 2 6-1 2-5 2-9 2s-8 0-9-2c-1-2 0-4 2-6 2-3 4-6 7-6z"/><ellipse cx="28" cy="42" rx="2.6" ry="1.9" fill="#0b0909"/><ellipse cx="36" cy="42" rx="2.6" ry="1.9" fill="#0b0909"/><path fill="#1a1716" d="M20 47c4 4 8 5 12 5s8-1 12-5c-3 6-7 8-12 8s-9-2-12-8z"/><path stroke="#0b0909" stroke-width="1.5" fill="none" stroke-linecap="round" d="M24 49c5 2 11 2 16 0"/></svg></div><h1>AFFEN-TAG</h1></div>
-  <p class="unter" style="color:var(--gold)">VORSCHAU VERSION 20 · Mikrofon-Hilfe · Mitspieler und Voice-Chat</p>
+  <p class="unter" style="color:var(--gold)">VORSCHAU VERSION 21 · Mitspielen neu gebaut · Voice-Chat · schwarz-weißes Logo</p>
   <p id="angemeldet"></p>
   <p class="unter">Klettern nur mit den Armen. Diese Vorschau zeigt die Welten und die Steuerung der App. Echte Mitspieler, Fangen und der Laden sind in der iPhone- und iPad-App.</p>
   <div class="hinweis">
@@ -285,7 +286,7 @@
 </section>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/objects/Sky.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/objects/Reflector.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/geometries/RoundedBoxGeometry.js"></script>
@@ -1820,14 +1821,19 @@ function baueKosmetik(id) {
   return g;
 }
 // ---------- Mitspieler und Voice-Chat ----------
-// Spieler im selben Raum (Raum-Code am Computer, sonst öffentlich) und auf derselben Karte verbinden sich
-// direkt miteinander (WebRTC über PeerJS). Jeder bekommt einen von 12 Plätzen: affentag1-<raum>-<karte>-<platz>.
-// Stimmen werden nach Entfernung leiser (wie in Gorilla Tag). Stumm = du sendest nichts und hörst niemanden.
-const PEER_OPTIONEN = window.__peerOptionen || { debug: 0, config: { iceServers: [{ urls: "stun:stun.l.google.com:19302" }, { urls: "stun:stun1.l.google.com:19302" }] } };
-const PLAETZE = 12;
-const stimme = { gefragt: false, stream: null, stumm: false };
-const netz = { peer: null, schluessel: null, mitspieler: new Map(), versuch: 0, sendeTakt: 0 };
-
+// Sehen: Jeder schickt seine Position über einen öffentlichen MQTT-Server (wie ein Chat-Server) –
+// das kommt durch praktisch jedes WLAN und Mobilfunknetz.
+// Hören: Die Stimmen laufen direkt von Gerät zu Gerät (WebRTC); verabredet wird das ebenfalls über MQTT.
+// Raum = Raum-Code am Computer (sonst öffentlich) + Karte. Stumm = du sendest nichts und hörst niemanden.
+const MQTT_SERVER = window.__mqttServer || ["wss://broker.emqx.io:8084/mqtt", "wss://broker.hivemq.com:8884/mqtt", "wss://test.mosquitto.org:8081/mqtt"];
+const ICE_SERVER = window.__iceServer || [
+  { urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] },
+  { urls: "stun:stun.cloudflare.com:3478" },
+  { urls: ["turn:openrelay.metered.ca:80", "turn:openrelay.metered.ca:443", "turn:openrelay.metered.ca:443?transport=tcp"], username: "openrelayproject", credential: "openrelayproject" },
+];
+const meineId = Math.random().toString(36).slice(2, 10);
+const stimme = { gefragt: false, stream: null, stumm: false, leer: null };
+const netz = { client: null, server: 0, status: "AUS", basis: null, mitspieler: new Map(), sendeTakt: 0 };
 // --- Mikrofon holen (mit Ausweichversuch) und verständlich erklären, wenn es nicht geht ---
 async function mikroHolen() {
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw Object.assign(new Error("kein getUserMedia"), { name: "KeinMikro" });
@@ -1859,7 +1865,7 @@ function frageStimme() {
       box.hidden = true;
       if (erlauben) {
         try {
-          stimme.stream = await mikroHolen();
+          if (!stimme.stream) { stimme.stream = await mikroHolen(); spurTauschen(); }
           stimme.stumm = false;
           // iPad: nach dem Mikrofon-Start kann der Ton kurz pausieren – wieder anwerfen
           try { if (ac && ac.state !== "running") await ac.resume(); } catch (_) {}
@@ -1885,15 +1891,13 @@ async function stummUmschalten() {
     try { stimme.stream = await mikroHolen(); }
     catch (e) { mikroHilfe(e); return; }
     // Bereits laufende Gespräche bekommen jetzt die echte Stimme
-    for (const m of netz.mitspieler.values()) if (m.anruf && m.anruf.peerConnection) {
-      const sender = m.anruf.peerConnection.getSenders().find(s => s.track && s.track.kind === "audio");
-      if (sender) sender.replaceTrack(stimme.stream.getAudioTracks()[0]);
-    }
+    spurTauschen();
   }
   stimme.stumm = !stimme.stumm;
   stummAnzeigen();
   zeige(stimme.stumm ? "STUMM – NIEMAND HÖRT DICH, DU HÖRST NIEMANDEN" : "MIKROFON AN", 2);
 }
+
 
 /** Was wir senden: das Mikrofon oder (ohne Mikrofon) eine stille Spur, damit wir trotzdem hören können */
 function sendeStream() {
@@ -1902,90 +1906,133 @@ function sendeStream() {
   return stimme.leer;
 }
 
+// --- Verbindung zum MQTT-Server (mit Ausweich-Servern) ---
+function serverVerbinden() {
+  if (netz.client || typeof mqtt === "undefined") return;
+  const url = MQTT_SERVER[netz.server % MQTT_SERVER.length];
+  netz.status = "VERBINDE …"; listeAktualisieren();
+  const c = mqtt.connect(url, { clientId: "affentag-" + meineId, clean: true, keepalive: 30, reconnectPeriod: 3000, connectTimeout: 8000 });
+  netz.client = c;
+  let jemalsVerbunden = false;
+  const wechseln = setTimeout(() => {
+    // Dieser Server antwortet nicht – den nächsten probieren
+    if (!jemalsVerbunden && netz.client === c) { c.end(true); netz.client = null; netz.server++; serverVerbinden(); }
+  }, 9000);
+  c.on("connect", () => {
+    jemalsVerbunden = true; clearTimeout(wechseln);
+    netz.status = "VERBUNDEN"; listeAktualisieren();
+    if (netz.basis) c.subscribe(netz.basis + "/#");
+  });
+  c.on("reconnect", () => { netz.status = "VERBINDE …"; listeAktualisieren(); });
+  c.on("offline", () => { netz.status = "OFFLINE"; listeAktualisieren(); });
+  c.on("error", () => {});
+  c.on("message", nachricht);
+}
+function senden(thema, daten) { if (netz.client && netz.client.connected) netz.client.publish(netz.basis + thema, JSON.stringify(daten), { qos: 0 }); }
+
 // --- Raum betreten / verlassen ---
 function netzKarte(kartenId) {
-  if (typeof Peer === "undefined") return; // ohne Netz (z. B. in der Claude-Vorschau) einfach allein
   const raum = (pc.raum || "OEFFENTLICH").replace(/[^A-Z0-9]/gi, "").toUpperCase() || "OEFFENTLICH";
-  const schluessel = `affentag1-${raum}-${kartenId}`;
-  if (schluessel === netz.schluessel) return;
-  netzVerlassen();
-  netz.schluessel = schluessel;
-  platzBelegen(0);
-}
-function netzVerlassen() {
+  const basis = `affentag2/${raum}/${kartenId}`;
+  if (basis === netz.basis) return;
+  if (netz.basis) { senden("/weg/" + meineId, { id: meineId }); if (netz.client) netz.client.unsubscribe(netz.basis + "/#"); }
   for (const id of [...netz.mitspieler.keys()]) mitspielerWeg(id);
-  if (netz.peer) { try { netz.peer.destroy(); } catch (_) {} }
-  netz.peer = null; netz.schluessel = null;
+  netz.basis = basis;
+  serverVerbinden();
+  if (netz.client && netz.client.connected) netz.client.subscribe(basis + "/#");
   listeAktualisieren();
 }
-function platzBelegen(n) {
-  if (n >= PLAETZE) { zeige("RAUM IST VOLL", 2); return; }
-  const schluessel = netz.schluessel;
-  const p = new Peer(`${schluessel}-${n}`, PEER_OPTIONEN);
-  p.on("open", () => {
-    if (netz.schluessel !== schluessel) { p.destroy(); return; }
-    netz.peer = p;
-    // Alle anderen Plätze anklingeln – wer da ist, antwortet
-    for (let i = 0; i < PLAETZE; i++) if (i !== n) verbinden(`${schluessel}-${i}`);
-  });
-  p.on("error", e => {
-    if (e.type === "unavailable-id") { p.destroy(); if (netz.schluessel === schluessel) platzBelegen(n + 1); }
-    else if (e.type === "peer-unavailable") { /* Platz ist frei – kein Problem */ }
-    else if (e.type === "network" || e.type === "server-error" || e.type === "socket-error") zeige("KEINE VERBINDUNG ZU ANDEREN SPIELERN", 2.5);
-  });
-  p.on("connection", d => datenKanal(d));
-  p.on("call", anruf => { anruf.answer(sendeStream()); anrufVerfolgen(anruf); });
-  p.on("disconnected", () => { if (netz.peer === p && !p.destroyed) try { p.reconnect(); } catch (_) {} });
-}
-function verbinden(id) {
-  if (!netz.peer || netz.mitspieler.has(id)) return;
-  // Wer schon da ist, wird angeklingelt; leere Plätze melden sich nicht
-  datenKanal(netz.peer.connect(id, { serialization: "json" }));
-  anrufVerfolgen(netz.peer.call(id, sendeStream()));
+function nachricht(thema, roh) {
+  if (!netz.basis || !thema.startsWith(netz.basis + "/")) return;
+  const teile = thema.slice(netz.basis.length + 1).split("/"), art = teile[0], wer = teile[1];
+  let d; try { d = JSON.parse(roh.toString()); } catch (_) { return; }
+  if (art === "z" && wer !== meineId && d && d.p) {
+    const neu = !netz.mitspieler.has(wer), m = mitspieler(wer);
+    m.zustand = d; m.zuletzt = performance.now();
+    if (neu) { zeige((d.n || "JEMAND") + " IST DA", 1.8); listeAktualisieren(); }
+    // Der mit der kleineren Kennung ruft an (sonst würden beide gleichzeitig anrufen)
+    if (!m.rtc && meineId < wer) anrufen(m);
+  } else if (art === "s" && wer === meineId && d && d.von) signal(d);
+  else if (art === "weg" && wer !== meineId) mitspielerWeg(wer);
 }
 
-// --- Mitspieler: Daten (Position, Hände, Name, Farbe, Accessoires) ---
+// --- Stimmen: direkte Verbindung (WebRTC) ---
+function rtcBauen(m) {
+  const rtc = new RTCPeerConnection({ iceServers: ICE_SERVER });
+  m.rtc = rtc; m.kandidaten = [];
+  for (const spur of sendeStream().getAudioTracks()) rtc.addTrack(spur, sendeStream());
+  rtc.onicecandidate = e => { if (e.candidate) senden("/s/" + m.id, { von: meineId, typ: "ice", daten: e.candidate.toJSON() }); };
+  rtc.ontrack = e => tonAnschliessen(m, e.streams[0] || new MediaStream([e.track]));
+  rtc.onconnectionstatechange = () => {
+    m.rtcStatus = rtc.connectionState; listeAktualisieren();
+    if (rtc.connectionState === "failed") { try { rtc.close(); } catch (_) {} m.rtc = null; if (meineId < m.id) setTimeout(() => netz.mitspieler.has(m.id) && !m.rtc && anrufen(m), 3000); }
+  };
+  return rtc;
+}
+async function anrufen(m) {
+  const rtc = rtcBauen(m);
+  try {
+    await rtc.setLocalDescription(await rtc.createOffer({ offerToReceiveAudio: true }));
+    senden("/s/" + m.id, { von: meineId, typ: "offer", daten: rtc.localDescription.toJSON() });
+  } catch (_) {}
+}
+async function signal(d) {
+  const m = mitspieler(d.von);
+  try {
+    if (d.typ === "offer") {
+      if (m.rtc) { try { m.rtc.close(); } catch (_) {} }
+      const rtc = rtcBauen(m);
+      await rtc.setRemoteDescription(d.daten);
+      await rtc.setLocalDescription(await rtc.createAnswer());
+      senden("/s/" + m.id, { von: meineId, typ: "answer", daten: rtc.localDescription.toJSON() });
+      for (const k of m.kandidaten.splice(0)) await rtc.addIceCandidate(k);
+    } else if (d.typ === "answer" && m.rtc) {
+      await m.rtc.setRemoteDescription(d.daten);
+      for (const k of m.kandidaten.splice(0)) await m.rtc.addIceCandidate(k);
+    } else if (d.typ === "ice") {
+      if (m.rtc && m.rtc.remoteDescription) await m.rtc.addIceCandidate(d.daten);
+      else (m.kandidaten = m.kandidaten || []).push(d.daten);
+    }
+  } catch (_) {}
+}
+/** Neue Mikrofon-Spur in alle laufenden Gespräche einsetzen */
+function spurTauschen() {
+  const spur = sendeStream().getAudioTracks()[0];
+  for (const m of netz.mitspieler.values()) if (m.rtc) for (const s of m.rtc.getSenders()) if (s.track && s.track.kind === "audio") s.replaceTrack(spur).catch(() => {});
+}
+
 function mitspieler(id) {
   let m = netz.mitspieler.get(id);
-  if (!m) { m = { id, zustand: null, avatar: null, daten: null, anruf: null, ton: null }; netz.mitspieler.set(id, m); }
+  if (!m) { m = { id, zustand: null, avatar: null, rtc: null, ton: null, kandidaten: [], zuletzt: performance.now() }; netz.mitspieler.set(id, m); }
   return m;
 }
-function datenKanal(d) {
-  if (!d) return;
-  d.on("open", () => { mitspieler(d.peer).daten = d; listeAktualisieren(); zeige("EIN SPIELER IST DA", 1.5); });
-  d.on("data", z => { if (z && z.p) { const m = mitspieler(d.peer); m.zustand = z; m.zuletzt = performance.now(); } });
-  d.on("close", () => mitspielerWeg(d.peer));
-  d.on("error", () => {});
-}
-function anrufVerfolgen(anruf) {
-  if (!anruf) return;
-  // Erst eintragen, wenn wirklich jemand antwortet (leere Plätze bleiben leer)
-  anruf.on("stream", s => { const m = mitspieler(anruf.peer); m.anruf = anruf; tonAnschliessen(m, s); });
-  anruf.on("close", () => {});
-  anruf.on("error", () => {});
-}
 function tonAnschliessen(m, s) {
-  if (m.ton) return;
+  if (m.ton) { try { m.ton.quelle.disconnect(); } catch (_) {} }
   // Manche Browser spielen WebRTC-Ton nur ab, wenn er an einem (stummen) Audio-Element hängt
-  const el = new Audio(); el.srcObject = s; el.muted = true; el.play().catch(() => {});
-  const quelle = ac.createMediaStreamSource(s), laut = ac.createGain(); laut.gain.value = 0;
-  quelle.connect(laut).connect(ac.destination);
+  const el = m.ton ? m.ton.el : new Audio(); el.srcObject = s; el.muted = true; el.setAttribute("playsinline", ""); el.play().catch(() => {});
+  const quelle = ac.createMediaStreamSource(s), laut = m.ton ? m.ton.laut : ac.createGain();
+  if (!m.ton) { laut.gain.value = 0; laut.connect(ac.destination); }
+  quelle.connect(laut);
   m.ton = { el, quelle, laut };
+  try { if (ac.state !== "running") ac.resume(); } catch (_) {}
 }
 function mitspielerWeg(id) {
   const m = netz.mitspieler.get(id); if (!m) return;
   if (m.avatar) scene.remove(m.avatar.gruppe);
   if (m.ton) { try { m.ton.quelle.disconnect(); m.ton.laut.disconnect(); m.ton.el.srcObject = null; } catch (_) {} }
-  try { m.daten && m.daten.close(); m.anruf && m.anruf.close(); } catch (_) {}
+  if (m.rtc) { try { m.rtc.close(); } catch (_) {} }
   netz.mitspieler.delete(id);
   listeAktualisieren();
 }
 function listeAktualisieren() {
-  const l = document.getElementById("listeAndere"); if (!l) return;
-  const namen = [...netz.mitspieler.values()].filter(m => m.zustand).map(m => m.zustand.n);
-  l.textContent = namen.length ? namen.join(" · ") : "Noch niemand da. Wer denselben Raum-Code und dieselbe Karte hat, taucht hier auf.";
+  const l = document.getElementById("listeAndere"), st = document.getElementById("listeStatus"); if (!l) return;
+  const andere = [...netz.mitspieler.values()].filter(m => m.zustand);
+  l.textContent = andere.length
+    ? andere.map(m => m.zustand.n + (m.rtcStatus === "connected" ? " · STIMME VERBUNDEN" : m.rtc ? " · STIMME VERBINDET …" : "")).join("\n")
+    : "Noch niemand da. Wer denselben Raum-Code und dieselbe Karte hat, taucht hier auf.";
+  const raum = netz.basis ? netz.basis.split("/")[1] : "–";
+  if (st) st.textContent = `SERVER: ${netz.status} · RAUM: ${raum === "OEFFENTLICH" ? "ÖFFENTLICH" : raum}`;
 }
-
 // --- Gorillas der anderen ---
 function avatarBauen(z) {
   const fell = new THREE.MeshStandardMaterial({ roughness: .88, flatShading: true }), hand = new THREE.MeshStandardMaterial({ roughness: .8, flatShading: true });
@@ -2043,15 +2090,14 @@ function avatareStellen(dt) {
 }
 function zustandSenden(dt) {
   netz.sendeTakt -= dt;
-  if (netz.sendeTakt > 0 || !netz.peer) return;
-  netz.sendeTakt = .08;
+  if (netz.sendeTakt > 0 || !netz.client || !netz.client.connected || !netz.basis) return;
+  netz.sendeTakt = .12;
   const r = x => Math.round(x * 100) / 100;
-  const z = {
+  senden("/z/" + meineId, {
     n: pc.name, f: "#" + fellMat.color.getHexString(), s: GROESSE, g: r(ich.gier),
     p: [r(ich.pos.x), r(ich.pos.y), r(ich.pos.z)], h: ich.h.map(h => [r(h.pos.x), r(h.pos.y), r(h.pos.z)]),
     hut: laden.hut, gesicht: laden.gesicht,
-  };
-  for (const m of netz.mitspieler.values()) if (m.daten && m.daten.open) try { m.daten.send(z); } catch (_) {}
+  });
 }
 function netzTakt(dt) {
   if (!titel.hidden) return;
@@ -2059,7 +2105,7 @@ function netzTakt(dt) {
   avatareStellen(dt);
 }
 document.getElementById("tStumm").addEventListener("click", stummUmschalten);
-addEventListener("pagehide", netzVerlassen);
+addEventListener("pagehide", () => { if (netz.basis) senden("/weg/" + meineId, { id: meineId }); });
 
 // ---------- Bühne: Renderer, Himmel, Licht ----------
 const canvas = document.getElementById("welt");
@@ -2383,7 +2429,7 @@ Object.entries(KARTEN).forEach(([id, k]) => {
     if (karte !== id) lade(id);
     // Beim Betreten: Stimme erlauben? Danach Mitspieler im Raum suchen
     const losNetz = () => netzKarte(id);
-    if (!stimme.gefragt) { stimme.gefragt = true; frageStimme().then(losNetz); } else losNetz();
+    stimme.gefragt = true; frageStimme().then(losNetz);
   };
   kartenListe.appendChild(b);
 });
