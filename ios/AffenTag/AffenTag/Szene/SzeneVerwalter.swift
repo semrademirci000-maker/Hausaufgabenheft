@@ -24,6 +24,7 @@ final class SzeneVerwalter {
         cam.fieldOfView = 78
         cam.zNear = 0.05
         cam.zFar = 250
+        cam.categoryBitMask = ~AffeKnoten.nurImSpiegel
         kamera.camera = cam
         kameraHalter.addChildNode(kamera)
         szene.rootNode.addChildNode(kameraHalter)

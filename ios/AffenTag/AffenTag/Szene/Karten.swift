@@ -120,13 +120,15 @@ enum Karten {
                 b.kiste(d * (r + 0.8) + V3(0, -0.1, 0), V3(2.4, 0.2, 1.8), farbe(0.3, 0.2, 0.1), .holz, gier: g)
             } else {
                 b.kiste(d * r + V3(0, 3.5, 0), V3(2.5, 7, 0.6), wand.variiert(&b.w, 0.06), .holz, gier: g)
-                if i != 9 {
-                    // Vorsprünge zum Hochklettern
-                    let hoehe: Float = [1.6, 3.2, 4.8][i % 3]
-                    b.kiste(d * (r - 0.6) + V3(0, hoehe, 0), V3(1.9, 0.25, 0.9), Karten.brett, .holz, gier: g)
-                }
             }
         }
+        // Spiegel an der Wand zwischen Canyon-Tunnel und Computer
+        do {
+            let a = grad(160), d = V3(sin(a), 0, cos(a))
+            b.spiegel(d * (r - 0.35) + V3(0, 1.8, 0), blick: -d, breite: 2.2, hoehe: 2.8)
+        }
+        // Wendeltreppe aus Brettern an der Wand: vom Boden bis ganz nach oben laufen
+        treppe(b, mitte: .zero, radius: r - 1.1, start: grad(192), schritt: grad(11), hoch: 0.4, anzahl: 18, breite: 1.55, tiefe: 1.6)
 
         // Der Computer
         let pc = V3(0, 0, -(r - 1.3))
@@ -160,6 +162,17 @@ enum Karten {
 
     // MARK: - Wald
 
+    /// Wendeltreppe aus einzelnen Brettern (dünnes Holz = von unten durchlässig, oben fest)
+    private static func treppe(_ b: KartenBauer, mitte: V3, radius: Float, start: Float, schritt: Float,
+                               hoch: Float, anzahl: Int, breite: Float, tiefe: Float) {
+        for k in 0..<anzahl {
+            let a = start + Float(k) * schritt
+            let d = V3(sin(a), 0, cos(a))
+            let y = mitte.y + hoch * Float(k + 1)
+            b.kiste(mitte + d * radius + V3(0, y - 0.06, 0), V3(breite, 0.12, tiefe), brett.variiert(&b.w), .holz, gier: gierZu(d))
+        }
+    }
+
     private static func baum(_ b: KartenBauer, _ p: V3, hoehe h: Float, radius r: Float, plattform: Bool) {
         b.zylinder(p, radius: r, hoehe: h, stamm.variiert(&b.w), .holz)
         let krone = b.w.zahl(3.0, 4.2)
@@ -191,11 +204,8 @@ enum Karten {
         b.kiste(V3(0, 11, 0), V3(6, 0.35, 6), brett, .holz, gier: grad(45))
         b.kiste(V3(0, 13.4, 0), V3(7, 0.3, 7), farbe(0.55, 0.3, 0.18), .holz)
         b.kugel(V3(0, 16, 0), radius: 5.5, blatt, .blaetter, stauchung: V3(1, 0.55, 1))
-        // Leiter-Stufen am Stamm
-        for i in 0..<9 {
-            let a = Float(i) * grad(40)
-            b.kiste(V3(sin(a) * 1.9, 0.7 + Float(i) * 0.7, cos(a) * 1.9), V3(0.9, 0.18, 0.6), brett, .holz, gier: a)
-        }
+        // Wendeltreppe um den Stamm: vom Waldboden hoch bis zum Baumhaus
+        treppe(b, mitte: .zero, radius: 2.9, start: grad(90), schritt: grad(29), hoch: 6.7 / 17, anzahl: 17, breite: 1.55, tiefe: 2.1)
 
         var baeume: [V3] = []
         var versuche = 0

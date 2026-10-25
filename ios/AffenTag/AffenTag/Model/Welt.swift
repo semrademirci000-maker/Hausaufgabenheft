@@ -90,9 +90,11 @@ final class Welt {
     // MARK: Punkt-Abfrage (für Hände)
 
     /// Steckt der Punkt in etwas? Dann: auf welchem kürzesten Weg kommt man raus.
-    func punktInnen(_ p: V3, rand: Float = 0) -> Treffer? {
+    /// `fest`: nur echte Wände – das Griffband unter dünnen Brettern zählt dann nicht.
+    func punktInnen(_ p: V3, rand: Float = 0, fest: Bool = false) -> Treffer? {
         var bester: Treffer?
         for k in koerper {
+            if fest && k.einweg { continue }
             let d = p - k.mitte
             if simd_length_squared(d) > (k.reichweite + rand) * (k.reichweite + rand) { continue }
             if let t = Welt.kugelTest(p, radius: rand, gegen: k), t.tiefe > (bester?.tiefe ?? 0) {
@@ -145,7 +147,8 @@ final class Welt {
                     }
                     return nil
                 }
-                if lokal.y < h.y - r * 0.6 { return nil }
+                // Körper: nur von oben fest (wer von unten kommt, geht durch)
+                if lokal.y < h.y + r * 0.25 { return nil }
             }
             let nah = simd_clamp(lokal, -h, h)
             let weg = lokal - nah

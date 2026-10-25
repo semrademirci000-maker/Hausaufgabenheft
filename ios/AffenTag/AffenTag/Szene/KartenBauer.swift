@@ -208,6 +208,33 @@ final class KartenBauer {
         return n
     }
 
+    /// Senkrechter Spiegel mit Holzrahmen: zeigt die Welt und dich selbst.
+    func spiegel(_ mitte: V3, blick: V3, breite: Float, hoehe: Float) {
+        let glas = SCNFloor()
+        glas.width = CGFloat(breite)
+        glas.length = CGFloat(hoehe)
+        glas.reflectivity = 1
+        glas.reflectionFalloffEnd = 0
+        glas.reflectionResolutionScaleFactor = 0.6
+        let m = SCNMaterial()
+        m.lightingModel = .constant
+        m.diffuse.contents = UIColor(white: 0.04, alpha: 1)
+        glas.materials = [m]
+        let n = SCNNode(geometry: glas)
+        n.simdPosition = mitte
+        // Die Spiegelfläche (sonst der Boden, Normale nach oben) zeigt in den Raum
+        n.simdOrientation = simd_quatf(angle: gierZu(blick), axis: V3(0, 1, 0)) * simd_quatf(angle: -.pi / 2, axis: V3(1, 0, 0))
+        lebendig.addChildNode(n)
+        let g = gierZu(blick)
+        let q = drehY(V3(1, 0, 0), g)
+        let rahmen: Float = 0.14
+        let holz = farbe(0.45, 0.3, 0.17)
+        for s: Float in [-1, 1] {
+            kiste(mitte + q * (s * (breite / 2 + rahmen / 2)) + blick * 0.03, V3(rahmen, hoehe + 2 * rahmen, 0.1), holz, .holz, gier: g, fest: false)
+            kiste(mitte + V3(0, s * (hoehe / 2 + rahmen / 2), 0) + blick * 0.03, V3(breite, rahmen, 0.1), holz, .holz, gier: g, fest: false)
+        }
+    }
+
     /// Ein leuchtender Durchgang zu einer anderen Karte.
     func tor(_ mitte: V3, gier g: Float, ziel: KartenID) {
         let holz = farbe(0.35, 0.22, 0.12)

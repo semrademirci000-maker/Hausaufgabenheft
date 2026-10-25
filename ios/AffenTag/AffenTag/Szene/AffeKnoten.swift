@@ -40,7 +40,7 @@ final class AffeKnoten {
         fell.diffuse.contents = Texturen.bild(.fell)
         fell.diffuse.wrapS = .repeat
         fell.diffuse.wrapT = .repeat
-        haut.diffuse.contents = farbe(0.05, 0.045, 0.045)
+        haut.diffuse.contents = farbe(0.11, 0.1, 0.095)
         lava.diffuse.contents = farbe(1, 0.42, 0.08)
         lava.emission.contents = farbe(0.9, 0.25, 0.02)
         gesichtMat.diffuse.contents = farbe(0.85, 0.72, 0.58)
@@ -88,7 +88,6 @@ final class AffeKnoten {
         }
         kopf.addChildNode(kopfSchmuck)
 
-        if lokal { koerper.isHidden = true }
         wurzel.addChildNode(koerper)
 
         for i in 0..<2 {
@@ -149,7 +148,17 @@ final class AffeKnoten {
         namensSchild.constraints = [SCNBillboardConstraint()]
         namensSchild.simdPosition = V3(0, 0.75, 0)
         if !lokal { wurzel.addChildNode(namensSchild) }
+        if lokal {
+            // Den eigenen Körper sieht die Kamera nicht – nur der Spiegel zeigt ihn.
+            koerper.enumerateHierarchy { n, _ in
+                n.categoryBitMask = AffeKnoten.nurImSpiegel
+                n.castsShadow = false
+            }
+        }
     }
+
+    /// Kategorie für Knoten, die nur in Spiegeln erscheinen.
+    static let nurImSpiegel = 1 << 4
 
     /// Wie fest jede Hand zugreift (0 = offen, 1 = Faust) und woran sie sich hält.
     var griff: [Float] = []
@@ -246,7 +255,7 @@ final class AffeKnoten {
 
         if fellFarbe != a.farbe {
             fellFarbe = a.farbe
-            fell.multiply.contents = farbe(CGFloat(0.02 + a.farbe.x * 0.6), CGFloat(0.02 + a.farbe.y * 0.6), CGFloat(0.02 + a.farbe.z * 0.6))
+            fell.multiply.contents = farbe(CGFloat(0.04 + a.farbe.x * 0.85), CGFloat(0.04 + a.farbe.y * 0.85), CGFloat(0.04 + a.farbe.z * 0.85))
         }
         if istJetztLava != istLava {
             istLava = istJetztLava

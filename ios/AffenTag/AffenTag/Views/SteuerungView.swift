@@ -1,8 +1,8 @@
 //
 //  SteuerungView.swift
 //  Die Handy-Steuerung wie beim Mobile-Spielen:
-//  Beide Joysticks sind unsichtbar und erscheinen erst unter dem Finger:
-//  linke Bildschirmhälfte = Laufen (W A S D), rechte Hälfte = Umschauen.
+//  Links der W-A-S-D-Stick zum Laufen: immer zu sehen wie früher, springt aber unter den Finger.
+//  Rechts der Blick-Stick: unsichtbar, erscheint unter dem Finger und verschwindet beim Loslassen.
 //  Dazu 1–4 und ⇧ (Sprinten), oben TAB · Menü · ESC, rechts Tastatur, F, R, E und ⎵ (Springen).
 //  Jede Taste ist eine eigene Ansicht – so gehen mehrere Finger gleichzeitig.
 //
@@ -23,7 +23,7 @@ struct SteuerungView: View {
             ZStack {
                 // Unsichtbare Joystick-Flächen ganz unten, damit die Tasten darüber liegen
                 HStack(spacing: 0) {
-                    SchwebeStick(buchstaben: true, groesse: stick) { x, y in
+                    SchwebeStick(buchstaben: true, groesse: stick, heim: CGPoint(x: stick / 2 + 8, y: h * 0.2 + stick / 2)) { x, y in
                         spiel.eingabe.lx = x
                         spiel.eingabe.ly = y
                     }
@@ -96,11 +96,13 @@ struct SteuerungView: View {
     }
 }
 
-// MARK: - Schwebender Joystick (erscheint unter dem Finger)
+// MARK: - Joystick, der unter den Finger springt
 
 struct SchwebeStick: View {
     let buchstaben: Bool
     let groesse: CGFloat
+    /// Wo der Stick ohne Finger steht (nil = unsichtbar)
+    var heim: CGPoint? = nil
     let melde: (Float, Float) -> Void
     @State private var mitte: CGPoint?
     @State private var knauf: CGSize = .zero
@@ -109,7 +111,7 @@ struct SchwebeStick: View {
         GeometryReader { _ in
             ZStack(alignment: .topLeading) {
                 Color.clear.contentShape(Rectangle())
-                if let m = mitte {
+                if let m = mitte ?? heim {
                     StickBild(buchstaben: buchstaben, knauf: knauf)
                         .frame(width: groesse, height: groesse)
                         .position(m)

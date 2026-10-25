@@ -145,9 +145,9 @@ struct AnleitungView: View {
             VStack(spacing: 14) {
                 Text("SO STEUERST DU DEINEN GORILLA").font(Stil.dick(24)).foregroundStyle(.white)
                 HStack(alignment: .top, spacing: 18) {
-                    schritt("gamecontroller.fill", "Linke Hälfte berühren: der Lauf-Stick (W A S D) erscheint unter dem Finger.")
+                    schritt("gamecontroller.fill", "Linker Stick (W A S D): laufen. Gegen einen Stamm laufen = hochklettern, loslassen = festhalten.")
                     schritt("eye.fill", "Rechte Hälfte berühren: der Blick-Stick erscheint. Finger weg = Stick weg.")
-                    schritt("arrow.up.circle.fill", "Springen. ⇧ = sprinten. Gegen eine Wand laufen = hochklettern.")
+                    schritt("arrow.up.circle.fill", "Springen (an der Wand: abstoßen). ⇧ = sprinten. Stick nach hinten = Wand loslassen.")
                     schritt("hand.raised.fill", "E festhalten · 1 Hände hoch · 3 runter · 4/2 linke/rechte Hand · R zurück · F Lampe · TAB Spieler")
                 }
                 Button("LOS GEHT'S!", action: fertig)
