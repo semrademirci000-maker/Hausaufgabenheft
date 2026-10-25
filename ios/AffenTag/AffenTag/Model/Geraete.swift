@@ -37,7 +37,7 @@ final class Geraete {
     }
 
     deinit {
-        beobachter.forEach(NotificationCenter.default.removeObserver)
+        for b in beobachter { NotificationCenter.default.removeObserver(b) }
         GCController.stopWirelessControllerDiscovery()
     }
 
