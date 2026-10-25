@@ -215,7 +215,7 @@ final class KartenBauer {
         glas.length = CGFloat(hoehe)
         glas.reflectivity = 1
         glas.reflectionFalloffEnd = 0
-        glas.reflectionResolutionScaleFactor = 0.6
+        glas.reflectionResolutionScaleFactor = 0.85
         let m = SCNMaterial()
         m.lightingModel = .constant
         m.diffuse.contents = UIColor(white: 0.04, alpha: 1)

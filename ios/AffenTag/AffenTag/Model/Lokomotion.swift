@@ -51,7 +51,7 @@ final class Affenkoerper {
     static var armLaenge: Float { 0.92 * groesse }
     static var schulter: V3 { V3(0.13, -0.16, 0.05) * groesse }
     static let ruheGier: Float = grad(15)
-    static let ruheNeigung: Float = grad(-38)
+    static let ruheNeigung: Float = grad(-30)
 
     var position: V3
     var geschwindigkeit: V3 = .zero

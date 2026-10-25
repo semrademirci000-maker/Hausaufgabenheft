@@ -153,7 +153,7 @@
 
 <section id="titel">
   <div style="display:flex;align-items:center;gap:18px"><div class="titelbild"><svg viewBox="0 0 64 64" aria-hidden="true"><defs><radialGradient id="gF" cx=".5" cy=".38" r=".62"><stop offset="0" stop-color="#9a8a7e"/><stop offset="1" stop-color="#56493f"/></radialGradient><radialGradient id="gK" cx=".5" cy=".3" r=".7"><stop offset="0" stop-color="#4c443f"/><stop offset="1" stop-color="#1a1716"/></radialGradient></defs><path fill="url(#gK)" d="M32 2c7 0 12 4 14 10 6 2 11 8 12 15 2 2 3 5 2 8-1 2-2 3-4 3-2 11-11 22-24 23C19 60 10 49 8 38c-2 0-3-1-4-3-1-3 0-6 2-8 1-7 6-13 12-15 2-6 7-10 14-10z"/><path fill="url(#gF)" d="M32 18c8 0 15 2 18 6 3 4 2 10 0 15-2 9-9 16-18 16s-16-7-18-16c-2-5-3-11 0-15 3-4 10-6 18-6z"/><path fill="#1a1716" d="M11 27c5-6 13-8 21-6 8-2 16 0 21 6-2 2-5 3-8 3-4 0-8-2-13-2s-9 2-13 2c-3 0-6-1-8-3z"/><ellipse cx="23.5" cy="31.5" rx="3.4" ry="2.4" fill="#0c0807"/><ellipse cx="40.5" cy="31.5" rx="3.4" ry="2.4" fill="#0c0807"/><circle cx="23.5" cy="31.6" r="1.5" fill="#5c3416"/><circle cx="40.5" cy="31.6" r="1.5" fill="#5c3416"/><circle cx="24.2" cy="31" r=".6" fill="#f2e6d8"/><circle cx="41.2" cy="31" r=".6" fill="#f2e6d8"/><path fill="#3b322d" d="M32 31c3 0 5 3 7 6 2 2 3 4 2 6-1 2-5 2-9 2s-8 0-9-2c-1-2 0-4 2-6 2-3 4-6 7-6z"/><ellipse cx="28" cy="42" rx="2.6" ry="1.9" fill="#0b0909"/><ellipse cx="36" cy="42" rx="2.6" ry="1.9" fill="#0b0909"/><path fill="#1a1716" d="M20 47c4 4 8 5 12 5s8-1 12-5c-3 6-7 8-12 8s-9-2-12-8z"/><path stroke="#0b0909" stroke-width="1.5" fill="none" stroke-linecap="round" d="M24 49c5 2 11 2 16 0"/></svg></div><h1>AFFEN-TAG</h1></div>
-  <p class="unter" style="color:var(--gold)">VORSCHAU VERSION 13 · schneller laufen · Hände näher und größer · helleres Gorilla-Symbol</p>
+  <p class="unter" style="color:var(--gold)">VORSCHAU VERSION 14 · Arme im Stumpf wieder da · Spiegel größer und schärfer</p>
   <p class="unter">Klettern nur mit den Armen. Diese Vorschau zeigt die Welten und die Steuerung der App. Echte Mitspieler, Fangen und der Laden sind in der iPhone- und iPad-App.</p>
   <div class="hinweis">
     <div><strong>LINKER STICK</strong>Laufen. Deine Hände setzen vorne auf und ziehen dich nach vorne.</div>
@@ -1014,7 +1014,7 @@ class Bauer {
   }
   /** Spiegel mit Holzrahmen: zeigt die Welt und dich selbst */
   spiegel(mitte, blick, breite, hoehe) {
-    const glas = new THREE.Reflector(new THREE.PlaneGeometry(breite, hoehe), { textureWidth: handy ? 512 : 1024, textureHeight: Math.round((handy ? 512 : 1024) * hoehe / breite), color: 0xb8c0c0, clipBias: .003 });
+    const glas = new THREE.Reflector(new THREE.PlaneGeometry(breite, hoehe), { textureWidth: handy ? 900 : 1400, textureHeight: Math.round((handy ? 900 : 1400) * hoehe / breite), color: 0x767878, clipBias: .003 });
     glas.position.copy(mitte); glas.lookAt(mitte.clone().add(blick));
     const vorher = glas.onBeforeRender;
     glas.onBeforeRender = (r, s, c) => { if (SPIEGEL_KOERPER) SPIEGEL_KOERPER.visible = true; vorher(r, s, c); if (SPIEGEL_KOERPER) SPIEGEL_KOERPER.visible = false; };
@@ -1224,7 +1224,8 @@ const KARTEN = {
       const rand = b.mat("rinde", 0x9c8470, { rep: 6 });
       const boden = new THREE.Mesh(new THREE.CylinderGeometry(R + .45, R + .45, 1, 96), [rand, oben, rand]);
       boden.position.y = -.5; boden.receiveShadow = true; b.gruppe.add(boden);
-      b.welt.dazu({ typ: "zyl", m: v(0, -.5, 0), r: R + .45, hh: .5, mat: "holz" });
+      // dick genug, dass Hände nie unter den Boden rutschen
+      b.welt.dazu({ typ: "zyl", m: v(0, -6, 0), r: R + .45, hh: 6, mat: "holz" });
 
       const tore = [{ a: grad(118), ziel: "wald", text: "WALD" }, { a: grad(242), ziel: "canyon", text: "CANYON" }, { a: grad(0), ziel: "berge", text: "BERGE" }];
       const luecke = 1.32 / R, tuerHoehe = 2.95;
@@ -1295,7 +1296,7 @@ const KARTEN = {
       b.schild("AFFEN-TAG", v(0, 4.4, -(R - .3)), 0, 3.4, { hoch: .8 });
 
       // Spiegel an der Wand zwischen Wald-Tunnel und Computer
-      { const a = grad(150), d = v(Math.sin(a), 0, Math.cos(a)); b.spiegel(d.clone().multiplyScalar(R - .5).add(v(0, 1.75, 0)), d.clone().negate(), 2.3, 2.9); }
+      { const a = grad(150), d = v(Math.sin(a), 0, Math.cos(a)); b.spiegel(d.clone().multiplyScalar(R - .5).add(v(0, 1.95, 0)), d.clone().negate(), 2.8, 3.3); b.schild("SPIEGEL", d.clone().multiplyScalar(R - .55).add(v(0, 4.05, 0)), gierZu(d), 1.6, { hoch: .42 }); }
       // Wendeltreppe aus Brettern an der Wand: vom Boden bis ganz nach oben laufen
       b.treppe(v(0, 0, 0), R - .95, grad(248), grad(11), .4, 22, 1.55, 1.75, R - .1);
       // Wurzeln, die von oben hängen
@@ -1566,25 +1567,33 @@ function gorillaHand(links, fellMat, hautMat) {
 /** Der eigene Gorilla-Körper: nur im Spiegel zu sehen */
 function gorillaKoerper(fellMat, hautMat) {
   const k = new THREE.Group();
-  const augenMat = new THREE.MeshStandardMaterial({ color: 0x120c08, roughness: .15 });
+  // Gesicht etwas heller als die Hände, damit man es im Spiegel gut erkennt
+  const gesichtMat = new THREE.MeshStandardMaterial({ color: 0x0f0c0a, normalMap: hautMat.normalMap, normalScale: new THREE.Vector2(.4, .4), roughness: .7 });
+  const dunkelMat = new THREE.MeshStandardMaterial({ color: 0x050404, roughness: .9 });
+  const augenMat = new THREE.MeshStandardMaterial({ color: 0x1e0f06, roughness: .08, metalness: .1 });
+  const glanzMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
   const teil = (geo, mat, x, y, z, sx = 1, sy = 1, sz = 1) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.scale.set(sx, sy, sz); k.add(m); return m; };
-  const kug = (r, seg = 24) => new THREE.SphereGeometry(r, seg, Math.round(seg * .75));
-  // Rumpf, Schultern, Bauch
-  teil(kug(.36), fellMat, 0, -.36, .04, 1.05, 1.12, .82);
-  teil(kug(.2), fellMat, -.2, -.14, .04, 1, .8, .9); teil(kug(.2), fellMat, .2, -.14, .04, 1, .8, .9);
-  teil(kug(.22), hautMat, 0, -.4, -.2, 1, 1.2, .35);
-  // Kopf mit Scheitelkamm, Gesicht, Brauenwulst, Augen, Nase, Mund
-  teil(kug(.19), fellMat, 0, .03, .05, 1, 1.05, 1);
-  teil(kug(.12), fellMat, 0, .16, .09, .8, .9, 1.1);
-  teil(kug(.14), hautMat, 0, -.01, -.08, 1, .95, .62);
-  teil(new THREE.CapsuleGeometry(.03, .16, 6, 12), hautMat, 0, .07, -.15, 1, 1, 1).rotation.z = Math.PI / 2;
-  for (const x of [-.055, .055]) {
-    teil(kug(.022, 12), augenMat, x, .03, -.155);
-    teil(kug(.017, 10), hautMat, x * .45, -.03, -.17, 1, .7, .8);
+  const kug = (r, seg = 28) => new THREE.SphereGeometry(r, seg, Math.round(seg * .75));
+  // Breite Brust, mächtige Schultern, runder Bauch
+  teil(kug(.4), fellMat, 0, -.42, .06, 1.15, 1.1, .85);
+  teil(kug(.24), fellMat, -.25, -.16, .05, 1, .85, .95); teil(kug(.24), fellMat, .25, -.16, .05, 1, .85, .95);
+  teil(kug(.2), gesichtMat, -.11, -.3, -.22, 1, .75, .35); teil(kug(.2), gesichtMat, .11, -.3, -.22, 1, .75, .35);
+  teil(kug(.26), fellMat, 0, -.62, -.08, 1.05, .9, .8);
+  // Kopf mit hohem Scheitelkamm
+  teil(kug(.2), fellMat, 0, .04, .04, 1.05, 1.05, 1);
+  teil(kug(.13), fellMat, 0, .18, .08, .75, 1, 1.15);
+  // Gesicht: Maske, dicker Brauenwulst, tiefe Augen mit Glanzpunkt, breite Nase, Maul
+  teil(kug(.15), gesichtMat, 0, -.01, -.085, 1.05, 1, .6);
+  teil(new THREE.CapsuleGeometry(.034, .17, 8, 16), dunkelMat, 0, .065, -.155).rotation.z = Math.PI / 2;
+  for (const x of [-.058, .058]) {
+    teil(kug(.026, 16), augenMat, x, .028, -.16);
+    teil(kug(.007, 8), glanzMat, x + .008, .036, -.183);
   }
-  teil(kug(.09), hautMat, 0, -.08, -.1, 1.1, .6, .75);
-  teil(new THREE.CapsuleGeometry(.008, .07, 4, 8), augenMat, 0, -.1, -.168).rotation.z = Math.PI / 2;
-  for (const x of [-.18, .18]) teil(kug(.04, 12), hautMat, x, .02, .04, .5, 1, .8);
+  teil(kug(.05), gesichtMat, 0, -.035, -.17, 1.25, .8, .7);
+  for (const x of [-.022, .022]) teil(kug(.016, 10), dunkelMat, x, -.042, -.205, 1, .7, .6);
+  teil(kug(.1), gesichtMat, 0, -.1, -.11, 1.15, .62, .8);
+  teil(new THREE.CapsuleGeometry(.007, .09, 4, 8), dunkelMat, 0, -.115, -.19).rotation.z = Math.PI / 2;
+  for (const x of [-.19, .19]) teil(kug(.045, 14), gesichtMat, x, .02, .04, .45, 1, .8);
   k.traverse(o => { if (o.isMesh) o.castShadow = false; });
   k.visible = false;
   return k;

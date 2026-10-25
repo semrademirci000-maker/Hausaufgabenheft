@@ -102,6 +102,8 @@ enum Karten {
         let r: Float = 7
         let wand = farbe(0.47, 0.31, 0.18)
         b.zylinder(V3(0, -1, 0), radius: r + 1.5, hoehe: 1, farbe(0.62, 0.43, 0.26), .holz, seiten: 24, textur: .ringe)
+        // Unsichtbar dicker Boden: Hände rutschen nie darunter
+        b.welt.dazu(Koerper(mitte: V3(0, -6, 0), form: .zylinder(radius: r + 1.5, halbeHoehe: 6), material: .holz))
         b.zylinder(V3(0, 7.2, 0), radius: r + 1.5, hoehe: 0.6, wand, .holz, seiten: 18)
 
         let tore = Dictionary(uniqueKeysWithValues: stumpfTore)
@@ -125,7 +127,8 @@ enum Karten {
         // Spiegel an der Wand zwischen Canyon-Tunnel und Computer
         do {
             let a = grad(160), d = V3(sin(a), 0, cos(a))
-            b.spiegel(d * (r - 0.35) + V3(0, 1.8, 0), blick: -d, breite: 2.2, hoehe: 2.8)
+            b.spiegel(d * (r - 0.35) + V3(0, 1.95, 0), blick: -d, breite: 2.8, hoehe: 3.3)
+            b.schild("SPIEGEL", d * (r - 0.4) + V3(0, 3.95, 0), gier: gierZu(d), groesse: 0.5, farbe(1, 0.85, 0.3))
         }
         // Wendeltreppe aus Brettern an der Wand: vom Boden bis ganz nach oben laufen
         treppe(b, mitte: .zero, radius: r - 1.1, start: grad(192), schritt: grad(11), hoch: 0.4, anzahl: 18, breite: 1.55, tiefe: 1.6)
