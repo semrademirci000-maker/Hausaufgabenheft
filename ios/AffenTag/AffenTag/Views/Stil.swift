@@ -11,6 +11,7 @@ enum Stil {
     static let lava = Color(red: 1, green: 0.42, blue: 0.08)
     static let holz = Color(red: 0.42, green: 0.27, blue: 0.15)
     static let blatt = Color(red: 0.3, green: 0.7, blue: 0.3)
+    static let gold = Color(red: 0.95, green: 0.78, blue: 0.48)
 
     static func dick(_ groesse: CGFloat) -> Font { .system(size: groesse, weight: .black, design: .rounded) }
     static func terminal(_ groesse: CGFloat) -> Font { .system(size: groesse, weight: .bold, design: .monospaced) }

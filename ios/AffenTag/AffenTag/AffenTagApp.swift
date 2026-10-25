@@ -30,7 +30,11 @@ struct RootView: View {
             Color.black.ignoresSafeArea()
             switch spiel.bildschirm {
             case .titel:
-                TitelView().transition(.opacity)
+                if spiel.einstellungen.angemeldet == true {
+                    TitelView().transition(.opacity)
+                } else {
+                    LoginView().transition(.opacity)
+                }
             case .spiel:
                 SpielView().transition(.opacity)
             }

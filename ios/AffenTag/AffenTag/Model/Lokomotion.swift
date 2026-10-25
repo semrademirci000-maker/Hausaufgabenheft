@@ -247,8 +247,14 @@ final class Affenkoerper {
                 geschwindigkeit = v
             }
             if sprungStoss && sprungZeit <= 0 {
-                // Sprung: beide Hände haben sich kräftig vom Boden abgestoßen
-                geschwindigkeit.y = max(geschwindigkeit.y * 1.2, 5.3 * sqrt(Affenkoerper.groesse))
+                // Sprung wie in Gorilla Tag: Schwung nach vorne mitnehmen und verstärken, dazu kräftig nach oben
+                var hor = V3(geschwindigkeit.x, 0, geschwindigkeit.z)
+                if laeuft && simd_length(laufZiel) > simd_length(hor) { hor = V3(laufZiel.x, 0, laufZiel.z) }
+                hor *= 1.3
+                if simd_length(hor) > 12 { hor *= 12 / simd_length(hor) }
+                geschwindigkeit.x = hor.x
+                geschwindigkeit.z = hor.z
+                geschwindigkeit.y = max(geschwindigkeit.y * 1.2, 5.6 * sqrt(Affenkoerper.groesse))
                 sprungStoss = false
             }
             if laeuft {
@@ -412,6 +418,11 @@ final class Affenkoerper {
 
         if sprungZeit > 0 {
             sprungZeit -= dt
+            // Beim Absprung den Lauf-Schwung behalten
+            if staerke > 0.15 {
+                laeuft = true
+                laufZiel = drehY(m, gier) * ((e.sprint ? 10 : 7) * staerke)
+            }
             let t = klemm(1 - sprungZeit / 0.16, 0, 1)
             let th = grad(78 - 105 * t)
             for i in 0..<2 {

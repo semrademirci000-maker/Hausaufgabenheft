@@ -30,6 +30,14 @@ struct TitelView: View {
                             .font(.system(size: 15, weight: .bold, design: .rounded))
                             .foregroundStyle(.white)
                             .umrandet()
+                        HStack(spacing: 8) {
+                            Text("ANGEMELDET ALS \(spiel.einstellungen.name)")
+                            Button("ABMELDEN") { spiel.einstellungen.angemeldet = false }
+                                .underline()
+                        }
+                        .font(.system(size: 13, weight: .heavy, design: .rounded))
+                        .foregroundStyle(.white)
+                        .umrandet()
                     }
                 }
 

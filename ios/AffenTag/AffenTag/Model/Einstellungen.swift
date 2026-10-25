@@ -42,6 +42,8 @@ struct Einstellungen: Codable, Equatable {
     var anleitungGesehen = false
     /// Größe des Gorillas, 1.0 bis 3.6
     var groesse = 2.6
+    /// Mit einem Affen-Namen angemeldet? (optional, damit alte Speicherstände weiter laden)
+    var angemeldet: Bool?
 
     private static let schluessel = "affentag.einstellungen"
 

@@ -254,6 +254,12 @@ enum Karten {
             let a = Float(i) * grad(45)
             return V3(sin(a) * 7, 0.5, cos(a) * 7)
         }
+        // Felswand rundherum – man kann an ihr hochklettern
+        for i in 0..<72 {
+            let a = Float(i) * grad(5)
+            let d = V3(sin(a), 0, cos(a))
+            b.kiste(d * 46.4 + V3(0, 10 + b.w.zahl(-1, 1), 0), V3(4.3, 20, 1.2), farbe(0.5, 0.48, 0.45).variiert(&b.w, 0.1), .stein, gier: gierZu(d))
+        }
         b.welt.grenzRadius = 45
         return Stimmung(himmelOben: farbe(0.35, 0.62, 0.95), himmelUnten: farbe(0.8, 0.92, 0.95),
                         nebel: farbe(0.65, 0.8, 0.75), nebelStart: 25, nebelEnde: 75,
