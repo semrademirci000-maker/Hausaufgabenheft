@@ -351,7 +351,7 @@ final class Affenkoerper {
             return false
         }
         wandWeg = w
-        let steigen: Float = vorwaerts ? 2.6 * min(1, staerke * 1.2) * sqrt(g / 2.6) : 0
+        let steigen: Float = vorwaerts ? 4.2 * min(1, staerke * 1.2) * sqrt(g / 2.6) : 0
         kletterTempo = V3(0, steigen, 0) + n * ((w - 0.5 * g) * 5)
         // Arme: eine Hand hält und zieht nach unten, die andere greift oben neu – passend zum Tempo
         if steigen > 0 { kletterPhase += dt * steigen * 0.62 / (1.25 * g) }

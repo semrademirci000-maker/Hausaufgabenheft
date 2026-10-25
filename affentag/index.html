@@ -54,6 +54,15 @@
   #tMenue svg { width: 96%; height: 96%; }
   .titelbild { width: clamp(70px, 10vw, 110px); }
   #tPunkte { left: max(3vw, calc(env(safe-area-inset-left, 0px) + 10px)); top: calc(10px + env(safe-area-inset-top, 0px)); }
+  #tStumm { right: max(3vw, calc(env(safe-area-inset-right, 0px) + 10px)); top: calc(16% + clamp(58px, 7.4vw, 78px)); width: clamp(56px, 7vw, 76px); height: clamp(48px, 6vw, 64px); }
+  #tStumm svg { width: 46%; height: 60%; } #tStumm .stumm { display: none; }
+  #tStumm.aus { border-color: #ff6b5a; color: #ff6b5a; } #tStumm.aus .an { display: none; } #tStumm.aus .stumm { display: block; }
+  #stimmeFrage { position: fixed; inset: 0; z-index: 35; display: grid; place-items: center; padding: 16px; background: rgba(6,4,3,.72); }
+  #stimmeFrage .kasten { width: min(400px, 100%); padding: 24px; border-radius: 22px; background: rgba(28,21,15,.95); border: 2px solid rgba(243,199,122,.35); text-align: center; display: grid; gap: 10px; }
+  #stimmeFrage h2 { margin: 0; font: 400 clamp(26px, 5vw, 34px) var(--schild); letter-spacing: .06em; color: var(--gold); }
+  #stimmeFrage p { margin: 0 0 6px; font-size: 14px; line-height: 1.45; opacity: .85; }
+  #stimmeFrage button { padding: 14px; border-radius: 14px; border: 0; font: 800 17px var(--text); letter-spacing: .1em; cursor: pointer; }
+  #stimmeFrage .haupt { background: var(--gold); color: #2a1c0e; } #stimmeFrage .gast { background: transparent; color: var(--papier); border: 2px solid rgba(255,255,255,.25); }
   #tTastatur { right: max(3vw, calc(env(safe-area-inset-right, 0px) + 10px)); top: 16%; width: clamp(56px, 7vw, 76px); height: clamp(48px, 6vw, 64px); }
   #tF { right: max(10vw, calc(env(safe-area-inset-right, 0px) + 50px)); bottom: 28%; }
   #tR { right: max(20vw, calc(env(safe-area-inset-right, 0px) + 130px)); bottom: 15%; }
@@ -61,7 +70,8 @@
   #tLeer { right: max(11vw, calc(env(safe-area-inset-right, 0px) + 60px)); bottom: max(3%, calc(env(safe-area-inset-bottom, 0px) + 6px)); }
 
   .hud { position: fixed; pointer-events: none; z-index: 4; text-shadow: 0 1px 3px rgba(0,0,0,.8); }
-  #ort { left: 50%; transform: translateX(-50%); top: calc(clamp(68px, 9vw, 94px) + env(safe-area-inset-top, 0px)); font: 400 15px var(--schild); letter-spacing: .08em; opacity: .9; white-space: nowrap; }
+  /* Kartenname als weißes Schild direkt unter dem weißen Gorilla-Kreis */
+  #ort { left: 50%; transform: translateX(-50%); top: calc(clamp(56px, 7.4vw, 76px) + env(safe-area-inset-top, 0px)); font: 400 14px var(--schild); letter-spacing: .08em; white-space: nowrap; background: rgba(255,255,255,.92); color: #1d1712; padding: 3px 14px 2px; border-radius: 999px; box-shadow: 0 2px 8px rgba(0,0,0,.35); }
   #meldung { top: 30%; left: 0; right: 0; text-align: center; font: 400 clamp(22px, 3.6vw, 36px) var(--schild); letter-spacing: .05em; transition: opacity .4s; padding-inline: 16px; }
   #liste { position: fixed; z-index: 6; left: 50%; top: 50%; transform: translate(-50%, -50%); background: rgba(14, 11, 8, .9); border: 2px solid var(--linie); border-radius: 14px; padding: 16px 22px; min-width: min(320px, 90vw); display: grid; gap: 8px; }
   #liste h2 { margin: 0; font: 400 19px var(--schild); letter-spacing: .06em; color: var(--gold); }
@@ -149,6 +159,10 @@
   <button class="taste rund gross" id="tShift" data-taste="shift" aria-label="Sprinten">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M12 3 3 12h5v8h8v-8h5z"/></svg>
   </button>
+  <button class="taste" id="tStumm" aria-label="Mikrofon an – antippen für stumm">
+    <svg class="an" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/></svg>
+    <svg class="stumm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7M4 4l16 16"/></svg>
+  </button>
   <button class="taste" id="tTastatur" data-taste="computer" aria-label="Tastatur">
     <svg viewBox="0 0 32 22" fill="none" stroke="currentColor" stroke-width="2"><rect x="1.5" y="1.5" width="29" height="19" rx="3"/><path d="M6 7h2M11 7h2M16 7h2M21 7h2M26 7h0M6 11.5h2M11 11.5h2M16 11.5h2M21 11.5h2M9 16h14" stroke-linecap="round"/></svg>
   </button>
@@ -167,7 +181,7 @@
 <div id="liste" hidden>
   <h2>SPIELER IM RAUM</h2>
   <div id="listeName" style="font-weight:800">DU</div>
-  <p>In der Vorschau bist du allein. In der App triffst du hier echte Spieler, oder deine Freunde über einen Raum-Code am Computer.</p>
+  <p id="listeAndere">Noch niemand da. Wer denselben Raum-Code und dieselbe Karte hat, taucht hier auf.</p>
 </div>
 <div id="quer">Bitte quer halten</div>
 
@@ -183,9 +197,17 @@
     <button type="button" class="gast" id="loginGast">ALS GAST SPIELEN</button>
   </form>
 </section>
+<section id="stimmeFrage" hidden>
+  <div class="kasten">
+    <h2>STIMME ERLAUBEN?</h2>
+    <p>Mit Stimme kannst du mit den anderen Spielern reden. Je näher jemand ist, desto lauter hörst du ihn. Mit dem Mikrofon-Knopf schaltest du jederzeit stumm.</p>
+    <button class="haupt" id="stimmeJa">ERLAUBEN</button>
+    <button class="gast" id="stimmeNein">NICHT ERLAUBEN</button>
+  </div>
+</section>
 <section id="titel">
   <div style="display:flex;align-items:center;gap:18px"><div class="titelbild"><svg viewBox="0 0 64 64" aria-hidden="true"><defs><radialGradient id="gF" cx=".5" cy=".38" r=".62"><stop offset="0" stop-color="#9a8a7e"/><stop offset="1" stop-color="#56493f"/></radialGradient><radialGradient id="gK" cx=".5" cy=".3" r=".7"><stop offset="0" stop-color="#4c443f"/><stop offset="1" stop-color="#1a1716"/></radialGradient></defs><path fill="url(#gK)" d="M32 2c7 0 12 4 14 10 6 2 11 8 12 15 2 2 3 5 2 8-1 2-2 3-4 3-2 11-11 22-24 23C19 60 10 49 8 38c-2 0-3-1-4-3-1-3 0-6 2-8 1-7 6-13 12-15 2-6 7-10 14-10z"/><path fill="url(#gF)" d="M32 18c8 0 15 2 18 6 3 4 2 10 0 15-2 9-9 16-18 16s-16-7-18-16c-2-5-3-11 0-15 3-4 10-6 18-6z"/><path fill="#1a1716" d="M11 27c5-6 13-8 21-6 8-2 16 0 21 6-2 2-5 3-8 3-4 0-8-2-13-2s-9 2-13 2c-3 0-6-1-8-3z"/><ellipse cx="23.5" cy="31.5" rx="3.4" ry="2.4" fill="#0c0807"/><ellipse cx="40.5" cy="31.5" rx="3.4" ry="2.4" fill="#0c0807"/><circle cx="23.5" cy="31.6" r="1.5" fill="#5c3416"/><circle cx="40.5" cy="31.6" r="1.5" fill="#5c3416"/><circle cx="24.2" cy="31" r=".6" fill="#f2e6d8"/><circle cx="41.2" cy="31" r=".6" fill="#f2e6d8"/><path fill="#3b322d" d="M32 31c3 0 5 3 7 6 2 2 3 4 2 6-1 2-5 2-9 2s-8 0-9-2c-1-2 0-4 2-6 2-3 4-6 7-6z"/><ellipse cx="28" cy="42" rx="2.6" ry="1.9" fill="#0b0909"/><ellipse cx="36" cy="42" rx="2.6" ry="1.9" fill="#0b0909"/><path fill="#1a1716" d="M20 47c4 4 8 5 12 5s8-1 12-5c-3 6-7 8-12 8s-9-2-12-8z"/><path stroke="#0b0909" stroke-width="1.5" fill="none" stroke-linecap="round" d="M24 49c5 2 11 2 16 0"/></svg></div><h1>AFFEN-TAG</h1></div>
-  <p class="unter" style="color:var(--gold)">VORSCHAU VERSION 18 · Laden mit Accessoires · Steine fürs Fangen · Farbe kostenlos</p>
+  <p class="unter" style="color:var(--gold)">VORSCHAU VERSION 19 · Mitspieler und Voice-Chat · schneller klettern</p>
   <p id="angemeldet"></p>
   <p class="unter">Klettern nur mit den Armen. Diese Vorschau zeigt die Welten und die Steuerung der App. Echte Mitspieler, Fangen und der Laden sind in der iPhone- und iPad-App.</p>
   <div class="hinweis">
@@ -244,13 +266,14 @@
     </div>
     <div class="seite" data-seite="info" hidden>
       <p>LINKER STICK / WASD: LAUFEN. GEGEN STAMM ODER WAND: HOCHKLETTERN, LOSLASSEN = HÄNGEN.<br>RECHTER STICK / MAUS / PFEILE: UMSCHAUEN. LEERTASTE / A: SPRINGEN MIT SCHWUNG. SHIFT / LT: SPRINTEN.<br>E / RT: FESTHALTEN. R / B: ZURÜCK ZUM START. F / X: TASCHENLAMPE. TAB: SPIELER.</p>
-      <p>IN DER VORSCHAU BIST DU ALLEIN. RAUM, MODUS UND MITSPIELER FUNKTIONIEREN IN DER APP.</p>
+      <p>MITSPIELER: WER DENSELBEN RAUM-CODE UND DIESELBE KARTE HAT, IST BEI DIR. OHNE CODE SPIELST DU IM ÖFFENTLICHEN RAUM. MIKROFON-KNOPF RECHTS = STUMM AN/AUS.</p>
     </div>
     <button class="tbtn" id="pcZu">SCHLIESSEN</button>
   </div>
 </section>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/objects/Sky.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/objects/Reflector.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/geometries/RoundedBoxGeometry.js"></script>
@@ -672,7 +695,7 @@ class Affe {
       return los(vorwaerts ? n.clone().multiplyScalar(3.4).add(v(0, 3.6, 0)) : v(0, 0, 0));
     }
     this.wandWeg = w;
-    const steigen = vorwaerts ? 2.6 * Math.min(1, mag * 1.2) * Math.sqrt(G / 2.6) : 0;
+    const steigen = vorwaerts ? 4.2 * Math.min(1, mag * 1.2) * Math.sqrt(G / 2.6) : 0;
     this.kletterVel = v(0, steigen, 0).addScaledVector(n, (w - .5 * G) * 5);
     // Arme: eine Hand hält und zieht nach unten, die andere greift oben neu – passend zum Tempo
     if (steigen > 0) this.kletterPhase += dt * steigen * .62 / (1.25 * G);
@@ -1784,6 +1807,223 @@ function baueKosmetik(id) {
   g.traverse(o => { if (o.isMesh) o.castShadow = false; });
   return g;
 }
+// ---------- Mitspieler und Voice-Chat ----------
+// Spieler im selben Raum (Raum-Code am Computer, sonst öffentlich) und auf derselben Karte verbinden sich
+// direkt miteinander (WebRTC über PeerJS). Jeder bekommt einen von 12 Plätzen: affentag1-<raum>-<karte>-<platz>.
+// Stimmen werden nach Entfernung leiser (wie in Gorilla Tag). Stumm = du sendest nichts und hörst niemanden.
+const PEER_OPTIONEN = window.__peerOptionen || { debug: 0, config: { iceServers: [{ urls: "stun:stun.l.google.com:19302" }, { urls: "stun:stun1.l.google.com:19302" }] } };
+const PLAETZE = 12;
+const stimme = { gefragt: false, stream: null, stumm: false };
+const netz = { peer: null, schluessel: null, mitspieler: new Map(), versuch: 0, sendeTakt: 0 };
+
+// --- Frage beim Betreten: Stimme erlauben? ---
+function frageStimme() {
+  return new Promise(fertig => {
+    const box = document.getElementById("stimmeFrage");
+    box.hidden = false;
+    const zu = async erlauben => {
+      box.hidden = true;
+      if (erlauben) {
+        try {
+          stimme.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+          stimme.stumm = false;
+        } catch (_) { stimme.stream = null; stimme.stumm = true; zeige("MIKROFON NICHT ERLAUBT – DU BIST STUMM", 2.5); }
+      } else stimme.stumm = true;
+      stummAnzeigen(); fertig();
+    };
+    document.getElementById("stimmeJa").onclick = () => zu(true);
+    document.getElementById("stimmeNein").onclick = () => zu(false);
+  });
+}
+
+// --- Stumm-Knopf ---
+function stummAnzeigen() {
+  const k = document.getElementById("tStumm");
+  k.classList.toggle("aus", stimme.stumm);
+  k.setAttribute("aria-label", stimme.stumm ? "Stumm – antippen zum Reden" : "Mikrofon an – antippen für stumm");
+  if (stimme.stream) stimme.stream.getAudioTracks().forEach(t => { t.enabled = !stimme.stumm; });
+}
+async function stummUmschalten() {
+  if (stimme.stumm && !stimme.stream) {
+    // Noch kein Mikrofon: jetzt fragen
+    try { stimme.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } }); }
+    catch (_) { zeige("MIKROFON NICHT ERLAUBT", 2); return; }
+    // Bereits laufende Gespräche bekommen jetzt die echte Stimme
+    for (const m of netz.mitspieler.values()) if (m.anruf && m.anruf.peerConnection) {
+      const sender = m.anruf.peerConnection.getSenders().find(s => s.track && s.track.kind === "audio");
+      if (sender) sender.replaceTrack(stimme.stream.getAudioTracks()[0]);
+    }
+  }
+  stimme.stumm = !stimme.stumm;
+  stummAnzeigen();
+  zeige(stimme.stumm ? "STUMM – NIEMAND HÖRT DICH, DU HÖRST NIEMANDEN" : "MIKROFON AN", 2);
+}
+
+/** Was wir senden: das Mikrofon oder (ohne Mikrofon) eine stille Spur, damit wir trotzdem hören können */
+function sendeStream() {
+  if (stimme.stream) return stimme.stream;
+  if (!stimme.leer) { const ziel = ac.createMediaStreamDestination(); stimme.leer = ziel.stream; }
+  return stimme.leer;
+}
+
+// --- Raum betreten / verlassen ---
+function netzKarte(kartenId) {
+  if (typeof Peer === "undefined") return; // ohne Netz (z. B. in der Claude-Vorschau) einfach allein
+  const raum = (pc.raum || "OEFFENTLICH").replace(/[^A-Z0-9]/gi, "").toUpperCase() || "OEFFENTLICH";
+  const schluessel = `affentag1-${raum}-${kartenId}`;
+  if (schluessel === netz.schluessel) return;
+  netzVerlassen();
+  netz.schluessel = schluessel;
+  platzBelegen(0);
+}
+function netzVerlassen() {
+  for (const id of [...netz.mitspieler.keys()]) mitspielerWeg(id);
+  if (netz.peer) { try { netz.peer.destroy(); } catch (_) {} }
+  netz.peer = null; netz.schluessel = null;
+  listeAktualisieren();
+}
+function platzBelegen(n) {
+  if (n >= PLAETZE) { zeige("RAUM IST VOLL", 2); return; }
+  const schluessel = netz.schluessel;
+  const p = new Peer(`${schluessel}-${n}`, PEER_OPTIONEN);
+  p.on("open", () => {
+    if (netz.schluessel !== schluessel) { p.destroy(); return; }
+    netz.peer = p;
+    // Alle anderen Plätze anklingeln – wer da ist, antwortet
+    for (let i = 0; i < PLAETZE; i++) if (i !== n) verbinden(`${schluessel}-${i}`);
+  });
+  p.on("error", e => {
+    if (e.type === "unavailable-id") { p.destroy(); if (netz.schluessel === schluessel) platzBelegen(n + 1); }
+    else if (e.type === "peer-unavailable") { /* Platz ist frei – kein Problem */ }
+    else if (e.type === "network" || e.type === "server-error" || e.type === "socket-error") zeige("KEINE VERBINDUNG ZU ANDEREN SPIELERN", 2.5);
+  });
+  p.on("connection", d => datenKanal(d));
+  p.on("call", anruf => { anruf.answer(sendeStream()); anrufVerfolgen(anruf); });
+  p.on("disconnected", () => { if (netz.peer === p && !p.destroyed) try { p.reconnect(); } catch (_) {} });
+}
+function verbinden(id) {
+  if (!netz.peer || netz.mitspieler.has(id)) return;
+  // Wer schon da ist, wird angeklingelt; leere Plätze melden sich nicht
+  datenKanal(netz.peer.connect(id, { serialization: "json" }));
+  anrufVerfolgen(netz.peer.call(id, sendeStream()));
+}
+
+// --- Mitspieler: Daten (Position, Hände, Name, Farbe, Accessoires) ---
+function mitspieler(id) {
+  let m = netz.mitspieler.get(id);
+  if (!m) { m = { id, zustand: null, avatar: null, daten: null, anruf: null, ton: null }; netz.mitspieler.set(id, m); }
+  return m;
+}
+function datenKanal(d) {
+  if (!d) return;
+  d.on("open", () => { mitspieler(d.peer).daten = d; listeAktualisieren(); zeige("EIN SPIELER IST DA", 1.5); });
+  d.on("data", z => { if (z && z.p) { const m = mitspieler(d.peer); m.zustand = z; m.zuletzt = performance.now(); } });
+  d.on("close", () => mitspielerWeg(d.peer));
+  d.on("error", () => {});
+}
+function anrufVerfolgen(anruf) {
+  if (!anruf) return;
+  // Erst eintragen, wenn wirklich jemand antwortet (leere Plätze bleiben leer)
+  anruf.on("stream", s => { const m = mitspieler(anruf.peer); m.anruf = anruf; tonAnschliessen(m, s); });
+  anruf.on("close", () => {});
+  anruf.on("error", () => {});
+}
+function tonAnschliessen(m, s) {
+  if (m.ton) return;
+  // Manche Browser spielen WebRTC-Ton nur ab, wenn er an einem (stummen) Audio-Element hängt
+  const el = new Audio(); el.srcObject = s; el.muted = true; el.play().catch(() => {});
+  const quelle = ac.createMediaStreamSource(s), laut = ac.createGain(); laut.gain.value = 0;
+  quelle.connect(laut).connect(ac.destination);
+  m.ton = { el, quelle, laut };
+}
+function mitspielerWeg(id) {
+  const m = netz.mitspieler.get(id); if (!m) return;
+  if (m.avatar) scene.remove(m.avatar.gruppe);
+  if (m.ton) { try { m.ton.quelle.disconnect(); m.ton.laut.disconnect(); m.ton.el.srcObject = null; } catch (_) {} }
+  try { m.daten && m.daten.close(); m.anruf && m.anruf.close(); } catch (_) {}
+  netz.mitspieler.delete(id);
+  listeAktualisieren();
+}
+function listeAktualisieren() {
+  const l = document.getElementById("listeAndere"); if (!l) return;
+  const namen = [...netz.mitspieler.values()].filter(m => m.zustand).map(m => m.zustand.n);
+  l.textContent = namen.length ? namen.join(" · ") : "Noch niemand da. Wer denselben Raum-Code und dieselbe Karte hat, taucht hier auf.";
+}
+
+// --- Gorillas der anderen ---
+function avatarBauen(z) {
+  const fell = new THREE.MeshStandardMaterial({ roughness: .88, flatShading: true }), hand = new THREE.MeshStandardMaterial({ roughness: .8, flatShading: true });
+  const gruppe = new THREE.Group(), koerperA = gorillaKoerper(fell, hautMat); koerperA.visible = true; gruppe.add(koerperA);
+  const glied = (unten, oben) => { const geo = new THREE.CylinderGeometry(oben, unten, 1, 7, 1); geo.translate(0, .5, 0); return geo; };
+  const arme = [0, 1].map(i => {
+    const ober = new THREE.Mesh(glied(.07, .056), fell), unter = new THREE.Mesh(glied(.052, .062), fell), h = gorillaHand(i === 0, hand);
+    gruppe.add(ober, unter, h); return { ober, unter, hand: h };
+  });
+  const schild = namensSchild(z.n);
+  gruppe.add(schild);
+  scene.add(gruppe);
+  return { gruppe, koerper: koerperA, arme, fell, hand, schild, name: z.n, farbe: "", hut: null, gesicht: null, hutObj: null, gesichtObj: null };
+}
+function namensSchild(text) {
+  const c = document.createElement("canvas"); c.width = 256; c.height = 64; const x = c.getContext("2d");
+  x.fillStyle = "rgba(0,0,0,.55)"; x.fillRect(0, 8, 256, 48); x.fillStyle = "#fff"; x.font = "800 32px Nunito, sans-serif"; x.textAlign = "center"; x.fillText(text, 128, 44);
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), depthTest: false, transparent: true }));
+  s.scale.set(1.2, .3, 1); s.renderOrder = 20; return s;
+}
+const _a = v(0, 0, 0), _b = v(0, 0, 0);
+function avatareStellen(dt) {
+  for (const m of netz.mitspieler.values()) {
+    const z = m.zustand; if (!z) continue;
+    if (!m.avatar) { m.avatar = avatarBauen(z); listeAktualisieren(); }
+    const A = m.avatar, g = z.s || 2.6;
+    if (A.name !== z.n) { A.gruppe.remove(A.schild); A.schild = namensSchild(z.n); A.gruppe.add(A.schild); A.name = z.n; listeAktualisieren(); }
+    if (A.farbe !== z.f) { A.farbe = z.f; A.fell.color.set(z.f); A.hand.color.set(z.f).multiplyScalar(.6); }
+    for (const art of ["hut", "gesicht"]) if (A[art] !== (z[art] || null)) {
+      if (A[art + "Obj"]) A.koerper.remove(A[art + "Obj"]);
+      A[art] = z[art] || null; A[art + "Obj"] = A[art] ? baueKosmetik(A[art]) : null;
+      if (A[art + "Obj"]) A.koerper.add(A[art + "Obj"]);
+    }
+    // weich zur gemeldeten Position gleiten
+    const k = Math.min(1, dt * 12);
+    _a.set(z.p[0], z.p[1], z.p[2]);
+    A.koerper.position.lerp(_a, k); A.koerper.rotation.y += Math.atan2(Math.sin(z.g - A.koerper.rotation.y), Math.cos(z.g - A.koerper.rotation.y)) * k;
+    A.koerper.scale.setScalar(g);
+    A.schild.position.copy(A.koerper.position).add(v(0, .55 * g, 0));
+    for (let i = 0; i < 2; i++) {
+      const arm = A.arme[i], h = z.h[i];
+      _b.set(h[0], h[1], h[2]);
+      const schulter = A.koerper.position.clone().add(drehY(v(i ? .24 : -.24, -.2, .02).multiplyScalar(g), A.koerper.rotation.y));
+      const weg = _b.clone().sub(schulter), ell = schulter.clone().addScaledVector(weg, .5).add(v(0, -.12 * g, 0));
+      setzeGlied(arm.ober, schulter, ell); setzeGlied(arm.unter, ell, _b);
+      arm.hand.position.copy(_b); arm.hand.rotation.set(0, A.koerper.rotation.y, 0); arm.hand.scale.setScalar(1.6 * g);
+    }
+    // Stimme: je weiter weg, desto leiser; stumm = niemanden hören
+    if (m.ton) {
+      const d = A.koerper.position.distanceTo(ich.pos), laut = stimme.stumm ? 0 : klemm(1 - (d - 3) / 30, 0, 1);
+      m.ton.laut.gain.setTargetAtTime(laut, ac.currentTime, .05);
+    }
+    if (performance.now() - (m.zuletzt || 0) > 8000) mitspielerWeg(m.id);
+  }
+}
+function zustandSenden(dt) {
+  netz.sendeTakt -= dt;
+  if (netz.sendeTakt > 0 || !netz.peer) return;
+  netz.sendeTakt = .08;
+  const r = x => Math.round(x * 100) / 100;
+  const z = {
+    n: pc.name, f: "#" + fellMat.color.getHexString(), s: GROESSE, g: r(ich.gier),
+    p: [r(ich.pos.x), r(ich.pos.y), r(ich.pos.z)], h: ich.h.map(h => [r(h.pos.x), r(h.pos.y), r(h.pos.z)]),
+    hut: laden.hut, gesicht: laden.gesicht,
+  };
+  for (const m of netz.mitspieler.values()) if (m.daten && m.daten.open) try { m.daten.send(z); } catch (_) {}
+}
+function netzTakt(dt) {
+  if (!titel.hidden) return;
+  zustandSenden(dt);
+  avatareStellen(dt);
+}
+document.getElementById("tStumm").addEventListener("click", stummUmschalten);
+addEventListener("pagehide", netzVerlassen);
 
 // ---------- Bühne: Renderer, Himmel, Licht ----------
 const canvas = document.getElementById("welt");
@@ -1869,6 +2109,8 @@ function lade(id) {
   blickN = id === "stumpf" ? grad(-4) : 0;
   document.getElementById("ort").textContent = k.name.toUpperCase();
   zeige(k.name.toUpperCase(), 2.2);
+  // Andere Karte = anderer Raum für Mitspieler und Stimmen
+  if (titel.hidden && stimme.gefragt) netzKarte(id);
 }
 
 // ---------- Klang ----------
@@ -2084,7 +2326,7 @@ if (eingeloggt) angemeldetZeigen(); else { login.hidden = false; }
 const groesseSetzen = g => { pc.groesse = Math.round(klemm(g, 1, 3.6) * 10) / 10; setzeGroesse(pc.groesse); pcSpeichern(); pcAnzeigen(); };
 document.getElementById("gMinus").onclick = () => groesseSetzen(pc.groesse - .1);
 document.getElementById("gPlus").onclick = () => groesseSetzen(pc.groesse + .1);
-document.getElementById("pcRaumOk").onclick = () => { pc.raum = raumFeld.value.trim().toUpperCase(); raumFeld.value = ""; pcSpeichern(); pcAnzeigen(); };
+document.getElementById("pcRaumOk").onclick = () => { pc.raum = raumFeld.value.trim().toUpperCase(); raumFeld.value = ""; pcSpeichern(); pcAnzeigen(); if (stimme.gefragt) netzKarte(karte); };
 ["INFEKTION", "FANGEN", "JAGD", "FARBSCHLACHT", "LOCKER"].forEach(m => {
   const b = document.createElement("button"); b.textContent = m; b.onclick = () => { pc.modus = m; pcSpeichern(); pcAnzeigen(); };
   document.getElementById("pcModi").appendChild(b);
@@ -2103,6 +2345,9 @@ Object.entries(KARTEN).forEach(([id, k]) => {
     try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); ac.resume(); } catch (_) {}
     titel.hidden = true; steuerung.hidden = false;
     if (karte !== id) lade(id);
+    // Beim Betreten: Stimme erlauben? Danach Mitspieler im Raum suchen
+    const losNetz = () => netzKarte(id);
+    if (!stimme.gefragt) { stimme.gefragt = true; frageStimme().then(losNetz); } else losNetz();
   };
   kartenListe.appendChild(b);
 });
@@ -2192,6 +2437,7 @@ function takt(jetzt) {
   }
   if (titel.hidden && computer.hidden) {
     ich.steuere(dt, steuer, welt);
+    netzTakt(dt);
     for (const s of ich.schritt(dt, welt)) { klang(s.mat, s.staerke); if (navigator.vibrate) try { navigator.vibrate(8); } catch (_) {} }
     if (ich.pos.y < welt.boden) ich.reset(welt.start[0], ich.gier);
     for (const t of welt.tore) {
