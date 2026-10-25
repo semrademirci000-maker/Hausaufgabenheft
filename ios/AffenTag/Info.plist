@@ -8,5 +8,15 @@
 		<string>_affen-tag._tcp</string>
 		<string>_affen-tag._udp</string>
 	</array>
+	<!-- Spielen mit Controller (Xbox, PlayStation, MFi) -->
+	<key>GCSupportsControllerUserInteraction</key>
+	<true/>
+	<key>GCSupportedGameControllers</key>
+	<array>
+		<dict>
+			<key>ProfileName</key>
+			<string>ExtendedGamepad</string>
+		</dict>
+	</array>
 </dict>
 </plist>

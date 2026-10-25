@@ -40,6 +40,8 @@ final class AffeKnoten {
         fell.diffuse.contents = Texturen.bild(.fell)
         fell.diffuse.wrapS = .repeat
         fell.diffuse.wrapT = .repeat
+        // feines, gleichmäßiges Fell statt grober Zotteln
+        fell.diffuse.contentsTransform = SCNMatrix4MakeScale(5, 7, 1)
         haut.diffuse.contents = farbe(0.06, 0.055, 0.052)
         lava.diffuse.contents = farbe(1, 0.42, 0.08)
         lava.emission.contents = farbe(0.9, 0.25, 0.02)
@@ -92,21 +94,21 @@ final class AffeKnoten {
 
         for i in 0..<2 {
             // Oberarm und Unterarm (leicht konisch), dazwischen der Ellbogen
-            let ober = SCNCone(topRadius: 0.052, bottomRadius: 0.064, height: 1)
+            let ober = SCNCone(topRadius: 0.054, bottomRadius: 0.068, height: 1)
             ober.radialSegmentCount = 16
             ober.materials = [fell]
             let o = SCNNode(geometry: ober)
             wurzel.addChildNode(o)
             oberarme.append(o)
 
-            let unter = SCNCone(topRadius: 0.04, bottomRadius: 0.052, height: 1)
+            let unter = SCNCone(topRadius: 0.062, bottomRadius: 0.055, height: 1)
             unter.radialSegmentCount = 16
             unter.materials = [fell]
             let a = SCNNode(geometry: unter)
             wurzel.addChildNode(a)
             arme.append(a)
 
-            let e = SCNSphere(radius: 0.054)
+            let e = SCNSphere(radius: 0.058)
             e.segmentCount = 16
             e.materials = [fell]
             let en = SCNNode(geometry: e)

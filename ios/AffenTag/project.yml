@@ -17,6 +17,9 @@ targets:
       path: Info.plist
       properties:
         NSBonjourServices: [_affen-tag._tcp, _affen-tag._udp]
+        GCSupportsControllerUserInteraction: true
+        GCSupportedGameControllers:
+          - ProfileName: ExtendedGamepad
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: de.schulplaner.affentag

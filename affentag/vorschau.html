@@ -153,7 +153,7 @@
 
 <section id="titel">
   <div style="display:flex;align-items:center;gap:18px"><div class="titelbild"><svg viewBox="0 0 64 64" aria-hidden="true"><defs><radialGradient id="gF" cx=".5" cy=".38" r=".62"><stop offset="0" stop-color="#9a8a7e"/><stop offset="1" stop-color="#56493f"/></radialGradient><radialGradient id="gK" cx=".5" cy=".3" r=".7"><stop offset="0" stop-color="#4c443f"/><stop offset="1" stop-color="#1a1716"/></radialGradient></defs><path fill="url(#gK)" d="M32 2c7 0 12 4 14 10 6 2 11 8 12 15 2 2 3 5 2 8-1 2-2 3-4 3-2 11-11 22-24 23C19 60 10 49 8 38c-2 0-3-1-4-3-1-3 0-6 2-8 1-7 6-13 12-15 2-6 7-10 14-10z"/><path fill="url(#gF)" d="M32 18c8 0 15 2 18 6 3 4 2 10 0 15-2 9-9 16-18 16s-16-7-18-16c-2-5-3-11 0-15 3-4 10-6 18-6z"/><path fill="#1a1716" d="M11 27c5-6 13-8 21-6 8-2 16 0 21 6-2 2-5 3-8 3-4 0-8-2-13-2s-9 2-13 2c-3 0-6-1-8-3z"/><ellipse cx="23.5" cy="31.5" rx="3.4" ry="2.4" fill="#0c0807"/><ellipse cx="40.5" cy="31.5" rx="3.4" ry="2.4" fill="#0c0807"/><circle cx="23.5" cy="31.6" r="1.5" fill="#5c3416"/><circle cx="40.5" cy="31.6" r="1.5" fill="#5c3416"/><circle cx="24.2" cy="31" r=".6" fill="#f2e6d8"/><circle cx="41.2" cy="31" r=".6" fill="#f2e6d8"/><path fill="#3b322d" d="M32 31c3 0 5 3 7 6 2 2 3 4 2 6-1 2-5 2-9 2s-8 0-9-2c-1-2 0-4 2-6 2-3 4-6 7-6z"/><ellipse cx="28" cy="42" rx="2.6" ry="1.9" fill="#0b0909"/><ellipse cx="36" cy="42" rx="2.6" ry="1.9" fill="#0b0909"/><path fill="#1a1716" d="M20 47c4 4 8 5 12 5s8-1 12-5c-3 6-7 8-12 8s-9-2-12-8z"/><path stroke="#0b0909" stroke-width="1.5" fill="none" stroke-linecap="round" d="M24 49c5 2 11 2 16 0"/></svg></div><h1>AFFEN-TAG</h1></div>
-  <p class="unter" style="color:var(--gold)">VORSCHAU VERSION 14 · Arme im Stumpf wieder da · Spiegel größer und schärfer</p>
+  <p class="unter" style="color:var(--gold)">VORSCHAU VERSION 15 · Controller und Tastatur mit Maus · neue Arme · Gorilla im Spiegel neu</p>
   <p class="unter">Klettern nur mit den Armen. Diese Vorschau zeigt die Welten und die Steuerung der App. Echte Mitspieler, Fangen und der Laden sind in der iPhone- und iPad-App.</p>
   <div class="hinweis">
     <div><strong>LINKER STICK</strong>Laufen. Deine Hände setzen vorne auf und ziehen dich nach vorne.</div>
@@ -1494,7 +1494,7 @@ const KARTEN = {
 
 // ---------- Gorilla-Arme und -Hände ----------
 /** Arm als Drehkörper; das Fell franst am Rand leicht aus (keine glatten Rohre) */
-function armGeometrie(profil, zotteln = .1) {
+function armGeometrie(profil, zotteln = .03) {
   const pts = profil.map(([y, r]) => new THREE.Vector2(r, y));
   const geo = new THREE.LatheGeometry(pts, 20);
   const pos = geo.attributes.position, uv = geo.attributes.uv;
@@ -1504,7 +1504,7 @@ function armGeometrie(profil, zotteln = .1) {
     const zz = zotteln * (.5 + y * 1.1);
     const f = 1 + (rausch(a * 3.2 + 9, y * 9, 31) - .5) * zz * 2 + (rausch(a * 11, y * 26, 32) - .5) * zz * 1.4;
     pos.setXYZ(i, x * f, y, z * f);
-    uv.setXY(i, uv.getX(i) * 3, uv.getY(i) * 4);
+    uv.setXY(i, uv.getX(i) * 7, uv.getY(i) * 9);
   }
   geo.computeVertexNormals();
   return geo;
@@ -1512,12 +1512,12 @@ function armGeometrie(profil, zotteln = .1) {
 function baueArme(szene) {
   // Fell: echte Haarstruktur in der Spielerfarbe (Standard braun), Hände: dunkles, ledriges Grau
   const fell = fellTextur(), haut = TEX.haut();
-  const fellMat = new THREE.MeshStandardMaterial({ color: 0x4a3426, map: fell.map, normalMap: fell.normalMap, normalScale: new THREE.Vector2(1.1, 1.1), roughness: .95, envMapIntensity: .35 });
+  const fellMat = new THREE.MeshStandardMaterial({ color: 0x4a3426, map: fell.map, normalMap: fell.normalMap, normalScale: new THREE.Vector2(.55, .55), roughness: .92, envMapIntensity: .3 });
   const hautMat = new THREE.MeshStandardMaterial({ color: 0x070606, normalMap: haut.normalMap, normalScale: new THREE.Vector2(.5, .5), roughness: .75, envMapIntensity: .12 });
-  // Kräftiger Oberarm; Unterarm wird zum Handgelenk hin dicker (wie beim echten Gorilla), dort hängt das Fell zottelig über die Hand
-  const oberGeo = armGeometrie([[0, .074], [.25, .08], [.6, .072], [.9, .064], [1, .06]]);
-  const unterGeo = armGeometrie([[0, .062], [.2, .068], [.5, .075], [.78, .079], [.9, .084], [.97, .078], [1, .056]], .16);
-  const ellGeo = new THREE.SphereGeometry(.066, 18, 14);
+  // Schlanke, lange Arme mit feinem, gleichmäßigem Fell – Unterarm zum Handgelenk hin leicht kräftiger
+  const oberGeo = armGeometrie([[0, .068], [.25, .072], [.6, .064], [.9, .056], [1, .054]]);
+  const unterGeo = armGeometrie([[0, .055], [.25, .06], [.6, .062], [.85, .064], [.95, .062], [1, .05]], .045);
+  const ellGeo = new THREE.SphereGeometry(.058, 18, 14);
   const arme = [0, 1].map(i => {
     const ober = new THREE.Mesh(oberGeo, fellMat), unter = new THREE.Mesh(unterGeo, fellMat), ell = new THREE.Mesh(ellGeo, fellMat);
     [ober, unter, ell].forEach(m => { m.castShadow = true; m.frustumCulled = false; szene.add(m); });
@@ -1566,34 +1566,34 @@ function gorillaHand(links, fellMat, hautMat) {
 }
 /** Der eigene Gorilla-Körper: nur im Spiegel zu sehen */
 function gorillaKoerper(fellMat, hautMat) {
+  // Wie ein Gorilla-Tag-Affe: aufrechter Rumpf ohne Beine, Kopf direkt drauf, flaches dunkles Gesicht.
+  // Maße in Gorilla-Größe; der Boden liegt bei y = -0.32 (Körperradius).
   const k = new THREE.Group();
-  // Gesicht etwas heller als die Hände, damit man es im Spiegel gut erkennt
-  const gesichtMat = new THREE.MeshStandardMaterial({ color: 0x0f0c0a, normalMap: hautMat.normalMap, normalScale: new THREE.Vector2(.4, .4), roughness: .7 });
-  const dunkelMat = new THREE.MeshStandardMaterial({ color: 0x050404, roughness: .9 });
-  const augenMat = new THREE.MeshStandardMaterial({ color: 0x1e0f06, roughness: .08, metalness: .1 });
+  const gesichtMat = new THREE.MeshStandardMaterial({ color: 0x0d0b0a, normalMap: hautMat.normalMap, normalScale: new THREE.Vector2(.35, .35), roughness: .72 });
+  const dunkelMat = new THREE.MeshStandardMaterial({ color: 0x030303, roughness: .9 });
+  const augenMat = new THREE.MeshStandardMaterial({ color: 0x140a04, roughness: .06 });
   const glanzMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
   const teil = (geo, mat, x, y, z, sx = 1, sy = 1, sz = 1) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.scale.set(sx, sy, sz); k.add(m); return m; };
-  const kug = (r, seg = 28) => new THREE.SphereGeometry(r, seg, Math.round(seg * .75));
-  // Breite Brust, mächtige Schultern, runder Bauch
-  teil(kug(.4), fellMat, 0, -.42, .06, 1.15, 1.1, .85);
-  teil(kug(.24), fellMat, -.25, -.16, .05, 1, .85, .95); teil(kug(.24), fellMat, .25, -.16, .05, 1, .85, .95);
-  teil(kug(.2), gesichtMat, -.11, -.3, -.22, 1, .75, .35); teil(kug(.2), gesichtMat, .11, -.3, -.22, 1, .75, .35);
-  teil(kug(.26), fellMat, 0, -.62, -.08, 1.05, .9, .8);
-  // Kopf mit hohem Scheitelkamm
-  teil(kug(.2), fellMat, 0, .04, .04, 1.05, 1.05, 1);
-  teil(kug(.13), fellMat, 0, .18, .08, .75, 1, 1.15);
-  // Gesicht: Maske, dicker Brauenwulst, tiefe Augen mit Glanzpunkt, breite Nase, Maul
-  teil(kug(.15), gesichtMat, 0, -.01, -.085, 1.05, 1, .6);
-  teil(new THREE.CapsuleGeometry(.034, .17, 8, 16), dunkelMat, 0, .065, -.155).rotation.z = Math.PI / 2;
-  for (const x of [-.058, .058]) {
-    teil(kug(.026, 16), augenMat, x, .028, -.16);
-    teil(kug(.007, 8), glanzMat, x + .008, .036, -.183);
+  const kug = (r, seg = 32) => new THREE.SphereGeometry(r, seg, Math.round(seg * .75));
+  // Rumpf: unten breit auf dem Boden, oben runde Schultern
+  const rumpf = new THREE.LatheGeometry([[0, -.32], [.16, -.315], [.24, -.27], [.28, -.16], [.29, -.06], [.27, .0], [.2, .05], [.08, .07], [0, .07]].map(([r, y]) => new THREE.Vector2(r, y)), 40);
+  const uv = rumpf.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * 8, uv.getY(i) * 5);
+  teil(rumpf, fellMat, 0, 0, .03, 1, 1, .78);
+  // Kopf mit Scheitelkamm, direkt auf den Schultern
+  teil(kug(.15), fellMat, 0, .1, .0, 1, 1.02, 1);
+  teil(kug(.1), fellMat, 0, .2, .04, .7, .9, 1.1);
+  // Gesicht: flache Maske, Brauenwulst, Augen, breite Nase, Maul
+  teil(kug(.12), gesichtMat, 0, .07, -.075, 1, .95, .55);
+  teil(new THREE.CapsuleGeometry(.022, .13, 8, 16), dunkelMat, 0, .125, -.128).rotation.z = Math.PI / 2;
+  for (const x of [-.045, .045]) {
+    teil(kug(.018, 16), augenMat, x, .1, -.132);
+    teil(kug(.005, 8), glanzMat, x + .006, .106, -.148);
   }
-  teil(kug(.05), gesichtMat, 0, -.035, -.17, 1.25, .8, .7);
-  for (const x of [-.022, .022]) teil(kug(.016, 10), dunkelMat, x, -.042, -.205, 1, .7, .6);
-  teil(kug(.1), gesichtMat, 0, -.1, -.11, 1.15, .62, .8);
-  teil(new THREE.CapsuleGeometry(.007, .09, 4, 8), dunkelMat, 0, -.115, -.19).rotation.z = Math.PI / 2;
-  for (const x of [-.19, .19]) teil(kug(.045, 14), gesichtMat, x, .02, .04, .45, 1, .8);
+  teil(kug(.04), gesichtMat, 0, .055, -.14, 1.3, .8, .6);
+  for (const x of [-.018, .018]) teil(kug(.012, 10), dunkelMat, x, .048, -.163, 1, .7, .5);
+  teil(kug(.075), gesichtMat, 0, .0, -.1, 1.15, .6, .75);
+  teil(new THREE.CapsuleGeometry(.005, .07, 4, 8), dunkelMat, 0, -.008, -.155).rotation.z = Math.PI / 2;
+  for (const x of [-.15, .15]) teil(kug(.035, 14), gesichtMat, x, .09, .0, .45, 1, .8);
   k.traverse(o => { if (o.isMesh) o.castShadow = false; });
   k.visible = false;
   return k;
@@ -1601,7 +1601,7 @@ function gorillaKoerper(fellMat, hautMat) {
 const _m4 = new THREE.Matrix4(), _q = new THREE.Quaternion();
 function setzeGlied(mesh, a, b) {
   const d = b.clone().sub(a), l = Math.max(.02, d.length());
-  mesh.position.copy(a); mesh.scale.set(GROESSE, l, GROESSE);
+  mesh.position.copy(a); mesh.scale.set(GROESSE * .9, l, GROESSE * .9);
   mesh.quaternion.setFromUnitVectors(v(0, 1, 0), d.divideScalar(l));
 }
 function stelleArme(arme, ich, dt) {
@@ -1614,7 +1614,7 @@ function stelleArme(arme, ich, dt) {
     setzeGlied(A.ober, schulter, ell);
     const handgelenk = hp.clone().addScaledVector(dir, -.03 * GROESSE);
     setzeGlied(A.unter, ell, handgelenk);
-    A.ell.position.copy(ell); A.ell.scale.setScalar(GROESSE);
+    A.ell.position.copy(ell); A.ell.scale.setScalar(GROESSE * .9);
     A.hand.scale.setScalar(1.9 * GROESSE);
     // Handfläche liegt flach auf der Fläche (Boden, Wand, Ast), Finger zeigen nach vorne – so sieht man sie
     const oben = h.haftet ? h.hn.clone() : v(0, 1, 0);
@@ -1768,8 +1768,19 @@ function stickBewegen(S, e) {
   knauf.style.left = 35 + x * 35 + "%"; knauf.style.top = 35 + y * 35 + "%";
   S.setze(x, -y);
 }
+// Maus (Tastatur-Spieler): Klick sperrt den Mauszeiger, dann schaut die Maus herum. ESC gibt ihn wieder frei.
+let mausSperreGeht = true;
+document.addEventListener("pointerlockerror", () => { mausSperreGeht = false; });
+document.addEventListener("mousemove", e => {
+  if (document.pointerLockElement !== canvas || !titel.hidden) return;
+  blickG -= e.movementX * .0032; blickN = klemm(blickN - e.movementY * .0032, grad(-80), grad(80));
+});
 canvas.addEventListener("pointerdown", e => {
   if (!titel.hidden) return;
+  if (e.pointerType === "mouse" && mausSperreGeht && canvas.requestPointerLock) {
+    if (document.pointerLockElement !== canvas) try { const p = canvas.requestPointerLock(); if (p && p.catch) p.catch(() => { mausSperreGeht = false; }); } catch (_) { mausSperreGeht = false; }
+    return;
+  }
   const S = e.clientX < canvas.clientWidth / 2 ? sticks.links : sticks.rechts;
   if (S.id !== null) return;
   canvas.setPointerCapture(e.pointerId);
@@ -1918,19 +1929,56 @@ async function kartenBilder() {
 try { await kartenBilder(); } catch (_) {}
 lade("stumpf");
 document.getElementById("laden").textContent = "WÄHLE EINEN ORT";
+// ---------- Controller (Xbox, PlayStation, MFi …) ----------
+// Linker Stick laufen, rechter Stick umschauen, A springen, RT festhalten (E), LT sprinten,
+// B zurück (R), X Lampe (F), Y Hände hoch (1), Steuerkreuz 1–4, LB/RB Hand 4/2, View = TAB, Menü = ESC.
+const PAD_TASTEN = { 0: "leer", 1: "r", 2: "f", 3: "1", 4: "4", 5: "2", 6: "shift", 7: "e", 8: "tab", 9: "esc", 12: "1", 13: "3", 14: "4", 15: "2" };
+const padVorher = {};
+let padTitelWahl = 0, padTitelSperre = 0;
+function padLesen(dt) {
+  const aus = { lx: 0, ly: 0, rx: 0, ry: 0, da: false };
+  const pads = navigator.getGamepads ? [...navigator.getGamepads()].filter(Boolean) : [];
+  const tot = x => Math.abs(x) < .15 ? 0 : (x - Math.sign(x) * .15) / .85;
+  for (const p of pads) {
+    aus.da = true;
+    aus.lx = aus.lx || tot(p.axes[0] || 0); aus.ly = aus.ly || -tot(p.axes[1] || 0);
+    aus.rx = aus.rx || tot(p.axes[2] || 0); aus.ry = aus.ry || -tot(p.axes[3] || 0);
+    p.buttons.forEach((b, i) => {
+      const an = b.pressed || b.value > .5, id = p.index + ":" + i;
+      if (an === !!padVorher[id]) return; padVorher[id] = an;
+      if (!titel.hidden) {
+        // Kartenwahl: Steuerkreuz/Stick links-rechts wählen, A starten
+        const karten = [...document.querySelectorAll(".karte")];
+        if (an && (i === 14 || i === 15)) { padTitelWahl = (padTitelWahl + (i === 15 ? 1 : -1) + karten.length) % karten.length; karten[padTitelWahl].focus(); }
+        if (an && i === 0 && karten.length) karten[padTitelWahl].click();
+        return;
+      }
+      if (!computer.hidden && an && (i === 1 || i === 9)) { computer.hidden = true; return; }
+      if (PAD_TASTEN[i]) druck(PAD_TASTEN[i], an);
+    });
+  }
+  if (!titel.hidden && Math.abs(aus.lx) > .6) {
+    padTitelSperre -= dt;
+    if (padTitelSperre <= 0) { const karten = [...document.querySelectorAll(".karte")]; padTitelWahl = (padTitelWahl + Math.sign(aus.lx) + karten.length) % karten.length; karten[padTitelWahl].focus(); padTitelSperre = .35; }
+  } else padTitelSperre = 0;
+  return aus;
+}
+addEventListener("gamepadconnected", () => zeige("CONTROLLER VERBUNDEN", 2.5));
+
 let zuletzt = performance.now();
 function takt(jetzt) {
   const dt = Math.min(.05, (jetzt - zuletzt) / 1000); zuletzt = jetzt; zeit += dt;
   ANIMIERT.zeit.value = zeit;
   if (canvas.width !== Math.floor(canvas.clientWidth * renderer.getPixelRatio())) groesse();
   const kx = (tasten.d ? 1 : 0) - (tasten.a ? 1 : 0), ky = (tasten.w ? 1 : 0) - (tasten.s ? 1 : 0);
-  const steuer = { ...st, lx: st.lx || kx, ly: st.ly || ky };
+  const pad = padLesen(dt);
+  const steuer = { ...st, lx: st.lx || kx || pad.lx, ly: st.ly || ky || pad.ly };
   const pfeil = (tasten.arrowleft ? 1 : 0) - (tasten.arrowright ? 1 : 0);
   if (titel.hidden) {
     // Rechter Joystick: gemütlich umschauen
     const kurve = x => Math.sign(x) * Math.abs(x) ** 1.4; // kleine Ausschläge fein, voller Ausschlag schnell
-    ich.gier += blickG + (-kurve(st.rx) * 3.0 + pfeil * 2.2) * dt; blickG = 0;
-    blickN = klemm(blickN + (kurve(st.ry) * 1.9 + ((tasten.arrowup ? 1 : 0) - (tasten.arrowdown ? 1 : 0)) * 1.0) * dt, grad(-80), grad(80));
+    ich.gier += blickG + (-kurve(st.rx || pad.rx) * 3.0 + pfeil * 2.2) * dt; blickG = 0;
+    blickN = klemm(blickN + (kurve(st.ry || pad.ry) * 1.9 + ((tasten.arrowup ? 1 : 0) - (tasten.arrowdown ? 1 : 0)) * 1.0) * dt, grad(-80), grad(80));
   } else {
     ich.gier += dt * .06; blickG = 0;
   }

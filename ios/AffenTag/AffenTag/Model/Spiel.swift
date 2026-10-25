@@ -107,6 +107,7 @@ final class Spiel: ObservableObject {
         Affenkoerper.groesse = Float(einstellungen.groesse)
         hud.steine = einstellungen.steine
         klang.lautstaerke(einstellungen.lautstaerke)
+        geraete.meldung = { [weak self] text in self?.zeige(text, sekunden: 2) }
     }
 
     // MARK: - Bildschirme
@@ -164,6 +165,16 @@ final class Spiel: ObservableObject {
 
     /// Joysticks: links laufen, rechts umschauen (je −1…1, y nach oben).
     var eingabe = SteuerEingabe()
+    /// Controller und Hardware-Tastatur
+    private let geraete = Geraete()
+
+    /// Bildschirm-Steuerung plus Controller/Tastatur zusammen
+    private var wirksameEingabe: SteuerEingabe {
+        var e = eingabe
+        if e.lx == 0 && e.ly == 0 { e.lx = geraete.lx; e.ly = geraete.ly }
+        if e.rx == 0 && e.ry == 0 { e.rx = geraete.rx; e.ry = geraete.ry }
+        return e
+    }
 
     /// Eine Taste auf dem Bildschirm wurde gedrückt oder losgelassen.
     func taste(_ t: Taste, _ gedrueckt: Bool) {
@@ -240,12 +251,13 @@ final class Spiel: ObservableObject {
         zeit += dt
         let fdt = Float(dt)
 
+        for (t, an) in geraete.abfragen() { taste(t, an) }
         wendeBlickAn(fdt)
 
         // Du
         let lava = istLava(ich)
         let eingefroren = (affen[ich]?.eingefrorenBis ?? 0) > zeit
-        lokal.steuere(dt: fdt, eingabe: eingabe, welt: welt, eingefroren: eingefroren)
+        lokal.steuere(dt: fdt, eingabe: wirksameEingabe, welt: welt, eingefroren: eingefroren)
         let aufschlaege = lokal.schritt(dt: fdt, welt: welt, sprungFaktor: lava ? 1.3 : 1.1,
                                         maxTempo: lava ? 13 : 12, eingefroren: eingefroren)
         for a in aufschlaege {
@@ -310,8 +322,9 @@ final class Spiel: ObservableObject {
         let stick = 0.6 + Float(einstellungen.empfindlichkeit) * 0.1
         // Blick-Stick: kleine Ausschläge fein, voller Ausschlag schnell
         let kurve = { (x: Float) -> Float in x < 0 ? -pow(-x, 1.4) : pow(x, 1.4) }
-        if einstellungen.drehModus != .aus { blickGier -= kurve(eingabe.rx) * 3.0 * stick * dt }
-        if !einstellungen.gyro { blickNeigung = klemm(blickNeigung + kurve(eingabe.ry) * 1.9 * stick * dt, grad(-80), grad(80)) }
+        let e = wirksameEingabe
+        if einstellungen.drehModus != .aus { blickGier -= kurve(e.rx) * 3.0 * stick * dt }
+        if !einstellungen.gyro { blickNeigung = klemm(blickNeigung + kurve(e.ry) * 1.9 * stick * dt, grad(-80), grad(80)) }
         if einstellungen.gyro, let m = bewegung.deviceMotion {
             let g = V3(Float(m.gravity.x), Float(m.gravity.y), Float(m.gravity.z))
             let w = V3(Float(m.rotationRate.x), Float(m.rotationRate.y), Float(m.rotationRate.z))
