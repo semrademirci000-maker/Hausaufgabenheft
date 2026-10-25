@@ -50,8 +50,8 @@ final class Affenkoerper {
     static var radius: Float { 0.32 * groesse }
     static var armLaenge: Float { 0.92 * groesse }
     static var schulter: V3 { V3(0.13, -0.16, 0.05) * groesse }
-    static let ruheGier: Float = grad(9)
-    static let ruheNeigung: Float = grad(-12)
+    static let ruheGier: Float = grad(15)
+    static let ruheNeigung: Float = grad(-38)
 
     var position: V3
     var geschwindigkeit: V3 = .zero
@@ -427,7 +427,7 @@ final class Affenkoerper {
         if kletterSteuern(dt: dt, eingabe: e, staerke: staerke, mWelt: mWelt, welt: welt) { return }
         if staerke > 0.15 {
             // Schnelle Armzüge: zügig laufen, Sprinten noch schneller
-            phase += dt * (1.1 + 0.6 * staerke) * (e.sprint ? 1.3 : 1)
+            phase += dt * (1.4 + 0.8 * staerke) * (e.sprint ? 1.3 : 1)
         }
         for i in 0..<2 {
             let seite: Float = i == 0 ? -0.22 : 0.22
@@ -444,8 +444,8 @@ final class Affenkoerper {
             do {
                 // Laufen: kontrolliert am Boden, die Arme schwingen nur sichtbar mit
                 laeuft = true
-                laufZiel = mWelt * ((e.sprint ? 7.5 : 5) * staerke)
-                let th = zug ? grad(55 - 85 * t) : grad(-30 + 85 * t)
+                laufZiel = mWelt * ((e.sprint ? 10 : 7) * staerke)
+                let th = zug ? grad(38 - 70 * t) : grad(-32 + 70 * t)
                 let tief = cos(th) * (zug ? 1 : 1 - 0.5 * sin(.pi * t))
                 d = m * sin(th) + runter * tief
             }

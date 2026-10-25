@@ -40,7 +40,7 @@ final class AffeKnoten {
         fell.diffuse.contents = Texturen.bild(.fell)
         fell.diffuse.wrapS = .repeat
         fell.diffuse.wrapT = .repeat
-        haut.diffuse.contents = farbe(0.11, 0.1, 0.095)
+        haut.diffuse.contents = farbe(0.06, 0.055, 0.052)
         lava.diffuse.contents = farbe(1, 0.42, 0.08)
         lava.emission.contents = farbe(0.9, 0.25, 0.02)
         gesichtMat.diffuse.contents = farbe(0.85, 0.72, 0.58)
@@ -309,7 +309,7 @@ final class AffeKnoten {
             if !haelt { vor = simd_normalize(vor * 0.75 + richtung * 0.25) }
             let hand = haende[i]
             let gr = Affenkoerper.groesse
-            hand.simdScale = V3(repeating: 1.3 * gr)
+            hand.simdScale = V3(repeating: 1.6 * gr)
             ellbogen[i].simdScale = V3(repeating: gr * 0.85)
             hand.simdPosition = h + oben * (0.06 * gr) - vor * (0.04 * gr)
             hand.simdLook(at: a.position + hand.simdPosition + vor, up: oben, localFront: V3(0, 0, -1))

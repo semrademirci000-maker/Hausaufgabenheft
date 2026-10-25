@@ -51,7 +51,7 @@
   #tShift { left: calc(max(6vw, calc(env(safe-area-inset-left, 0px) + 20px)) + clamp(130px, 16vw, 176px)); bottom: max(5%, calc(env(safe-area-inset-bottom, 0px) + 8px)); }
   #oben { top: calc(10px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); display: flex; gap: clamp(14px, 4vw, 48px); align-items: center; }
   #tMenue { width: clamp(52px, 6.6vw, 70px); height: clamp(52px, 6.6vw, 70px); background: rgba(255,255,255,.92); color: #1d1712; border: 0; }
-  #tMenue svg { width: 80%; height: 80%; }
+  #tMenue svg { width: 96%; height: 96%; }
   .titelbild { width: clamp(70px, 10vw, 110px); }
   #tPunkte { left: max(3vw, calc(env(safe-area-inset-left, 0px) + 10px)); top: calc(10px + env(safe-area-inset-top, 0px)); }
   #tTastatur { right: max(3vw, calc(env(safe-area-inset-right, 0px) + 10px)); top: 16%; width: clamp(56px, 7vw, 76px); height: clamp(48px, 6vw, 64px); }
@@ -115,7 +115,7 @@
   <div id="oben">
     <button class="taste klein" data-taste="tab">TAB</button>
     <button class="taste rund" id="tMenue" data-taste="menue" aria-label="Karten">
-      <svg viewBox="0 0 64 64" aria-hidden="true"><defs><radialGradient id="gF" cx=".5" cy=".38" r=".62"><stop offset="0" stop-color="#6e645d"/><stop offset="1" stop-color="#352f2b"/></radialGradient><radialGradient id="gK" cx=".5" cy=".3" r=".7"><stop offset="0" stop-color="#36302c"/><stop offset="1" stop-color="#121010"/></radialGradient></defs><path fill="url(#gK)" d="M32 2c7 0 12 4 14 10 6 2 11 8 12 15 2 2 3 5 2 8-1 2-2 3-4 3-2 11-11 22-24 23C19 60 10 49 8 38c-2 0-3-1-4-3-1-3 0-6 2-8 1-7 6-13 12-15 2-6 7-10 14-10z"/><path fill="url(#gF)" d="M32 18c8 0 15 2 18 6 3 4 2 10 0 15-2 9-9 16-18 16s-16-7-18-16c-2-5-3-11 0-15 3-4 10-6 18-6z"/><path fill="#1a1716" d="M11 27c5-6 13-8 21-6 8-2 16 0 21 6-2 2-5 3-8 3-4 0-8-2-13-2s-9 2-13 2c-3 0-6-1-8-3z"/><ellipse cx="23.5" cy="31.5" rx="3.4" ry="2.4" fill="#0c0807"/><ellipse cx="40.5" cy="31.5" rx="3.4" ry="2.4" fill="#0c0807"/><circle cx="23.5" cy="31.6" r="1.5" fill="#5c3416"/><circle cx="40.5" cy="31.6" r="1.5" fill="#5c3416"/><circle cx="24.2" cy="31" r=".6" fill="#f2e6d8"/><circle cx="41.2" cy="31" r=".6" fill="#f2e6d8"/><path fill="#26211f" d="M32 31c3 0 5 3 7 6 2 2 3 4 2 6-1 2-5 2-9 2s-8 0-9-2c-1-2 0-4 2-6 2-3 4-6 7-6z"/><ellipse cx="28" cy="42" rx="2.6" ry="1.9" fill="#0b0909"/><ellipse cx="36" cy="42" rx="2.6" ry="1.9" fill="#0b0909"/><path fill="#1a1716" d="M20 47c4 4 8 5 12 5s8-1 12-5c-3 6-7 8-12 8s-9-2-12-8z"/><path stroke="#0b0909" stroke-width="1.5" fill="none" stroke-linecap="round" d="M24 49c5 2 11 2 16 0"/></svg>
+      <svg viewBox="0 0 64 64" aria-hidden="true"><defs><radialGradient id="gF" cx=".5" cy=".38" r=".62"><stop offset="0" stop-color="#9a8a7e"/><stop offset="1" stop-color="#56493f"/></radialGradient><radialGradient id="gK" cx=".5" cy=".3" r=".7"><stop offset="0" stop-color="#4c443f"/><stop offset="1" stop-color="#1a1716"/></radialGradient></defs><path fill="url(#gK)" d="M32 2c7 0 12 4 14 10 6 2 11 8 12 15 2 2 3 5 2 8-1 2-2 3-4 3-2 11-11 22-24 23C19 60 10 49 8 38c-2 0-3-1-4-3-1-3 0-6 2-8 1-7 6-13 12-15 2-6 7-10 14-10z"/><path fill="url(#gF)" d="M32 18c8 0 15 2 18 6 3 4 2 10 0 15-2 9-9 16-18 16s-16-7-18-16c-2-5-3-11 0-15 3-4 10-6 18-6z"/><path fill="#1a1716" d="M11 27c5-6 13-8 21-6 8-2 16 0 21 6-2 2-5 3-8 3-4 0-8-2-13-2s-9 2-13 2c-3 0-6-1-8-3z"/><ellipse cx="23.5" cy="31.5" rx="3.4" ry="2.4" fill="#0c0807"/><ellipse cx="40.5" cy="31.5" rx="3.4" ry="2.4" fill="#0c0807"/><circle cx="23.5" cy="31.6" r="1.5" fill="#5c3416"/><circle cx="40.5" cy="31.6" r="1.5" fill="#5c3416"/><circle cx="24.2" cy="31" r=".6" fill="#f2e6d8"/><circle cx="41.2" cy="31" r=".6" fill="#f2e6d8"/><path fill="#3b322d" d="M32 31c3 0 5 3 7 6 2 2 3 4 2 6-1 2-5 2-9 2s-8 0-9-2c-1-2 0-4 2-6 2-3 4-6 7-6z"/><ellipse cx="28" cy="42" rx="2.6" ry="1.9" fill="#0b0909"/><ellipse cx="36" cy="42" rx="2.6" ry="1.9" fill="#0b0909"/><path fill="#1a1716" d="M20 47c4 4 8 5 12 5s8-1 12-5c-3 6-7 8-12 8s-9-2-12-8z"/><path stroke="#0b0909" stroke-width="1.5" fill="none" stroke-linecap="round" d="M24 49c5 2 11 2 16 0"/></svg>
     </button>
     <button class="taste klein" data-taste="esc">ESC</button>
   </div>
@@ -152,8 +152,8 @@
 <div id="quer">Bitte quer halten</div>
 
 <section id="titel">
-  <div style="display:flex;align-items:center;gap:18px"><div class="titelbild"><svg viewBox="0 0 64 64" aria-hidden="true"><defs><radialGradient id="gF" cx=".5" cy=".38" r=".62"><stop offset="0" stop-color="#6e645d"/><stop offset="1" stop-color="#352f2b"/></radialGradient><radialGradient id="gK" cx=".5" cy=".3" r=".7"><stop offset="0" stop-color="#36302c"/><stop offset="1" stop-color="#121010"/></radialGradient></defs><path fill="url(#gK)" d="M32 2c7 0 12 4 14 10 6 2 11 8 12 15 2 2 3 5 2 8-1 2-2 3-4 3-2 11-11 22-24 23C19 60 10 49 8 38c-2 0-3-1-4-3-1-3 0-6 2-8 1-7 6-13 12-15 2-6 7-10 14-10z"/><path fill="url(#gF)" d="M32 18c8 0 15 2 18 6 3 4 2 10 0 15-2 9-9 16-18 16s-16-7-18-16c-2-5-3-11 0-15 3-4 10-6 18-6z"/><path fill="#1a1716" d="M11 27c5-6 13-8 21-6 8-2 16 0 21 6-2 2-5 3-8 3-4 0-8-2-13-2s-9 2-13 2c-3 0-6-1-8-3z"/><ellipse cx="23.5" cy="31.5" rx="3.4" ry="2.4" fill="#0c0807"/><ellipse cx="40.5" cy="31.5" rx="3.4" ry="2.4" fill="#0c0807"/><circle cx="23.5" cy="31.6" r="1.5" fill="#5c3416"/><circle cx="40.5" cy="31.6" r="1.5" fill="#5c3416"/><circle cx="24.2" cy="31" r=".6" fill="#f2e6d8"/><circle cx="41.2" cy="31" r=".6" fill="#f2e6d8"/><path fill="#26211f" d="M32 31c3 0 5 3 7 6 2 2 3 4 2 6-1 2-5 2-9 2s-8 0-9-2c-1-2 0-4 2-6 2-3 4-6 7-6z"/><ellipse cx="28" cy="42" rx="2.6" ry="1.9" fill="#0b0909"/><ellipse cx="36" cy="42" rx="2.6" ry="1.9" fill="#0b0909"/><path fill="#1a1716" d="M20 47c4 4 8 5 12 5s8-1 12-5c-3 6-7 8-12 8s-9-2-12-8z"/><path stroke="#0b0909" stroke-width="1.5" fill="none" stroke-linecap="round" d="M24 49c5 2 11 2 16 0"/></svg></div><h1>AFFEN-TAG</h1></div>
-  <p class="unter" style="color:var(--gold)">VORSCHAU VERSION 12 · schneller umschauen · neue Arme · neue Symbole</p>
+  <div style="display:flex;align-items:center;gap:18px"><div class="titelbild"><svg viewBox="0 0 64 64" aria-hidden="true"><defs><radialGradient id="gF" cx=".5" cy=".38" r=".62"><stop offset="0" stop-color="#9a8a7e"/><stop offset="1" stop-color="#56493f"/></radialGradient><radialGradient id="gK" cx=".5" cy=".3" r=".7"><stop offset="0" stop-color="#4c443f"/><stop offset="1" stop-color="#1a1716"/></radialGradient></defs><path fill="url(#gK)" d="M32 2c7 0 12 4 14 10 6 2 11 8 12 15 2 2 3 5 2 8-1 2-2 3-4 3-2 11-11 22-24 23C19 60 10 49 8 38c-2 0-3-1-4-3-1-3 0-6 2-8 1-7 6-13 12-15 2-6 7-10 14-10z"/><path fill="url(#gF)" d="M32 18c8 0 15 2 18 6 3 4 2 10 0 15-2 9-9 16-18 16s-16-7-18-16c-2-5-3-11 0-15 3-4 10-6 18-6z"/><path fill="#1a1716" d="M11 27c5-6 13-8 21-6 8-2 16 0 21 6-2 2-5 3-8 3-4 0-8-2-13-2s-9 2-13 2c-3 0-6-1-8-3z"/><ellipse cx="23.5" cy="31.5" rx="3.4" ry="2.4" fill="#0c0807"/><ellipse cx="40.5" cy="31.5" rx="3.4" ry="2.4" fill="#0c0807"/><circle cx="23.5" cy="31.6" r="1.5" fill="#5c3416"/><circle cx="40.5" cy="31.6" r="1.5" fill="#5c3416"/><circle cx="24.2" cy="31" r=".6" fill="#f2e6d8"/><circle cx="41.2" cy="31" r=".6" fill="#f2e6d8"/><path fill="#3b322d" d="M32 31c3 0 5 3 7 6 2 2 3 4 2 6-1 2-5 2-9 2s-8 0-9-2c-1-2 0-4 2-6 2-3 4-6 7-6z"/><ellipse cx="28" cy="42" rx="2.6" ry="1.9" fill="#0b0909"/><ellipse cx="36" cy="42" rx="2.6" ry="1.9" fill="#0b0909"/><path fill="#1a1716" d="M20 47c4 4 8 5 12 5s8-1 12-5c-3 6-7 8-12 8s-9-2-12-8z"/><path stroke="#0b0909" stroke-width="1.5" fill="none" stroke-linecap="round" d="M24 49c5 2 11 2 16 0"/></svg></div><h1>AFFEN-TAG</h1></div>
+  <p class="unter" style="color:var(--gold)">VORSCHAU VERSION 13 · schneller laufen · Hände näher und größer · helleres Gorilla-Symbol</p>
   <p class="unter">Klettern nur mit den Armen. Diese Vorschau zeigt die Welten und die Steuerung der App. Echte Mitspieler, Fangen und der Laden sind in der iPhone- und iPad-App.</p>
   <div class="hinweis">
     <div><strong>LINKER STICK</strong>Laufen. Deine Hände setzen vorne auf und ziehen dich nach vorne.</div>
@@ -561,7 +561,7 @@ function blattTextur(farbig) {
 // ---------- Arm-Fortbewegung (wie Model/Lokomotion.swift) ----------
 // Größe des Gorillas (am Computer einstellbar). Alle Maße wachsen mit.
 let GROESSE = 2.6, RADIUS = 0.32 * 2.6, ARM = 0.95 * 2.6, SCHULTER = v(0.24, -0.22, 0.06).multiplyScalar(2.6);
-const RUHE_G = grad(11), RUHE_N = grad(-14);
+const RUHE_G = grad(15), RUHE_N = grad(-38);
 function setzeGroesse(g) { GROESSE = g; RADIUS = .32 * g; ARM = .95 * g; SCHULTER = v(.24, -.22, .06).multiplyScalar(g); }
 class Affe {
   constructor() {
@@ -687,7 +687,7 @@ class Affe {
     const mWelt = drehY(m, this.gier);
     if (this.kletterSteuern(dt, st, mag, mWelt, welt)) return;
     // Schnelle Armzüge: Laufen ~9 m/s, Sprinten ~12 m/s (bei normaler Größe)
-    if (mag > 0.15) this.phase += dt * (1.1 + .6 * mag) * (st.sprint ? 1.3 : 1);
+    if (mag > 0.15) this.phase += dt * (1.4 + .8 * mag) * (st.sprint ? 1.3 : 1);
     for (let i = 0; i < 2; i++) {
       const seite = i ? .2 : -.2;
       if (this.schlag[i] > 0) { this.zeige(i, v(seite * .3, .05, -1), false); continue; }
@@ -698,9 +698,9 @@ class Affe {
       // Laufen: kontrolliert am Boden mit fester Geschwindigkeit (kein Wegfliegen).
       // Die Arme schwingen dabei sichtbar mit: vorne aufsetzen, nach hinten durchziehen.
       this.laeuft = true;
-      this.laufZiel = mWelt.clone().multiplyScalar((st.sprint ? 7.5 : 5) * mag);
+      this.laufZiel = mWelt.clone().multiplyScalar((st.sprint ? 10 : 7) * mag);
       const p = (this.phase + i * .5) % 1, zug = p < .55, t = zug ? p / .55 : (p - .55) / .45;
-      const th = zug ? grad(55 - 85 * t) : grad(-30 + 85 * t);
+      const th = zug ? grad(38 - 70 * t) : grad(-32 + 70 * t);
       const d = m.clone().multiplyScalar(Math.sin(th)).addScaledVector(runter, Math.cos(th) * (zug ? 1 : 1 - .5 * Math.sin(Math.PI * t)));
       d.x += seite;
       this.zeige(i, d, false);
@@ -772,7 +772,7 @@ class Affe {
         else this.vel.multiplyScalar(this.klettert ? .4 : 1.1);
         // Sprung: beide Hände haben sich kräftig vom Boden abgestoßen
         if (this.sprungStoss) { this.vel.y = Math.max(this.vel.y * 1.2, 5.3 * Math.sqrt(GROESSE)); this.sprungStoss = false; }
-        if (this.vel.length() > 9) this.vel.setLength(9);
+        if (this.vel.length() > 12) this.vel.setLength(12);
       }
       if (this.sprungStoss && this.sprungZeit <= 0) { this.vel.y = Math.max(this.vel.y * 1.2, 5.3 * Math.sqrt(GROESSE)); this.sprungStoss = false; }
       // Laufen: Geschwindigkeit weich auf das Ziel bringen (in der Luft nur wenig steuern)
@@ -1512,7 +1512,7 @@ function baueArme(szene) {
   // Fell: echte Haarstruktur in der Spielerfarbe (Standard braun), Hände: dunkles, ledriges Grau
   const fell = fellTextur(), haut = TEX.haut();
   const fellMat = new THREE.MeshStandardMaterial({ color: 0x4a3426, map: fell.map, normalMap: fell.normalMap, normalScale: new THREE.Vector2(1.1, 1.1), roughness: .95, envMapIntensity: .35 });
-  const hautMat = new THREE.MeshStandardMaterial({ color: 0x100f0e, normalMap: haut.normalMap, normalScale: new THREE.Vector2(.5, .5), roughness: .62, envMapIntensity: .3 });
+  const hautMat = new THREE.MeshStandardMaterial({ color: 0x070606, normalMap: haut.normalMap, normalScale: new THREE.Vector2(.5, .5), roughness: .75, envMapIntensity: .12 });
   // Kräftiger Oberarm; Unterarm wird zum Handgelenk hin dicker (wie beim echten Gorilla), dort hängt das Fell zottelig über die Hand
   const oberGeo = armGeometrie([[0, .074], [.25, .08], [.6, .072], [.9, .064], [1, .06]]);
   const unterGeo = armGeometrie([[0, .062], [.2, .068], [.5, .075], [.78, .079], [.9, .084], [.97, .078], [1, .056]], .16);
@@ -1592,7 +1592,7 @@ function gorillaKoerper(fellMat, hautMat) {
 const _m4 = new THREE.Matrix4(), _q = new THREE.Quaternion();
 function setzeGlied(mesh, a, b) {
   const d = b.clone().sub(a), l = Math.max(.02, d.length());
-  mesh.position.copy(a); mesh.scale.set(GROESSE * .8, l, GROESSE * .8);
+  mesh.position.copy(a); mesh.scale.set(GROESSE, l, GROESSE);
   mesh.quaternion.setFromUnitVectors(v(0, 1, 0), d.divideScalar(l));
 }
 function stelleArme(arme, ich, dt) {
@@ -1605,8 +1605,8 @@ function stelleArme(arme, ich, dt) {
     setzeGlied(A.ober, schulter, ell);
     const handgelenk = hp.clone().addScaledVector(dir, -.03 * GROESSE);
     setzeGlied(A.unter, ell, handgelenk);
-    A.ell.position.copy(ell); A.ell.scale.setScalar(GROESSE * .8);
-    A.hand.scale.setScalar(1.55 * GROESSE);
+    A.ell.position.copy(ell); A.ell.scale.setScalar(GROESSE);
+    A.hand.scale.setScalar(1.9 * GROESSE);
     // Handfläche liegt flach auf der Fläche (Boden, Wand, Ast), Finger zeigen nach vorne – so sieht man sie
     const oben = h.haftet ? h.hn.clone() : v(0, 1, 0);
     let vor = dir.clone().addScaledVector(oben, -dir.dot(oben));

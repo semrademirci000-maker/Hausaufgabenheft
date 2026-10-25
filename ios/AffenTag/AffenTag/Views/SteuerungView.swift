@@ -38,7 +38,7 @@ struct SteuerungView: View {
                     .position(x: 36, y: 26)
                 HStack(spacing: max(14, w * 0.04)) {
                     TasteView(taste: .tab, form: .eckig, groesse: CGSize(width: 56, height: 40)) { Text("TAB") }
-                    TasteView(taste: .logo, form: .rund, groesse: CGSize(width: 64, height: 64), hell: true) { Image("GorillaLogo").resizable().interpolation(.high).frame(width: 46, height: 46) }
+                    TasteView(taste: .logo, form: .rund, groesse: CGSize(width: 64, height: 64), hell: true) { Image("GorillaLogo").resizable().interpolation(.high).frame(width: 58, height: 58) }
                     TasteView(taste: .esc, form: .eckig, groesse: CGSize(width: 56, height: 40)) { Text("ESC") }
                 }
                 .position(x: w / 2, y: 34)
