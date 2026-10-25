@@ -57,6 +57,11 @@
   #tStumm { right: max(3vw, calc(env(safe-area-inset-right, 0px) + 10px)); top: calc(16% + clamp(58px, 7.4vw, 78px)); width: clamp(56px, 7vw, 76px); height: clamp(48px, 6vw, 64px); }
   #tStumm svg { width: 46%; height: 60%; } #tStumm .stumm { display: none; }
   #tStumm.aus { border-color: #ff6b5a; color: #ff6b5a; } #tStumm.aus .an { display: none; } #tStumm.aus .stumm { display: block; }
+  #mikroHilfe { position: fixed; inset: 0; z-index: 36; display: grid; place-items: center; padding: 16px; background: rgba(6,4,3,.72); }
+  #mikroHilfe .kasten { width: min(440px, 100%); padding: 24px; border-radius: 22px; background: rgba(28,21,15,.95); border: 2px solid rgba(243,199,122,.35); display: grid; gap: 12px; }
+  #mikroHilfe h2 { margin: 0; text-align: center; font: 400 clamp(24px, 5vw, 32px) var(--schild); color: var(--gold); }
+  #mikroHilfe p { margin: 0; font-size: 14px; line-height: 1.5; }
+  #mikroHilfe button { padding: 14px; border-radius: 14px; border: 0; font: 800 17px var(--text); background: var(--gold); color: #2a1c0e; cursor: pointer; }
   #stimmeFrage { position: fixed; inset: 0; z-index: 35; display: grid; place-items: center; padding: 16px; background: rgba(6,4,3,.72); }
   #stimmeFrage .kasten { width: min(400px, 100%); padding: 24px; border-radius: 22px; background: rgba(28,21,15,.95); border: 2px solid rgba(243,199,122,.35); text-align: center; display: grid; gap: 10px; }
   #stimmeFrage h2 { margin: 0; font: 400 clamp(26px, 5vw, 34px) var(--schild); letter-spacing: .06em; color: var(--gold); }
@@ -205,9 +210,16 @@
     <button class="gast" id="stimmeNein">NICHT ERLAUBEN</button>
   </div>
 </section>
+<section id="mikroHilfe" hidden>
+  <div class="kasten">
+    <h2>MIKROFON GEHT NICHT</h2>
+    <p id="mikroHilfeText" style="white-space: pre-line; text-align: left"></p>
+    <button class="haupt" id="mikroHilfeOk">OK</button>
+  </div>
+</section>
 <section id="titel">
   <div style="display:flex;align-items:center;gap:18px"><div class="titelbild"><svg viewBox="0 0 64 64" aria-hidden="true"><defs><radialGradient id="gF" cx=".5" cy=".38" r=".62"><stop offset="0" stop-color="#9a8a7e"/><stop offset="1" stop-color="#56493f"/></radialGradient><radialGradient id="gK" cx=".5" cy=".3" r=".7"><stop offset="0" stop-color="#4c443f"/><stop offset="1" stop-color="#1a1716"/></radialGradient></defs><path fill="url(#gK)" d="M32 2c7 0 12 4 14 10 6 2 11 8 12 15 2 2 3 5 2 8-1 2-2 3-4 3-2 11-11 22-24 23C19 60 10 49 8 38c-2 0-3-1-4-3-1-3 0-6 2-8 1-7 6-13 12-15 2-6 7-10 14-10z"/><path fill="url(#gF)" d="M32 18c8 0 15 2 18 6 3 4 2 10 0 15-2 9-9 16-18 16s-16-7-18-16c-2-5-3-11 0-15 3-4 10-6 18-6z"/><path fill="#1a1716" d="M11 27c5-6 13-8 21-6 8-2 16 0 21 6-2 2-5 3-8 3-4 0-8-2-13-2s-9 2-13 2c-3 0-6-1-8-3z"/><ellipse cx="23.5" cy="31.5" rx="3.4" ry="2.4" fill="#0c0807"/><ellipse cx="40.5" cy="31.5" rx="3.4" ry="2.4" fill="#0c0807"/><circle cx="23.5" cy="31.6" r="1.5" fill="#5c3416"/><circle cx="40.5" cy="31.6" r="1.5" fill="#5c3416"/><circle cx="24.2" cy="31" r=".6" fill="#f2e6d8"/><circle cx="41.2" cy="31" r=".6" fill="#f2e6d8"/><path fill="#3b322d" d="M32 31c3 0 5 3 7 6 2 2 3 4 2 6-1 2-5 2-9 2s-8 0-9-2c-1-2 0-4 2-6 2-3 4-6 7-6z"/><ellipse cx="28" cy="42" rx="2.6" ry="1.9" fill="#0b0909"/><ellipse cx="36" cy="42" rx="2.6" ry="1.9" fill="#0b0909"/><path fill="#1a1716" d="M20 47c4 4 8 5 12 5s8-1 12-5c-3 6-7 8-12 8s-9-2-12-8z"/><path stroke="#0b0909" stroke-width="1.5" fill="none" stroke-linecap="round" d="M24 49c5 2 11 2 16 0"/></svg></div><h1>AFFEN-TAG</h1></div>
-  <p class="unter" style="color:var(--gold)">VORSCHAU VERSION 19 · Mitspieler und Voice-Chat · schneller klettern</p>
+  <p class="unter" style="color:var(--gold)">VORSCHAU VERSION 20 · Mikrofon-Hilfe · Mitspieler und Voice-Chat</p>
   <p id="angemeldet"></p>
   <p class="unter">Klettern nur mit den Armen. Diese Vorschau zeigt die Welten und die Steuerung der App. Echte Mitspieler, Fangen und der Laden sind in der iPhone- und iPad-App.</p>
   <div class="hinweis">
@@ -1816,6 +1828,28 @@ const PLAETZE = 12;
 const stimme = { gefragt: false, stream: null, stumm: false };
 const netz = { peer: null, schluessel: null, mitspieler: new Map(), versuch: 0, sendeTakt: 0 };
 
+// --- Mikrofon holen (mit Ausweichversuch) und verständlich erklären, wenn es nicht geht ---
+async function mikroHolen() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw Object.assign(new Error("kein getUserMedia"), { name: "KeinMikro" });
+  try { return await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } }); }
+  catch (e) {
+    if (e && e.name === "NotAllowedError") throw e;
+    return await navigator.mediaDevices.getUserMedia({ audio: true }); // einfachere Anfrage für ältere Geräte
+  }
+}
+function mikroHilfe(e) {
+  const name = (e && e.name) || "Fehler", imFenster = window.self !== window.top;
+  let text;
+  if (imFenster) text = "Hier im eingebetteten Fenster darf das Spiel kein Mikrofon benutzen. Öffne den Spiel-Link direkt in Safari (oder vom Home-Bildschirm), dann klappt es.";
+  else if (name === "NotAllowedError" || name === "SecurityError") text = "Safari hat das Mikrofon für diese Seite gesperrt. So erlaubst du es:\n1. Tippe in Safari links in der Adressleiste auf „aA“ (bzw. das Seiten-Symbol) → Website-Einstellungen → Mikrofon → Erlauben.\n2. Oder: Einstellungen-App → Apps → Safari → Mikrofon → Fragen oder Erlauben.\n3. Spielst du vom Home-Bildschirm: App schließen und neu öffnen.\nDanach die Seite neu laden und wieder „Erlauben“ wählen.";
+  else if (name === "NotFoundError" || name === "KeinMikro") text = "Es wurde kein Mikrofon gefunden. Prüfe, ob ein Mikrofon da ist und keine andere App es gerade benutzt.";
+  else if (name === "NotReadableError" || name === "AbortError") text = "Das Mikrofon wird gerade von einer anderen App benutzt (z. B. ein Anruf oder FaceTime). Beende sie und tippe dann nochmal auf den Mikrofon-Knopf.";
+  else text = "Das Mikrofon konnte nicht gestartet werden (" + name + "). Lade die Seite neu und versuche es nochmal.";
+  document.getElementById("mikroHilfeText").textContent = text;
+  document.getElementById("mikroHilfe").hidden = false;
+}
+document.getElementById("mikroHilfeOk").onclick = () => { document.getElementById("mikroHilfe").hidden = true; };
+
 // --- Frage beim Betreten: Stimme erlauben? ---
 function frageStimme() {
   return new Promise(fertig => {
@@ -1825,9 +1859,11 @@ function frageStimme() {
       box.hidden = true;
       if (erlauben) {
         try {
-          stimme.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+          stimme.stream = await mikroHolen();
           stimme.stumm = false;
-        } catch (_) { stimme.stream = null; stimme.stumm = true; zeige("MIKROFON NICHT ERLAUBT – DU BIST STUMM", 2.5); }
+          // iPad: nach dem Mikrofon-Start kann der Ton kurz pausieren – wieder anwerfen
+          try { if (ac && ac.state !== "running") await ac.resume(); } catch (_) {}
+        } catch (e) { stimme.stream = null; stimme.stumm = true; mikroHilfe(e); }
       } else stimme.stumm = true;
       stummAnzeigen(); fertig();
     };
@@ -1846,8 +1882,8 @@ function stummAnzeigen() {
 async function stummUmschalten() {
   if (stimme.stumm && !stimme.stream) {
     // Noch kein Mikrofon: jetzt fragen
-    try { stimme.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } }); }
-    catch (_) { zeige("MIKROFON NICHT ERLAUBT", 2); return; }
+    try { stimme.stream = await mikroHolen(); }
+    catch (e) { mikroHilfe(e); return; }
     // Bereits laufende Gespräche bekommen jetzt die echte Stimme
     for (const m of netz.mitspieler.values()) if (m.anruf && m.anruf.peerConnection) {
       const sender = m.anruf.peerConnection.getSenders().find(s => s.track && s.track.kind === "audio");
