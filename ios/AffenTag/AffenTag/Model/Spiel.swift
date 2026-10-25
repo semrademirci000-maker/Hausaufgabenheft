@@ -89,6 +89,8 @@ final class Spiel: ObservableObject {
     private var rundeSendeTakt: Double = 0
     private var hudTakt: Double = 0
     private var belohnungTakt: Double = 0
+    /// Wie viele du in dieser Runde schon gefangen hast – jeder weitere Fang bringt mehr Steine
+    private var fangSerie = 0
     private var vogelTakt: Double = 3
     private var meldungBis: Double = 0
     private var notfallNah = false
@@ -428,6 +430,7 @@ final class Spiel: ObservableObject {
         let nameT = affen[t]?.name ?? "?"
         let nameO = affen[o]?.name ?? "?"
         if o == ich {
+            fangSerie = 0
             klang.gefangen()
             if einstellungen.vibration { haptikStark.impactOccurred() }
             switch runde.modus {
@@ -437,8 +440,11 @@ final class Spiel: ObservableObject {
             }
         } else if t == ich {
             klang.fangen()
-            einstellungen.steine += 2
-            zeige("\(nameO) GEFANGEN! +2 STEINE", sekunden: 1.5)
+            // Je mehr du fängst, desto mehr Steine: 5, 10, 15 … bis 40 pro Fang
+            fangSerie += 1
+            let lohn = min(5 * fangSerie, 40)
+            einstellungen.steine += lohn
+            zeige(fangSerie > 1 ? "\(nameO) GEFANGEN! \(fangSerie)ER-SERIE · +\(lohn) STEINE" : "\(nameO) GEFANGEN! +\(lohn) STEINE", sekunden: 1.8)
         } else {
             klang.fernFangen()
         }
@@ -538,13 +544,14 @@ final class Spiel: ObservableObject {
     }
 
     private func rundeBeendet() {
+        fangSerie = 0
         klang.rundeEnde()
         if runde.modus == .infektion {
             zeige("ALLE SIND LAVA! NEUE RUNDE GLEICH …", sekunden: 4)
         } else if let s = runde.sieger {
             if s == ich {
-                einstellungen.steine += 10
-                zeige("DU HAST GEWONNEN! +10 STEINE", sekunden: 4)
+                einstellungen.steine += 25
+                zeige("DU HAST GEWONNEN! +25 STEINE", sekunden: 4)
             } else {
                 zeige("\(affen[s]?.name ?? "?") HAT GEWONNEN!", sekunden: 4)
             }

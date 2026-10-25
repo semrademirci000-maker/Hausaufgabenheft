@@ -112,6 +112,12 @@
   .reiterknopf { background: transparent; color: var(--terminal); border: 1.5px solid var(--terminal); font: 700 13px var(--mono); padding: 5px 9px; cursor: pointer; }
   .reiterknopf.an { background: var(--terminal); color: #000; }
   .seite { display: grid; gap: 10px; }
+  .seite .hinweistext { font-size: 12px; opacity: .85; margin: 0; }
+  .ladenliste { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; max-height: 46vh; overflow-y: auto; }
+  .ware { border: 1.5px solid var(--terminal); padding: 8px; display: grid; gap: 6px; font: 700 13px var(--mono); color: var(--terminal); }
+  .ware .preis { opacity: .8; font-size: 12px; }
+  .ware.traegt { background: rgba(77,255,122,.14); }
+  .ware .tbtn:disabled { opacity: .4; cursor: default; }
   .terminal input { background: #000; color: var(--terminal); border: 1.5px solid var(--terminal); font: 700 18px var(--mono); padding: 8px 10px; text-transform: uppercase; min-width: 0; }
   .liste { display: grid; gap: 6px; }
   .liste button { text-align: left; background: transparent; color: var(--terminal); border: 0; font: 700 15px var(--mono); padding: 4px 0; cursor: pointer; }
@@ -179,7 +185,7 @@
 </section>
 <section id="titel">
   <div style="display:flex;align-items:center;gap:18px"><div class="titelbild"><svg viewBox="0 0 64 64" aria-hidden="true"><defs><radialGradient id="gF" cx=".5" cy=".38" r=".62"><stop offset="0" stop-color="#9a8a7e"/><stop offset="1" stop-color="#56493f"/></radialGradient><radialGradient id="gK" cx=".5" cy=".3" r=".7"><stop offset="0" stop-color="#4c443f"/><stop offset="1" stop-color="#1a1716"/></radialGradient></defs><path fill="url(#gK)" d="M32 2c7 0 12 4 14 10 6 2 11 8 12 15 2 2 3 5 2 8-1 2-2 3-4 3-2 11-11 22-24 23C19 60 10 49 8 38c-2 0-3-1-4-3-1-3 0-6 2-8 1-7 6-13 12-15 2-6 7-10 14-10z"/><path fill="url(#gF)" d="M32 18c8 0 15 2 18 6 3 4 2 10 0 15-2 9-9 16-18 16s-16-7-18-16c-2-5-3-11 0-15 3-4 10-6 18-6z"/><path fill="#1a1716" d="M11 27c5-6 13-8 21-6 8-2 16 0 21 6-2 2-5 3-8 3-4 0-8-2-13-2s-9 2-13 2c-3 0-6-1-8-3z"/><ellipse cx="23.5" cy="31.5" rx="3.4" ry="2.4" fill="#0c0807"/><ellipse cx="40.5" cy="31.5" rx="3.4" ry="2.4" fill="#0c0807"/><circle cx="23.5" cy="31.6" r="1.5" fill="#5c3416"/><circle cx="40.5" cy="31.6" r="1.5" fill="#5c3416"/><circle cx="24.2" cy="31" r=".6" fill="#f2e6d8"/><circle cx="41.2" cy="31" r=".6" fill="#f2e6d8"/><path fill="#3b322d" d="M32 31c3 0 5 3 7 6 2 2 3 4 2 6-1 2-5 2-9 2s-8 0-9-2c-1-2 0-4 2-6 2-3 4-6 7-6z"/><ellipse cx="28" cy="42" rx="2.6" ry="1.9" fill="#0b0909"/><ellipse cx="36" cy="42" rx="2.6" ry="1.9" fill="#0b0909"/><path fill="#1a1716" d="M20 47c4 4 8 5 12 5s8-1 12-5c-3 6-7 8-12 8s-9-2-12-8z"/><path stroke="#0b0909" stroke-width="1.5" fill="none" stroke-linecap="round" d="M24 49c5 2 11 2 16 0"/></svg></div><h1>AFFEN-TAG</h1></div>
-  <p class="unter" style="color:var(--gold)">VORSCHAU VERSION 17 · Arme und Hände im Gorilla-Tag-Stil</p>
+  <p class="unter" style="color:var(--gold)">VORSCHAU VERSION 18 · Laden mit Accessoires · Steine fürs Fangen · Farbe kostenlos</p>
   <p id="angemeldet"></p>
   <p class="unter">Klettern nur mit den Armen. Diese Vorschau zeigt die Welten und die Steuerung der App. Echte Mitspieler, Fangen und der Laden sind in der iPhone- und iPad-App.</p>
   <div class="hinweis">
@@ -198,6 +204,7 @@
     <div class="reiter" role="tablist">
       <button class="reiterknopf an" data-seite="name">NAME</button>
       <button class="reiterknopf" data-seite="farbe">FARBE</button>
+      <button class="reiterknopf" data-seite="laden">LADEN</button>
       <button class="reiterknopf" data-seite="groesse">GRÖSSE</button>
       <button class="reiterknopf" data-seite="raum">RAUM</button>
       <button class="reiterknopf" data-seite="modus">MODUS</button>
@@ -209,11 +216,16 @@
       <button class="tbtn" id="pcNameOk">SPEICHERN</button>
     </div>
     <div class="seite" data-seite="farbe" hidden>
-      <p>FELLFARBE, STUFEN 0 BIS 9</p>
+      <p>FELLFARBE, STUFEN 0 BIS 9 · FARBE ÄNDERN IST KOSTENLOS</p>
       <div class="stufe"><span>ROT</span><button class="tbtn" data-k="r" data-d="-1">−</button><output id="oR">3</output><button class="tbtn" data-k="r" data-d="1">+</button></div>
       <div class="stufe"><span>GRÜN</span><button class="tbtn" data-k="g" data-d="-1">−</button><output id="oG">2</output><button class="tbtn" data-k="g" data-d="1">+</button></div>
       <div class="stufe"><span>BLAU</span><button class="tbtn" data-k="b" data-d="-1">−</button><output id="oB">1</output><button class="tbtn" data-k="b" data-d="1">+</button></div>
       <div class="stufe"><span>SO:</span><div id="farbe"></div></div>
+    </div>
+    <div class="seite" data-seite="laden" hidden>
+      <p>DU HAST <b id="ladenSteine">0</b> STEINE. ANSEHEN KANNST DU DICH IM SPIEGEL.</p>
+      <p class="hinweistext">STEINE BEKOMMST DU FÜRS FANGEN: 1. FANG +5, 2. FANG +10, 3. FANG +15 … BIS +40 PRO FANG. RUNDE GEWONNEN +25.</p>
+      <div class="ladenliste" id="ladenListe"></div>
     </div>
     <div class="seite" data-seite="groesse" hidden>
       <p>WIE GROSS IST DEIN GORILLA?</p>
@@ -1651,6 +1663,127 @@ function stelleArme(arme, ich, dt) {
     }));
   }
 }
+// ---------- Laden: Accessoires für deinen Gorilla ----------
+// Dieselbe Liste wie in der App (Model/Spieler.swift). Preise in Steinen.
+const KOSMETIK = [
+  { id: "banane", name: "Bananenhut", preis: 25, art: "hut" },
+  { id: "party", name: "Partyhut", preis: 30, art: "hut" },
+  { id: "blumen", name: "Blumenkranz", preis: 35, art: "hut" },
+  { id: "muetze", name: "Weihnachtsmütze", preis: 45, art: "hut" },
+  { id: "pilz", name: "Pilzhut", preis: 50, art: "hut" },
+  { id: "cowboy", name: "Cowboyhut", preis: 60, art: "hut" },
+  { id: "propeller", name: "Propellerkappe", preis: 80, art: "hut" },
+  { id: "zylinder", name: "Zylinder", preis: 90, art: "hut" },
+  { id: "krone", name: "Krone", preis: 120, art: "hut" },
+  { id: "heiligenschein", name: "Heiligenschein", preis: 150, art: "hut" },
+  { id: "schnurrbart", name: "Schnurrbart", preis: 20, art: "gesicht" },
+  { id: "nerdbrille", name: "Nerdbrille", preis: 30, art: "gesicht" },
+  { id: "sonnenbrille", name: "Sonnenbrille", preis: 40, art: "gesicht" },
+  { id: "maske", name: "Taucherbrille", preis: 55, art: "gesicht" },
+];
+
+/** Baut ein Accessoire in Körper-Maßen (Kopfmitte bei y 0.1, Gesicht vorne bei z −0.15). */
+function baueKosmetik(id) {
+  const g = new THREE.Group();
+  const mat = (farbe, o = {}) => new THREE.MeshStandardMaterial({ color: farbe, roughness: o.rau ?? .6, metalness: o.metall ?? 0, emissive: o.leuchten ?? 0x000000, transparent: !!o.durch, opacity: o.durch ?? 1 });
+  const teil = (geo, m, x, y, z, rx = 0, ry = 0, rz = 0) => { const n = new THREE.Mesh(geo, m); n.position.set(x, y, z); n.rotation.set(rx, ry, rz); g.add(n); return n; };
+  const OBEN = .27;
+  switch (id) {
+    case "banane": {
+      const bogen = new THREE.TorusGeometry(.12, .035, 10, 24, Math.PI * .85);
+      teil(bogen, mat(0xf2d23c, { rau: .45 }), 0, OBEN - .1, .02, 0, Math.PI / 2, Math.PI * .08);
+      teil(new THREE.CylinderGeometry(.008, .012, .04, 6), mat(0x4a3a1a), 0, OBEN + .02, -.1);
+      break;
+    }
+    case "party": {
+      teil(new THREE.ConeGeometry(.075, .18, 20), mat(0xe8417a), 0, OBEN + .07, .02, -.12);
+      teil(new THREE.SphereGeometry(.022, 10, 8), mat(0xffe14d), 0, OBEN + .165, .0);
+      for (let i = 0; i < 3; i++) teil(new THREE.TorusGeometry(.062 - i * .02, .006, 6, 20), mat(0x4dd7ff), 0, OBEN + .015 + i * .045, .02 - i * .006, Math.PI / 2 - .12);
+      break;
+    }
+    case "blumen": {
+      teil(new THREE.TorusGeometry(.13, .014, 8, 28), mat(0x3f8f3a), 0, OBEN - .07, .03, Math.PI / 2);
+      const farben = [0xff6fa8, 0xffe14d, 0xffffff, 0xb07cff, 0xff8a3d];
+      for (let i = 0; i < 10; i++) { const a = i / 10 * Math.PI * 2; teil(new THREE.SphereGeometry(.026, 10, 8), mat(farben[i % 5], { rau: .5 }), Math.sin(a) * .13, OBEN - .065, .03 + Math.cos(a) * .13); }
+      break;
+    }
+    case "muetze": {
+      const rot = mat(0xd42a2a, { rau: .8 }), weiss = mat(0xf4f1ea, { rau: .95 });
+      teil(new THREE.TorusGeometry(.13, .03, 10, 28), weiss, 0, OBEN - .06, .03, Math.PI / 2);
+      teil(new THREE.ConeGeometry(.12, .22, 20), rot, .03, OBEN + .05, .06, .45, 0, -.3);
+      teil(new THREE.SphereGeometry(.035, 12, 10), weiss, .09, OBEN + .1, .14);
+      break;
+    }
+    case "pilz": {
+      const kappe = new THREE.SphereGeometry(.19, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2);
+      teil(kappe, mat(0xc8262b, { rau: .5 }), 0, OBEN - .05, .03);
+      for (let i = 0; i < 7; i++) { const a = i / 7 * Math.PI * 2 + .3, h = i % 2 ? .45 : .8; teil(new THREE.SphereGeometry(.026, 10, 8), mat(0xffffff), Math.sin(a) * .19 * Math.cos(h), OBEN - .05 + .19 * Math.sin(h), .03 + Math.cos(a) * .19 * Math.cos(h)); }
+      break;
+    }
+    case "cowboy": {
+      const leder = mat(0x7a4a22, { rau: .85 });
+      teil(new THREE.CylinderGeometry(.21, .21, .014, 28), leder, 0, OBEN - .04, .03);
+      teil(new THREE.CylinderGeometry(.085, .1, .1, 20), leder, 0, OBEN + .01, .03);
+      teil(new THREE.CylinderGeometry(.101, .101, .02, 20), mat(0x2b1a0e), 0, OBEN - .02, .03);
+      break;
+    }
+    case "propeller": {
+      // Kappe aus vier bunten Vierteln
+      for (let i = 0; i < 4; i++) teil(new THREE.SphereGeometry(.152, 6, 10, i * Math.PI / 2, Math.PI / 2, 0, Math.PI / 2), mat([0xe8412f, 0xffd23f, 0x2f8be8, 0x3fbf5a][i]), 0, OBEN - .07, .03);
+      teil(new THREE.CylinderGeometry(.008, .008, .06, 6), mat(0x888888, { metall: .6 }), 0, OBEN + .1, .03);
+      const prop = new THREE.Group(); prop.position.set(0, OBEN + .13, .03); g.add(prop);
+      for (const s of [-1, 1]) { const f = new THREE.Mesh(new THREE.BoxGeometry(.13, .006, .03), mat(0xe8412f)); f.position.x = s * .07; f.rotation.x = s * .25; prop.add(f); }
+      g.userData.drehen = prop;
+      break;
+    }
+    case "zylinder": {
+      const schwarz = mat(0x111111, { rau: .5 });
+      teil(new THREE.CylinderGeometry(.16, .16, .012, 28), schwarz, 0, OBEN - .04, .03);
+      teil(new THREE.CylinderGeometry(.085, .08, .18, 24), schwarz, 0, OBEN + .05, .03);
+      teil(new THREE.CylinderGeometry(.082, .082, .03, 24), mat(0x8a1a1a), 0, OBEN - .015, .03);
+      break;
+    }
+    case "krone": {
+      const gold = mat(0xf2c037, { rau: .25, metall: .9 });
+      teil(new THREE.CylinderGeometry(.1, .095, .06, 24, 1, true), gold, 0, OBEN - .02, .03).material.side = THREE.DoubleSide;
+      for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; teil(new THREE.ConeGeometry(.022, .06, 8), gold, Math.sin(a) * .095, OBEN + .04, .03 + Math.cos(a) * .095); }
+      for (let i = 0; i < 3; i++) { const a = i / 3 * Math.PI * 2 + .5; teil(new THREE.SphereGeometry(.014, 8, 6), mat([0xe0204a, 0x2a6cff, 0x22c46a][i], { rau: .1 }), Math.sin(a) * .1, OBEN - .02, .03 + Math.cos(a) * .1); }
+      break;
+    }
+    case "heiligenschein": {
+      teil(new THREE.TorusGeometry(.12, .014, 10, 36), mat(0xffe680, { leuchten: 0xffd34d, rau: .3 }), 0, OBEN + .1, .03, Math.PI / 2);
+      break;
+    }
+    case "schnurrbart": {
+      const haar = mat(0x1b120c, { rau: .9 });
+      for (const s of [-1, 1]) teil(new THREE.CapsuleGeometry(.012, .06, 4, 8), haar, s * .035, .02, -.165, 0, 0, Math.PI / 2 + s * .35);
+      break;
+    }
+    case "nerdbrille": {
+      const rand = mat(0x111111, { rau: .4 });
+      for (const s of [-1, 1]) {
+        teil(new THREE.TorusGeometry(.03, .006, 6, 20), rand, s * .045, .1, -.152);
+        teil(new THREE.CircleGeometry(.028, 20), mat(0xcfe8ff, { durch: .25, rau: .05 }), s * .045, .1, -.151);
+        teil(new THREE.BoxGeometry(.006, .006, .1), rand, s * .078, .1, -.105);
+      }
+      teil(new THREE.BoxGeometry(.03, .006, .006), rand, 0, .105, -.152);
+      break;
+    }
+    case "sonnenbrille": {
+      const glas = mat(0x0a0a0a, { rau: .05, metall: .4 });
+      for (const s of [-1, 1]) { const b = teil(new THREE.BoxGeometry(.062, .036, .01), glas, s * .045, .1, -.155); b.rotation.y = s * -.12; teil(new THREE.BoxGeometry(.006, .006, .1), glas, s * .08, .105, -.105); }
+      teil(new THREE.BoxGeometry(.04, .008, .008), glas, 0, .112, -.155);
+      break;
+    }
+    case "maske": {
+      teil(new THREE.BoxGeometry(.15, .06, .03), mat(0x7fd6ff, { durch: .45, rau: .05 }), 0, .1, -.155);
+      teil(new THREE.TorusGeometry(.155, .01, 6, 32), mat(0x1f6fd1), 0, .1, -.0, Math.PI / 2);
+      break;
+    }
+  }
+  g.traverse(o => { if (o.isMesh) o.castShadow = false; });
+  return g;
+}
 
 // ---------- Bühne: Renderer, Himmel, Licht ----------
 const canvas = document.getElementById("welt");
@@ -1891,6 +2024,40 @@ function pcAnzeigen() {
 }
 document.getElementById("pcNameOk").onclick = () => { const n = nameFeld.value.trim().toUpperCase(); if (n) { pc.name = n; pcSpeichern(); pcAnzeigen(); zeige("NAME: " + n, 1.5); } };
 
+// ---------- Laden ----------
+// In der Vorschau startest du mit 100 Steinen (alleine kann man niemanden fangen).
+// In der App gibt es Steine fürs Fangen: je mehr du in einer Runde fängst, desto mehr pro Fang.
+const laden = { steine: 100, besitz: [], hut: null, gesicht: null };
+try { Object.assign(laden, JSON.parse(localStorage.getItem("affentag.laden") || "{}")); } catch (_) {}
+const getragen = { hut: null, gesicht: null };
+function ladenSpeichern() { try { localStorage.setItem("affentag.laden", JSON.stringify(laden)); } catch (_) {} }
+function anziehen() {
+  for (const art of ["hut", "gesicht"]) {
+    if (getragen[art]) { koerper.remove(getragen[art]); getragen[art] = null; }
+    if (laden[art]) { getragen[art] = baueKosmetik(laden[art]); koerper.add(getragen[art]); }
+  }
+}
+function ladenZeigen() {
+  document.getElementById("ladenSteine").textContent = laden.steine;
+  const liste = document.getElementById("ladenListe"); liste.textContent = "";
+  for (const k of KOSMETIK) {
+    const hat = laden.besitz.includes(k.id), traegt = laden[k.art] === k.id;
+    const w = document.createElement("div"); w.className = "ware" + (traegt ? " traegt" : "");
+    const n = document.createElement("div"); n.textContent = k.name.toUpperCase();
+    const p = document.createElement("div"); p.className = "preis"; p.textContent = (k.art === "hut" ? "KOPF · " : "GESICHT · ") + (hat ? "GEKAUFT" : k.preis + " STEINE");
+    const b = document.createElement("button"); b.className = "tbtn";
+    b.textContent = !hat ? "KAUFEN" : traegt ? "AUSZIEHEN" : "ANZIEHEN";
+    if (!hat && laden.steine < k.preis) { b.disabled = true; b.textContent = "ZU TEUER"; }
+    b.onclick = () => {
+      if (!hat) { if (laden.steine < k.preis) return; laden.steine -= k.preis; laden.besitz.push(k.id); laden[k.art] = k.id; zeige(k.name.toUpperCase() + " GEKAUFT!", 1.6); }
+      else laden[k.art] = traegt ? null : k.id;
+      ladenSpeichern(); anziehen(); ladenZeigen();
+    };
+    w.append(n, p, b); liste.appendChild(w);
+  }
+}
+ladenZeigen(); anziehen();
+
 // ---------- Anmelden ----------
 const login = document.getElementById("login"), loginName = document.getElementById("loginName"), loginFehler = document.getElementById("loginFehler");
 function angemeldetZeigen() {
@@ -2048,6 +2215,7 @@ function takt(jetzt) {
   sonne.position.copy(ich.pos).addScaledVector(sonnenRichtung, 60); sonne.target.position.copy(ich.pos);
   stelleArme(arme, ich, dt);
   koerper.position.copy(ich.pos); koerper.rotation.y = ich.gier; koerper.scale.setScalar(GROESSE);
+  if (getragen.hut && getragen.hut.userData.drehen) getragen.hut.userData.drehen.rotation.y += dt * 14;
   renderer.render(scene, kamera);
   requestAnimationFrame(takt);
 }
