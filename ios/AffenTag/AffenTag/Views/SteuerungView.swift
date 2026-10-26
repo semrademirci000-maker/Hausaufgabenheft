@@ -1,7 +1,7 @@
 //
 //  SteuerungView.swift
 //  Die Handy-Steuerung wie beim Mobile-Spielen:
-//  Links der W-A-S-D-Stick zum Laufen: immer zu sehen wie früher, springt aber unter den Finger.
+//  Links der W-A-S-D-Stick zum Laufen: unsichtbar, erscheint unter dem Finger, verschwindet beim Loslassen.
 //  Rechts der Blick-Stick: unsichtbar, erscheint unter dem Finger und verschwindet beim Loslassen.
 //  Dazu 1–4 und ⇧ (Sprinten), oben TAB · Menü · ESC, rechts Tastatur, F, R, E und ⎵ (Springen).
 //  Jede Taste ist eine eigene Ansicht – so gehen mehrere Finger gleichzeitig.
@@ -23,7 +23,7 @@ struct SteuerungView: View {
             ZStack {
                 // Unsichtbare Joystick-Flächen ganz unten, damit die Tasten darüber liegen
                 HStack(spacing: 0) {
-                    SchwebeStick(buchstaben: true, groesse: stick, heim: CGPoint(x: stick / 2 + 8, y: h * 0.2 + stick / 2)) { x, y in
+                    SchwebeStick(buchstaben: true, groesse: stick) { x, y in
                         spiel.eingabe.lx = x
                         spiel.eingabe.ly = y
                     }
