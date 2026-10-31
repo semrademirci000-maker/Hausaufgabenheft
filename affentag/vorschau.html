@@ -54,6 +54,28 @@
   #tMenue svg { width: 96%; height: 96%; }
   .titelbild { width: clamp(70px, 10vw, 110px); }
   #tPunkte { left: max(3vw, calc(env(safe-area-inset-left, 0px) + 10px)); top: calc(10px + env(safe-area-inset-top, 0px)); }
+  #tKamera { left: max(3vw, calc(env(safe-area-inset-left, 0px) + 10px)); top: calc(62px + env(safe-area-inset-top, 0px)); }
+  #tKamera svg { width: 62%; height: 62%; }
+  #tKamSchirm { left: 50%; transform: translateX(-50%); bottom: max(6%, calc(env(safe-area-inset-bottom, 0px) + 10px)); padding: 0 22px; height: 52px; border-radius: 26px; background: rgba(70,15,15,.78); border-color: #ff6b5a; color: #ffd0c8; font: 700 16px var(--mono); letter-spacing: .08em; }
+  #recAnzeige { position: fixed; z-index: 7; left: calc(max(3vw, calc(env(safe-area-inset-left, 0px) + 10px)) + 70px); top: calc(16px + env(safe-area-inset-top, 0px)); display: flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px; border: 0; background: rgba(160,10,10,.88); color: #fff; font: 800 15px var(--mono); letter-spacing: .08em; cursor: pointer; }
+  #recAnzeige .punkt { width: 11px; height: 11px; border-radius: 50%; background: #fff; animation: rec 1s steps(2) infinite; }
+  @keyframes rec { 50% { opacity: .2; } }
+  #kamVorschau { position: fixed; z-index: 6; left: max(3vw, calc(env(safe-area-inset-left, 0px) + 10px)); top: calc(118px + env(safe-area-inset-top, 0px)); width: clamp(160px, 20vw, 240px); aspect-ratio: 16 / 9; border: 2px solid #ff6b5a; border-radius: 10px; overflow: hidden; background: #000; pointer-events: none; }
+  #kamVorschau canvas, #kamVorschauPanel canvas { width: 100%; height: 100%; display: block; }
+  #kameraPanel { position: fixed; inset: 0; z-index: 30; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; padding: 16px; }
+  #kameraPanel .terminal { border-color: #ff6b5a; color: #ffd0c8; box-shadow: 0 0 30px rgba(255,107,90,.25); }
+  #kameraPanel .reiterknopf { color: #ffd0c8; border-color: #ff6b5a; } #kameraPanel .reiterknopf.an { background: #ff6b5a; color: #000; }
+  #kameraPanel .tbtn { background: #ff6b5a; } #kameraPanel .tbtn.rot { background: #ff2a2a; color: #fff; }
+  #kameraPanel .tbtn.gross { width: 100%; padding: 12px; font-size: 18px; }
+  #kameraPanel p { margin: 4px 0 0; font-size: 12px; opacity: .85; }
+  .kamreihe { display: flex; flex-wrap: wrap; gap: 6px; }
+  #kamVorschauPanel { width: 100%; aspect-ratio: 16 / 9; border: 1.5px solid #ff6b5a; background: #000; }
+  #videoFertig { position: fixed; inset: 0; z-index: 36; display: grid; place-items: center; padding: 16px; background: rgba(6,4,3,.78); }
+  #videoFertig .kasten { width: min(520px, 100%); padding: 20px; border-radius: 22px; background: rgba(28,21,15,.96); border: 2px solid rgba(243,199,122,.35); display: grid; gap: 10px; text-align: center; }
+  #videoFertig h2 { margin: 0; font: 400 28px var(--schild); color: var(--gold); }
+  #videoFertig video { width: 100%; border-radius: 12px; background: #000; max-height: 50vh; }
+  #videoFertig .haupt, #videoFertig .gast { display: block; padding: 13px; border-radius: 14px; border: 0; font: 800 16px var(--text); letter-spacing: .08em; cursor: pointer; text-decoration: none; }
+  #videoFertig .haupt { background: var(--gold); color: #2a1c0e; } #videoFertig .gast { background: transparent; color: var(--papier); border: 2px solid rgba(255,255,255,.25); }
   #tStumm { right: max(3vw, calc(env(safe-area-inset-right, 0px) + 10px)); top: calc(16% + clamp(58px, 7.4vw, 78px)); width: clamp(56px, 7vw, 76px); height: clamp(48px, 6vw, 64px); }
   #tStumm svg { width: 46%; height: 60%; } #tStumm .stumm { display: none; }
   #tStumm.aus { border-color: #ff6b5a; color: #ff6b5a; } #tStumm.aus .an { display: none; } #tStumm.aus .stumm { display: block; }
@@ -173,6 +195,12 @@
   </button>
   <div class="stick" id="stickR" aria-label="Umschauen" hidden><div class="knauf"></div></div>
   <button class="taste" id="tPc" data-taste="computer" hidden>DRÜCKE E, UM DEN COMPUTER ZU BENUTZEN</button>
+  <button class="taste" id="tKamSchirm" hidden>DRÜCKE E FÜR DIE KAMERA</button>
+  <button class="taste klein" id="tKamera" aria-label="Kamera">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><rect x="2.5" y="6.5" width="13" height="11" rx="2"/><path d="M15.5 10.5 21.5 7v10l-6-3.5z"/></svg>
+  </button>
+  <button id="recAnzeige" hidden aria-label="Aufnahme stoppen"><span class="punkt"></span>REC <span id="recZeit">0:00</span></button>
+  <div id="kamVorschau" hidden><div id="kamVorschauBild"></div></div>
   <button class="taste rund gross" id="tF" data-taste="f">F</button>
   <button class="taste rund gross" id="tR" data-taste="r">R</button>
   <button class="taste rund gross" id="tE" data-taste="e">E</button>
@@ -218,9 +246,45 @@
     <button class="haupt" id="mikroHilfeOk">OK</button>
   </div>
 </section>
+<section id="kameraPanel" hidden>
+  <div class="terminal" role="dialog" aria-label="Kamera">
+    <h2>KAMERA</h2>
+    <div class="kamreihe"><button class="tbtn gross" data-k="aufnahme">● AUFNEHMEN</button></div>
+    <p>WAS SOLL MAN IM VIDEO SEHEN?</p>
+    <div class="kamreihe">
+      <button class="reiterknopf" data-ansicht="ich">ICH-SICHT (NUR ARME)</button>
+      <button class="reiterknopf" data-ansicht="kamera">KAMERA (GANZER KÖRPER)</button>
+    </div>
+    <div id="kamVorschauPanel" hidden></div>
+    <p>WO IST DIE KAMERA?</p>
+    <div class="kamreihe">
+      <button class="reiterknopf" data-modus="hier">HIER FALLEN LASSEN</button>
+      <button class="reiterknopf" data-modus="folgen">FOLGT MIR</button>
+      <button class="reiterknopf" data-modus="selfie">SELFIE</button>
+      <button class="reiterknopf" data-k="weg">EINSTECKEN</button>
+    </div>
+    <p>MEHR:</p>
+    <div class="kamreihe">
+      <button class="reiterknopf" data-k="stimme">STIMME: AN</button>
+      <button class="reiterknopf" data-k="mikro">MEINE STIMME IM VIDEO: JA</button>
+      <button class="reiterknopf" data-k="lampe">TASCHENLAMPE: AUS</button>
+      <button class="reiterknopf" data-k="start">ZURÜCK ZUM START</button>
+    </div>
+    <button class="tbtn" data-k="zu">SCHLIESSEN</button>
+  </div>
+</section>
+<section id="videoFertig" hidden>
+  <div class="kasten">
+    <h2>VIDEO FERTIG</h2>
+    <video id="videoAnsicht" controls playsinline></video>
+    <button class="haupt" id="videoTeilen">SICHERN / TEILEN</button>
+    <a class="gast" id="videoLaden" href="#">HERUNTERLADEN</a>
+    <button class="gast" id="videoZu">SCHLIESSEN</button>
+  </div>
+</section>
 <section id="titel">
   <div style="display:flex;align-items:center;gap:18px"><div class="titelbild"><svg viewBox="0 0 64 64" aria-hidden="true"><defs><radialGradient id="gF" cx=".5" cy=".38" r=".62"><stop offset="0" stop-color="#9a8a7e"/><stop offset="1" stop-color="#56493f"/></radialGradient><radialGradient id="gK" cx=".5" cy=".3" r=".7"><stop offset="0" stop-color="#4c443f"/><stop offset="1" stop-color="#1a1716"/></radialGradient></defs><path fill="url(#gK)" d="M32 2c7 0 12 4 14 10 6 2 11 8 12 15 2 2 3 5 2 8-1 2-2 3-4 3-2 11-11 22-24 23C19 60 10 49 8 38c-2 0-3-1-4-3-1-3 0-6 2-8 1-7 6-13 12-15 2-6 7-10 14-10z"/><path fill="url(#gF)" d="M32 18c8 0 15 2 18 6 3 4 2 10 0 15-2 9-9 16-18 16s-16-7-18-16c-2-5-3-11 0-15 3-4 10-6 18-6z"/><path fill="#1a1716" d="M11 27c5-6 13-8 21-6 8-2 16 0 21 6-2 2-5 3-8 3-4 0-8-2-13-2s-9 2-13 2c-3 0-6-1-8-3z"/><ellipse cx="23.5" cy="31.5" rx="3.4" ry="2.4" fill="#0c0807"/><ellipse cx="40.5" cy="31.5" rx="3.4" ry="2.4" fill="#0c0807"/><circle cx="23.5" cy="31.6" r="1.5" fill="#5c3416"/><circle cx="40.5" cy="31.6" r="1.5" fill="#5c3416"/><circle cx="24.2" cy="31" r=".6" fill="#f2e6d8"/><circle cx="41.2" cy="31" r=".6" fill="#f2e6d8"/><path fill="#3b322d" d="M32 31c3 0 5 3 7 6 2 2 3 4 2 6-1 2-5 2-9 2s-8 0-9-2c-1-2 0-4 2-6 2-3 4-6 7-6z"/><ellipse cx="28" cy="42" rx="2.6" ry="1.9" fill="#0b0909"/><ellipse cx="36" cy="42" rx="2.6" ry="1.9" fill="#0b0909"/><path fill="#1a1716" d="M20 47c4 4 8 5 12 5s8-1 12-5c-3 6-7 8-12 8s-9-2-12-8z"/><path stroke="#0b0909" stroke-width="1.5" fill="none" stroke-linecap="round" d="M24 49c5 2 11 2 16 0"/></svg></div><h1>MONKE TAG</h1></div>
-  <p class="unter" style="color:var(--gold)">VORSCHAU VERSION 25 · Monke Tag</p>
+  <p class="unter" style="color:var(--gold)">VORSCHAU VERSION 26 · Kamera und Videoaufnahme</p>
   <p id="angemeldet"></p>
   <p class="unter">Klettern nur mit den Armen. Spring durch den Wald, kletter die Felsen hoch und triff deine Freunde: gleicher Raum-Code am Computer, dann seht und hört ihr euch.</p>
   <div class="hinweis">
@@ -1379,6 +1443,15 @@ const KARTEN = {
       const pcLicht = new THREE.PointLight(0x55ff88, .7, 4, 2); pcLicht.position.copy(pc).add(v(0, 1.45, .8)); b.gruppe.add(pcLicht);
       b.welt.dazu({ typ: "kiste", m: pc.clone().add(v(0, 1.2, -.1)), h: v(1.3, .5, .55), g: 0, mat: "holz" });
       b.welt.computer = pc.clone().add(v(0, .8, 1));
+      // Kamera-Bildschirm rechts neben dem Computer: Aufnahme, Stimme und mehr (E drücken)
+      { const a = grad(220), d = v(Math.sin(a), 0, Math.cos(a)), p = d.clone().multiplyScalar(R - .55), g = gierZu(d);
+        const rahmen = new THREE.Mesh(new THREE.RoundedBoxGeometry(1.5, 1.0, .12, 3, .05), new THREE.MeshStandardMaterial({ color: 0x1c1c1e, roughness: .5, metalness: .3 }));
+        rahmen.position.copy(p).add(v(0, 2.0, 0)); rahmen.rotation.y = g; rahmen.castShadow = true; b.gruppe.add(rahmen);
+        const bild = new THREE.Mesh(new THREE.PlaneGeometry(1.32, .82), new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xffffff, emissiveMap: terminalBild(["KAMERA", "(o) REC", "STIMME", "> DRUECKE E"]), roughness: .2 }));
+        bild.position.copy(p).add(v(0, 2.0, 0)).addScaledVector(d, -.065); bild.rotation.y = g; b.gruppe.add(bild);
+        b.balken(p.clone().add(v(0, 0, 0)), p.clone().add(v(0, 1.5, 0)), .05, false);
+        b.welt.dazu({ typ: "kiste", m: p.clone().add(v(0, 1.2, 0)), h: v(.75, 1.2, .2), g, mat: "metall" });
+        b.welt.kameraSchirm = p.clone().addScaledVector(d, -1.2); }
       b.schild("MONKE TAG", v(0, 4.4, -(R - .3)), 0, 3.4, { hoch: .8 });
 
       // Spiegel an der Wand zwischen Wald-Tunnel und Computer
@@ -2011,7 +2084,7 @@ function tonAnschliessen(m, s) {
   // Manche Browser spielen WebRTC-Ton nur ab, wenn er an einem (stummen) Audio-Element hängt
   const el = m.ton ? m.ton.el : new Audio(); el.srcObject = s; el.muted = true; el.setAttribute("playsinline", ""); el.play().catch(() => {});
   const quelle = ac.createMediaStreamSource(s), laut = m.ton ? m.ton.laut : ac.createGain();
-  if (!m.ton) { laut.gain.value = 0; laut.connect(ac.destination); }
+  if (!m.ton) { laut.gain.value = 0; laut.connect(tonAusgang()); }
   quelle.connect(laut);
   m.ton = { el, quelle, laut };
   try { if (ac.state !== "running") ac.resume(); } catch (_) {}
@@ -2132,7 +2205,7 @@ const huelle = new THREE.HemisphereLight(0xcfe2ff, 0x5b4a36, .55); scene.add(hue
 const lampe = new THREE.SpotLight(0xfff0d0, 0, 35, grad(26), .5, 1.4);
 kamera.add(lampe); lampe.position.set(.15, -.15, 0); const lampenZiel = new THREE.Object3D(); lampenZiel.position.set(0, 0, -1); kamera.add(lampenZiel); lampe.target = lampenZiel;
 const pmrem = new THREE.PMREMGenerator(renderer);
-let umgebung = null;
+let umgebung = null, letzterHimmel = null;
 
 function stelleHimmel(k) {
   const u = himmel.material.uniforms;
@@ -2146,6 +2219,8 @@ function stelleHimmel(k) {
   if (umgebung) umgebung.dispose();
   umgebung = pmrem.fromScene(hilfe).texture;
   scene.environment = umgebung;
+  letzterHimmel = hilfe;
+  if (window.__kamBereit) kamUmgebungNeu();
   sonne.intensity = k.sonne[0] < 20 ? 2.2 : 3;
   sonne.color.setHSL(k.sonne[0] < 20 ? .07 : .1, k.sonne[0] < 20 ? .8 : .35, k.sonne[0] < 20 ? .75 : .92);
 }
@@ -2197,13 +2272,19 @@ function lade(id) {
 
 // ---------- Klang ----------
 let ac = null;
+// Gemeinsamer Tonausgang: alle Spielgeräusche laufen hier durch, damit eine Videoaufnahme sie mitbekommt
+let ausgang = null;
+function tonAusgang() {
+  if (!ausgang) { ausgang = ac.createGain(); ausgang.connect(ac.destination); }
+  return ausgang;
+}
 function klang(mat, staerke) {
   if (!ac) return;
   const t = ac.currentTime, l = .25 + .75 * Math.min(1, staerke);
   const ton = (f, dauer, laut, typ = "sine", gleit = 1) => {
     const o = ac.createOscillator(), g = ac.createGain(); o.type = typ; o.frequency.setValueAtTime(f, t);
     o.frequency.exponentialRampToValueAtTime(f * gleit, t + dauer); g.gain.setValueAtTime(laut * l, t);
-    g.gain.exponentialRampToValueAtTime(.001, t + dauer); o.connect(g).connect(ac.destination); o.start(t); o.stop(t + dauer);
+    g.gain.exponentialRampToValueAtTime(.001, t + dauer); o.connect(g).connect(tonAusgang()); o.start(t); o.stop(t + dauer);
   };
   const rauschen = (dauer, laut, tief, hoch) => {
     const buf = ac.createBuffer(1, Math.ceil(ac.sampleRate * dauer), ac.sampleRate), d = buf.getChannelData(0);
@@ -2211,7 +2292,7 @@ function klang(mat, staerke) {
     const s = ac.createBufferSource(); s.buffer = buf;
     const lp = ac.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = tief;
     const hp = ac.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = hoch;
-    const g = ac.createGain(); g.gain.value = laut * l; s.connect(lp).connect(hp).connect(g).connect(ac.destination); s.start(t);
+    const g = ac.createGain(); g.gain.value = laut * l; s.connect(lp).connect(hp).connect(g).connect(tonAusgang()); s.start(t);
   };
   if (mat === "holz") { ton(210, .13, .5, "sine", .5); rauschen(.05, .3, 1800, 250); }
   else if (mat === "gras") { rauschen(.1, .45, 1100, 150); ton(95, .08, .22, "sine", .6); }
@@ -2279,7 +2360,7 @@ function zeigeTitel() { titel.hidden = false; steuerung.hidden = true; }
 function druck(taste, an) {
   document.querySelectorAll(`[data-taste="${taste}"]`).forEach(b => b.classList.toggle("an", an));
   if (taste === "shift") st.sprint = an;
-  if (taste === "e") { st.greifen = an; if (an && !pcKnopf.hidden) { computer.hidden = false; st.greifen = false; return; } }
+  if (taste === "e") { st.greifen = an; if (an && !pcKnopf.hidden) { computer.hidden = false; st.greifen = false; return; } if (an && !document.getElementById("tKamSchirm").hidden) { kamPanelOeffnen(); st.greifen = false; return; } }
   if (taste === "1") st.hoch = an;
   if (taste === "3") st.runter = an;
   if (!an) return;
@@ -2528,6 +2609,10 @@ function takt(jetzt) {
     // Am Computer: großer Knopf unten in der Mitte
     const amPc = !!welt.computer && flach(welt.computer.clone().sub(ich.pos)).length() < 2.6;
     if (pcKnopf.hidden === amPc) pcKnopf.hidden = !amPc;
+    // Am Kamera-Bildschirm im Stumpf
+    const kamKnopf = document.getElementById("tKamSchirm");
+    const amSchirm = !amPc && !!welt.kameraSchirm && flach(welt.kameraSchirm.clone().sub(ich.pos)).length() < 2.4;
+    if (kamKnopf.hidden === amSchirm) kamKnopf.hidden = !amSchirm;
   }
   if (zeit > meldungBis) meldung.style.opacity = 0;
   for (const p of [flocken, staub]) if (p) {
@@ -2543,10 +2628,222 @@ function takt(jetzt) {
   stelleArme(arme, ich, dt);
   koerper.position.copy(ich.pos); koerper.rotation.y = ich.gier; koerper.scale.setScalar(GROESSE);
   if (getragen.hut && getragen.hut.userData.drehen) getragen.hut.userData.drehen.rotation.y += dt * 14;
+  if (window.__kamBereit) kamTakt(dt);
   renderer.render(scene, kamera);
   requestAnimationFrame(takt);
 }
 requestAnimationFrame(takt);
+// ---------- Kamera und Videoaufnahme (wie die Kamera in Gorilla Tag) ----------
+// Zwei Ansichten:
+//  ICH-SICHT: das, was du siehst – man sieht nur deine Arme.
+//  KAMERA:    eine eigene Kamera in der Welt filmt deinen ganzen Gorilla.
+//             Du kannst sie hinstellen („fallen lassen“), dir folgen lassen oder als Selfie vor dich halten.
+// Bedienen am Kamera-Bildschirm im Stumpf (E drücken) oder überall mit dem Kamera-Knopf oben links.
+const kam = {
+  ansicht: "ich",          // "ich" | "kamera"
+  modus: "folgen",         // "hier" | "folgen" | "selfie"
+  mitStimme: true,
+  aufnahme: null, teile: [], start: 0, video: null, dateiTyp: "",
+  renderer: null, leinwand: null, kamera: null, pmrem: null, umgebung: null, takt: 0,
+};
+
+let aufnahmeTon = null;
+
+// --- Die Kamera in der Welt (kleines Modell mit rotem Aufnahme-Licht) ---
+const kamModell = (() => {
+  const g = new THREE.Group();
+  const gehaeuse = new THREE.Mesh(new THREE.RoundedBoxGeometry(.34, .24, .22, 3, .04), new THREE.MeshStandardMaterial({ color: 0x1b1b1d, roughness: .45, metalness: .3 }));
+  const linse = new THREE.Mesh(new THREE.CylinderGeometry(.075, .085, .12, 24), new THREE.MeshStandardMaterial({ color: 0x0a0a0c, roughness: .2, metalness: .6 }));
+  linse.rotation.x = Math.PI / 2; linse.position.z = -.15;
+  const glas = new THREE.Mesh(new THREE.CircleGeometry(.06, 24), new THREE.MeshStandardMaterial({ color: 0x223355, roughness: .05, metalness: .2, emissive: 0x0a1428 }));
+  glas.position.z = -.211; glas.rotation.y = Math.PI;
+  const licht = new THREE.Mesh(new THREE.SphereGeometry(.022, 12, 10), new THREE.MeshBasicMaterial({ color: 0x551111 }));
+  licht.position.set(.12, .08, -.112);
+  g.add(gehaeuse, linse, glas, licht);
+  g.userData.licht = licht;
+  g.traverse(o => { if (o.isMesh) o.castShadow = true; });
+  g.visible = false;
+  scene.add(g);
+  return g;
+})();
+
+function kamRendererBauen() {
+  if (kam.renderer) return;
+  kam.leinwand = document.createElement("canvas");
+  kam.leinwand.width = 1280; kam.leinwand.height = 720;
+  const r = new THREE.WebGLRenderer({ canvas: kam.leinwand, antialias: true, preserveDrawingBuffer: true });
+  r.setPixelRatio(1); r.setSize(handy ? 960 : 1280, handy ? 540 : 720, false);
+  r.outputEncoding = THREE.sRGBEncoding; r.toneMapping = THREE.ACESFilmicToneMapping;
+  r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFSoftShadowMap;
+  kam.renderer = r;
+  kam.kamera = new THREE.PerspectiveCamera(62, 16 / 9, .05, 400);
+  kam.pmrem = new THREE.PMREMGenerator(r);
+  kamUmgebungNeu();
+  document.getElementById("kamVorschauBild").appendChild(kam.leinwand);
+}
+/** Das Umgebungslicht gehört zu einem Renderer – die Kamera braucht ihr eigenes */
+function kamUmgebungNeu() {
+  if (!kam.pmrem || !letzterHimmel) return;
+  if (kam.umgebung) kam.umgebung.dispose();
+  kam.umgebung = kam.pmrem.fromScene(letzterHimmel).texture;
+}
+
+// --- Kamera hinstellen / folgen / Selfie ---
+const _kz = v(0, 0, 0), _kb = v(0, 0, 0);
+function kamZiel() { return ich.pos.clone().add(v(0, .05 * GROESSE, 0)); }
+function kamHierHinstellen() {
+  // „Fallen lassen“: die Kamera bleibt vor dir in der Luft stehen und schaut dich an
+  const vor = vorne(ich.gier);
+  kamModell.position.copy(ich.pos).addScaledVector(vor, 2.4 * GROESSE).add(v(0, .25 * GROESSE, 0));
+  kam.modus = "hier"; kamModell.visible = true; kamPanelZeigen();
+  zeige("KAMERA HINGESTELLT", 1.5);
+}
+function kamBewegen(dt) {
+  if (kam.modus === "folgen") {
+    // schräg hinter dir, etwas erhöht – wie ein Kameramann
+    _kz.copy(ich.pos).addScaledVector(vorne(ich.gier), -3 * GROESSE).add(v(1.1 * GROESSE, 1.1 * GROESSE, 0).applyAxisAngle(v(0, 1, 0), ich.gier));
+    kamModell.position.lerp(_kz, Math.min(1, dt * 3));
+  } else if (kam.modus === "selfie") {
+    _kz.copy(ich.pos).addScaledVector(vorne(ich.gier), 1.6 * GROESSE).add(v(0, .2 * GROESSE, 0));
+    kamModell.position.lerp(_kz, Math.min(1, dt * 8));
+  }
+  // nicht in Wänden verschwinden
+  const t = welt.punktInnen(kamModell.position, true); if (t) kamModell.position.addScaledVector(t.n, t.tiefe + .1);
+  kamModell.lookAt(kamZiel()); kamModell.rotateY(Math.PI);
+  kamModell.scale.setScalar(GROESSE / 2.6);
+}
+
+// --- Bild der Kamera rendern (eigener Renderer, dein Körper ist sichtbar) ---
+function kamRendern(dt) {
+  if (!kam.renderer) return;
+  kam.takt -= dt; if (kam.takt > 0) return; kam.takt = 1 / 30;
+  kam.kamera.position.copy(kamModell.position);
+  kam.kamera.lookAt(kamZiel());
+  const env = scene.environment;
+  scene.environment = kam.umgebung;
+  kam.renderer.toneMappingExposure = renderer.toneMappingExposure;
+  koerper.visible = true; kamModell.visible = false;
+  kam.renderer.render(scene, kam.kamera);
+  koerper.visible = false; kamModell.visible = true;
+  scene.environment = env;
+}
+function kamTakt(dt) {
+  const brauchtKamera = kam.ansicht === "kamera" && (kam.aufnahme || !document.getElementById("kameraPanel").hidden);
+  if (kamModell.visible) kamBewegen(dt);
+  if (brauchtKamera) kamRendern(dt);
+  document.getElementById("kamVorschau").hidden = !(kam.aufnahme && kam.ansicht === "kamera");
+  // Aufnahme-Licht blinkt
+  kamModell.userData.licht.material.color.setHex(kam.aufnahme && Math.floor(zeit * 2) % 2 === 0 ? 0xff2222 : 0x551111);
+  if (kam.aufnahme) {
+    const s = Math.floor((performance.now() - kam.start) / 1000);
+    document.getElementById("recZeit").textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  }
+}
+
+// --- Aufnahme ---
+function videoTyp() {
+  for (const t of ["video/mp4;codecs=avc1", "video/mp4", "video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"])
+    if (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) return t;
+  return "";
+}
+function aufnahmeStarten() {
+  if (kam.aufnahme) return;
+  if (!window.MediaRecorder || !HTMLCanvasElement.prototype.captureStream) { zeige("VIDEOAUFNAHME GEHT AUF DIESEM GERÄT NICHT", 2.5); return; }
+  if (kam.ansicht === "kamera") { kamRendererBauen(); if (!kamModell.visible) { kam.modus = kam.modus === "hier" ? "folgen" : kam.modus; kamModell.visible = true; kamModell.position.copy(ich.pos).add(v(0, 1.5 * GROESSE, 3 * GROESSE)); } kamRendern(1); }
+  const quelle = kam.ansicht === "kamera" ? kam.leinwand : canvas;
+  const stream = quelle.captureStream(30);
+  // Ton: Spielgeräusche, Stimmen der anderen und – wenn gewünscht – dein Mikrofon
+  try {
+    aufnahmeTon = ac.createMediaStreamDestination();
+    tonAusgang().connect(aufnahmeTon);
+    if (kam.mitStimme && stimme.stream && !stimme.stumm) { aufnahmeTon.mikro = ac.createMediaStreamSource(stimme.stream); aufnahmeTon.mikro.connect(aufnahmeTon); }
+    for (const spur of aufnahmeTon.stream.getAudioTracks()) stream.addTrack(spur);
+  } catch (_) {}
+  kam.dateiTyp = videoTyp();
+  let rec;
+  try { rec = new MediaRecorder(stream, kam.dateiTyp ? { mimeType: kam.dateiTyp, videoBitsPerSecond: 6e6 } : undefined); }
+  catch (_) { zeige("VIDEOAUFNAHME GEHT AUF DIESEM GERÄT NICHT", 2.5); return; }
+  kam.teile = [];
+  rec.ondataavailable = e => { if (e.data && e.data.size) kam.teile.push(e.data); };
+  rec.onstop = aufnahmeFertig;
+  rec.start(1000);
+  kam.aufnahme = rec; kam.start = performance.now();
+  document.getElementById("recAnzeige").hidden = false;
+  kamPanelZeigen();
+  zeige(kam.ansicht === "kamera" ? "AUFNAHME – GANZER KÖRPER" : "AUFNAHME – ICH-SICHT", 1.5);
+}
+function aufnahmeStoppen() {
+  if (!kam.aufnahme) return;
+  try { kam.aufnahme.stop(); } catch (_) {}
+  kam.aufnahme = null;
+  document.getElementById("recAnzeige").hidden = true;
+  try { if (aufnahmeTon) { tonAusgang().disconnect(aufnahmeTon); if (aufnahmeTon.mikro) aufnahmeTon.mikro.disconnect(); } } catch (_) {}
+  aufnahmeTon = null;
+  kamPanelZeigen();
+}
+function aufnahmeFertig() {
+  const typ = (kam.dateiTyp || (kam.teile[0] && kam.teile[0].type) || "video/webm").split(";")[0];
+  kam.video = new Blob(kam.teile, { type: typ }); kam.teile = [];
+  const endung = typ.includes("mp4") ? "mp4" : "webm";
+  const datei = `MonkeTag-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.${endung}`;
+  const url = URL.createObjectURL(kam.video);
+  const box = document.getElementById("videoFertig");
+  const vid = document.getElementById("videoAnsicht"); vid.src = url;
+  const runter = document.getElementById("videoLaden"); runter.href = url; runter.download = datei;
+  const teilen = document.getElementById("videoTeilen");
+  const f = new File([kam.video], datei, { type: typ });
+  teilen.hidden = !(navigator.canShare && navigator.canShare({ files: [f] }));
+  teilen.onclick = () => navigator.share({ files: [f], title: "Monke Tag" }).catch(() => {});
+  box.hidden = false;
+}
+document.getElementById("videoZu").onclick = () => { document.getElementById("videoFertig").hidden = true; };
+
+// --- Kamera-Bildschirm (Bedienfeld) ---
+function kamPanelZeigen() {
+  const p = document.getElementById("kameraPanel");
+  p.querySelector("[data-k=aufnahme]").textContent = kam.aufnahme ? "■ AUFNAHME STOPPEN" : "● AUFNEHMEN";
+  p.querySelector("[data-k=aufnahme]").classList.toggle("rot", !!kam.aufnahme);
+  p.querySelectorAll("[data-ansicht]").forEach(b => b.classList.toggle("an", b.dataset.ansicht === kam.ansicht));
+  p.querySelectorAll("[data-modus]").forEach(b => b.classList.toggle("an", kamModell.visible && b.dataset.modus === kam.modus));
+  p.querySelector("[data-k=stimme]").textContent = stimme.stumm ? "STIMME: AUS" : "STIMME: AN";
+  p.querySelector("[data-k=mikro]").textContent = kam.mitStimme ? "MEINE STIMME IM VIDEO: JA" : "MEINE STIMME IM VIDEO: NEIN";
+  p.querySelector("[data-k=lampe]").textContent = lampeAn ? "TASCHENLAMPE: AN" : "TASCHENLAMPE: AUS";
+  document.getElementById("kamVorschauPanel").hidden = kam.ansicht !== "kamera";
+  if (kam.ansicht === "kamera" && kam.leinwand && !p.hidden) document.getElementById("kamVorschauPanel").appendChild(kam.leinwand);
+}
+function kamPanelOeffnen() {
+  const p = document.getElementById("kameraPanel"); p.hidden = false;
+  if (kam.ansicht === "kamera") kamRendererBauen();
+  kamPanelZeigen();
+}
+function kamPanelSchliessen() {
+  document.getElementById("kameraPanel").hidden = true;
+  if (kam.leinwand) document.getElementById("kamVorschauBild").appendChild(kam.leinwand);
+}
+document.getElementById("kameraPanel").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.ansicht) {
+    if (kam.aufnahme) { zeige("ERST DIE AUFNAHME STOPPEN", 1.5); return; }
+    kam.ansicht = b.dataset.ansicht;
+    if (kam.ansicht === "kamera") { kamRendererBauen(); if (!kamModell.visible) kamHierHinstellen(); }
+  }
+  if (b.dataset.modus) { if (b.dataset.modus === "hier") kamHierHinstellen(); else { kam.modus = b.dataset.modus; kamModell.visible = true; } }
+  const k = b.dataset.k;
+  if (k === "aufnahme") kam.aufnahme ? aufnahmeStoppen() : aufnahmeStarten();
+  if (k === "weg") { if (kam.aufnahme && kam.ansicht === "kamera") { zeige("ERST DIE AUFNAHME STOPPEN", 1.5); return; } kamModell.visible = false; zeige("KAMERA EINGESTECKT", 1.2); }
+  if (k === "stimme") stummUmschalten();
+  if (k === "mikro") kam.mitStimme = !kam.mitStimme;
+  if (k === "lampe") { druck("f", true); druck("f", false); }
+  if (k === "start") { ich.reset(welt.start[0], ich.gier); }
+  if (k === "zu") { kamPanelSchliessen(); return; }
+  setTimeout(kamPanelZeigen, 50);
+});
+document.getElementById("kameraPanel").addEventListener("keydown", e => e.stopPropagation());
+document.getElementById("tKamera").addEventListener("click", kamPanelOeffnen);
+document.getElementById("recAnzeige").addEventListener("click", aufnahmeStoppen);
+document.getElementById("tKamSchirm").addEventListener("click", kamPanelOeffnen);
+window.__kamBereit = true;
+if (letzterHimmel) kamUmgebungNeu();
 })();
 </script>
 </body></html>
