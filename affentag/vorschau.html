@@ -277,7 +277,8 @@
   <div class="kasten">
     <h2>VIDEO FERTIG</h2>
     <video id="videoAnsicht" controls playsinline></video>
-    <button class="haupt" id="videoTeilen">SICHERN / TEILEN</button>
+    <button class="haupt" id="videoTeilen">IN GALERIE SICHERN</button>
+    <p id="videoHinweis" style="margin:0;font-size:13px;opacity:.85">Danach im Menü auf „Video sichern“ tippen – dann ist es in deinen Fotos.</p>
     <a class="gast" id="videoLaden" href="#">HERUNTERLADEN</a>
     <button class="gast" id="videoZu">SCHLIESSEN</button>
   </div>
@@ -2792,9 +2793,13 @@ function aufnahmeFertig() {
   const runter = document.getElementById("videoLaden"); runter.href = url; runter.download = datei;
   const teilen = document.getElementById("videoTeilen");
   const f = new File([kam.video], datei, { type: typ });
-  teilen.hidden = !(navigator.canShare && navigator.canShare({ files: [f] }));
-  teilen.onclick = () => navigator.share({ files: [f], title: "Monke Tag" }).catch(() => {});
+  const kannTeilen = !!(navigator.canShare && navigator.canShare({ files: [f] }));
+  teilen.hidden = !kannTeilen; document.getElementById("videoHinweis").hidden = !kannTeilen;
+  const sichern = () => navigator.share({ files: [f], title: "Monke Tag" }).then(() => zeige("VIDEO GESICHERT", 1.5)).catch(() => {});
+  teilen.onclick = sichern;
   box.hidden = false;
+  // Gleich das Menü zum Sichern öffnen (klappt nur, wenn das Gerät es direkt nach dem Stoppen erlaubt)
+  if (kannTeilen) sichern();
 }
 document.getElementById("videoZu").onclick = () => { document.getElementById("videoFertig").hidden = true; };
 
