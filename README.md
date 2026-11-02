@@ -103,6 +103,8 @@ Pier, Glastürmen und pastellfarbenen Häusern mit Balkonen und Markisen.
   und Getränke; Waffenladen **Kimme & Korn** (W).
 - **Neue Cheats:** MINIGUN, GEIST (5 Minuten unsichtbar), TITAN (5 Minuten unbesiegbar) mit Restzeit-Anzeige,
   BLITZ (Supersportwagen). Alle Codes stehen in `neonhafen/cheats.html`.
+- **Fahrmodus** im Auto wählbar (unten in der Mitte, am PC Tasten 1–4): **Eco**, **Sport**, **Race**, **Speedest** –
+  mit Tacho in km/h. Die Garage der Villa betritt nur der Spieler; das Tor öffnet sich nur direkt davor oder beim Hineinfahren.
 - **Karte mit Navi:** „Karte“ (oder Taste M, oder auf die Minikarte tippen) öffnet die große Karte.
   Tippe irgendwo hin – dort erscheint eine lila Markierung, und eine Linie zeigt dir den Weg.
 - **Polizei:** Streifenwagen fahren mit Abstand hinter dir statt zu rammen. Hältst du an oder bist zu Fuß,
