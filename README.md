@@ -83,6 +83,9 @@ Pier, Glastürmen und pastellfarbenen Häusern mit Balkonen und Markisen.
 - **Moduswahl:** **Story** (Jo kommt mit der Fähre an, sieben Kapitel mit Dialogen) oder
   **freies Spiel** mit eigenem Spielstand und Aufträgen an den **M**-Punkten.
 - Fahndung bis fünf Sterne, **Lackiererei (L)** löscht sie, am **Autohof (A)** verkaufst du Autos.
+- **Belebte Stadt:** bis zu 100 Fußgänger (am Handy etwa 60), auch am Strand; manche bleiben stehen.
+  Ampeln an jeder Kreuzung – der Verkehr hält bei Rot. Bänke, Mülleimer, Hydranten, Wolken,
+  Wellen auf dem Meer und Fassaden mit plastischen Fenstern.
 - **Karte mit Navi:** „Karte“ (oder Taste M, oder auf die Minikarte tippen) öffnet die große Karte.
   Tippe irgendwo hin – dort erscheint eine lila Markierung, und eine Linie zeigt dir den Weg.
 - **Polizei:** Streifenwagen fahren mit Abstand hinter dir statt zu rammen. Hältst du an oder bist zu Fuß,
