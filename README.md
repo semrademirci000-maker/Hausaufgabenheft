@@ -105,6 +105,9 @@ Pier, Glastürmen und pastellfarbenen Häusern mit Balkonen und Markisen.
   BLITZ (Supersportwagen). Alle Codes stehen in `neonhafen/cheats.html`.
 - **Fahrmodus** im Auto wählbar (unten in der Mitte, am PC Tasten 1–4): **Eco**, **Sport**, **Race**, **Speedest** –
   mit Tacho in km/h. Die Garage der Villa betritt nur der Spieler; das Tor öffnet sich nur direkt davor oder beim Hineinfahren.
+- **Ladenüberfall:** Mit gezogener Waffe an die Kasse eines 24/7-Markts – der Verkäufer hebt die Hände, nach etwa
+  6 Sekunden ist die Beute voll (350–900 $). Beim Rausgehen hat der Laden die Polizei gerufen (zwei Sterne);
+  derselbe Laden kann erst nach einer Weile wieder überfallen werden.
 - **Karte mit Navi:** „Karte“ (oder Taste M, oder auf die Minikarte tippen) öffnet die große Karte.
   Tippe irgendwo hin – dort erscheint eine lila Markierung, und eine Linie zeigt dir den Weg.
 - **Polizei:** Streifenwagen fahren mit Abstand hinter dir statt zu rammen. Hältst du an oder bist zu Fuß,
