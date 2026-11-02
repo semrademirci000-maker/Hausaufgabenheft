@@ -85,6 +85,15 @@ zu Fuß herumlaufen, Autos klauen, Aufträge erledigen und vor der Polizei flieh
 
 Öffnen: `https://semrademirci000-maker.github.io/Hausaufgabenheft/neonhafen/`.
 
+**Auf allen Handys installieren:**
+- **Android (und jedes andere Handy):** Link in Chrome öffnen → Menü ⋮ → *App installieren* bzw.
+  *Zum Startbildschirm hinzufügen*. Startet dann im Vollbild, quer, mit eigenem Icon und
+  funktioniert offline. Vibration bei Unfällen und Explosionen ist an.
+- **iPhone/iPad im Browser:** in Safari *Teilen → Zum Home-Bildschirm*.
+- **iPhone/iPad als echte App:** SwiftUI-App in [`ios/Neonhafen`](ios/Neonhafen/README.md).
+  GitHub baut sie automatisch, `Neonhafen.ipa` liegt unter *Releases* und wird mit
+  Sideloadly oder AltStore installiert.
+
 ## Der letzte Bus – Nachtkiosk (3D-Actionspiel)
 
 In `derletztebus/` steckt ein 3D-Spiel (three.js), am besten **quer** gespielt:
@@ -150,7 +159,8 @@ Zum schnellen Ausprobieren am Rechner reicht es, `index.html` im Browser zu öff
 | `statistik.html` | Deine private Spieler-Statistik |
 | `stitched/` | Das Spiel STITCHED von Muaz, mit anonymem Zähler |
 | `stitched/board.html` | Privates Board: wer STITCHED gespielt hat |
-| `neonhafen/` | Stadt-Actionspiel „Neonhafen“ |
+| `neonhafen/` | Stadt-Actionspiel „Neonhafen“ (installierbar, offline) |
+| `ios/Neonhafen/` | „Neonhafen“ als SwiftUI-App für iPhone und iPad |
 | `derletztebus/` | 3D-Actionspiel „Der letzte Bus – Nachtkiosk“ |
 | `ios/DerLetzteBus/` | „Der letzte Bus“ als SwiftUI-App (noch die Textgeschichte) |
 | `sw.js`, `manifest.webmanifest`, `icons/` | Offline-Betrieb, App-Icon, Home-Bildschirm |

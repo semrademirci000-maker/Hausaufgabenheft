@@ -1,5 +1,5 @@
 /* Kleiner Service Worker: App funktioniert auch ohne Internet. */
-const CACHE = 'schulplaner-v2';
+const CACHE = 'schulplaner-v3';
 const FILES = [
   './', './index.html', './styles.css', './app.js', './music.js',
   './manifest.webmanifest', './icons/icon.svg',
@@ -22,6 +22,7 @@ self.addEventListener('fetch', e => {
   if (new URL(e.request.url).pathname.includes('/stitched/')) return; // STITCHED ist ein eigenes Spiel
   if (new URL(e.request.url).pathname.includes('/derletztebus/')) return; // „Der letzte Bus“ auch
   if (new URL(e.request.url).pathname.includes('/emo/')) return; // Emo, der Roboter, auch
+  if (new URL(e.request.url).pathname.includes('/neonhafen/')) return; // Neonhafen hat einen eigenen Service Worker
   e.respondWith(
     caches.match(e.request).then(hit => hit || fetch(e.request).then(res => {
       const copy = res.clone();

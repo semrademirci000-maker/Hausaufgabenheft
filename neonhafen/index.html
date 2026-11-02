@@ -6,9 +6,16 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0b1018">
 <title>Neonhafen</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Chakra+Petch:wght@500;700&display=swap">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Neonhafen">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
 <style>
+@font-face{font-family:"Bungee";font-weight:400;font-display:swap;src:url(fonts/bungee.woff2) format("woff2")}
+@font-face{font-family:"Chakra Petch";font-weight:500;font-display:swap;src:url(fonts/chakra-500.woff2) format("woff2")}
+@font-face{font-family:"Chakra Petch";font-weight:700;font-display:swap;src:url(fonts/chakra-700.woff2) format("woff2")}
 /* Layout: Vollbild-Spielfeld, HUD an den Rändern mit Safe-Area-Abständen. Bewusst nur ein (Nacht-)Look. */
 :root{
   --night:#0b1018; --panel:rgba(10,14,22,.72); --ink:#eef2f7; --dim:#9aa6b8;
@@ -286,7 +293,7 @@ function carPhysics(c,dt,thr,steer,hb){
 function impact(c,sp){
   if(sp>130){carDamage(c,(sp-130)*.07,false);
     if(sp>220){sfx('crash',c.x,c.y,Math.min(1,sp/500));for(let i=0;i<6;i++)spark(c.x+Math.cos(c.a)*c.p.l/2,c.y+Math.sin(c.a)*c.p.l/2);
-      if(c===player.car)shake=Math.min(14,sp/40);}}
+      if(c===player.car){shake=Math.min(14,sp/40);haptic(sp>380?'heavy':'medium')}}}
 }
 function addSkid(c){
   if(skids.length>500)skids.splice(0,40);
@@ -427,7 +434,11 @@ const muteBtn=document.getElementById('mute');
 muteBtn.addEventListener('click',()=>{ensureAudio();muted=!muted;if(master)master.gain.value=muted?0:.55;muteBtn.textContent=muted?'Ton an':'Ton aus'});
 
 // =================== Effekte ===================
-let shake=0;
+let shake=0,hapT=0;
+// Vibration: in der iOS-App über die native Brücke, sonst (Android) über navigator.vibrate
+function haptic(k){const now=performance.now();if(now-hapT<120)return;hapT=now;
+  try{if(window.webkit&&window.webkit.messageHandlers&&window.webkit.messageHandlers.haptic){window.webkit.messageHandlers.haptic.postMessage(k);return}}catch(e){}
+  try{if(navigator.vibrate)navigator.vibrate(k==='heavy'?45:k==='medium'?25:12)}catch(e){}}
 function spark(x,y){parts.push({x,y,vx:rand(-160,160),vy:rand(-160,160),life:.35,max:.35,s:2.5,c:'#ffd27a',k:'spark'})}
 function smoke(x,y,dark){parts.push({x,y,vx:rand(-15,15),vy:rand(-15,15),life:1.6,max:1.6,s:rand(8,14),c:dark?'40,40,46':'150,150,160',k:'smoke'})}
 function fire(x,y){parts.push({x:x+rand(-8,8),y:y+rand(-8,8),vx:rand(-20,20),vy:rand(-20,20),life:.6,max:.6,s:rand(7,12),k:'fire'})}
@@ -435,7 +446,7 @@ function explode(c){
   c.wreck=true;c.burn=0;c.wreckT=40;c.col='#2a2522';c.roofCol='#1f1b19';sfx('boom',c.x,c.y);
   for(let i=0;i<40;i++){const a=Math.random()*TAU,s=rand(60,380);parts.push({x:c.x,y:c.y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:.8,max:.8,s:rand(8,18),k:'fire'})}
   for(let i=0;i<20;i++)smoke(c.x+rand(-30,30),c.y+rand(-30,30),true);
-  if(dist(c.x,c.y,cam.x,cam.y)<700)shake=18;
+  if(dist(c.x,c.y,cam.x,cam.y)<700){shake=18;haptic('heavy')}
   const byP=c.lastHit>0;if(byP)addHeat(c.police?3:1);
   for(const p of peds){const d=dist(p.x,p.y,c.x,c.y);if(d<120){const a=Math.atan2(p.y-c.y,p.x-c.x);knockDown(p,Math.cos(a)*300,Math.sin(a)*300,99,byP)}}
   for(const o of cars){if(o===c||o.wreck)continue;const d=dist(o.x,o.y,c.x,c.y);if(d<130){carDamage(o,(130-d)*.7,byP);const a=Math.atan2(o.y-c.y,o.x-c.x);o.vx+=Math.cos(a)*160;o.vy+=Math.sin(a)*160}}
@@ -443,7 +454,7 @@ function explode(c){
   else if(!player.car){const d=dist(player.x,player.y,c.x,c.y);if(d<120)hurtPlayer((120-d)*.6)}
   panic(c.x,c.y,400);
 }
-function hurtPlayer(n){if(player.dead>0)return;player.hp-=n;if(n>3)shake=Math.max(shake,4);if(player.hp<=0){player.hp=0;gameOver('wasted')}}
+function hurtPlayer(n){if(player.dead>0)return;player.hp-=n;if(n>3){shake=Math.max(shake,4);haptic('medium')}if(player.hp<=0){player.hp=0;gameOver('wasted')}}
 
 // =================== Schüsse ===================
 function fire_(fromX,fromY,a,owner,dmg){
@@ -676,7 +687,7 @@ function update(dt){
     const wantShoot=keys.Space||btn.act||mouse.down;
     if(wantShoot&&player.shootCd<=0){
       const a=(mouse.active&&mouse.t>0&&mouse.down)?player.a:autoAim();player.a=a;player.aimT=.3;
-      fire_(player.x+Math.cos(a)*14,player.y+Math.sin(a)*14,a+rand(-.04,.04),'player',14);player.shootCd=.24;
+      fire_(player.x+Math.cos(a)*14,player.y+Math.sin(a)*14,a+rand(-.04,.04),'player',14);haptic('light');player.shootCd=.24;
       if(player.wanted===0)addHeat(.35);
     }
     if(player.aimT>0)player.aimT-=dt;
@@ -816,7 +827,7 @@ function carCollisions(){
         const rv=(b.vx-a.vx)*nx+(b.vy-a.vy)*ny;
         if(rv<0){const ma=a.p.hp,mb=b.p.hp,j2=-(1.3)*rv/(1/ma+1/mb);a.vx-=j2/ma*nx;a.vy-=j2/ma*ny;b.vx+=j2/mb*nx;b.vy+=j2/mb*ny;
           const sp=-rv;if(sp>120){const byP=a===player.car||b===player.car;const dmg=(sp-120)*.06;carDamage(a,dmg,b===player.car);carDamage(b,dmg,a===player.car);
-            if(sp>200){sfx('crash',(a.x+b.x)/2,(a.y+b.y)/2,Math.min(1,sp/450));spark((p[0]+q[0])/2,(p[1]+q[1])/2);spark((p[0]+q[0])/2,(p[1]+q[1])/2);if(byP)shake=Math.min(12,sp/45)}}}
+            if(sp>200){sfx('crash',(a.x+b.x)/2,(a.y+b.y)/2,Math.min(1,sp/450));spark((p[0]+q[0])/2,(p[1]+q[1])/2);spark((p[0]+q[0])/2,(p[1]+q[1])/2);if(byP){shake=Math.min(12,sp/45);haptic('medium')}}}}
       }}
     // Auto gegen Fußgänger
     if(a.wreck)continue;const sp=Math.hypot(a.vx,a.vy);const ca2=Math.cos(a.a),sa2=Math.sin(a.a);
@@ -1065,6 +1076,8 @@ requestAnimationFrame(frame);
 document.getElementById('go').addEventListener('click',()=>{ensureAudio();document.getElementById('start').hidden=true;running=true;
   toast(player.done?'Willkommen zurück. Erledigte Aufträge: '+player.done:'Folge den pinken Pfeilen zu einem Auftrag (M).')});
 addEventListener('pagehide',save);
+document.addEventListener('visibilitychange',()=>{if(document.hidden){save();if(AC)AC.suspend()}else if(AC&&running)AC.resume()});
+if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
 </body>
 </html>

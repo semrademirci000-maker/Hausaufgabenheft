@@ -5,6 +5,8 @@
 > der kleine Roboter Emo (wie EMO Go Home – das Handy ist sein Gesicht).
 > In [`AffenTag`](AffenTag/README.md) steckt ein Kletter-Fangspiel wie Gorilla Tag
 > (nur mit den Armen bewegen, echte Mitspieler, Computer im Stumpf).
+> In [`Neonhafen`](Neonhafen/README.md) liegt das Stadt-Actionspiel „Neonhafen“
+> (Autos klauen, Aufträge, Polizei) als App für iPhone und iPad.
 
 Dieselbe App wie die Web-Version, aber nativ in **SwiftUI** für iPad und iPhone:
 Startseite, Stundenplan, Hausaufgabenheft mit 3-D-Blättern und Lo-Fi-Musik.

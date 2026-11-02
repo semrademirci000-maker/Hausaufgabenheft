@@ -1,0 +1,81 @@
+# Baut die native iOS-App „Neonhafen" auf einem Mac von GitHub – ganz ohne eigenen Mac.
+# Ergebnis: Neonhafen.ipa (unsigniert) als Download unter „Releases" und als Build-Artefakt.
+# Installieren auf iPhone oder iPad: mit Sideloadly oder AltStore (signiert die App mit deiner Apple-ID).
+name: Neonhafen iOS-App bauen
+
+on:
+  push:
+    paths:
+      - "ios/Neonhafen/**"
+      - "neonhafen/**"
+      - ".github/workflows/neonhafen-ios.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: neonhafen-ios
+  cancel-in-progress: true
+
+jobs:
+  bauen:
+    runs-on: macos-15
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Xcode auswählen
+        run: |
+          sudo xcode-select -s "$(ls -d /Applications/Xcode_16*.app | sort -V | tail -1)"
+          xcodebuild -version
+
+      - name: Aktuelles Spiel in die App kopieren
+        working-directory: ios/Neonhafen
+        run: python3 spiel-einbauen.py
+
+      - name: App bauen (ohne Signatur)
+        working-directory: ios/Neonhafen
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project Neonhafen.xcodeproj \
+            -scheme Neonhafen \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            build | tee xcodebuild.log | grep -E "error:|warning: unused|BUILD (SUCCEEDED|FAILED)" || true
+          grep -q "BUILD SUCCEEDED" xcodebuild.log
+
+      - name: Fehlerprotokoll anzeigen
+        if: failure()
+        working-directory: ios/Neonhafen
+        run: grep -E "error:" -A 3 xcodebuild.log | head -200 || true
+
+      - name: IPA packen
+        working-directory: ios/Neonhafen
+        run: |
+          mkdir -p Payload
+          cp -R build/Build/Products/Release-iphoneos/Neonhafen.app Payload/
+          zip -qry Neonhafen.ipa Payload
+          ls -lh Neonhafen.ipa
+
+      - name: Als Build-Artefakt hochladen
+        uses: actions/upload-artifact@v4
+        with:
+          name: Neonhafen-ipa
+          path: ios/Neonhafen/Neonhafen.ipa
+
+      - name: Als Download unter Releases bereitstellen
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: neonhafen-neueste
+          name: Neonhafen (neueste Version)
+          body: |
+            Automatisch gebaut aus ${{ github.sha }}.
+            Neonhafen.ipa herunterladen und mit Sideloadly oder AltStore auf iPhone oder iPad installieren.
+          files: ios/Neonhafen/Neonhafen.ipa
+          make_latest: false
+          prerelease: false
