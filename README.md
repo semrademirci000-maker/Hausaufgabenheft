@@ -83,6 +83,27 @@ Pier, Glastürmen und pastellfarbenen Häusern mit Balkonen und Markisen.
 - **Moduswahl:** **Story** (Jo kommt mit der Fähre an, sieben Kapitel mit Dialogen) oder
   **freies Spiel** mit eigenem Spielstand und Aufträgen an den **M**-Punkten.
 - Fahndung bis fünf Sterne, **Lackiererei (L)** löscht sie, am **Autohof (A)** verkaufst du Autos.
+- **Karte mit Navi:** „Karte“ (oder Taste M, oder auf die Minikarte tippen) öffnet die große Karte.
+  Tippe irgendwo hin – dort erscheint eine lila Markierung, und eine Linie zeigt dir den Weg.
+- **Polizei:** Streifenwagen fahren mit Abstand hinter dir statt zu rammen. Hältst du an oder bist zu Fuß,
+  steigen die Polizisten aus – bei einem Stern wollen sie dich festnehmen, ab zwei Sternen schießen sie.
+- **Cheats:** Taste „Cheats“ öffnet ein Eingabefeld mit ▲▼◀▶ A B. Am PC kannst du das Cheat-Wort auch
+  einfach während des Spiels tippen. Die Liste steht im Startmenü unter „Cheats anzeigen“:
+
+  | Wirkung | Wort | Tasten |
+  |---|---|---|
+  | +250.000 $ | GELDREGEN | ▲ ▲ ▼ ▼ A B A B |
+  | Volle Gesundheit | HEILUNG | ◀ ▶ ◀ ▶ A A B B |
+  | Fahndung weg | SAUBER | ▼ ▼ ▼ B B B ◀ ▶ |
+  | Zwei Sterne mehr | AERGER | ▲ ▲ ▲ A A A ▶ ◀ |
+  | Sportwagen | FLITZER | ▶ A ▶ B ▲ ▲ ◀ ▼ |
+  | Streifenwagen | STREIFE | B B ▼ ▲ A ▶ ▶ ▶ |
+  | Transporter | LASTER | ▼ ▼ ▶ ▶ A A B ▲ |
+  | Unverwundbar (an/aus) | PANZERHAUT | A B ▲ ▼ ◀ ▶ A B |
+  | Turbo-Autos (an/aus) | TURBO | ▶ ▶ ▶ A ▲ ▲ ▲ B |
+  | Polizei ignoriert dich (an/aus) | FRIEDEN | B A ▼ ▼ ◀ ◀ ▶ A |
+  | Zeitsprung +6 Stunden | ZEITSPRUNG | ▼ ◀ ▼ ◀ B A B A |
+  | Panik in der Stadt | PANIK | ◀ ◀ A ▶ ▶ B ▲ ▼ |
 - Steuerung: WASD, E, Leertaste/Klick, rechte Maustaste dreht die Kamera – am Handy linker
   Daumen-Stick, rechts wischen für die Kamera, Tasten für Einsteigen, Schuss/Drift und Hupe.
 
