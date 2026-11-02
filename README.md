@@ -91,6 +91,13 @@ Pier, Glastürmen und pastellfarbenen Häusern mit Balkonen und Markisen.
 - **Handy:** „Handy“ → **Taxi rufen** (das Taxi kommt zu dir, fährt zur Kartenmarkierung, Fahrpreis nach Strecke;
   „Fahrt überspringen“ geht auch) und **Cheat eingeben**.
 - **Cheat-Seite:** [`neonhafen/cheats.html`](neonhafen/cheats.html) listet alle Codes.
+- **Figuren:** Gelenke an Hüfte, Knie, Schulter und Ellbogen (echter Gang, Rennen mit Vorlage), Gesicht mit Augen,
+  Brauen, Mund, Ohren; Jacken, Röcke, kurze Hosen, Dutt. Wer getroffen wird, kippt nach vorn oder hinten um.
+- **Blut:** dunkelrote Spritzer bei Treffern und eine Lache, die sich unter liegenden Figuren ausbreitet.
+- **Waffenmodelle** aus vielen Teilen (Lauf, Schlitten, Magazin, Schaft, Zielfernrohr), Vorschau im Waffenmenü;
+  lange Waffen werden mit beiden Händen gehalten.
+- **Autos:** getönte Scheiben mit Fahrer und Sitzen, Türfugen, Griffe, Nummernschilder, Speichenfelgen, runde Scheinwerfer.
+- **Handy** im Smartphone-Look mit Uhrzeit und App-Symbolen (Taxi, Karte, Waffen, Cheats, Menü, Ton).
 - **Karte mit Navi:** „Karte“ (oder Taste M, oder auf die Minikarte tippen) öffnet die große Karte.
   Tippe irgendwo hin – dort erscheint eine lila Markierung, und eine Linie zeigt dir den Weg.
 - **Polizei:** Streifenwagen fahren mit Abstand hinter dir statt zu rammen. Hältst du an oder bist zu Fuß,
