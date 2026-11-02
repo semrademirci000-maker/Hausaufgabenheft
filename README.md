@@ -107,7 +107,9 @@ Pier, Glastürmen und pastellfarbenen Häusern mit Balkonen und Markisen.
   mit Tacho in km/h. Die Garage der Villa betritt nur der Spieler; das Tor öffnet sich nur direkt davor oder beim Hineinfahren.
 - **Ladenüberfall:** In jedem 24/7-Markt und im Waffenladen an die Kasse gehen und „Kasse überfallen“ wählen –
   mit Schusswaffe (6 Sekunden, mehr Geld) oder mit Fäusten (9 Sekunden, weniger Geld). Beim Rausgehen gibt es zwei Sterne.
-- **Schlagen:** jederzeit mit der Taste „Schlag“ (PC: V), egal welche Waffe ausgewählt ist. Manche Leute schlagen zurück.
+- **Schlagen:** jederzeit mit der Taste „Schlag“ (PC: V), egal welche Waffe ausgewählt ist. Die meisten Leute schlagen zurück.
+- **Polizei abhängen:** Die Polizei sucht dort, wo sie dich zuletzt gesehen hat. Bleib außer Sicht, dann verlierst du
+  die Sterne schnell. Kleine Vergehen geben nur volle Sterne, wenn Polizei in der Nähe ist.
 - **Karte mit Navi:** „Karte“ (oder Taste M, oder auf die Minikarte tippen) öffnet die große Karte.
   Tippe irgendwo hin – dort erscheint eine lila Markierung, und eine Linie zeigt dir den Weg.
 - **Polizei:** Streifenwagen fahren mit Abstand hinter dir statt zu rammen. Hältst du an oder bist zu Fuß,

@@ -392,7 +392,7 @@ function spawnOnRoad(minD,maxD,type,driver){
 function chooseDir(c,I,J,d){
   let opts=[0,1,2,3].filter(k=>validDir(I,J,k)&&k!==(d+2)%4);
   if(!opts.length)return (d+2)%4;
-  if((c.police&&player.wanted>0)||c.taxiDest){const tg=c.taxiDest||[player.x,player.y];
+  if((c.police&&player.wanted>0)||c.taxiDest){const tg=c.taxiDest||player.lastSeen||[player.x,player.y];
     let best=opts[0],bd=1e9;
     for(const k of opts){const v=dist(icx(I+DIRS[k][0]),icx(J+DIRS[k][1]),tg[0],tg[1])+Math.random()*80;if(v<bd){bd=v;best=k}}
     return best;
@@ -491,11 +491,11 @@ function moveCircle(o,dx,dy,r){
 function knockDown(p,vx,vy,dmg,byPlayer){
   if(p.state==='down')return;
   p.hp-=dmg;if(p.hp>0){p.vx=vx*.5;p.vy=vy*.5;
-    if(p.hitBy==='fist'&&!p.cop&&p.state!=='brawl'&&Math.random()<.4){p.state='brawl';p.timer=12;p.punchCd=.8;toast('Er wehrt sich!');return}
+    if(p.hitBy==='fist'&&!p.cop&&p.state!=='brawl'&&Math.random()<.8){p.state='brawl';p.timer=12;p.punchCd=.8;toast('Er wehrt sich!');return}
     if(p.state!=='brawl')fleeFrom(p,p.x-vx,p.y-vy,5);return}
   p.state='down';p.timer=30;p.vx=vx;p.vy=vy;p.fallT=0;p.fallDir=(Math.cos(p.a)*vx+Math.sin(p.a)*vy)>0?-1:1;
   if(dmg>=8){const ox=p.fallDir>0?-Math.cos(p.a)*9:Math.cos(p.a)*9,oy=p.fallDir>0?-Math.sin(p.a)*9:Math.sin(p.a)*9;setTimeout(()=>addBlood(p.x+ox,p.y+oy,rand(11,17),true),450)}
-  if(byPlayer&&!p.counted){p.counted=true;addHeat(p.cop?3:1.2);
+  if(byPlayer&&!p.counted){p.counted=true;addHeat(p.cop?3:(copSees()?1.2:.5));
     if(Math.random()<.55)pickups.push({kind:'cash',x:p.x+rand(-10,10),y:p.y+rand(-10,10),v:Math.round(rand(10,70)),t:40});}
   panic(p.x,p.y,260);
 }
@@ -509,7 +509,10 @@ function save(){if(!mode)return;slot.money=player.money;slot.done=player.done;tr
 const player={x:PIER.x,y:PIER.y-60,a:-Math.PI/2,vx:0,vy:0,hp:100,money:0,done:0,car:null,
   wanted:0,heat:0,unseen:0,shootCd:0,ph:0,moving:false,bust:0,dead:0,aimT:0,gy:0};
 const TH=[0,1,4,9,16,25];
+function copSees(){for(const c of cars)if(c.police&&c.driver==='police'&&dist(c.x,c.y,player.x,player.y)<600&&los(c.x,c.y,player.x,player.y))return true;
+  for(const p of peds)if(p.cop&&p.state!=='down'&&dist(p.x,p.y,player.x,player.y)<500)return true;return false}
 function addHeat(h){
+  if(player.wanted===0||!player.lastSeen)player.lastSeen=[player.x,player.y];
   if(peace||cheatT.invis>0)return;
   player.heat=Math.min(32,player.heat+h);let w=0;for(let i=1;i<=5;i++)if(player.heat>=TH[i])w=i;
   if(w>player.wanted){player.wanted=w;sfx('alarm')}player.unseen=0;
@@ -684,7 +687,7 @@ function tryEnter(){
   if(!best){toast('Kein Auto in der Nähe');return}
   if(Math.hypot(best.vx,best.vy)>170){toast('Zu schnell – warte, bis es bremst');return}
   if(best.driver==='ai'||best.driver==='police'){
-    const cop=best.police;ejectDriver(best,true);addHeat(cop?4:1);
+    const cop=best.police;ejectDriver(best,true);addHeat(cop?4:(copSees()?1:.3));
     toast(cop?'Streifenwagen geklaut! Das gibt Ärger.':'Auto geklaut: '+best.p.name);
   }else toast(best.p.name);
   best.driver='player';best.ai=null;player.car=best;sfx('door',best.x,best.y);camS.manual=0;
@@ -869,7 +872,7 @@ function onScreen(x,y){
 function populate(){
   let traffic=0,police=0;for(const c of cars){if(c.driver==='ai')traffic++;if(c.driver==='police')police++}
   if(traffic<(COARSE?20:26))spawnOnRoad(550,1500,pick(TRAFFIC),'ai');
-  const wantP=player.wanted===0?1:Math.min(6,player.wanted+1);
+  const wantP=player.wanted===0?1:Math.min(4,player.wanted);
   if(police<wantP){const c=spawnOnRoad(player.wanted?650:900,player.wanted?1300:1800,'streife','police');if(c&&player.wanted)c.chase=true}
   let alivePeds=0;for(const p of peds)if(p.state!=='down')alivePeds++;
   for(let k=0;k<6&&alivePeds<PEDN;k++){
@@ -974,7 +977,7 @@ function update(dt){
       else if(w.grenade){throwGrenade();if(player.wanted===0)addHeat(.5)}
       else{const a=autoAim();player.a=a;player.aimT=.35;
         for(let i=0;i<w.pellets;i++)fireGun(player.x+Math.cos(a)*10,player.y+Math.sin(a)*10,a+rand(-w.spread,w.spread),'player',w.dmg,player.gy+11,w.life);
-        haptic(w.pellets>1?'medium':'light');if(player.wanted===0)addHeat(.35)}
+        haptic(w.pellets>1?'medium':'light');if(player.wanted===0&&copSees())addHeat(.35)}
     }
     if(player.punchT>0)player.punchT-=dt;if(player.punchCd>0)player.punchCd-=dt;
     if((keys.KeyV||btn.punch)&&!(player.punchCd>0))punch(WEAPONS[0]);
@@ -1076,7 +1079,7 @@ function pointInCar(c,x,y){const ca=Math.cos(c.a),sa=Math.sin(c.a),dx=x-c.x,dy=y
 function aiDrive(c,dt){
   const ai=c.ai;if(ai.ignore>0)ai.ignore-=dt;
   const chasing=c.police&&c.chase&&player.wanted>0;
-  if(chasing){c.chaseT-=dt;if(c.chaseT<=0){c.chaseT=.3;const d=dist(c.x,c.y,player.x,player.y);const was=c.direct;c.direct=d<560&&los(c.x,c.y,player.x,player.y);if(was&&!c.direct)rejoin(c)}}
+  if(chasing){c.chaseT-=dt;if(c.chaseT<=0){c.chaseT=.3;const d=dist(c.x,c.y,player.x,player.y);const was=c.direct;c.direct=cheatT.invis<=0&&d<440&&los(c.x,c.y,player.x,player.y);if(was&&!c.direct)rejoin(c)}}
   else if(c.direct){c.direct=false;rejoin(c)}
   const fwd=c.vx*Math.cos(c.a)+c.vy*Math.sin(c.a),dP=dist(c.x,c.y,player.x,player.y);
   let tx,ty,target,keepGap=false;
@@ -1169,8 +1172,8 @@ function policeLogic(dt){
     for(const c of cars){if(!c.police||c.driver!=='police')continue;c.chase=true;
       if(c.direct)seen=true;else if(dist(c.x,c.y,player.x,player.y)<420&&los(c.x,c.y,player.x,player.y))seen=true}
     if(cheatT.invis>0)seen=false;
-    if(seen)player.unseen=0;else player.unseen+=dt;
-    if(player.unseen>5+player.wanted*2.4&&!(mission&&mission.kind==='finale')){player.wanted--;player.heat=TH[player.wanted];player.unseen=0;
+    if(seen){player.unseen=0;player.lastSeen=[player.x,player.y]}else player.unseen+=dt;
+    if(player.unseen>3+player.wanted*1.4&&!(mission&&mission.kind==='finale')){player.wanted--;player.heat=TH[player.wanted];player.unseen=0;
       if(player.wanted===0){toast('Die Polizei hat dich verloren.');for(const c of cars)if(c.police)c.chase=false}}
     let near=false;
     if(!player.car)for(const c of cars){if(c.police&&c.driver==='police'&&dist(c.x,c.y,player.x,player.y)<85&&Math.hypot(c.vx,c.vy)<60)near=true}
