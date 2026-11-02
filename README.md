@@ -99,7 +99,7 @@ Pier, Glastürmen und pastellfarbenen Häusern mit Balkonen und Markisen.
 - **Autos:** getönte Scheiben mit Fahrer und Sitzen, Türfugen, Griffe, Nummernschilder, Speichenfelgen, runde Scheinwerfer.
 - **Handy** im Smartphone-Look mit Uhrzeit und App-Symbolen (Taxi, Karte, Waffen, Cheats, Menü, Ton).
 - **Begehbare Gebäude:** deine **Villa Solera** (H) am Strand – mit Wohnzimmer, Küche, Bett (schlafen und speichern),
-  Kleiderschrank (Outfit wechseln) und Garage mit **zwei Supersportwagen „Fulmine GT“**; **24/7-Märkte** (S) für Snacks
+  Kleiderschrank (Outfit wechseln) und geschlossener Garage mit Rolltor (öffnet sich, wenn du davorstehst) und **zwei Supersportwagen „Fulmine GT“**; **24/7-Märkte** (S) für Snacks
   und Getränke; Waffenladen **Kimme & Korn** (W).
 - **Neue Cheats:** MINIGUN, GEIST (5 Minuten unsichtbar), TITAN (5 Minuten unbesiegbar) mit Restzeit-Anzeige,
   BLITZ (Supersportwagen). Alle Codes stehen in `neonhafen/cheats.html`.

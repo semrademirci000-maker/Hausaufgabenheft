@@ -281,7 +281,11 @@ const isRoadC=c=>{const m=c%PER;return m===0||m===1};
 const isWalkC=c=>{const m=c%PER;return m===2||m===9};
 function tileAt(tx,ty){if(tx<0||ty<0||tx>=MAPN||ty>=MAPN)return WATER;if(tx>=MW||ty>=MW)return SAND;return map[ty*MW+tx]}
 function tileAtW(x,y){return tileAt(Math.floor(x/T),Math.floor(y/T))}
-function solidW(x,y){const t=tileAtW(x,y);return t===BUILD||t===WATER}
+function solidW(x,y){const t=tileAtW(x,y);if(t===BUILD||t===WATER)return true;
+  if(GAR&&x>GAR.x0-6&&x<GAR.x1+6&&y>GAR.z0-6&&y<GAR.z1+6){for(const r of GAR.walls)if(x>r[0]&&x<r[2]&&y>r[1]&&y<r[3])return true;
+    if(GAR.open<.6&&x>GAR.x0&&x<GAR.x1&&y>GAR.z1-4&&y<GAR.z1+3)return true}
+  return false}
+let GAR=null;
 function groundH(x,y){const t=tileAtW(x,y);return t===ROAD?0:t===WATER?-9:t===SAND?1:2}
 for(let ty=0;ty<MW;ty++)for(let tx=0;tx<MW;tx++)map[ty*MW+tx]=(isRoadC(tx)||isRoadC(ty))?ROAD:(isWalkC(tx)||isWalkC(ty))?WALK:BUILD;
 const buildings=[],trees=[],pads=[],lamps=[];
@@ -1331,9 +1335,9 @@ let neonMat=null;
     if(b.neon&&!b.glass&&srand()<.4){const c=new THREE.Color(b.neon);const yb=top-14;box(NB,null,x0+8,yb,z1+2.5,x1-8,yb+4,z1+3.5,c)}
   }
   addMesh(toGeo(SF),shopMat,true);
-  if(VILLA){const vx=VILLA.x0*T,vz=(VILLA.y0+4)*T,wc=new THREE.Color('#f4f1ea'),dk=new THREE.Color('#3a3d44');
-    box(RB,RB,vx+.6*T,2,vz,vx+.6*T+4,40,vz+1.7*T,wc);box(RB,RB,vx+4.4*T-4,2,vz,vx+4.4*T,40,vz+1.7*T,wc);box(RB,RB,vx+.6*T-2,40,vz-2,vx+4.4*T+2,45,vz+1.75*T,dk);
-    box(RB,RB,vx+.6*T,2,vz+1.7*T-3,vx+.6*T+4,40,vz+1.7*T,wc)}
+  if(VILLA){const vx=VILLA.x0*T,vz=(VILLA.y0+4)*T-6,x0=vx+.5*T,x1=vx+4.5*T,z1=vz+1.75*T,wc=new THREE.Color('#f4f1ea'),dk=new THREE.Color('#3a3d44');
+    box(RB,RB,x0,2,vz,x0+5,46,z1,wc);box(RB,RB,x1-5,2,vz,x1,46,z1,wc);box(RB,RB,x0-2,46,vz,x1+2,51,z1+2,dk);box(RB,RB,x0,40,z1-5,x1,46,z1,wc);box(RB,RB,x0,2,vz,x1,46,vz+4,new THREE.Color('#e6e1d6'));
+    GAR={x0,x1,z0:vz,z1,open:0,walls:[[x0,vz,x0+5,z1],[x1-5,vz,x1,z1]]}}
   addMesh(toGeo(WS),stuccoMat,true);
   addMesh(toGeo(WG),towerMat,true);
   addMesh(toGeo(RB),new THREE.MeshLambertMaterial({vertexColors:true}),true);
@@ -1368,6 +1372,17 @@ function addSigns(){
     m.position.set(b.x+b.w/2,Math.min(b.ht-10,64),b.y+b.h+3);city.add(m);
   }
 }
+// Garage der Villa: Betonboden, Deckenlicht, Rolltor
+if(GAR){const w=GAR.x1-GAR.x0-10,d=GAR.z1-GAR.z0;
+  const fl=new THREE.Mesh(new THREE.PlaneGeometry(w,d).rotateX(-Math.PI/2),new THREE.MeshStandardMaterial({color:'#8d8e8c',roughness:.6}));fl.position.set((GAR.x0+GAR.x1)/2,2.15,(GAR.z0+GAR.z1)/2);fl.receiveShadow=true;scene.add(fl);
+  const lp=new THREE.Mesh(new THREE.BoxGeometry(60,1,10),new THREE.MeshBasicMaterial({color:'#fff7e0',toneMapped:false}));lp.position.set((GAR.x0+GAR.x1)/2,39.5,(GAR.z0+GAR.z1)/2);scene.add(lp);
+  const gl=new THREE.PointLight('#fff1d6',6000,260,2);gl.position.set((GAR.x0+GAR.x1)/2,36,(GAR.z0+GAR.z1)/2);scene.add(gl);
+  const tex=canvasTex(64,64,(g,W_,H_)=>{for(let y=0;y<64;y+=8){g.fillStyle='#d9dcdf';g.fillRect(0,y,64,6);g.fillStyle='#9aa0a6';g.fillRect(0,y+6,64,2)}},true);tex.repeat.set(4,5);
+  const door=new THREE.Mesh(new THREE.BoxGeometry(GAR.x1-GAR.x0-10,38,2),new THREE.MeshStandardMaterial({map:tex,roughness:.45,metalness:.5}));
+  door.position.set((GAR.x0+GAR.x1)/2,21,GAR.z1-2);door.castShadow=true;scene.add(door);GAR.door=door}
+function updateGarage(dt){if(!GAR)return;const cx=(GAR.x0+GAR.x1)/2,near=!inside&&dist(player.x,player.y,cx,GAR.z1)<170||(player.x>GAR.x0&&player.x<GAR.x1&&player.y>GAR.z0&&player.y<GAR.z1);
+  const was=GAR.open;GAR.open+=((near?1:0)-GAR.open)*Math.min(1,dt*2.2);if(Math.abs(was-GAR.open)<.0005)return;
+  GAR.door.scale.y=Math.max(.06,1-GAR.open);GAR.door.position.y=2+38*(1-GAR.open*.97)/2+38*GAR.open*.94}
 // Straßenlaternen (instanziert)
 const lampMats={};
 {
@@ -1766,6 +1781,7 @@ function syncScene(dt){
   if(mission&&mission.target){const [tx,ty]=mission.target;beacon.visible=true;beacon.position.set(tx,groundH(tx,ty)+210,ty);beaconMat.opacity=.16+Math.sin(time*4)*.06}else beacon.visible=false;
   if(waypoint){wpBeacon.visible=true;wpBeacon.position.set(waypoint[0],groundH(waypoint[0],waypoint[1])+210,waypoint[1])}else wpBeacon.visible=false;
   updatePools(dt);
+  updateGarage(dt);
   if(window._water){window._water.offset.set(time*.004,time*.002);nWater.offset.set(time*.006,-time*.004)}
 }
 function poseHuman(g,x,y,gy,a,ph,moving,down,aim,run,fall,fallDir,twoHand){
