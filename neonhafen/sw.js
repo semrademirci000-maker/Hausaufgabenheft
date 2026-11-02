@@ -1,7 +1,7 @@
 /* Neonhafen offline: alles einmal laden, danach läuft das Spiel ohne Internet. */
-const CACHE = 'neonhafen-v2';
+const CACHE = 'neonhafen-v3';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon-180.png', './icon-192.png', './icon-512.png',
-  './fonts/bungee.woff2', './fonts/chakra-500.woff2', './fonts/chakra-700.woff2'];
+  './fonts/bungee.woff2', './fonts/chakra-500.woff2', './fonts/chakra-700.woff2', './vendor/three.global.js'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
 });

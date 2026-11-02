@@ -71,17 +71,24 @@ in der Nähe über WLAN/Bluetooth). Mit Freunden: am Computer einen Raum-Code ei
 **Vorschau im Browser** (ohne Mehrspieler, gleiche Arm-Physik):
 https://semrademirci000-maker.github.io/Hausaufgabenheft/affentag/vorschau.html
 
-## Neonhafen – Stadt-Actionspiel (von oben)
+## Neonhafen – 3D-Stadt-Actionspiel
 
-In `neonhafen/` steckt ein eigenes Open-World-Spiel in einer Hafenstadt bei Nacht:
-zu Fuß herumlaufen, Autos klauen, Aufträge erledigen und vor der Polizei fliehen.
+In `neonhafen/` steckt ein eigenes Open-World-Spiel in 3D (three.js): eine Hafenstadt bei Nacht
+mit beleuchteten Hochhäusern, Leuchtreklamen, Straßenlaternen, Verkehr und Fußgängern.
+Die Kamera hängt hinter dir – zu Fuß oder im Auto.
 
-- **Aufträge (M):** Mara (Kurierfahrt mit Zeitlimit), Kofi (bestimmtes Auto zum Autohof bringen),
-  Frau Lindqvist (drei Sterne bekommen und die Polizei abhängen).
-- **Fahndung:** bis zu fünf Sterne. Die Streife verfolgt dich, ab drei Sternen wird geschossen.
-  Außer Sicht verlieren sie dich irgendwann – oder du fährst in die **Lackiererei (L)**.
-- **Autohof (A):** geklaute Autos gegen Bargeld verkaufen.
-- Steuerung: WASD, E, Leertaste, Maus – oder am Handy Daumen-Stick und Tasten rechts.
+Beim Start wählst du den Modus:
+
+- **Story:** Jo kommt mit der Nachtfähre nach Neonhafen. Sieben Kapitel mit Dialogen –
+  Mara, Kofi und Frau Lindqvist geben dir Aufträge, bis dich jemand reinlegt und du die letzte
+  Fähre erwischen musst. Der Fortschritt wird gespeichert; danach geht es frei weiter.
+- **Freies Spiel:** keine Geschichte, eigener Spielstand. Aufträge holst du dir an den pinken
+  **M**-Punkten (Kurierfahrt, Auto-Bestellung, Polizei ablenken).
+
+Überall: bis zu fünf Fahndungssterne (ab drei wird geschossen), **Lackiererei (L)** löscht die
+Fahndung, am **Autohof (A)** verkaufst du geklaute Autos.
+Steuerung: WASD, E, Leertaste/Klick, rechte Maustaste dreht die Kamera – am Handy linker
+Daumen-Stick, rechts wischen für die Kamera, Tasten für Einsteigen, Schuss/Drift und Hupe.
 
 Öffnen: `https://semrademirci000-maker.github.io/Hausaufgabenheft/neonhafen/`.
 
@@ -159,7 +166,7 @@ Zum schnellen Ausprobieren am Rechner reicht es, `index.html` im Browser zu öff
 | `statistik.html` | Deine private Spieler-Statistik |
 | `stitched/` | Das Spiel STITCHED von Muaz, mit anonymem Zähler |
 | `stitched/board.html` | Privates Board: wer STITCHED gespielt hat |
-| `neonhafen/` | Stadt-Actionspiel „Neonhafen“ (installierbar, offline) |
+| `neonhafen/` | 3D-Stadt-Actionspiel „Neonhafen“ mit Story und freiem Spiel (installierbar, offline) |
 | `ios/Neonhafen/` | „Neonhafen“ als SwiftUI-App für iPhone und iPad |
 | `derletztebus/` | 3D-Actionspiel „Der letzte Bus – Nachtkiosk“ |
 | `ios/DerLetzteBus/` | „Der letzte Bus“ als SwiftUI-App (noch die Textgeschichte) |

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Kopiert das Web-Spiel (../../neonhafen/index.html) als EINE Datei in die App.
 
-Die Schriften werden dabei als data:-URIs eingebettet, damit die App ohne Internet
+Die Schriften (als data:-URIs) und die 3D-Engine three.js werden dabei eingebettet, damit die App ohne Internet
 und ohne Unterordner im App-Bundle funktioniert. Nach jeder Änderung am Spiel einmal
 ausführen:   python3 spiel-einbauen.py
 (Der GitHub-Workflow macht das vor jedem Build automatisch.)
@@ -18,6 +18,13 @@ def schrift(m):
     return f'url(data:font/woff2;base64,{b64})'
 
 html = re.sub(r'url\((fonts/[^)]+\.woff2)\)', schrift, html)
+
+# 3D-Engine (three.js) direkt einbetten – Skripte aus Unterordnern lädt WebKit aus dem Bundle nicht zuverlässig
+def skript(m):
+    code = (web / m.group(1)).read_text(encoding="utf-8")
+    assert "</script" not in code.lower()
+    return "<script>\n" + code + "\n</script>"
+html = re.sub(r'<script src="(vendor/[^"]+\.js)"></script>', skript, html)
 # Web-Only-Teile, die es in der App nicht braucht
 html = re.sub(r'<link rel="(apple-touch-icon|icon|manifest)"[^>]*>\n?', '', html)
 ziel = hier / "Neonhafen" / "Spiel" / "neonhafen.html"

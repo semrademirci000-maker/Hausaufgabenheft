@@ -1,7 +1,7 @@
 # Neonhafen – iOS-App (SwiftUI) für iPhone und iPad
 
-Das Stadt-Actionspiel **Neonhafen** als eigene App: Autos klauen, Aufträge
-erledigen, der Polizei entkommen. Läuft auf **iPhone und iPad**, quer und hoch,
+Das 3D-Stadt-Actionspiel **Neonhafen** als eigene App – mit **Story-Modus** und
+**freiem Spiel**: Autos klauen, Aufträge erledigen, der Polizei entkommen. Läuft auf **iPhone und iPad**, quer und hoch,
 komplett **offline**, mit Vibration bei Unfällen, Schüssen und Explosionen.
 
 Die App ist eine SwiftUI-Hülle um das Web-Spiel aus [`neonhafen/`](../../neonhafen/):
@@ -37,7 +37,7 @@ python3 spiel-einbauen.py
 ```
 
 Das Skript kopiert `neonhafen/index.html` nach `Neonhafen/Spiel/neonhafen.html` und
-bettet die Schriften ein. Der Workflow macht das vor jedem Build automatisch.
+bettet die Schriften und die 3D-Engine (three.js) ein. Der Workflow macht das vor jedem Build automatisch.
 
 ## Dateien
 
