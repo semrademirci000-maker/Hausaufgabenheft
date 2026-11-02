@@ -1,6 +1,6 @@
-# Neonhafen – iOS-App (SwiftUI) für iPhone und iPad
+# Costa Solera – iOS-App (SwiftUI) für iPhone und iPad
 
-Das 3D-Stadt-Actionspiel **Neonhafen** als eigene App – mit **Story-Modus** und
+Das 3D-Actionspiel **Costa Solera** (Ordner- und Projektname: Neonhafen) als eigene App – mit **Story-Modus** und
 **freiem Spiel**: Autos klauen, Aufträge erledigen, der Polizei entkommen. Läuft auf **iPhone und iPad**, quer und hoch,
 komplett **offline**, mit Vibration bei Unfällen, Schüssen und Explosionen.
 

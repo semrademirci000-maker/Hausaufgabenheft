@@ -71,24 +71,20 @@ in der Nähe über WLAN/Bluetooth). Mit Freunden: am Computer einen Raum-Code ei
 **Vorschau im Browser** (ohne Mehrspieler, gleiche Arm-Physik):
 https://semrademirci000-maker.github.io/Hausaufgabenheft/affentag/vorschau.html
 
-## Neonhafen – 3D-Stadt-Actionspiel
+## Costa Solera – 3D-Actionspiel an der Küste
 
-In `neonhafen/` steckt ein eigenes Open-World-Spiel in 3D (three.js): eine Hafenstadt bei Nacht
-mit beleuchteten Hochhäusern, Leuchtreklamen, Straßenlaternen, Verkehr und Fußgängern.
-Die Kamera hängt hinter dir – zu Fuß oder im Auto.
+In `neonhafen/` (Ordnername bleibt, damit der Link gleich bleibt) steckt ein eigenes
+Open-World-Spiel in 3D (three.js): **Port Solera**, eine sonnige Küstenstadt mit Palmen, Strand,
+Pier, Glastürmen und pastellfarbenen Häusern mit Balkonen und Markisen.
 
-Beim Start wählst du den Modus:
-
-- **Story:** Jo kommt mit der Nachtfähre nach Neonhafen. Sieben Kapitel mit Dialogen –
-  Mara, Kofi und Frau Lindqvist geben dir Aufträge, bis dich jemand reinlegt und du die letzte
-  Fähre erwischen musst. Der Fortschritt wird gespeichert; danach geht es frei weiter.
-- **Freies Spiel:** keine Geschichte, eigener Spielstand. Aufträge holst du dir an den pinken
-  **M**-Punkten (Kurierfahrt, Auto-Bestellung, Polizei ablenken).
-
-Überall: bis zu fünf Fahndungssterne (ab drei wird geschossen), **Lackiererei (L)** löscht die
-Fahndung, am **Autohof (A)** verkaufst du geklaute Autos.
-Steuerung: WASD, E, Leertaste/Klick, rechte Maustaste dreht die Kamera – am Handy linker
-Daumen-Stick, rechts wischen für die Kamera, Tasten für Einsteigen, Schuss/Drift und Hupe.
+- **Realistischere Grafik:** Sonnenlicht mit echten Schatten, Tag-Nacht-Wechsel (ein Tag ≈ 16 Minuten,
+  nachts Fensterlicht, Laternen, Scheinwerfer und Sterne), spiegelnde Glasfassaden und Autolacke,
+  Meer mit Spiegelung und flachem Wasser am Strand.
+- **Moduswahl:** **Story** (Jo kommt mit der Fähre an, sieben Kapitel mit Dialogen) oder
+  **freies Spiel** mit eigenem Spielstand und Aufträgen an den **M**-Punkten.
+- Fahndung bis fünf Sterne, **Lackiererei (L)** löscht sie, am **Autohof (A)** verkaufst du Autos.
+- Steuerung: WASD, E, Leertaste/Klick, rechte Maustaste dreht die Kamera – am Handy linker
+  Daumen-Stick, rechts wischen für die Kamera, Tasten für Einsteigen, Schuss/Drift und Hupe.
 
 Öffnen: `https://semrademirci000-maker.github.io/Hausaufgabenheft/neonhafen/`.
 
@@ -166,8 +162,8 @@ Zum schnellen Ausprobieren am Rechner reicht es, `index.html` im Browser zu öff
 | `statistik.html` | Deine private Spieler-Statistik |
 | `stitched/` | Das Spiel STITCHED von Muaz, mit anonymem Zähler |
 | `stitched/board.html` | Privates Board: wer STITCHED gespielt hat |
-| `neonhafen/` | 3D-Stadt-Actionspiel „Neonhafen“ mit Story und freiem Spiel (installierbar, offline) |
-| `ios/Neonhafen/` | „Neonhafen“ als SwiftUI-App für iPhone und iPad |
+| `neonhafen/` | 3D-Actionspiel „Costa Solera“ mit Story und freiem Spiel (installierbar, offline) |
+| `ios/Neonhafen/` | „Costa Solera“ als SwiftUI-App für iPhone und iPad |
 | `derletztebus/` | 3D-Actionspiel „Der letzte Bus – Nachtkiosk“ |
 | `ios/DerLetzteBus/` | „Der letzte Bus“ als SwiftUI-App (noch die Textgeschichte) |
 | `sw.js`, `manifest.webmanifest`, `icons/` | Offline-Betrieb, App-Icon, Home-Bildschirm |

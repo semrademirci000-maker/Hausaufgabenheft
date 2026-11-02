@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Neonhafen – Stadt-Actionspiel von oben.
+/// Costa Solera – 3D-Actionspiel in einer sonnigen Küstenstadt (Story oder freies Spiel).
 /// Das Spiel selbst ist dasselbe wie im Web (Spiel/neonhafen.html) und läuft hier
 /// offline in einer WebKit-Ansicht; die App liefert Vollbild, Vibration und Icon.
 @main
