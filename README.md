@@ -71,6 +71,20 @@ in der Nähe über WLAN/Bluetooth). Mit Freunden: am Computer einen Raum-Code ei
 **Vorschau im Browser** (ohne Mehrspieler, gleiche Arm-Physik):
 https://semrademirci000-maker.github.io/Hausaufgabenheft/affentag/vorschau.html
 
+## Neonhafen – Stadt-Actionspiel (von oben)
+
+In `neonhafen/` steckt ein eigenes Open-World-Spiel in einer Hafenstadt bei Nacht:
+zu Fuß herumlaufen, Autos klauen, Aufträge erledigen und vor der Polizei fliehen.
+
+- **Aufträge (M):** Mara (Kurierfahrt mit Zeitlimit), Kofi (bestimmtes Auto zum Autohof bringen),
+  Frau Lindqvist (drei Sterne bekommen und die Polizei abhängen).
+- **Fahndung:** bis zu fünf Sterne. Die Streife verfolgt dich, ab drei Sternen wird geschossen.
+  Außer Sicht verlieren sie dich irgendwann – oder du fährst in die **Lackiererei (L)**.
+- **Autohof (A):** geklaute Autos gegen Bargeld verkaufen.
+- Steuerung: WASD, E, Leertaste, Maus – oder am Handy Daumen-Stick und Tasten rechts.
+
+Öffnen: `https://semrademirci000-maker.github.io/Hausaufgabenheft/neonhafen/`.
+
 ## Der letzte Bus – Nachtkiosk (3D-Actionspiel)
 
 In `derletztebus/` steckt ein 3D-Spiel (three.js), am besten **quer** gespielt:
@@ -136,6 +150,7 @@ Zum schnellen Ausprobieren am Rechner reicht es, `index.html` im Browser zu öff
 | `statistik.html` | Deine private Spieler-Statistik |
 | `stitched/` | Das Spiel STITCHED von Muaz, mit anonymem Zähler |
 | `stitched/board.html` | Privates Board: wer STITCHED gespielt hat |
+| `neonhafen/` | Stadt-Actionspiel „Neonhafen“ |
 | `derletztebus/` | 3D-Actionspiel „Der letzte Bus – Nachtkiosk“ |
 | `ios/DerLetzteBus/` | „Der letzte Bus“ als SwiftUI-App (noch die Textgeschichte) |
 | `sw.js`, `manifest.webmanifest`, `icons/` | Offline-Betrieb, App-Icon, Home-Bildschirm |
