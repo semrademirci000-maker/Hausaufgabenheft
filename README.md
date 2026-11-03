@@ -129,6 +129,8 @@ Pier, Glastürmen und pastellfarbenen Häusern mit Balkonen und Markisen.
   Tippe irgendwo hin – dort erscheint eine lila Markierung, und eine Linie zeigt dir den Weg.
 - **Polizei:** Streifenwagen fahren mit Abstand hinter dir statt zu rammen. Hältst du an oder bist zu Fuß,
   steigen die Polizisten aus – bei einem Stern wollen sie dich festnehmen, ab zwei Sternen schießen sie.
+- **Cheats im Spiel:** Handy → „Cheats“ zeigt alle Codes als Liste – „An“ aktiviert sofort, „Kopieren“ legt das Wort in die
+  Zwischenablage, im Feld darüber kann man einen Code einfügen und mit „Eingeben“ bestätigen.
 - **Cheats:** Taste „Cheats“ öffnet ein Eingabefeld mit ▲▼◀▶ A B. Am PC kannst du das Cheat-Wort auch
   einfach während des Spiels tippen. Die Liste steht im Startmenü unter „Cheats anzeigen“:
 

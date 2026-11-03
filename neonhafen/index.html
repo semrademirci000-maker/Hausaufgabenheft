@@ -73,6 +73,16 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--night);color:var
 .phone .pad{margin-top:auto}
 .phone small{color:rgba(255,255,255,.85)}
 #cheatSeq{color:#fff}
+#cheat .screen{overflow-y:auto}
+.cinput{display:flex;gap:6px;width:100%}
+.cinput input{flex:1;min-width:0;font:700 14px var(--body);padding:8px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.35);background:rgba(0,0,0,.35);color:#fff;text-transform:uppercase;-webkit-user-select:text;user-select:text}
+.cinput button,#cheatQuick button{font:700 12px var(--body);border:0;border-radius:9px;padding:7px 9px;cursor:pointer;background:rgba(255,255,255,.9);color:#14213d}
+#cheatGo{background:var(--cash)!important}
+#cheatQuick{display:flex;flex-direction:column;gap:6px;width:100%}
+.cq{display:flex;align-items:center;gap:6px;background:rgba(0,0,0,.35);border-radius:12px;padding:6px 8px}
+.cq span{flex:1;min-width:0;display:flex;flex-direction:column;color:#fff;font:700 12.5px var(--body);line-height:1.2}
+.cq span em{font-style:normal;font:400 11px var(--display);color:var(--cash);letter-spacing:.04em}
+.cq .on{background:var(--cash)!important}
 #cheatSeq{font-family:var(--display);font-size:20px;letter-spacing:4px;min-height:28px;color:var(--cash)}
 .pad{display:grid;grid-template-columns:repeat(4,56px);gap:8px}
 .pad button{height:56px;border-radius:14px;border:1px solid rgba(255,255,255,.25);background:#1c2330;color:var(--ink);font:700 20px var(--body);cursor:pointer;touch-action:manipulation}
@@ -248,7 +258,9 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--night);color:var
       <span></span><button type="button" data-k="U">▲</button><span></span><button type="button" data-k="A" class="ab">A</button>
       <button type="button" data-k="L">◀</button><button type="button" data-k="D">▼</button><button type="button" data-k="R">▶</button><button type="button" data-k="B" class="ab">B</button>
     </div>
-    <small>Tasten hintereinander drücken. Am PC kannst du das Cheat-Wort auch einfach im Spiel tippen.</small>
+    <div class="cinput"><input id="cheatInput" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Code eingeben oder einfügen" aria-label="Cheat-Code"><button type="button" id="cheatPaste">Einfügen</button><button type="button" id="cheatGo">Eingeben</button></div>
+    <div id="cheatQuick" aria-label="Alle Cheats"></div>
+    <small>Tippe „An“, um einen Cheat sofort zu aktivieren, oder „Kopieren“, um den Code zu kopieren.</small>
     <button class="homebar" id="cheatClose" type="button" aria-label="Schließen"></button>
   </div></div>
 </div>
@@ -556,6 +568,7 @@ function setWanted(w){player.wanted=w;player.heat=TH[w];player.unseen=0}
 const keys={};let enterPressed=false,hornPressed=false;
 const mouse={down:false,rdown:false,lx:0};
 addEventListener('keydown',e=>{
+  if(e.target&&e.target.tagName==='INPUT')return;
   if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code))e.preventDefault();
   if(!e.repeat){
     if(dlgOpen&&(e.code==='Enter'||e.code==='Space'||e.code==='KeyE')){nextLine();return}
@@ -2226,6 +2239,17 @@ function tryCheats(buf,field){
 const seqEl=document.getElementById('cheatSeq'),cheatEl=document.getElementById('cheat');
 function padPress(k){padBuf=(padBuf+k).slice(-8);seqEl.textContent=[...padBuf].map(c=>SYM[c]).join(' ');sfx('blip');
   if(tryCheats(padBuf,'seq')){padBuf='';seqEl.textContent='✓';setTimeout(()=>{if(!padBuf)seqEl.textContent=' '},700)}}
+// Cheat-Liste im Handy: sofort aktivieren oder Code kopieren/einfügen
+function copyText(t){const fallback=()=>{let ok=false;try{const el=document.getElementById('cheatInput');el.value=t;el.focus();el.select();ok=!!(document.execCommand&&document.execCommand('copy'))}catch(_){}toast(ok?'Kopiert: '+t:'Code steht im Feld: '+t)};
+  try{navigator.clipboard.writeText(t).then(()=>toast('Kopiert: '+t),fallback)}catch(e){fallback()}}
+function runCode(raw){const w=(raw||'').toUpperCase().replace(/[^A-Z]/g,'');if(!w){toast('Bitte einen Code eingeben.');return}
+  if(!CHEATS.some(c=>c.word===w)){toast('Unbekannter Code: '+w);sfx('fail');return}tryCheats(w,'word')}
+{const q=document.getElementById('cheatQuick');for(const c of CHEATS){const row=document.createElement('div');row.className='cq';const t=document.createElement('span');t.textContent=c.name;
+  const em=document.createElement('em');em.textContent=c.word;t.append(em);const cp=document.createElement('button');cp.type='button';cp.textContent='Kopieren';cp.addEventListener('click',()=>copyText(c.word));
+  const go=document.createElement('button');go.type='button';go.className='on';go.textContent='An';go.addEventListener('click',()=>runCode(c.word));row.append(t,cp,go);q.append(row)}
+  const inp=document.getElementById('cheatInput');document.getElementById('cheatGo').addEventListener('click',()=>{runCode(inp.value);inp.value='';inp.blur()});
+  inp.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter'){runCode(inp.value);inp.value='';inp.blur()}});
+  document.getElementById('cheatPaste').addEventListener('click',async()=>{try{const t=(await navigator.clipboard.readText()).trim();inp.value=t;if(t){runCode(t);inp.value=''}}catch(e){inp.focus();toast('Halte das Feld gedrückt und wähle „Einfügen“.')}})}
 function openCheat(){if(!running||dlgOpen)return;resetInputs();phoneTime();cheatOpen=true;padBuf='';seqEl.textContent=' ';cheatEl.hidden=false}
 function closeCheat(){cheatOpen=false;cheatEl.hidden=true}
 for(const b of document.querySelectorAll('.pad button'))b.addEventListener('click',()=>padPress(b.dataset.k));
