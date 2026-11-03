@@ -79,6 +79,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--night);color:var
 #cheatList td{padding:3px 8px 3px 0;vertical-align:top}
 #cheatList td:nth-child(2),#cheatList td:nth-child(3){font-family:var(--display);color:var(--cash);white-space:nowrap}
 #timers{display:flex;flex-direction:column;align-items:flex-end;gap:2px;font:700 13px var(--body);color:var(--cash);text-shadow:0 1px 0 #000}
+#driftTag{left:50%;transform:translateX(-50%);top:calc(96px + env(safe-area-inset-top,0px));font:400 28px var(--display);color:var(--cash);text-shadow:0 3px 0 #000,0 0 18px rgba(255,209,102,.5)}
 #prompt{left:50%;transform:translateX(-50%);bottom:calc(36% + env(safe-area-inset-bottom,0px));background:var(--panel);border:1px solid rgba(255,209,102,.5);border-radius:10px;padding:8px 14px;font:700 15px var(--body);color:var(--cash)}
 #weaponTag{font:700 13px var(--body);color:var(--ink);text-shadow:0 1px 0 #000}
 .ovl{position:fixed;inset:0;z-index:16;background:rgba(6,10,16,.6);display:flex;align-items:center;justify-content:center;padding:16px}
@@ -186,6 +187,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--night);color:var
 <div class="hud" id="mission" hidden><b id="mTitle"></b><span id="mText"></span><em id="mTime"></em></div>
 <div class="hud" id="toast"></div>
 <div class="hud" id="prompt" hidden></div>
+<div class="hud" id="driftTag" hidden></div>
 <div class="hud" id="big"></div>
 <div id="dlg" hidden><div id="dlgWho"></div><div id="dlgText"></div><button id="dlgNext" type="button">Weiter ▸</button></div>
 <div id="touch" hidden>
@@ -440,12 +442,21 @@ function carPhysics(c,dt,thr,steer,hb){
   else if(thr<0){if(fwd>15){fwd+=P.brk*thr*dt;c.brake=true}else fwd+=P.acc*.6*thr*dt}
   fwd-=fwd*.45*dt;const roll=(thr===0?90:25)*dt*(c.wreck?6:1);fwd=Math.abs(fwd)<roll?0:fwd-Math.sign(fwd)*roll;
   fwd=clamp(fwd,-max*.4,max);
-  if(hb){fwd-=fwd*1.1*dt;c.brake=true}
-  const grip=(hb?1.8:11)*dm.grip;
-  if((hb&&Math.abs(fwd)>60)||Math.abs(lat)>140)addSkid(c);
+  const latAbs=Math.abs(lat);
+  if(mine){
+    // Drift: Handbremse lässt das Heck ausbrechen; schnelle Kurven mit Vollgas halten den Drift
+    if(hb&&Math.abs(fwd)>90)c.drifting=true;
+    else if(c.drifting&&(latAbs<35||Math.abs(fwd)<70))c.drifting=false;
+    if(!c.drifting&&thr>.8&&Math.abs(steer)>.6&&fwd>max*.5&&(dm.grip>1||hb))c.drifting=true;
+  }else c.drifting=false;
+  if(hb){fwd-=fwd*(mine?.35:1.1)*dt;c.brake=true}
+  const grip=(hb?1.1:c.drifting?(thr>0?1.9:3.2):11)*dm.grip;
+  if((hb&&Math.abs(fwd)>60)||latAbs>120||(c.drifting&&latAbs>40))addSkid(c);
+  if(c.drifting&&thr>0)fwd+=P.acc*.25*thr*dt;
   lat-=lat*Math.min(1,grip*dt);
+  if(mine)driftFx(c,dt,latAbs,fwd);
   const sf=clamp(Math.abs(fwd)/110,0,1)*(1-.35*Math.abs(fwd)/P.max);
-  const na=c.a+steer*P.turn*sf*Math.sign(fwd)*dt*(hb?1.5:1);
+  const na=c.a+steer*P.turn*sf*Math.sign(fwd)*dt*(hb?1.8:c.drifting?1.6:1);
   if(!carHits(c,c.x,c.y,na))c.a=na;
   ca=Math.cos(c.a);sa=Math.sin(c.a);
   c.vx=fwd*ca-lat*sa;c.vy=fwd*sa+lat*ca;
@@ -454,6 +465,15 @@ function carPhysics(c,dt,thr,steer,hb){
   const ny=c.y+c.vy*dt;
   if(carHits(c,c.x,ny,c.a)){impact(c,Math.abs(c.vy));c.vy*=-.25}else c.y=ny;
   c.thr=thr;c.steer+=(steer-c.steer)*Math.min(1,dt*10);c.spin+=fwd*dt/5;
+}
+function driftFx(c,dt,latAbs,fwd){
+  if(c.drifting&&latAbs>45&&Math.abs(fwd)>80){
+    c.driftScore=(c.driftScore||0)+latAbs/100*Math.abs(fwd)/100*dt*14;
+    const ca=Math.cos(c.a),sa=Math.sin(c.a);if(Math.random()<.7)for(const s of [-1,1])parts.push({x:c.x-ca*c.p.l*.35-sa*s*c.p.w*.4,y:c.y-sa*c.p.l*.35+ca*s*c.p.w*.4,h:c.gy+3,vx:rand(-20,20),vy:rand(-20,20),vh:rand(8,25),life:1.4,max:1.4,s:rand(9,15),k:'smoke'});
+    c.squeal=(c.squeal||0)-dt;if(c.squeal<=0){c.squeal=.11;noise(.13,2400,.07*Math.min(1,latAbs/150),'bandpass')}
+    if(c.driftScore>8)setIf('ds',Math.floor(c.driftScore),v=>{driftEl.textContent='Drift '+v;driftEl.hidden=false});
+  }else if(c.driftScore){const sc=Math.floor(c.driftScore);c.driftScore=0;driftEl.hidden=true;hudCache.ds=-1;
+    if(sc>=20){const cash=Math.min(300,sc);player.money+=cash;toast('Drift! '+sc+' Punkte · +'+cash+' $');sfx('cash')}}
 }
 function impact(c,sp){
   if(sp>130){carDamage(c,(sp-130)*.07,false);
@@ -557,17 +577,17 @@ function showTouch(){touchEl.hidden=false}
 if(COARSE)showTouch();
 cv.addEventListener('pointerdown',e=>{
   ensureAudio();
-  if(e.pointerType==='mouse'){if(e.button===0)mouse.down=true;if(e.button===2){mouse.rdown=true;mouse.lx=e.clientX}return}
+  if(e.pointerType==='mouse'){if(e.button===0)mouse.down=true;if(e.button===2){mouse.rdown=true;mouse.lx=e.clientX;mouse.ly=e.clientY}return}
   showTouch();
   if(stick.id===null&&e.clientX<W*.5){stick.id=e.pointerId;stick.ox=e.clientX;stick.oy=e.clientY;stick.vx=stick.vy=stick.m=0;try{cv.setPointerCapture(e.pointerId)}catch(_){}}
-  else if(look.id===null){look.id=e.pointerId;look.lx=e.clientX;try{cv.setPointerCapture(e.pointerId)}catch(_){}}
+  else if(look.id===null){look.id=e.pointerId;look.lx=e.clientX;look.ly=e.clientY;try{cv.setPointerCapture(e.pointerId)}catch(_){}}
 });
 cv.addEventListener('pointermove',e=>{
-  if(e.pointerType==='mouse'){if(mouse.rdown){rotateCam((e.clientX-mouse.lx)*.006);mouse.lx=e.clientX}return}
+  if(e.pointerType==='mouse'){if(mouse.rdown){rotateCam((e.clientX-mouse.lx)*.006,(e.clientY-mouse.ly)*.005);mouse.lx=e.clientX;mouse.ly=e.clientY}return}
   if(e.pointerId===stick.id){const R=62;let dx=e.clientX-stick.ox,dy=e.clientY-stick.oy;const l=Math.hypot(dx,dy);
     if(l>R){stick.ox+=dx/l*(l-R);stick.oy+=dy/l*(l-R);dx=e.clientX-stick.ox;dy=e.clientY-stick.oy}
     stick.vx=dx/R;stick.vy=dy/R;stick.m=Math.min(1,Math.hypot(dx,dy)/R)}
-  else if(e.pointerId===look.id){rotateCam((e.clientX-look.lx)*.008);look.lx=e.clientX}
+  else if(e.pointerId===look.id){rotateCam((e.clientX-look.lx)*.008,(e.clientY-look.ly)*.006);look.lx=e.clientX;look.ly=e.clientY}
 });
 function endPtr(e){if(e.pointerType==='mouse'){if(e.button===0)mouse.down=false;if(e.button===2)mouse.rdown=false;return}
   if(e.pointerId===stick.id){stick.id=null;stick.vx=stick.vy=stick.m=0}if(e.pointerId===look.id)look.id=null}
@@ -917,7 +937,7 @@ function respawn(){
 }
 
 // =================== HUD ===================
-const toastEl=document.getElementById('toast'),bigEl=document.getElementById('big');
+const driftEl=document.getElementById('driftTag'),toastEl=document.getElementById('toast'),bigEl=document.getElementById('big');
 let toastT=0,bigT=0;
 function toast(s){toastEl.textContent=s;toastEl.classList.add('on');toastT=2.8}
 function bigMsg(a,b){bigEl.textContent='';bigEl.append(a);if(b){const s=document.createElement('small');s.textContent=b;bigEl.append(s)}bigEl.classList.add('on');bigT=3.2}
@@ -1206,8 +1226,8 @@ const sun=new THREE.DirectionalLight('#fff1d6',3);sun.castShadow=true;
 {const S=COARSE?480:720;sun.shadow.mapSize.set(COARSE?1024:2048,COARSE?1024:2048);Object.assign(sun.shadow.camera,{left:-S,right:S,top:S,bottom:-S,near:50,far:4200});
  sun.shadow.bias=-.0004;sun.shadow.normalBias=2;}
 scene.add(sun,sun.target);
-const camS={yaw:-Math.PI/2,manual:0,x:PIER.x,z:PIER.y,h:40,dist:62};
-function rotateCam(d){camS.yaw+=d;camS.manual=1.8}
+const camS={yaw:-Math.PI/2,pitch:.42,manual:0,x:PIER.x,z:PIER.y,h:40,dist:62};
+function rotateCam(d,dp){camS.yaw+=d;if(dp)camS.pitch=clamp(camS.pitch+dp,-.12,1.15);camS.manual=3}
 // Himmel als Shader: Verlauf, Sonne, Abendrot
 const skyU={top:{value:new THREE.Color()},hor:{value:new THREE.Color()},sunDir:{value:new THREE.Vector3(0,1,0)},sunCol:{value:new THREE.Color()}};
 const skyMat=new THREE.ShaderMaterial({uniforms:skyU,side:THREE.BackSide,depthWrite:false,fog:false,
@@ -1855,22 +1875,25 @@ function poseHuman(g,x,y,gy,a,ph,moving,down,aim,run,fall,fallDir,twoHand){
 // =================== Kamera ===================
 function updateCamera(dt){
   const c=player.car||player.ride;let fwd=0;if(c)fwd=c.vx*Math.cos(c.a)+c.vy*Math.sin(c.a);
+  if(look.id!==null||mouse.rdown)camS.manual=3;
   if(camS.manual>0)camS.manual-=dt;
-  else if(c){const want=fwd<-60?c.a:c.a;camS.yaw+=angDiff(camS.yaw,want)*Math.min(1,dt*2.6)}
+  else if(c){const want=c.drifting&&Math.hypot(c.vx,c.vy)>80?Math.atan2(c.vy,c.vx):c.a;camS.yaw+=angDiff(camS.yaw,want)*Math.min(1,dt*(c.drifting?1.6:2.6))}
   else if(player.moving&&Math.abs(angDiff(camS.yaw,player.a))<2.2)camS.yaw+=angDiff(camS.yaw,player.a)*Math.min(1,dt*1.1);
   const sp=c?Math.hypot(c.vx,c.vy):0;
-  const D=c?92+sp*.06:58,Hh=c?36+sp*.012:26;
-  camS.dist+=(D-camS.dist)*Math.min(1,dt*3);camS.h+=(Hh-camS.h)*Math.min(1,dt*3);
-  const px=player.x,pz=player.y;let d=camS.dist;
+  const D=c?92+sp*.06:58;
+  camS.dist+=(D-camS.dist)*Math.min(1,dt*3);
+  const px=player.x,pz=player.y,pit=camS.pitch,base=c?10:6;
+  const camH=()=>player.gy+base+camS.dist*Math.sin(pit)*1.05;
+  let d=camS.dist*Math.cos(pit);
   // Kamera nicht in Häuser schieben
-  for(let s=10;s<=camS.dist;s+=6){const x=px-Math.cos(camS.yaw)*s,z=pz-Math.sin(camS.yaw)*s;const t=tileAtW(x,z);
-    if(t===BUILD&&bh[Math.floor(z/T)*MW+Math.floor(x/T)]>camS.h-4){d=Math.max(12,s-8);break}}
-  const tx=px-Math.cos(camS.yaw)*d,tz=pz-Math.sin(camS.yaw)*d,ty=player.gy+camS.h*(d/camS.dist)+(d<camS.dist?8:0);
+  for(let s=10;s<=d;s+=6){const x=px-Math.cos(camS.yaw)*s,z=pz-Math.sin(camS.yaw)*s;const t=tileAtW(x,z);
+    if(t===BUILD&&bh[Math.floor(z/T)*MW+Math.floor(x/T)]>camH()-4){d=Math.max(12,s-8);break}}
+  const tx=px-Math.cos(camS.yaw)*d,tz=pz-Math.sin(camS.yaw)*d,ty=Math.max(player.gy+3,camH()*(d/Math.max(1,camS.dist*Math.cos(pit)))+(d<camS.dist*Math.cos(pit)?8:0));
   const k=Math.min(1,dt*(c?7:9));
   camS.x+=(tx-camS.x)*k;camS.z+=(tz-camS.z)*k;camS.y=(camS.y||ty)+(ty-(camS.y||ty))*k;
   const sx=(Math.random()-.5)*shake,sy=(Math.random()-.5)*shake;if(shake>0)shake=Math.max(0,shake-dt*25);
-  camera.position.set(camS.x+sx,camS.y+sy,camS.z);
-  const la=c?28:10,lh=c?12:14;
+  camera.position.set(camS.x+sx,Math.max(groundH(camS.x,camS.z)+2,camS.y+sy),camS.z);
+  const la=c?28:10,lh=(c?12:14)+(pit<.3?(.3-pit)*90:0);
   camera.lookAt(px+Math.cos(camS.yaw)*la,player.gy+lh,pz+Math.sin(camS.yaw)*la);
   const fov=(W<H?74:62)+(c?clamp(sp/600,0,1)*10:0);if(Math.abs(camera.fov-fov)>.1){camera.fov+=(fov-camera.fov)*Math.min(1,dt*3);camera.updateProjectionMatrix()}
   skyMesh.position.set(camera.position.x,0,camera.position.z);stars.position.copy(skyMesh.position);
