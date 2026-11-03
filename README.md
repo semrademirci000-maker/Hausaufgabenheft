@@ -109,13 +109,19 @@ Pier, Glastürmen und pastellfarbenen Häusern mit Balkonen und Markisen.
   mit Tacho in km/h. Die Garage der Villa betritt nur der Spieler; das Tor öffnet sich nur direkt davor oder beim Hineinfahren.
 - **Ladenüberfall:** In jedem 24/7-Markt und im Waffenladen an die Kasse gehen und „Kasse überfallen“ wählen –
   mit Schusswaffe (6 Sekunden, mehr Geld) oder mit Fäusten (9 Sekunden, weniger Geld). Beim Rausgehen gibt es zwei Sterne.
-- **Schlagen:** jederzeit mit der Taste „Schlag“ (PC: V), egal welche Waffe ausgewählt ist. Die meisten Leute schlagen zurück.
+- **Faustkampf:** Taste „Schlag“ (PC: V) trifft automatisch die nächste Person – Kombo aus zwei Geraden und einem
+  Aufwärtshaken (K.o. mit Zeitlupe). Getroffene taumeln, die meisten wehren sich mit Deckung und sichtbarem Ausholen.
 - **Polizei abhängen:** Die Polizei sucht dort, wo sie dich zuletzt gesehen hat. Bleib außer Sicht, dann verlierst du
   die Sterne schnell. Kleine Vergehen geben nur volle Sterne, wenn Polizei in der Nähe ist.
 - **Umschauen:** rechte Bildschirmhälfte wischen – links/rechts drehen, hoch/runter schauen (PC: rechte Maustaste ziehen).
   Die Kamera bleibt so, bis du losläufst oder losfährst.
 - **Drift:** „Drift“ (PC: Leertaste) in der Kurve – das Heck bricht aus, mit Gas hältst du den Drift. Reifenqualm,
   Quietschen und Drift-Punkte; lange Drifts bringen bis zu 300 $. In Race und Speedest driftet das Auto auch bei Vollgas in engen Kurven.
+- **Viele Läden (rund 50):** 24/7-Märkte (S), Modegeschäfte „Mode Solera“ (K, Outfits kaufen), Imbisse „Solera Grill“ (I,
+  Burger und Limo) und Waffenläden (W) – alle betretbar und überfallbar.
+- **Flugplatz (✈)** südlich vom Strand mit Startbahn, Hangar und Tower: kleine Propellerflugzeuge selbst fliegen
+  (Stick hoch = Gas und abheben, links/rechts lenken, Turbo-Taste), landen, oder in der Luft mit dem **Fallschirm** abspringen.
+  Hoch über der Stadt ziehen Passagierflugzeuge vorbei.
 - **Karte mit Navi:** „Karte“ (oder Taste M, oder auf die Minikarte tippen) öffnet die große Karte.
   Tippe irgendwo hin – dort erscheint eine lila Markierung, und eine Linie zeigt dir den Weg.
 - **Polizei:** Streifenwagen fahren mit Abstand hinter dir statt zu rammen. Hältst du an oder bist zu Fuß,
