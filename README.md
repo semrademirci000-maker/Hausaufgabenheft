@@ -122,6 +122,9 @@ Pier, Glastürmen und pastellfarbenen Häusern mit Balkonen und Markisen.
 - **Flugplatz (✈)** südlich vom Strand mit Startbahn, Hangar und Tower: kleine Propellerflugzeuge selbst fliegen
   (Stick hoch = Gas und abheben, links/rechts lenken, Turbo-Taste), landen, oder in der Luft mit dem **Fallschirm** abspringen.
   Hoch über der Stadt ziehen Passagierflugzeuge vorbei.
+- **Karte mit Symbolen:** Jeder Ort hat ein eigenes Symbol (Haus, Flugzeug, Einkaufswagen, T-Shirt, Burger, Pistole,
+  Kreuz, Polizeischild, Spraydose, Auto, Ausrufezeichen, Schiff) – auf der großen Karte, der Minikarte und über der Tür.
+  Unten auf der großen Karte gibt es eine Legende: Tippe auf ein Symbol, und der nächste Ort dieser Art wird markiert.
 - **Karte mit Navi:** „Karte“ (oder Taste M, oder auf die Minikarte tippen) öffnet die große Karte.
   Tippe irgendwo hin – dort erscheint eine lila Markierung, und eine Linie zeigt dir den Weg.
 - **Polizei:** Streifenwagen fahren mit Abstand hinter dir statt zu rammen. Hältst du an oder bist zu Fuß,

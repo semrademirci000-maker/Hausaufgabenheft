@@ -49,6 +49,9 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--night);color:var
 #bigmap{position:fixed;inset:0;z-index:15;background:rgba(6,10,16,.92);display:flex;flex-direction:column;
   padding:max(10px,env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) max(10px,env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px))}
 #bm{flex:1;min-height:0;width:100%;cursor:crosshair;touch-action:none}
+#legend{display:flex;gap:6px;overflow-x:auto;padding-top:8px;scrollbar-width:thin}
+#legend button{flex:none;display:flex;align-items:center;gap:6px;background:#1c2330;border:1px solid rgba(255,255,255,.15);border-radius:20px;padding:4px 10px 4px 4px;color:var(--ink);font:700 12px var(--body);cursor:pointer;white-space:nowrap}
+#legend canvas{width:24px;height:24px}
 .bmbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding-top:8px;font-size:14px;color:var(--dim)}
 .bmbar span{flex:1;min-width:160px}
 #cheat{position:fixed;inset:0;z-index:16;background:rgba(6,10,16,.6);display:flex;align-items:center;justify-content:center;padding:16px}
@@ -205,7 +208,8 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--night);color:var
 
 <div id="bigmap" hidden>
   <canvas id="bm"></canvas>
-  <div class="bmbar"><span>Tippe auf die Karte, um ein Ziel zu markieren.</span><button class="sbtn" id="bmClear" type="button">Markierung löschen</button><button class="sbtn" id="bmClose" type="button">Zurück</button></div>
+  <div id="legend"></div>
+  <div class="bmbar"><span>Tippe auf die Karte oder auf ein Symbol unten – dann wird der nächste Ort markiert.</span><button class="sbtn" id="bmClear" type="button">Markierung löschen</button><button class="sbtn" id="bmClose" type="button">Zurück</button></div>
 </div>
 <div id="phoneMenu" class="ovl" hidden>
   <div class="phone"><div class="screen">
@@ -1923,13 +1927,34 @@ function addSkid(c){
       skidMesh.setMatrixAt(skidI,_m);skidI=(skidI+1)%SKIDN;skidMesh.count=Math.min(SKIDN,skidMesh.count+1);skidMesh.instanceMatrix.needsUpdate=true}}
     c[key]=[x,y,now]}
 }
+// Eigene Symbole für alle Orte (Karte, Minikarte, Schild über der Tür)
+const ICON={villa:['#ffd166','#3a2a00'],air:['#0284c7','#fff'],shop:['#2a9d8f','#fff'],cloth:['#7b2cbf','#fff'],food:['#f4a261','#3a1d00'],guns:['#d62828','#fff'],
+  hospital:['#ffffff','#d62828'],police:['#1d4ed8','#fff'],paint:['#b36bff','#fff'],garage:['#e9c46a','#2b2b2b'],mission:['#ff6b57','#fff'],pier:['#2ec4b6','#fff']};
+const iconKey=k=>k.startsWith('m')&&k.length===2?'mission':k;
+function drawIcon(g,kind,x,y,R){const k=iconKey(kind),[bg,fg]=ICON[k]||['#444','#fff'];
+  g.save();g.translate(x,y);g.fillStyle=bg;g.beginPath();g.arc(0,0,R,0,TAU);g.fill();g.lineWidth=Math.max(1.5,R*.14);g.strokeStyle='rgba(0,0,0,.65)';g.stroke();
+  g.scale(R/10,R/10);g.fillStyle=fg;g.strokeStyle=fg;g.lineWidth=1.4;g.lineJoin='round';g.lineCap='round';const P=(pts)=>{g.beginPath();pts.forEach(([a,b],i)=>i?g.lineTo(a,b):g.moveTo(a,b));g.closePath();g.fill()};
+  if(k==='villa'){P([[-6,-1],[0,-6.5],[6,-1]]);g.fillRect(-4.6,-1,9.2,6.5);g.fillStyle=bg;g.fillRect(-1.3,1.6,2.6,3.9)}
+  else if(k==='air'){P([[6.5,0],[4.5,-.9],[-4.5,-.9],[-6,-2.6],[-6.6,-2.6],[-5.6,0],[-6.6,2.6],[-6,2.6],[-4.5,.9],[4.5,.9]]);P([[1.6,-.9],[-1.8,-6.6],[-3.4,-6.6],[-1.4,-.9]]);P([[1.6,.9],[-1.8,6.6],[-3.4,6.6],[-1.4,.9]])}
+  else if(k==='shop'){g.beginPath();g.moveTo(-6.5,-4.5);g.lineTo(-4.5,-4.5);g.lineTo(-3,2);g.lineTo(4.5,2);g.lineTo(5.8,-2.6);g.lineTo(-3.8,-2.6);g.stroke();g.beginPath();g.arc(-2,4.3,1.2,0,TAU);g.arc(3.6,4.3,1.2,0,TAU);g.fill()}
+  else if(k==='cloth')P([[-2,-5.5],[2,-5.5],[6.5,-3],[5,0],[3.2,-1],[3.2,5.5],[-3.2,5.5],[-3.2,-1],[-5,0],[-6.5,-3]]);
+  else if(k==='food'){g.beginPath();g.ellipse(0,-1.6,6,3.4,0,Math.PI,0);g.fill();g.fillRect(-6.2,-.9,12.4,1.8);g.fillStyle=bg==='#f4a261'?'#7a3b1a':fg;g.fillRect(-6,1.2,12,1.8);g.fillStyle=fg;g.beginPath();g.ellipse(0,3.6,6,1.6,0,0,Math.PI*2);g.fill()}
+  else if(k==='guns'){P([[-6,-3.4],[5.5,-3.4],[5.5,-1],[-1,-1],[-1.6,4.8],[-4.6,4.8],[-3.6,-1],[-6,-1]]);g.fillRect(4.6,-4.4,1,1)}
+  else if(k==='hospital'){g.fillRect(-1.9,-5.8,3.8,11.6);g.fillRect(-5.8,-1.9,11.6,3.8)}
+  else if(k==='police'){P([[0,-6],[5.2,-3.8],[4.4,2],[0,6],[-4.4,2],[-5.2,-3.8]]);g.fillStyle=bg;g.beginPath();for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,r=i%2?1.2:2.8;g.lineTo(Math.cos(a)*r,Math.sin(a)*r-.2)}g.closePath();g.fill()}
+  else if(k==='paint'){g.fillRect(-3.4,-2.5,5.4,8);g.fillRect(-2.2,-4.6,3,2);g.fillRect(-1.2,-5.8,1,1.4);for(const [a,b] of [[3.6,-4.6],[5.2,-2.8],[4.4,-6.2]]){g.beginPath();g.arc(a,b,.8,0,TAU);g.fill()}}
+  else if(k==='garage'){P([[-6.5,1.6],[-6,-.8],[-3.6,-1.4],[-1.8,-4],[2.6,-4],[4.6,-1.4],[6.5,-.6],[6.5,1.6]]);g.fillStyle=fg;g.beginPath();g.arc(-3.6,2.4,1.7,0,TAU);g.arc(3.8,2.4,1.7,0,TAU);g.fill()}
+  else if(k==='mission'){g.fillRect(-1.3,-6,2.6,8);g.beginPath();g.arc(0,4.5,1.6,0,TAU);g.fill()}
+  else if(k==='pier'){P([[-6.4,1],[6.4,1],[4.4,4.8],[-4.4,4.8]]);g.fillRect(-.6,-6,1.2,7);P([[.6,-5.6],[5,-.4],[.6,-.4]])}
+  g.restore()}
+const _iconTex={};function iconTex(kind){const k=iconKey(kind);return _iconTex[k]||(_iconTex[k]=canvasTex(128,128,(g)=>drawIcon(g,k,64,64,56)))}
 function letterTex(ch,col){return canvasTex(128,128,(g,w,h)=>{g.fillStyle='rgba(10,14,22,.85)';g.beginPath();g.arc(64,64,56,0,TAU);g.fill();g.lineWidth=8;g.strokeStyle=col;g.stroke();
   g.fillStyle=col;g.font='64px Bungee, Impact, sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText(ch,64,68)})}
 const PADSTYLE={air:['#4fd6ff','✈'],cloth:['#b36bff','K'],food:['#f4a261','I'],villa:['#ffd166','H'],shop:['#2ec4b6','S'],guns:['#e76f51','W'],hospital:['#ffffff','+'],police:['#2ec4b6','P'],paint:['#b36bff','L'],garage:['#ffd166','A'],m0:['#ff6b57','M'],m1:['#ff6b57','M'],m2:['#ff6b57','M'],pier:['#2ec4b6','F']};
 for(const p of pads){const [col,ch]=PADSTYLE[p.kind];
   const ring=new THREE.Mesh(new THREE.RingGeometry(24,30,36).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:.75,depthWrite:false,toneMapped:false}));
   ring.position.set(p.x,groundH(p.x,p.y)+.5,p.y);scene.add(ring);
-  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:letterTex(ch,col),depthWrite:false}));sp.scale.set(22,22,1);sp.position.set(p.x,40,p.y);scene.add(sp);
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:iconTex(p.kind),depthWrite:false}));sp.scale.set(24,24,1);sp.position.set(p.x,56,p.y);scene.add(sp);
   p.mesh={ring,sp}}
 const wpMat=new THREE.MeshBasicMaterial({color:'#b14cff',transparent:true,opacity:.25,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide,toneMapped:false});
 const wpBeacon=new THREE.Mesh(new THREE.CylinderGeometry(18,18,420,24,1,true),wpMat);wpBeacon.visible=false;scene.add(wpBeacon);
@@ -2003,7 +2028,7 @@ function syncScene(dt){
   const on=Math.sin(time*16)>0;sirenR.color.set(on?'#ff2a3a':'#3a0a10');sirenB.color.set(on?'#0b1a40':'#2a6bff');
   // Pads & Missionsziel
   for(const p of pads){const act=!(p.kind.startsWith('m')&&(mission||(mode==='story'&&!slot.finished)))&&!(p.kind==='pier'&&!(mission&&mission.kind==='finale'));
-    p.mesh.ring.visible=act;p.mesh.sp.visible=act;if(act){p.mesh.sp.position.y=40+Math.sin(time*2+p.x)*3;p.mesh.ring.material.opacity=p.cd>0?.25:.75}}
+    p.mesh.ring.visible=act;p.mesh.sp.visible=act;if(act){p.mesh.sp.position.y=56+Math.sin(time*2+p.x)*3;p.mesh.ring.material.opacity=p.cd>0?.25:.75}}
   if(mission&&mission.target){const [tx,ty]=mission.target;beacon.visible=true;beacon.position.set(tx,groundH(tx,ty)+210,ty);beaconMat.opacity=.16+Math.sin(time*4)*.06}else beacon.visible=false;
   if(waypoint){wpBeacon.visible=true;wpBeacon.position.set(waypoint[0],groundH(waypoint[0],waypoint[1])+210,waypoint[1])}else wpBeacon.visible=false;
   updatePools(dt);
@@ -2087,8 +2112,9 @@ function targetMarker(t,col){
   octx.save();octx.translate(ex,ey);octx.rotate(a);octx.fillStyle=col;octx.beginPath();octx.moveTo(16,0);octx.lineTo(-8,-11);octx.lineTo(-3,0);octx.lineTo(-8,11);octx.closePath();octx.fill();octx.restore();
   octx.fillStyle=col;octx.fillText(Math.round(d/8)+' m',ex-Math.cos(a)*26,ey-Math.sin(a)*26+4);
 }
-const miniMap=(()=>{const s=3,c=document.createElement('canvas');c.width=c.height=MAPN*s;const g=c.getContext('2d');const col=['#6b7080','#a9a497','#3a3d44','#4f7d38','#1f6f8f','#e3cf9e'];
-  for(let y=0;y<MAPN;y++)for(let x=0;x<MAPN;x++){g.fillStyle=col[tileAt(x,y)];g.fillRect(x*s,y*s,s,s)}return c})();
+const NN=MAPN+6;
+const miniMap=(()=>{const s=3,c=document.createElement('canvas');c.width=c.height=NN*s;const g=c.getContext('2d');const col=['#6b7080','#a9a497','#3a3d44','#4f7d38','#1f6f8f','#e3cf9e','#d6d8db'];
+  for(let y=0;y<NN;y++)for(let x=0;x<NN;x++){g.fillStyle=col[tileAt(x,y)];g.fillRect(x*s,y*s,s,s)}return c})();
 const mini=document.getElementById('mini'),mctx=mini.getContext('2d');
 function drawMini(){
   const S=240,R=24,s=3;mctx.setTransform(1,0,0,1,0,0);mctx.fillStyle='#1f6f8f';mctx.fillRect(0,0,S,S);
@@ -2098,7 +2124,9 @@ function drawMini(){
   const toM=(x,y)=>[(x/T-ptx+R)*k,(y/T-pty+R)*k];
   const dot=(x,y,col,r,edge)=>{let [mx,my]=toM(x,y);const dx=mx-S/2,dy=my-S/2,d=Math.hypot(dx,dy);if(d>S/2-10){if(!edge)return;mx=S/2+dx/d*(S/2-10);my=S/2+dy/d*(S/2-10)}
     mctx.fillStyle=col;mctx.beginPath();mctx.arc(mx,my,r,0,TAU);mctx.fill();mctx.strokeStyle='#000';mctx.lineWidth=2;mctx.stroke()};
-  for(const p of pads){if(!p.mesh.ring.visible)continue;dot(p.x,p.y,PADSTYLE[p.kind][0],7,p.kind.startsWith('m')||p.kind==='paint'||p.kind==='pier'||p.kind==='air'||p.kind==='villa')}
+  for(const p of pads){if(!p.mesh.ring.visible)continue;const imp=p.kind.startsWith('m')&&p.kind.length===2||p.kind==='paint'||p.kind==='pier'||p.kind==='air'||p.kind==='villa';
+    let [mx,my]=toM(p.x,p.y);const dx=mx-S/2,dy=my-S/2,d=Math.hypot(dx,dy);if(d>S/2-14){if(!imp)continue;mx=S/2+dx/d*(S/2-14);my=S/2+dy/d*(S/2-14)}
+    mctx.save();mctx.translate(mx,my);mctx.rotate(camS.yaw+Math.PI/2);drawIcon(mctx,p.kind,0,0,imp?13:10);mctx.restore()}
   for(const c of cars)if(c.police&&c.driver==='police')dot(c.x,c.y,Math.sin(time*10)>0?'#ff3b4f':'#3b8bff',5,false);
   if(route.pts.length>1){mctx.strokeStyle=route.col;mctx.lineWidth=5;mctx.lineJoin='round';mctx.beginPath();route.pts.forEach((q,i)=>{const [mx,my]=toM(q[0],q[1]);i?mctx.lineTo(mx,my):mctx.moveTo(mx,my)});mctx.stroke()}
   if(mission&&mission.target)dot(mission.target[0],mission.target[1],'#ffd166',8,true);
@@ -2119,24 +2147,30 @@ function updateRoute(){
   route.pts=horiz?[[player.x,player.y],[icx(i1),icx(j0)],[icx(i1),icx(j1)],t]:[[player.x,player.y],[icx(i0),icx(j1)],[icx(i1),icx(j1)],t];
 }
 const bigmapEl=document.getElementById('bigmap'),bm=document.getElementById('bm'),bctx=bm.getContext('2d');
-const mapBig=(()=>{const s=8,c=document.createElement('canvas');c.width=c.height=MAPN*s;const g=c.getContext('2d');const col=['#6b7080','#b8b2a3','#3a3d44','#4f7d38','#1f6f8f','#e3cf9e'];
-  for(let y=0;y<MAPN;y++)for(let x=0;x<MAPN;x++){g.fillStyle=col[tileAt(x,y)];g.fillRect(x*s,y*s,s,s)}
+const mapBig=(()=>{const s=8,c=document.createElement('canvas');c.width=c.height=NN*s;const g=c.getContext('2d');const col=['#6b7080','#b8b2a3','#3a3d44','#4f7d38','#1f6f8f','#e3cf9e','#d6d8db'];
+  for(let y=0;y<NN;y++)for(let x=0;x<NN;x++){g.fillStyle=col[tileAt(x,y)];g.fillRect(x*s,y*s,s,s)}
   g.fillStyle='rgba(255,255,255,.08)';for(const b of buildings)g.fillRect(b.x/T*s+1,b.y/T*s+1,b.w/T*s-2,b.h/T*s-2);return c})();
 function mapLayout(){const r=bm.getBoundingClientRect();const size=Math.min(r.width,r.height);return {r,size,ox:(r.width-size)/2,oy:(r.height-size)/2}}
 function drawBigMap(){
   const {r,size,ox,oy}=mapLayout();bm.width=Math.round(r.width*ODPR);bm.height=Math.round(r.height*ODPR);
   bctx.setTransform(ODPR,0,0,ODPR,0,0);bctx.fillStyle='#1f6f8f';bctx.fillRect(0,0,r.width,r.height);
   bctx.imageSmoothingEnabled=true;bctx.drawImage(mapBig,ox,oy,size,size);
-  const k=size/(MAPN*T),P=(x,y)=>[ox+x*k,oy+y*k];
+  const k=size/(NN*T),P=(x,y)=>[ox+x*k,oy+y*k];
   if(route.pts.length>1){bctx.strokeStyle=route.col;bctx.lineWidth=4;bctx.lineJoin='round';bctx.beginPath();route.pts.forEach((q,i)=>{const [x,y]=P(q[0],q[1]);i?bctx.lineTo(x,y):bctx.moveTo(x,y)});bctx.stroke()}
   bctx.font='700 11px "Chakra Petch",sans-serif';bctx.textAlign='center';bctx.textBaseline='middle';
-  for(const p of pads){if(!p.mesh.ring.visible)continue;const [x,y]=P(p.x,p.y);const [c,ch]=PADSTYLE[p.kind];bctx.fillStyle='#11161f';bctx.beginPath();bctx.arc(x,y,9,0,TAU);bctx.fill();bctx.strokeStyle=c;bctx.lineWidth=2;bctx.stroke();bctx.fillStyle=c;bctx.fillText(ch,x,y+1)}
+  const big=new Set(['villa','air','hospital','police','paint','garage','pier','m0','m1','m2']);
+  for(const pass of [0,1])for(const p of pads){if(!p.mesh.ring.visible||big.has(p.kind)!==!!pass)continue;const [x,y]=P(p.x,p.y);drawIcon(bctx,p.kind,x,y,pass?12:8.5)}
   for(const c of cars)if(c.police&&c.driver==='police'){const [x,y]=P(c.x,c.y);bctx.fillStyle='#3b8bff';bctx.beginPath();bctx.arc(x,y,4,0,TAU);bctx.fill()}
   if(mission&&mission.target){const [x,y]=P(...mission.target);bctx.fillStyle='#ffd166';bctx.beginPath();bctx.arc(x,y,7,0,TAU);bctx.fill();bctx.strokeStyle='#000';bctx.lineWidth=2;bctx.stroke()}
   if(waypoint){const [x,y]=P(...waypoint);bctx.fillStyle='#b14cff';bctx.beginPath();bctx.moveTo(x,y);bctx.arc(x,y-14,8,Math.PI*.8,Math.PI*2.2);bctx.closePath();bctx.fill();bctx.fillStyle='#fff';bctx.beginPath();bctx.arc(x,y-14,3,0,TAU);bctx.fill()}
   const [px,py]=P(player.x,player.y);bctx.save();bctx.translate(px,py);bctx.rotate(player.a);bctx.fillStyle='#fff';bctx.strokeStyle='#000';bctx.lineWidth=2;
   bctx.beginPath();bctx.moveTo(10,0);bctx.lineTo(-7,-7);bctx.lineTo(-3,0);bctx.lineTo(-7,7);bctx.closePath();bctx.fill();bctx.stroke();bctx.restore();
 }
+const LEGEND=[['villa','Deine Villa'],['air','Flugplatz'],['shop','24/7-Markt'],['cloth','Modegeschäft'],['food','Imbiss'],['guns','Waffenladen'],
+  ['hospital','Krankenhaus'],['police','Polizei'],['paint','Lackiererei'],['garage','Autohof'],['mission','Auftrag'],['pier','Fähre']];
+{const lg=document.getElementById('legend');for(const [k,name] of LEGEND){const b=document.createElement('button');b.type='button';const c=document.createElement('canvas');c.width=c.height=48;drawIcon(c.getContext('2d'),k,24,24,22);
+  const t=document.createElement('span');t.textContent=name;b.append(c,t);b.addEventListener('click',()=>{let best=null,bd=1e9;for(const p of pads){if(iconKey(p.kind)!==k||!p.mesh.ring.visible)continue;const d=dist(p.x,p.y,player.x,player.y);if(d<bd){bd=d;best=p}}
+    if(!best){toast(name+': gerade nicht verfügbar.');return}waypoint=[best.x,best.y];updateRoute();sfx('blip');toast(name+' markiert – folge der lila Linie.');drawBigMap()});lg.append(b)}}
 function openMap(){if(!running||dlgOpen||inside)return;resetInputs();mapOpen=true;bigmapEl.hidden=false;updateRoute();requestAnimationFrame(drawBigMap)}
 function closeMap(){mapOpen=false;bigmapEl.hidden=true}
 function setWaypoint(x,y){
@@ -2146,8 +2180,8 @@ function setWaypoint(x,y){
   waypoint=[x,y];updateRoute();sfx('blip');
   if(taxi&&taxi.state==='ride'){taxiGo();closeMap()}else toast('Ziel markiert – folge der lila Linie.');
 }
-bm.addEventListener('pointerdown',e=>{const {r,size,ox,oy}=mapLayout();const x=(e.clientX-r.left-ox)/size*MAPN*T,y=(e.clientY-r.top-oy)/size*MAPN*T;
-  if(x<0||y<0||x>MAPN*T||y>MAPN*T)return;setWaypoint(x,y);drawBigMap()});
+bm.addEventListener('pointerdown',e=>{const {r,size,ox,oy}=mapLayout();const x=(e.clientX-r.left-ox)/size*NN*T,y=(e.clientY-r.top-oy)/size*NN*T;
+  if(x<0||y<0||x>NN*T||y>NN*T)return;setWaypoint(x,y);drawBigMap()});
 document.getElementById('bmClear').addEventListener('click',()=>{waypoint=null;updateRoute();drawBigMap()});
 document.getElementById('bmClose').addEventListener('click',closeMap);
 document.getElementById('mapBtn').addEventListener('click',openMap);
