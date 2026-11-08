@@ -14,6 +14,7 @@ Bären-Maske, „SPACE“-Schriftzug hinten, schwarzer Cargo-Hose mit „R“-An
 | `roblox_figur.stl` | **Zum Drucken in einer Farbe.** Ein einziger, geschlossener Körper. |
 | `roblox_figur_farbig.3mf` | Für Mehrfarb-Drucker (z. B. Bambu AMS, Prusa MMU): Teile nach Farbe getrennt. |
 | `mehrfarbig/figur_*.stl` | Dieselben Farbteile einzeln (schwarz, blau, weiß, grau, haut) – zusammen in den Slicer laden. |
+| `roblox_figur.usdz` | **Auf dem iPad/iPhone ansehen:** in der Dateien-App antippen – drehen, zoomen und per „AR“ in echter Größe auf den Tisch stellen. (`python3 make_usdz.py`) |
 | `roblox_figur_farbig.glb` | Farbige 3D-Ansicht (z. B. im Browser oder 3D-Viewer). |
 | `generate.py` | Skript, das alles erzeugt. Andere Größe: `python3 generate.py 80` (= 80 mm hoch). |
 
