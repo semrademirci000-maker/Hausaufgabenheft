@@ -73,6 +73,26 @@ def ring(center, r, tube, axis="y"):
     return t.translate(list(center))
 
 
+def on_back(cs, center, depth=0.04):
+    """2D-Form erhaben auf eine Rueckseite (Flaeche y = center[1]) setzen.
+    Von hinten gesehen zeigt die 2D-x-Achse nach rechts (= -x im Modell)."""
+    solid = cs.extrude(depth + 0.02)
+    mat = [[-1, 0, 0, center[0]], [0, 0, 1, center[1] - 0.02], [0, 1, 0, center[2]]]
+    return solid.transform(mat)
+
+
+def text_shape(text, height):
+    """Text als 2D-Querschnitt (zentriert), Hoehe der Grossbuchstaben = height."""
+    from matplotlib.textpath import TextPath
+    from matplotlib.font_manager import FontProperties
+    tp = TextPath((0, 0), text, size=1.0, prop=FontProperties(family="DejaVu Sans", weight="bold"))
+    polys = [p for p in tp.to_polygons() if len(p) >= 3]
+    cs = CS([p.tolist() for p in polys], mf.FillRule.EvenOdd)
+    b = cs.bounds()
+    k = height / (b[3] - b[1])
+    return cs.translate([-(b[0] + b[2]) / 2, -(b[1] + b[3]) / 2]).scale([k, k])
+
+
 def union(parts):
     return M.batch_boolean(parts, mf.OpType.Add) if len(parts) > 1 else parts[0]
 
@@ -95,8 +115,7 @@ hoodie = [
     box(-2.0, -1.0, -0.5, 0.5, 2.0, 4.0),                  # Arm rechts
     box(1.0, 2.03, -0.53, 0.53, 2.0, 2.25),                # Aermel-Buendchen
     box(-2.03, -1.0, -0.53, 0.53, 2.0, 2.25),
-    ellipsoid([0, 0.42, 3.88], [0.68, 0.24, 0.26]),        # Kapuze (hinten)
-    # Kapuzen-Kragen um den Hals
+    # Kragen um den Hals
     (M.cylinder(0.14, 0.52, 0.52, SEG) - M.cylinder(0.14, 0.3, 0.3, SEG)).translate([0, 0.02, 3.97]),
 ]
 
@@ -200,11 +219,21 @@ COLORS = {
     "haut": (232, 190, 150, 255),
 }
 # Hoechste Prioritaet zuerst: wo Teile sich ueberlappen, "gewinnt" das obere.
+# ---------------------------------------------------------------- Rueckseite
+# "SPACE"-Schriftzug hinten auf der Hoodie (leicht schraeg wie auf dem Avatar)
+back_print = [on_back(text_shape("SPACE", 0.3).rotate(8), [0, 0.5, 3.45])]
+# Hufeisen-"U" auf den hinteren Hosentaschen
+horseshoe = (CS.circle(0.2, 32) - CS.circle(0.13, 32)) ^ CS.square([0.5, 0.25]).translate([-0.25, -0.25])
+horseshoe = horseshoe + CS.square([0.07, 0.2]).translate([-0.2, 0]) + CS.square([0.07, 0.2]).translate([0.13, 0])
+horseshoe = horseshoe + CS.square([0.13, 0.05]).translate([-0.245, 0.17]) + CS.square([0.13, 0.05]).translate([0.115, 0.17])
+back_logos = [on_back(horseshoe, [x, 0.5, 1.3], 0.035) for x in (-0.5, 0.5)]
+
 LAYERS = [
     ("schwarz", nose + mouth),
     ("weiss", muzzle),
     ("grau", headphones + key_ring),
     ("weiss", key_letter),
+    ("weiss", back_print + back_logos),
     ("blau", key_plate),
     ("grau", straps),
     ("schwarz", hair),

@@ -1,7 +1,7 @@
 # Roblox-Figur als 3D-Druck-Modell
 
 Der Avatar (R6) mit blauer Hoodie, schwarzen Emo-Haaren mit Katzenohren, grauen Kopfhörern,
-Bären-Maske, schwarzer Cargo-Hose mit „R“-Anhänger und blau-weißen Sneakern.
+Bären-Maske, „SPACE“-Schriftzug hinten, schwarzer Cargo-Hose mit „R“-Anhänger und Hufeisen-Logos hinten und blau-weißen Sneakern.
 
 ![Vorschau](vorschau.png)
 
